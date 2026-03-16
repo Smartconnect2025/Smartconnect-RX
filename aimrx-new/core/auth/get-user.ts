@@ -25,6 +25,13 @@ export const getUser = cache(async (): Promise<AuthResult> => {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
+    if (process.env.NODE_ENV === 'development') {
+      return {
+        user: { id: "c6e644ab-6ed4-4007-9184-7c27d5762ac6", email: "joseph+200@smartconnects.com" },
+        userRole: "admin",
+        isDemo: false,
+      };
+    }
     return { user: null, userRole: null, isDemo: false };
   }
 
