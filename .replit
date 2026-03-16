@@ -24,10 +24,10 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "AimRX"
+args = "SmartConnect RX"
 
 [[workflows.workflow]]
-name = "AimRX"
+name = "SmartConnect RX"
 author = "agent"
 
 [[workflows.workflow.tasks]]
