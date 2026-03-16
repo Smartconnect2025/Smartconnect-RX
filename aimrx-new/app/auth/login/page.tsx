@@ -297,22 +297,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Dev bypass links */}
-            <div className="mt-3 flex gap-2 justify-center">
-              <a
-                href="/api/auth/dev-bypass?token=scrx-dev-2026&role=admin"
-                className="text-xs px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium transition-colors"
-              >
-                Dev Login (Admin)
-              </a>
-              <a
-                href="/api/auth/dev-bypass?token=scrx-dev-2026&role=provider"
-                className="text-xs px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200 text-gray-600 font-medium transition-colors"
-              >
-                Dev Login (Provider)
-              </a>
-            </div>
-
             {/* Invitation Only Message */}
             <div className="mt-4 text-center">
               <p className="text-sm text-gray-500">
