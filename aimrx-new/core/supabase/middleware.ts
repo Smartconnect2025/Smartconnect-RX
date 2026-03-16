@@ -10,6 +10,14 @@ import { getUserRole } from "@core/auth";
 import { envConfig } from "@core/config";
 import { getCachedUserData, isSessionExpired, setSessionStarted } from "@core/auth/cache-helpers";
 
+function createAdminSupabaseClient() {
+  return createServerClient(
+    envConfig.NEXT_PUBLIC_SUPABASE_URL,
+    envConfig.SUPABASE_SERVICE_ROLE_KEY,
+    { cookies: { getAll: () => [], setAll: () => {} } }
+  );
+}
+
 /**
  * Updates the Supabase session during middleware execution
  *
@@ -196,7 +204,7 @@ export async function updateSession(request: NextRequest) {
 
     // If not cached or cache is for a different user, query database
     if (!userRole) {
-      userRole = await getUserRole(user.id, supabase);
+      userRole = await getUserRole(user.id, createAdminSupabaseClient());
       // Cache the role for future requests, bound to user ID
       if (userRole) {
         supabaseResponse.cookies.set("user_role_cache", userRole, {

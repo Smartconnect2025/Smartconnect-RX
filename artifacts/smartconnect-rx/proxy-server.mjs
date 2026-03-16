@@ -5,6 +5,12 @@ const PORT = parseInt(process.env.PORT) || 26196;
 const TARGET_PORT = 5000;
 const TARGET_HOST = "localhost";
 
+const NO_CACHE_HEADERS = {
+  "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+  "Pragma": "no-cache",
+  "Expires": "0",
+};
+
 const server = http.createServer((req, res) => {
   const options = {
     hostname: TARGET_HOST,
@@ -15,13 +21,14 @@ const server = http.createServer((req, res) => {
   };
 
   const proxyReq = http.request(options, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode, proxyRes.headers);
+    const mergedHeaders = { ...proxyRes.headers, ...NO_CACHE_HEADERS };
+    res.writeHead(proxyRes.statusCode, mergedHeaders);
     proxyRes.pipe(res, { end: true });
   });
 
   proxyReq.on("error", () => {
     if (!res.headersSent) {
-      res.writeHead(502);
+      res.writeHead(502, NO_CACHE_HEADERS);
       res.end("SmartConnect RX is starting up... please wait a moment.");
     }
   });
