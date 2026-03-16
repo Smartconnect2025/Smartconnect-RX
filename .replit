@@ -51,3 +51,4 @@ timeoutMs = 20000
 [userenv.shared]
 NEXT_PUBLIC_SUPABASE_URL = "https://pxehuvreezdpiusgwbct.supabase.co"
 NEXT_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable_1BVgKzRNB4weuXG-KVyKFg_sneiznZC"
+EASYPOST_API_KEY = "EZAK52c4e70e1d474a66ba1224e7e1170837qtzqDdMtackqJSpzSQ26wQ"
