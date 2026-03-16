@@ -62,7 +62,7 @@ export default function MFAEnrollPage() {
 
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: "AIM RX",
+        friendlyName: "SmartConnect RX",
       });
       if (error) throw error;
       if (data) {
@@ -356,7 +356,7 @@ export default function MFAEnrollPage() {
                 disabled={!codesAcknowledged}
                 data-testid="button-continue"
               >
-                Continue to AIM RX
+                Continue to SmartConnect RX
               </Button>
             </div>
           )}

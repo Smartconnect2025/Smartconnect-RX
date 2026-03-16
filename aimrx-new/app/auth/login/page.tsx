@@ -90,25 +90,23 @@ export default function LoginPage() {
         localStorage.removeItem("inactivity_logout");
       } catch {}
 
-      let mfaMethod = "email";
+      let mfaMethod = "totp";
       try {
         const prefRes = await fetch("/api/auth/mfa/preference");
         if (prefRes.ok) {
           const prefData = await prefRes.json();
-          mfaMethod = prefData.mfa_method || "email";
+          mfaMethod = prefData.mfa_method || "totp";
         }
       } catch {}
 
-      document.cookie = `mfa_method=${mfaMethod};path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const hasVerifiedTOTP = factors?.totp?.some((f) => f.status === "verified");
 
-      if (process.env.NODE_ENV === 'development') {
-        document.cookie = "totp_verified=true;path=/;max-age=28800;samesite=lax";
-        document.cookie = "mfa_pending=;path=/;max-age=0";
-        window.location.href = redirectUrl || '/admin';
-        return;
-      }
-
-      if (mfaMethod === "email") {
+      if (hasVerifiedTOTP) {
+        document.cookie = `mfa_method=totp;path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
+        router.push(`/auth/mfa-verify?redirect=${encodeURIComponent(redirectUrl || "/")}`);
+      } else if (mfaMethod === "email") {
+        document.cookie = `mfa_method=email;path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
         document.cookie = "mfa_pending=true;path=/;max-age=600;samesite=lax";
         let sendSuccess = false;
         try {
@@ -119,37 +117,15 @@ export default function LoginPage() {
           });
           sendSuccess = sendRes.ok;
         } catch {}
-        if (!sendSuccess) {
-          // Code may still have been sent server-side — navigate to verify page anyway
-          // so the user can enter the code they received by email
-          try {
-            const retryRes = await fetch("/api/auth/mfa/send-code", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ userId: data.user.id, email: data.user.email }),
-            });
-            sendSuccess = retryRes.ok;
-          } catch {}
-        }
-        // Always navigate to verify screen — code is sent server-side even if
-        // the browser couldn't confirm the response
-        document.cookie = "mfa_pending=true;path=/;max-age=600;samesite=lax";
-        router.push(`/auth/verify-mfa?userId=${data.user.id}&email=${encodeURIComponent(data.user.email)}&redirect=${encodeURIComponent(redirectUrl || "/")}`);
-      } else {
-        const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
-        if (factorsError) {
-          document.cookie = "mfa_method=;path=/;max-age=0";
-          toast.error("Failed to load authenticator. Please try again.");
-          setIsLoading(false);
-          return;
-        }
-        const hasVerifiedTOTP = factors?.totp?.some((f) => f.status === "verified");
-
-        if (hasVerifiedTOTP) {
-          router.push(`/auth/mfa-verify?redirect=${encodeURIComponent(redirectUrl || "/")}`);
+        if (sendSuccess) {
+          router.push(`/auth/verify-mfa?userId=${data.user.id}&email=${encodeURIComponent(data.user.email)}&redirect=${encodeURIComponent(redirectUrl || "/")}`);
         } else {
+          document.cookie = `mfa_method=totp;path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
           router.push(`/auth/mfa-enroll?redirect=${encodeURIComponent(redirectUrl || "/")}`);
         }
+      } else {
+        document.cookie = `mfa_method=totp;path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
+        router.push(`/auth/mfa-enroll?redirect=${encodeURIComponent(redirectUrl || "/")}`);
       }
     } catch (error: unknown) {
       toast.error(
