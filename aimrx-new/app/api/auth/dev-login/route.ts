@@ -20,11 +20,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error?.message || "Login failed" }, { status: 401 });
   }
 
-  const response = NextResponse.redirect(new URL("/admin", request.url));
-
   const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL!.match(/https:\/\/(.+)\.supabase\.co/)?.[1] || "";
 
-  response.cookies.set(`sb-${projectRef}-auth-token`, JSON.stringify({
+  const cookieValue = JSON.stringify({
     access_token: data.session.access_token,
     refresh_token: data.session.refresh_token,
     expires_at: Math.floor(Date.now() / 1000) + data.session.expires_in,
@@ -32,7 +30,26 @@ export async function GET(request: NextRequest) {
     token_type: "bearer",
     type: "access",
     user: data.user,
-  }), {
+  });
+
+  const html = `<!DOCTYPE html>
+<html><head><title>Logging in...</title></head>
+<body>
+<p>Signing in... redirecting to admin dashboard.</p>
+<script>
+document.cookie = "sb-${projectRef}-auth-token=" + encodeURIComponent(${JSON.stringify(cookieValue)}) + ";path=/;max-age=${data.session.expires_in};samesite=lax";
+document.cookie = "totp_verified=true;path=/;max-age=28800;samesite=lax";
+document.cookie = "mfa_pending=;path=/;max-age=0";
+setTimeout(function() { window.location.href = "/admin"; }, 300);
+</script>
+</body></html>`;
+
+  const response = new NextResponse(html, {
+    status: 200,
+    headers: { "Content-Type": "text/html" },
+  });
+
+  response.cookies.set(`sb-${projectRef}-auth-token`, cookieValue, {
     path: "/",
     httpOnly: false,
     secure: false,
