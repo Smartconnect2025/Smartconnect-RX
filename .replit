@@ -1,4 +1,4 @@
-modules = ["nodejs-24"]
+modules = ["nodejs-24", "postgresql-16"]
 
 [[artifacts]]
 id = "artifacts/api-server"
@@ -58,3 +58,6 @@ DIGITALRX_WEBHOOK_SECRET = "drx_3e5d8572891ba9836a5bdf192848ba0fd1224572e0b73aa8
 NEXT_PUBLIC_VENDOR_NAME = "SmartConnect RX"
 SENDGRID_FROM_EMAIL = "noreply@aimrx.com"
 SENDGRID_FROM_NAME = "SmartConnect RX"
+
+[nix]
+channel = "stable-25_05"

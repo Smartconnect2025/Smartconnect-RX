@@ -3,7 +3,15 @@
  *
  * Contains helper functions for user authentication and JWT processing.
  */
-import { User, SupabaseClient } from "@supabase/supabase-js";
+import { User, SupabaseClient, createClient } from "@supabase/supabase-js";
+import { envConfig } from "@core/config";
+
+function getAdminClient(): SupabaseClient {
+  return createClient(
+    envConfig.NEXT_PUBLIC_SUPABASE_URL,
+    envConfig.SUPABASE_SERVICE_ROLE_KEY
+  );
+}
 
 /**
  * Serialize user data consistently for client-side use
@@ -36,10 +44,11 @@ export type SerializedUser = ReturnType<typeof serializeUser>;
  */
 export async function fetchUserRoleFromDatabase(
   userId: string,
-  supabase: SupabaseClient,
+  _supabase: SupabaseClient,
 ): Promise<{ role: string; isDemo: boolean }> {
   try {
-    const { data, error } = await supabase
+    const adminClient = getAdminClient();
+    const { data, error } = await adminClient
       .from("user_roles")
       .select("role, is_demo")
       .eq("user_id", userId)
