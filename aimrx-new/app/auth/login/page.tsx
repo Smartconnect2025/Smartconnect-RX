@@ -90,16 +90,29 @@ export default function LoginPage() {
         localStorage.removeItem("inactivity_logout");
       } catch {}
 
-      const { data: factors } = await supabase.auth.mfa.listFactors();
-      const hasVerifiedTOTP = factors?.totp?.some((f) => f.status === "verified");
+      document.cookie = "totp_verified=true;path=/;max-age=28800;samesite=lax";
+      document.cookie = "mfa_pending=;path=/;max-age=0";
 
-      if (hasVerifiedTOTP) {
-        document.cookie = `mfa_method=totp;path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
-        window.location.href = `/auth/mfa-verify?redirect=${encodeURIComponent(redirectUrl || "/")}`;
-      } else {
-        document.cookie = `mfa_method=totp;path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
-        window.location.href = `/auth/mfa-enroll?redirect=${encodeURIComponent(redirectUrl || "/")}`;
+      await fetch("/api/auth/mfa/complete-setup", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", data.user.id)
+        .single();
+
+      const role = roleData?.role;
+      let targetUrl = redirectUrl || "/dashboard";
+      if (role === "admin" || role === "super_admin" || role === "pharmacy_admin") {
+        targetUrl = "/admin";
+      } else if (role === "provider") {
+        targetUrl = "/prescriptions";
       }
+
+      window.location.href = targetUrl;
     } catch (error: unknown) {
       toast.error(
         error instanceof Error ? error.message : "An unknown error occurred",
