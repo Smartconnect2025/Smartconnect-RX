@@ -92,6 +92,14 @@ export default function VerifyMFAPage() {
       toast.success("Verification successful!");
       try { localStorage.setItem("last_activity", Date.now().toString()); } catch {}
 
+      document.cookie = "totp_verified=true;path=/;max-age=86400;samesite=lax";
+      document.cookie = "mfa_pending=;path=/;max-age=0";
+      if (data.role) {
+        document.cookie = `user_role=${data.role};path=/;max-age=86400;samesite=lax`;
+        document.cookie = `user_role_cache=${data.role};path=/;max-age=86400;samesite=lax`;
+        document.cookie = `user_role_uid=${userId};path=/;max-age=86400;samesite=lax`;
+      }
+
       const role = data.role as UserRole;
       const targetUrl = role ? getDashboardUrl(role) : (redirectUrl !== "/" ? redirectUrl : "/dashboard");
       window.location.href = targetUrl;
