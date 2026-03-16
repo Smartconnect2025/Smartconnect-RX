@@ -56,6 +56,26 @@ export async function POST(request: NextRequest) {
     });
     await setSessionStarted(response);
 
+    const role = roleData?.role || "user";
+    response.cookies.set("user_role_cache", role, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+    response.cookies.set("user_role", role, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+    response.cookies.set("user_role_uid", userId, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+    });
+
     return response;
   } catch (error) {
     console.error("Error in verify-code API:", error);
