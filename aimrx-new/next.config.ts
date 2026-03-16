@@ -30,6 +30,7 @@ const nextConfig: NextConfig = {
           "*.replit.app",
           "*.riker.replit.dev",
           "*.spock.replit.dev",
+          "*.picard.replit.dev",
         ]
       : []),
   ],

@@ -30,6 +30,10 @@ function getCorsOrigin(request: NextRequest): string | null {
     return origin;
   }
 
+  if (origin && (origin.endsWith('.replit.dev') || origin.endsWith('.repl.co') || origin.endsWith('.replit.app'))) {
+    return origin;
+  }
+
   return null;
 }
 

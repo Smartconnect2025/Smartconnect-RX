@@ -4,7 +4,71 @@
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
 
-## Stack
+## SmartConnect RX (Main Application)
+
+**Location:** `/home/runner/workspace/aimrx-new/`
+**Run command:** `cd /home/runner/workspace/aimrx-new && PORT=5000 npx next dev -p 5000 -H 0.0.0.0`
+
+### Stack
+- Next.js 15 with App Router (NOT Pages Router)
+- React 19, TypeScript
+- Tailwind CSS v4, ShadCN UI
+- Supabase (auth + database) via `@supabase/ssr` (NOT `@supabase/auth-helpers`)
+- Drizzle ORM
+- Node.js v20
+
+### TypeScript Path Aliases
+- `@/*` = `./`
+- `@core/*` = `./core/`
+- `@features/*` = `./features/`
+
+### Supabase Instance
+- URL: `https://pxehuvreezdpiusgwbct.supabase.co` (project ref: `pxehuvreezdpiusgwbct`)
+- Admin user ID: `c6e644ab-6ed4-4007-9184-7c27d5762ac6`
+
+### Test Accounts
+- Admin: `joseph+200@smartconnects.com` / `Admin123!`
+- Provider: `joseph+201@smartconnects.com` / `Provider123!`
+
+### Required Secrets
+- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — anon/publishable key
+- `SUPABASE_SERVICE_ROLE_KEY` — service role key (admin operations)
+- `SESSION_SECRET` — random string for session signing
+- `SENDGRID_API_KEY` — for MFA email codes (from noreply@aimrx.com)
+- `EASYPOST_TEST_API_KEY` — shipping API
+
+### Auth Pipeline
+1. `middleware.ts` (root) → handles CORS preflight, then calls `updateSession()`
+2. `core/supabase/middleware.ts` `updateSession()` → creates Supabase client from cookies, calls `supabase.auth.getUser()`, checks MFA status, checks route access
+3. Route access defined in `core/routing/routes-config.ts` — admin routes need admin role, provider routes need provider role
+4. Role fetched from `user_roles` table in database
+
+### MFA Flow
+- Email OTP via SendGrid from `noreply@aimrx.com`
+- Codes stored in `mfa_codes` table, 10-minute expiry
+- Attempts limited (locks after too many failures)
+- **MFA is bypassed in development mode** (login page sets `totp_verified=true` cookie directly)
+
+### Replit Environment Fixes Applied
+1. **CORS**: Root `middleware.ts` allows `*.replit.dev`, `*.repl.co`, `*.replit.app` origins
+2. **MFA bypass**: `app/auth/login/page.tsx` skips MFA in development mode
+3. **allowedDevOrigins**: `next.config.ts` includes Replit domains (spock, riker, picard)
+
+### Critical Files (DO NOT modify without understanding the auth system)
+- `core/supabase/middleware.ts` — session management
+- `core/routing/routes-config.ts` — route access rules
+- `core/config/envConfig.ts` — environment configuration
+
+### Replit Routing Architecture
+- Port 80 (main proxy) → api-server artifact (port 8080, kind="api") handles `/api/` paths
+- smartconnect-rx artifact (kind="web") handles page routes
+- api-server now proxies everything to Next.js port 5000
+
+### GitHub Repository
+- `https://github.com/Smartconnect2025/Smartconnect-RX` (main branch)
+
+## Monorepo Stack
 
 - **Monorepo tool**: pnpm workspaces
 - **Node.js version**: 24
@@ -20,77 +84,57 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 
 ```text
 artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
-│   ├── api-spec/           # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/   # Generated React Query hooks
-│   ├── api-zod/            # Generated Zod schemas from OpenAPI
-│   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+├── aimrx-new/                 # SmartConnect RX Next.js app
+├── artifacts/                 # Deployable applications
+│   ├── api-server/            # Express proxy → Next.js port 5000
+│   └── smartconnect-rx/       # Web artifact (page routing)
+├── lib/                       # Shared libraries
+│   ├── api-spec/              # OpenAPI spec + Orval codegen config
+│   ├── api-client-react/      # Generated React Query hooks
+│   ├── api-zod/               # Generated Zod schemas from OpenAPI
+│   └── db/                    # Drizzle ORM schema + DB connection
+├── scripts/                   # Utility scripts
+├── pnpm-workspace.yaml        # pnpm workspace
+├── tsconfig.base.json         # Shared TS options
+├── tsconfig.json              # Root TS project references
+└── package.json               # Root package
 ```
 
 ## TypeScript & Composite Projects
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references.
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+- **Always typecheck from the root** — run `pnpm run typecheck`
+- **`emitDeclarationOnly`** — only `.d.ts` files during typecheck
+- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array
 
 ## Root Scripts
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages
+- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly`
 
 ## Packages
 
 ### `artifacts/api-server` (`@workspace/api-server`)
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
-
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+HTTP proxy forwarding all traffic to Next.js at localhost:5000. Listens on port 8080.
 
 ### `lib/db` (`@workspace/db`)
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
-
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
-
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+Database layer using Drizzle ORM with PostgreSQL.
 
 ### `lib/api-spec` (`@workspace/api-spec`)
 
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
+OpenAPI 3.1 spec and Orval codegen config.
 
 ### `lib/api-zod` (`@workspace/api-zod`)
 
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
+Generated Zod schemas from OpenAPI spec.
 
 ### `lib/api-client-react` (`@workspace/api-client-react`)
 
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
+Generated React Query hooks and fetch client.
 
 ### `scripts` (`@workspace/scripts`)
 
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+Utility scripts package. Run via `pnpm --filter @workspace/scripts run <script>`.
