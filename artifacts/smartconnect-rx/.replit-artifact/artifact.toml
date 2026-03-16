@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "SmartConnect RX"
+version = "1.0.0"
+id = "artifacts/smartconnect-rx"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+localPort = 26196
+name = "web"
+paths = ["/"]
+
+[services.development]
+run = "pnpm --filter @workspace/smartconnect-rx run dev"
+
+[services.env]
+PORT = "26196"
+BASE_PATH = "/"
+
+[services.production]
+build = ["pnpm", "--filter", "@workspace/smartconnect-rx", "run", "build"]
+publicDir = "artifacts/smartconnect-rx/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
