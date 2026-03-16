@@ -114,19 +114,7 @@ export async function updateSession(request: NextRequest) {
       const totpVerified = request.cookies.get("totp_verified")?.value === "true";
       const userMfaMethod = request.cookies.get("mfa_method")?.value;
 
-      if (process.env.NODE_ENV === 'development') {
-        if (!totpVerified) {
-          supabaseResponse.cookies.set("totp_verified", "true", {
-            httpOnly: true,
-            secure: false,
-            sameSite: "lax",
-            path: "/",
-          });
-        }
-        if (!cached.sessionToken) {
-          await setSessionStarted(supabaseResponse);
-        }
-      } else if (!totpVerified) {
+      if (!totpVerified) {
         const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
 
         if (userMfaMethod === "email") { // explicit email flow; missing/undefined/totp all use TOTP AAL path below

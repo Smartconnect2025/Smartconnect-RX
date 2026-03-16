@@ -7,16 +7,15 @@ import { createServerClient } from "@core/supabase";
 import { cache } from "react";
 import { serializeUser, AuthResult, getUserRoleAndDemo } from "./auth-utils";
 
-/**
- * Server-side function to get the current authenticated user
- *
- * This function is cached with React's cache to deduplicate requests within
- * a server component render pass, improving performance when multiple
- * components request the same user data.
- *
- * @returns Promise resolving to user data and role information
- */
 export const getUser = cache(async (): Promise<AuthResult> => {
+  if (process.env.NODE_ENV === 'development') {
+    return {
+      user: { id: "c6e644ab-6ed4-4007-9184-7c27d5762ac6", email: "joseph+200@smartconnects.com" },
+      userRole: "admin",
+      isDemo: false,
+    };
+  }
+
   const supabase = await createServerClient();
 
   const {
@@ -25,13 +24,6 @@ export const getUser = cache(async (): Promise<AuthResult> => {
   } = await supabase.auth.getUser();
 
   if (error || !user) {
-    if (process.env.NODE_ENV === 'development') {
-      return {
-        user: { id: "c6e644ab-6ed4-4007-9184-7c27d5762ac6", email: "joseph+200@smartconnects.com" },
-        userRole: "admin",
-        isDemo: false,
-      };
-    }
     return { user: null, userRole: null, isDemo: false };
   }
 

@@ -101,15 +101,6 @@ export default function LoginPage() {
 
       document.cookie = `mfa_method=${mfaMethod};path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
 
-      if (process.env.NODE_ENV === 'development' || !process.env.SENDGRID_API_KEY) {
-        await supabase.auth.getSession();
-        document.cookie = "totp_verified=true;path=/;max-age=28800;samesite=lax";
-        document.cookie = "mfa_pending=;path=/;max-age=0";
-        await new Promise(resolve => setTimeout(resolve, 500));
-        window.location.href = redirectUrl || '/admin';
-        return;
-      }
-
       if (mfaMethod === "email") {
         document.cookie = "mfa_pending=true;path=/;max-age=600;samesite=lax";
         let sendSuccess = false;
