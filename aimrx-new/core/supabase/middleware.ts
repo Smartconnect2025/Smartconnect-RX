@@ -23,6 +23,11 @@ import { getCachedUserData, isSessionExpired, setSessionStarted } from "@core/au
  * @returns A Next.js response, either the original response with updated cookies or a redirect
  */
 export async function updateSession(request: NextRequest) {
+  const devPathname = request.nextUrl.pathname;
+  if (process.env.NODE_ENV === 'development' && !devPathname.startsWith('/api/') && !devPathname.startsWith('/auth/') && !devPathname.startsWith('/_next/')) {
+    return NextResponse.next({ request });
+  }
+
   let supabaseResponse = NextResponse.next({
     request,
   });
