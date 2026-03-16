@@ -1,47 +1,52 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createAdminClient } from "@core/database/client";
+import { createClient } from "@supabase/supabase-js";
 
 export async function GET(request: NextRequest) {
-  const token = request.nextUrl.searchParams.get("token");
-
-  if (token !== "catalog-preview-2026") {
-    return NextResponse.json({ error: "Invalid token" }, { status: 403 });
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json({ error: "Not available" }, { status: 404 });
   }
 
-  const admin = createAdminClient();
+  const email = request.nextUrl.searchParams.get("email") || "joseph+200@smartconnects.com";
+  const password = request.nextUrl.searchParams.get("password") || "Admin123!";
 
-  const email = "jospeh+40@smartconnects.com";
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
-  const { data: userData } = await admin
-    .from("providers")
-    .select("user_id")
-    .eq("email", email)
-    .single();
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
-  if (!userData) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  if (error || !data.session) {
+    return NextResponse.json({ error: error?.message || "Login failed" }, { status: 401 });
   }
 
-  const { data: linkData, error: linkError } =
-    await admin.auth.admin.generateLink({
-      type: "magiclink",
-      email: email,
-    });
+  const response = NextResponse.redirect(new URL("/admin", request.url));
 
-  if (linkError || !linkData) {
-    return NextResponse.json(
-      { error: "Failed to generate link: " + (linkError?.message || "unknown") },
-      { status: 500 }
-    );
-  }
+  const projectRef = process.env.NEXT_PUBLIC_SUPABASE_URL!.match(/https:\/\/(.+)\.supabase\.co/)?.[1] || "";
 
-  const hashedToken = linkData.properties?.hashed_token;
-  if (!hashedToken) {
-    return NextResponse.json({ error: "No token in link" }, { status: 500 });
-  }
+  response.cookies.set(`sb-${projectRef}-auth-token`, JSON.stringify({
+    access_token: data.session.access_token,
+    refresh_token: data.session.refresh_token,
+    expires_at: Math.floor(Date.now() / 1000) + data.session.expires_in,
+    expires_in: data.session.expires_in,
+    token_type: "bearer",
+    type: "access",
+    user: data.user,
+  }), {
+    path: "/",
+    httpOnly: false,
+    secure: false,
+    sameSite: "lax",
+    maxAge: data.session.expires_in,
+  });
 
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-  const verifyUrl = `${supabaseUrl}/auth/v1/verify?token=${hashedToken}&type=magiclink&redirect_to=${encodeURIComponent(request.nextUrl.origin + "/api/auth/dev-login/callback")}`;
+  response.cookies.set("totp_verified", "true", {
+    path: "/",
+    maxAge: 28800,
+    sameSite: "lax",
+  });
 
-  return NextResponse.redirect(verifyUrl);
+  response.cookies.set("mfa_pending", "", { path: "/", maxAge: 0 });
+
+  return response;
 }
