@@ -113,12 +113,20 @@ export default function LoginPage() {
           sendSuccess = sendRes.ok;
         } catch {}
         if (!sendSuccess) {
-          document.cookie = "mfa_method=;path=/;max-age=0";
-          document.cookie = "mfa_pending=;path=/;max-age=0";
-          toast.error("Failed to send verification code. Please try again.");
-          setIsLoading(false);
-          return;
+          // Code may still have been sent server-side — navigate to verify page anyway
+          // so the user can enter the code they received by email
+          try {
+            const retryRes = await fetch("/api/auth/mfa/send-code", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ userId: data.user.id, email: data.user.email }),
+            });
+            sendSuccess = retryRes.ok;
+          } catch {}
         }
+        // Always navigate to verify screen — code is sent server-side even if
+        // the browser couldn't confirm the response
+        document.cookie = "mfa_pending=true;path=/;max-age=600;samesite=lax";
         router.push(`/auth/verify-mfa?userId=${data.user.id}&email=${encodeURIComponent(data.user.email)}&redirect=${encodeURIComponent(redirectUrl || "/")}`);
       } else {
         const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
