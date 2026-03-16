@@ -76,12 +76,25 @@ export default function VerifyMFAPage() {
     }
     setIsVerifying(true);
     try {
-      const response = await fetch("/api/auth/mfa/verify-code", {
+      const apiUrl = `${window.location.origin}/api/auth/mfa/verify-code`;
+      console.log("[MFA] Fetching:", apiUrl);
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
         body: JSON.stringify({ userId, code: fullCode }),
       });
-      const data = await response.json();
+      console.log("[MFA] Response status:", response.status, "type:", response.type, "url:", response.url);
+      const text = await response.text();
+      console.log("[MFA] Response body (first 500):", text.substring(0, 500));
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.error("[MFA] Non-JSON response:", text.substring(0, 1000));
+        toast.error("Server returned an unexpected response. Please try again.");
+        return;
+      }
       if (!data.success) {
         toast.error(data.error || "Invalid code");
         setCode(["", "", "", "", "", ""]);
