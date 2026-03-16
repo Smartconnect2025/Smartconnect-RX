@@ -90,42 +90,15 @@ export default function LoginPage() {
         localStorage.removeItem("inactivity_logout");
       } catch {}
 
-      let mfaMethod = "totp";
-      try {
-        const prefRes = await fetch("/api/auth/mfa/preference");
-        if (prefRes.ok) {
-          const prefData = await prefRes.json();
-          mfaMethod = prefData.mfa_method || "totp";
-        }
-      } catch {}
-
       const { data: factors } = await supabase.auth.mfa.listFactors();
       const hasVerifiedTOTP = factors?.totp?.some((f) => f.status === "verified");
 
       if (hasVerifiedTOTP) {
         document.cookie = `mfa_method=totp;path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
-        router.push(`/auth/mfa-verify?redirect=${encodeURIComponent(redirectUrl || "/")}`);
-      } else if (mfaMethod === "email") {
-        document.cookie = `mfa_method=email;path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
-        document.cookie = "mfa_pending=true;path=/;max-age=600;samesite=lax";
-        let sendSuccess = false;
-        try {
-          const sendRes = await fetch("/api/auth/mfa/send-code", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ userId: data.user.id, email: data.user.email }),
-          });
-          sendSuccess = sendRes.ok;
-        } catch {}
-        if (sendSuccess) {
-          router.push(`/auth/verify-mfa?userId=${data.user.id}&email=${encodeURIComponent(data.user.email)}&redirect=${encodeURIComponent(redirectUrl || "/")}`);
-        } else {
-          document.cookie = `mfa_method=totp;path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
-          router.push(`/auth/mfa-enroll?redirect=${encodeURIComponent(redirectUrl || "/")}`);
-        }
+        window.location.href = `/auth/mfa-verify?redirect=${encodeURIComponent(redirectUrl || "/")}`;
       } else {
         document.cookie = `mfa_method=totp;path=/;max-age=${60 * 60 * 24 * 30};samesite=lax`;
-        router.push(`/auth/mfa-enroll?redirect=${encodeURIComponent(redirectUrl || "/")}`);
+        window.location.href = `/auth/mfa-enroll?redirect=${encodeURIComponent(redirectUrl || "/")}`;
       }
     } catch (error: unknown) {
       toast.error(

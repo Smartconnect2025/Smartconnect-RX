@@ -32,8 +32,15 @@ export async function PATCH(request: NextRequest) {
   try {
     const origin = request.headers.get("origin");
     const host = request.headers.get("host");
-    if (origin && host && !origin.includes(host.split(":")[0])) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (origin && host) {
+      const hostBase = host.split(":")[0];
+      const isAllowed = origin.includes(hostBase) ||
+        origin.endsWith(".replit.dev") ||
+        origin.endsWith(".repl.co") ||
+        origin.endsWith(".replit.app");
+      if (!isAllowed) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
 
     const supabase = await createServerClient();
