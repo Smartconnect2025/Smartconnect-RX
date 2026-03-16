@@ -76,25 +76,12 @@ export default function VerifyMFAPage() {
     }
     setIsVerifying(true);
     try {
-      const apiUrl = `${window.location.origin}/api/auth/mfa/verify-code`;
-      console.log("[MFA] Fetching:", apiUrl);
-      const response = await fetch(apiUrl, {
+      const response = await fetch("/api/auth/mfa/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
         body: JSON.stringify({ userId, code: fullCode }),
       });
-      console.log("[MFA] Response status:", response.status, "type:", response.type, "url:", response.url);
-      const text = await response.text();
-      console.log("[MFA] Response body (first 500):", text.substring(0, 500));
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        console.error("[MFA] Non-JSON response:", text.substring(0, 1000));
-        toast.error("Server returned an unexpected response. Please try again.");
-        return;
-      }
+      const data = await response.json();
       if (!data.success) {
         toast.error(data.error || "Invalid code");
         setCode(["", "", "", "", "", ""]);
@@ -104,14 +91,6 @@ export default function VerifyMFAPage() {
 
       toast.success("Verification successful!");
       try { localStorage.setItem("last_activity", Date.now().toString()); } catch {}
-
-      document.cookie = "totp_verified=true;path=/;max-age=86400;samesite=lax";
-      document.cookie = "mfa_pending=;path=/;max-age=0";
-      if (data.role) {
-        document.cookie = `user_role=${data.role};path=/;max-age=86400;samesite=lax`;
-        document.cookie = `user_role_cache=${data.role};path=/;max-age=86400;samesite=lax`;
-        document.cookie = `user_role_uid=${userId};path=/;max-age=86400;samesite=lax`;
-      }
 
       const role = data.role as UserRole;
       const targetUrl = role ? getDashboardUrl(role) : (redirectUrl !== "/" ? redirectUrl : "/dashboard");

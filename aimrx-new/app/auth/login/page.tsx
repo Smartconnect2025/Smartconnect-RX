@@ -103,7 +103,7 @@ export default function LoginPage() {
 
       if (process.env.NODE_ENV === 'development' || !process.env.SENDGRID_API_KEY) {
         document.cookie = "totp_verified=true;path=/;max-age=28800;samesite=lax";
-        window.location.href = redirectUrl || '/';
+        router.push(redirectUrl || '/');
         return;
       }
 
