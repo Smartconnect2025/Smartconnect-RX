@@ -1,0 +1,14 @@
+/* Hide scrollbars but allow scrolling */
+.no-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+/* Required field indicator */
+.required::after {
+  content: " *";
+  color: #ef4444;
+}

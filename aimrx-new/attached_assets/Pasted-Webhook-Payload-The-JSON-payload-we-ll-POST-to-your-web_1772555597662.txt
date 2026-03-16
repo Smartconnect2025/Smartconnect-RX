@@ -1,0 +1,81 @@
+Webhook Payload
+The JSON payload we'll POST to your webhook URL
+POST to Your Webhook URL
+json
+{
+  "StoreID": "001",
+  "QueueID": "12345",
+  "RxNumber": "RX98765",
+  "RxDate": "1/1/2025",
+  "DrugName": "Aspirin",
+  "DrugNDC": "12342342323",
+  "Qty": "30",
+  "DateWritten": null,
+  "Instructions": null,
+  "Daw": null,
+  "DaysSupply": "30",
+  "Notes": null,
+  "InsPaid": null,
+  "LastFilledDate": null,
+  "RefillNbr": null,
+  "Refillremaining": null,
+  "PatCopay": "3",
+  "RxRetail": null,
+  "aacCost": null,
+  "AwpCost": null,
+  "RxOrigcode": null,
+  "DeliveryType": null,
+  "DeliveryDate": "1/1/2025",
+  "TrackingNumber": "1Z999AA10123456784",
+  "PrintedDate": null,
+  "RxStatus": null,
+  "LotNumber": "LOT12345",
+  "ApprovedByInitials": null,
+  "Patient": {
+    "PatientName": "John Doe",
+    "DOB": "1980-01-01",
+    "Sex": null,
+    "Patientstreet": null,
+    "Patientcity": null,
+    "Patientstate": null,
+    "Patientzip": null,
+    "PatientPhone": null,
+    "PatientMobile": null,
+    "SSN": null,
+    "Email": null,
+    "CustomID": null,
+    "PatientFlag": null,
+    "HomeName": null,
+    "Room": null,
+    "EmployerName": null,
+    "EmployerStreet": null,
+    "EmployerCity": null,
+    "EmployerState": null,
+    "EmployerZip": null,
+    "EmployerPhone": null,
+    "DateOfInjury": null
+  },
+  "Doctor": {
+    "DoctorName": "Dr. Smith",
+    "DoctorStreet": null,
+    "DoctorCity": null,
+    "DoctorState": null,
+    "DoctorZip": null,
+    "DoctorPhone": null,
+    "DoctorFax": null,
+    "DoctorDea": null,
+    "DoctorNpi": null,
+    "ContactName": null
+  },
+  "Insurance": {
+    "InsuredName": null,
+    "Bin": null,
+    "PCN": null,
+    "CardNumber": "xxxxxxx2",
+    "GroupNumber": null,
+    "Relation": null,
+    "PersonCode": null
+  }
+}
+
+We'll send a POST request to your webhook URL whenever the prescription status changes. The payload includes the complete prescription record with Patient, Doctor, and Insurance details.

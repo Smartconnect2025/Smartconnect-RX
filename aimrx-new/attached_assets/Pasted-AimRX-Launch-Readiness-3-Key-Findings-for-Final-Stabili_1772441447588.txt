@@ -1,0 +1,207 @@
+AimRX Launch Readiness: 3 Key Findings for Final Stabilization
+External
+Inbox
+AI Overview
+Joseph identified three high-impact areas needing fixes for AimRX launch readiness: Payload Integrity, Security Hardening, and Session Stability.
+Jerry urged Joseph and Tomas to meet immediately to resolve the bugs for a same-day production deployment.
+Tomas completed most fixes but deferred Rate Limiting, stating he did not know how to validate NDCs, and confirmed production deployment occurred.
+Jerry acknowledged Tomas's update and stated they will test more in production the following morning.
+By Gemini; there may be mistakes. Learn more
+
+Joseph Sughayer
+Thu, Feb 26, 4:28 PM (4 days ago)
+Hi Tomas, I’ve completed a final audit of the AimRX platform as we prepare for launch. To ensure everything is 100% robust for the providers and the pharmacy, I
+
+Jerry Horani
+Thu, Feb 26, 5:25 PM (4 days ago)
+I recommend that you 2 get together this AM to solve these bugs so we can go in production tonight bug free .
+
+Joseph Sughayer
+Thu, Feb 26, 5:34 PM (4 days ago)
+Hello Tomas, let’s jump on a call now to go over the 3 Blockers I identified. We need to review the issues immediately to stay on track for tonight's production
+
+Tomas Goldenberg
+Fri, Feb 27, 6:27 AM (3 days ago)
+Hi Guys sorry i had a ultra busy day because tomorrow im getting married hehe Ok, regarding your feedback joseph. Point one (a,b,c) - Done added dea number and
+
+Jerry Horani
+Fri, Feb 27, 6:44 AM (3 days ago)
+to Tomas, me
+
+Thanks Tomas , we will test more in production in the am and let you know . 
+Thanks
+Jerry Horani
+
+On Feb 26, 2026, at 9:27 PM, Tomas Goldenberg <tomasg@topflightapps.com> wrote:
+
+Joseph Sughayer <joseph@smartconnects.com>
+Fri, Feb 27, 11:01 AM (3 days ago)
+to Jerry, Tomas
+
+
+Subject: Bug — Profile Tab Save Wipes Physical Address
+
+Hi Tomas,
+
+I found a bug causing the "Missing: Physical Address" modal to appear on the Prescriptions page even after the provider has filled in their address.
+
+What's happening:
+
+The provider fills in their Physical Address on the Payment & Billing tab and saves it — the address goes into the database correctly. Later, when they go to the Profile tab and click "Save Changes," their address is erased from the database.
+
+This happens because the Profile tab's save function (updatePersonalInfo in provider-profile-service.ts, line 106) includes physical_address in the update payload. Since the Profile tab doesn't actually show the address fields on screen, the form sends empty values, and the save overwrites the real address with null.
+
+Then when the provider goes to create a prescription, the check on prescriptions/page.tsx (lines 526-531) looks up physical_address, finds it empty, and shows the "Complete Your Profile" modal.
+
+Where the bug is:
+
+File: features/provider-profile/services/provider-profile-service.ts
+Line 106: physical_address: hasPhysicalAddressData ? data.physicalAddress : null
+Line 107: billing_address: hasBillingAddressData ? data.billingAddress : null
+The fix:
+
+Remove physical_address and billing_address from the updateData object in the updatePersonalInfo function. These fields are only entered on the Payment & Billing tab, so they should only be saved by PaymentBillingForm.tsx — the Profile tab shouldn't touch them.
+
+Also worth noting: the Profile tab saves empty address fields to localStorage (provider-profile-${userId}), which can make the problem worse when the form reloads and merges stale localStorage data over DB values. Consider excluding physicalAddress and billingAddress from the localStorage persistence in ProfileForm as well.
+
+Thanks
+
+image.png
+
+Joseph Sughayer <joseph@smartconnects.com>
+Fri, Feb 27, 11:28 AM (3 days ago)
+to Jerry, Tomas
+
+ Root Cause Found — Patient Address Missing from Pharmacy Payload
+
+Hi Tomas,
+
+We traced why the Feb 26 payload to Greenwich Rx had no patient address even though the patient's address was in the database.
+
+Bug 1 — Patient Address Override (the main issue)
+
+File: app/api/prescriptions/[id]/submit-to-pharmacy/route.ts, lines 188-190
+
+const patientAddress = prescription.has_custom_address && prescription.custom_address
+  ? prescription.custom_address
+  : patient?.physical_address;
+When has_custom_address is true but custom_address is an empty object {}, JavaScript treats {} as truthy. So the code picks the empty custom_address instead of the patient's real address from the database. All address fields become undefined and get silently dropped from the JSON payload.
+
+This was added in commit bb4ee1a on Feb 10 ("Override custom address prescription"). Before that, the code read the patient address directly and it would have worked.
+
+Fix: Check that custom_address actually has real data inside it before using it:
+
+const hasValidCustomAddress = prescription.has_custom_address
+  && prescription.custom_address
+  && prescription.custom_address.street
+  && prescription.custom_address.city
+  && prescription.custom_address.state
+  && (prescription.custom_address.zipCode || prescription.custom_address.zip);
+const patientAddress = hasValidCustomAddress
+  ? prescription.custom_address
+  : patient?.physical_address;
+Bug 2 — DoctorPhone always undefined
+
+Same file, line 217: DoctorPhone: provider.phone
+
+The providers table column is phone_number, not phone. So DoctorPhone is always undefined and never sent.
+
+Fix: Change to provider.phone_number
+
+Bug 3 — Patient Sex always "F"
+
+Same file, line 200: Sex: prescription.patients.gender === "male" ? "M" : "F"
+
+The patients table has no gender column. Gender is stored inside the data JSON field as patient.data.gender. So prescription.patients.gender is always undefined, the comparison is always false, and Sex always defaults to "F".
+
+Fix: Change to prescription.patients.data?.gender === "male" ? "M" : "F"
+
+Thanks,
+Joseph 
+
+Joseph Sughayer <joseph@smartconnects.com>
+Fri, Feb 27, 11:42 AM (3 days ago)
+to Jerry, Tomas
+
+Subject: Critical — Mark as Paid Does Not Send Prescription to Pharmacy
+
+Hi Tomas,
+
+There's one more critical issue that needs to be fixed before we can go live.
+
+When a provider clicks "Mark as Paid" for an in-office payment, the prescription status updates to "paid" but the prescription is never sent to the pharmacy. The patient's medication never gets filled.
+
+Here's how the two payment paths compare:
+
+Online payment (works):
+Patient pays via Authorize.Net → webhook fires → webhook calls /api/prescriptions/[id]/submit-to-pharmacy → pharmacy receives it ✅
+
+In-office payment (broken):
+Provider clicks "Mark as Paid" → /api/prescriptions/[id]/mark-paid updates the status → nothing else happens → pharmacy never receives it ❌
+
+The file is app/api/prescriptions/[id]/mark-paid/route.ts. After updating the prescription status, it needs to also call submit-to-pharmacy — the same way the Authorize.Net webhook does.
+
+This means any prescription where the provider collects payment in the office will sit in the database and never reach the pharmacy.
+
+Thanks,
+
+Joseph Sughayer
+Fri, Feb 27, 11:45 AM (3 days ago)
+Hi Tomas, Providers are still getting randomly logged out or losing their session state. I checked the middleware and found the root cause — it's the role cache
+
+Joseph Sughayer <joseph@smartconnects.com>
+Fri, Feb 27, 12:00 PM (3 days ago)
+to Jerry, Tomas
+
+Subject: A Few Admin Routes May Have Been Missed
+
+Hi Tomas,
+
+I checked the latest code on GitHub after your updates and I can see the auth guards you added to the admin routes — categories, groups, patients, providers, tags, tiers, pharmacies, and the rest. That all looks good.
+
+While reviewing, I noticed that a handful of the older utility routes may have been overlooked in that pass. These are the original seed/setup routes from earlier in development:
+
+force-seed-admins
+seed-aim-admin / seed-grinethch-admin
+seed-aim / seed-grinethch
+seed-prescriptions
+seed-real-medications
+seed-experiencecare
+create-mfa-table
+invite-doctor
+They don't have the getUser() check that the other admin routes now have, so they're currently accessible without authentication.
+
+Since most of these are setup tools that were useful during development but probably aren't needed in production anymore, the easiest fix might be to just remove them. For invite-doctor, which is probably still needed for day-to-day operations, adding the same auth pattern you used on the other routes would do the trick.
+
+Thanks,
+Joseph
+
+Tomas Goldenberg
+Sat, Feb 28, 12:40 AM (2 days ago)
+to me, Jerry
+
+Hi Josepg
+
+I’m reaching out to provide an update on the latest platform fixes and stability improvements. Although we reached the end of the allocated hours for this block, I wanted to ensure everything was running smoothly before the next cycle.
+
+Completed Fixes & Improvements:
+
+Profile Tab: Fixed the issue with saving the "Physical Address" field.
+
+Pharmacy Integration: Resolved the bug where the "Patient Custom Address" was missing from the pharmacy payload.
+
+Prescription Workflow: Optimized the "Mark as Paid" process. While it previously required a manual "Submit" step by design, I’ve now automated it so the prescription is sent to the pharmacy immediately upon payment.
+
+Provider Experience: Fixed the "Short Session" issue to prevent providers from being logged out prematurely.
+
+Next Steps:
+
+Admin Routes: A few non-critical admin routes were identified but have been deferred to the next sprint, as they do not impact the core platform stability.
+
+Note on Hours: As I’m just returning from my wedding and we had reached our hour limit, I finalized these remaining stability points in my own personal time to ensure the platform remains solid and reliable for users.
+
+Prod deployment done
+
+Best regards,
+
+tomas

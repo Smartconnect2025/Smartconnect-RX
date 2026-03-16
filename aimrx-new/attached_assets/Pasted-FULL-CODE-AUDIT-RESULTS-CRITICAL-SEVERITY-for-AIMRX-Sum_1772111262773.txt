@@ -1,0 +1,65 @@
+FULL CODE AUDIT RESULTS CRITICAL SEVERITY for AIMRX
+Summarize this email
+
+Joseph Sughayer <joseph@smartconnects.com>
+9:09 AM (6 hours ago)
+to Jerry
+
+FULL CODE AUDIT RESULTS
+CRITICAL SEVERITY
+1. Unprotected Admin API Routes — Anyone Can Call Them
+These routes use createAdminClient() (service role key, bypasses all security) with zero authentication checks:
+
+Route	What it does	Risk
+/api/admin/force-seed-admins	Creates admin users with hardcoded passwords (AIM2025!, Grin2025!)	Anyone can create admin accounts
+/api/admin/seed-aim-admin	Seeds AIM pharmacy admin	Same as above
+/api/admin/seed-grinethch-admin	Seeds Greenwich admin	Same as above
+/api/admin/seed-aim	Seeds AIM pharmacy data	Anyone can modify pharmacy data
+/api/admin/seed-grinethch	Seeds Greenwich data	Same
+/api/admin/seed-prescriptions	Seeds prescription data	Anyone can inject prescriptions
+/api/admin/seed-real-medications	Seeds medications	Anyone can modify drug catalog
+/api/admin/seed-experiencecare	Seeds data	Same
+/api/admin/create-mfa-table	Creates database tables via raw SQL	Anyone can modify DB schema
+/api/admin/invite-doctor	Creates provider accounts with confirmed email	Anyone can create provider accounts
+/api/debug/check-my-role	Exposes user role info	Information leak
+This means right now, someone could call POST
+https://app.aimrx.com/api/admin/force-seed-admins
+ and create admin accounts on your live system.
+
+2. Webhook Signature Bypass (Authorize.Net)
+In app/api/webhooks/authnet/route.ts line 19: the signature check only runs if the header exists. If someone sends a request without the x-anet-signature header, the webhook processes it without any verification. An attacker could fake payment confirmations, mark prescriptions as paid, and trigger pharmacy submissions.
+
+3. Hardcoded Passwords in Source Code
+force-seed-admins/route.ts has passwords in plain text: AIM2025! and Grin2025!. These are in the Git repo.
+
+HIGH SEVERITY
+4. Session Instability (the bug we discussed)
+The Render logs confirmed sessions drop intermittently. Root cause: the middleware refreshes cookies via supabase.auth.getUser(), but if any response is returned before the cookie setAll completes, the browser and server go out of sync. The 2-minute cache TTL on role cookies is also very aggressive — it means roles are re-queried constantly, adding latency.
+
+5. Hardcoded Credentials in invite-doctor Route
+The invite-doctor route accepts a password in the request body and creates a user with that password. No strength validation, no rate limiting.
+
+6. No Rate Limiting
+No rate limiting on any endpoint — login, password reset, MFA verification, payment links. An attacker could brute-force MFA codes or spam login attempts.
+
+MEDIUM SEVERITY
+7. .env File Probes
+The Render logs show someone hit /.env on your live site. The .env is in .gitignore so it won't be in the build, and Next.js doesn't serve it — you're safe here. But worth confirming.
+
+8. Bot/Scanner Traffic
+IPs are probing WordPress/Magento endpoints (/wp-json/wc/store/cart, /graphql, /catalogsearch). Not harmful since those don't exist, but shows your site is being actively scanned.
+
+9. Missing Error Feedback to Users
+When /api/provider/pharmacy fails or session drops, the frontend silently shows an empty medication list with no error message. Providers don't know what went wrong.
+
+10. React Hook Dependency Warnings (15 total)
+Most are minor, but step2/page.tsx missing supabase in useEffect deps could cause stale data in the medication loader if the Supabase client changes.
+
+LOW SEVERITY
+11. Unused Variables/Imports (27 ESLint errors) — Code cleanliness, no runtime impact.
+
+12. Console Statements — console.log/console.warn in production code (tiers, cron, submit-to-pharmacy).
+
+13. provider_pharmacy_links Table Empty — The pharmacy route has fallback logic to show global medications when no links exist, so this works but means the pharmacy-specific tier/pricing system isn't being used as designed.
+
+

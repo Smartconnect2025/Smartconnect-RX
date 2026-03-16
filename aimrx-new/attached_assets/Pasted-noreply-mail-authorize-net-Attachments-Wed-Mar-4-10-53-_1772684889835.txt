@@ -1,0 +1,43 @@
+noreply@mail.authorize.net
+Attachments
+Wed, Mar 4, 10:53 PM (8 hours ago)
+After repeated attempts, we are unable to deliver notifications to Webhook ID 621effcd-1222-4ff5-b618-627fa6771d0e at your URL: https://app.aimrx.com/api/webhoo
+
+Joseph Sughayer <joseph@smartconnects.com>
+Wed, Mar 4, 11:22 PM (8 hours ago)
+to Jerry
+
+Subject: Authorize.net Webhook Deactivated — Action Needed
+
+Hi Jerry,
+
+We received a notification from Authorize.net that our payment webhook has been deactivated. This means we're currently not receiving automatic payment confirmations when patients pay for prescriptions.
+
+What happened:
+Authorize.net has been trying to send payment notifications to our app, but the webhook was returning errors because the Authorize.net Signature Key is missing from our production environment. After repeated failures, Authorize.net deactivated the webhook.
+
+What this affects:
+Without the webhook active, when a patient completes a payment through Authorize.net, our system doesn't automatically know about it. The prescription status won't auto-update to "Payment Received" and the automatic pharmacy submission after payment won't trigger.
+
+What we need to fix it:
+
+The Authorize.net Signature Key — Can you log into login.authorize.net → Account → API Credentials & Keys → and get the Signature Key? We need to add it to our production environment as AUTHNET_SIGNATURE_KEY.
+
+Reactivate the webhook — Once the key is configured, we'll need someone to go into Authorize.net: Account → Webhooks → find the deactivated webhook → Edit → change Status to "Active" → Save.
+
+Once we have the Signature Key and reactivate the webhook, payment notifications will flow again automatically.
+
+Let me know if you need help with any of this or if you'd prefer I handle the reactivation once you provide the key.
+
+Best,
+Joseph
+
+Jerry Horani
+4:28 AM (2 hours ago)
+to me
+
+Done and the new news Key is 
+E944071DE8B56BFCA599A5DB91B0CB2850384ADA4C2137412B113AB91D772F45B884423E79E389BA40255FDD53397A133CC6E3EE53B6B6FBDBB5E2803D72BD0C
+
+Jerry Horani
+501-960-2387

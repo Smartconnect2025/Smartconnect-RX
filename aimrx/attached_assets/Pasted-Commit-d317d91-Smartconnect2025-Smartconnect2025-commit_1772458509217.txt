@@ -1,0 +1,647 @@
+Commit d317d91
+Smartconnect2025
+Smartconnect2025
+committed
+37 minutes ago
+feat: add Manage Admins section to admin dashboard
+Adds a new "Manage Admins" page accessible from the Platform Owner Dashboard.
+Super admins can now create, view, and remove platform-level admin accounts
+directly from the UI instead of needing database access.
+
+New files:
+- app/api/admin/super-admins/route.ts (GET/POST/DELETE)
+- features/admin-dashboard/components/SuperAdminsManagement.tsx
+- app/(features)/admin/super-admins/page.tsx
+
+Modified:
+- AdminDashboard.tsx (added Manage Admins card)
+- AdminNavigationTabs.tsx (added Manage Admins tab)
+main
+1 parent 
+d2076c4
+ commit 
+d317d91
+File tree
+Filter files…
+app
+(features)/admin/super-admins
+page.tsx
+api/admin/super-admins
+route.ts
+components/layout
+AdminNavigationTabs.tsx
+features/admin-dashboard
+AdminDashboard.tsx
+components
+SuperAdminsManagement.tsx
+5 files changed
++596
+-2
+lines changed
+Search within code
+ 
+‎app/(features)/admin/super-admins/page.tsx‎
++16
+Lines changed: 16 additions & 0 deletions
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,16 @@
+"use client";
+import { Suspense } from "react";
+import { SuperAdminsManagement } from "@/features/admin-dashboard/components/SuperAdminsManagement";
+import { AdminNavigationTabs } from "@/components/layout/AdminNavigationTabs";
+export default function AdminSuperAdminsPage() {
+  return (
+    <>
+      <AdminNavigationTabs />
+      <Suspense>
+        <SuperAdminsManagement />
+      </Suspense>
+    </>
+  );
+}
+‎app/api/admin/super-admins/route.ts‎
++174
+Lines changed: 174 additions & 0 deletions
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,174 @@
+import { NextResponse } from "next/server";
+import { createServerClient, createAdminClient } from "@core/supabase/server";
+import { getUser } from "@core/auth";
+export async function GET() {
+  const { user, userRole } = await getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+  if (userRole !== "admin") {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+  try {
+    const supabaseAdmin = createAdminClient();
+    const { data: adminRoles, error } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id, role, created_at")
+      .eq("role", "admin");
+    if (error) {
+      return NextResponse.json({ error: "Failed to fetch admins" }, { status: 500 });
+    }
+    const admins = await Promise.all(
+      (adminRoles || []).map(async (role) => {
+        const { data: userData } = await supabaseAdmin.auth.admin.getUserById(role.user_id);
+        const { data: pharmacyLinks } = await supabaseAdmin
+          .from("pharmacy_admins")
+          .select("pharmacy_id, pharmacies(name, slug)")
+          .eq("user_id", role.user_id);
+        return {
+          user_id: role.user_id,
+          email: userData?.user?.email || "Unknown",
+          full_name: userData?.user?.user_metadata?.full_name || userData?.user?.user_metadata?.first_name
+            ? `${userData?.user?.user_metadata?.first_name || ""} ${userData?.user?.user_metadata?.last_name || ""}`.trim()
+            : null,
+          created_at: userData?.user?.created_at || role.created_at,
+          last_sign_in: userData?.user?.last_sign_in_at || null,
+          pharmacies: pharmacyLinks || [],
+        };
+      })
+    );
+    return NextResponse.json({ success: true, admins });
+  } catch (error) {
+    console.error("Error fetching super admins:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch admins", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
+}
+export async function POST(request: Request) {
+  const { user, userRole } = await getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+  if (userRole !== "admin") {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+  try {
+    const body = await request.json();
+    const { email, password, full_name } = body;
+    if (!email || !password) {
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
+    }
+    const supabaseAdmin = createAdminClient();
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: full_name || email.split("@")[0],
+      },
+    });
+    if (authError || !authData.user) {
+      const isDuplicate =
+        authError?.code === "user_already_exists" ||
+        authError?.code === "email_exists" ||
+        (authError as { status?: number })?.status === 422 ||
+        authError?.message?.toLowerCase().includes("already") ||
+        authError?.message?.toLowerCase().includes("exists");
+      return NextResponse.json(
+        { error: isDuplicate ? "A user with this email already exists" : authError?.message || "Failed to create user" },
+        { status: isDuplicate ? 400 : 500 }
+      );
+    }
+    const userId = authData.user.id;
+    const { error: roleError } = await supabaseAdmin
+      .from("user_roles")
+      .insert({ user_id: userId, role: "admin" });
+    if (roleError) {
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+      return NextResponse.json({ error: "Failed to assign admin role" }, { status: 500 });
+    }
+    return NextResponse.json({
+      success: true,
+      message: "Super admin created successfully",
+      admin: {
+        user_id: userId,
+        email,
+        full_name: full_name || null,
+      },
+    }, { status: 201 });
+  } catch (error) {
+    console.error("Error creating super admin:", error);
+    return NextResponse.json(
+      { error: "Failed to create super admin", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
+}
+export async function DELETE(request: Request) {
+  const { user, userRole } = await getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
+  }
+  if (userRole !== "admin") {
+    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+  try {
+    const body = await request.json();
+    const { user_id } = body;
+    if (!user_id) {
+      return NextResponse.json({ error: "user_id is required" }, { status: 400 });
+    }
+    if (user_id === user.id) {
+      return NextResponse.json({ error: "You cannot remove your own admin access" }, { status: 400 });
+    }
+    const supabaseAdmin = createAdminClient();
+    await supabaseAdmin
+      .from("user_roles")
+      .delete()
+      .eq("user_id", user_id)
+      .eq("role", "admin");
+    await supabaseAdmin
+      .from("pharmacy_admins")
+      .delete()
+      .eq("user_id", user_id);
+    return NextResponse.json({
+      success: true,
+      message: "Admin access removed successfully",
+    });
+  } catch (error) {
+    console.error("Error removing super admin:", error);
+    return NextResponse.json(
+      { error: "Failed to remove admin", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
+}
+‎components/layout/AdminNavigationTabs.tsx‎
++7
+-1
+Lines changed: 7 additions & 1 deletion
+Original file line number	Diff line number	Diff line change
+@@ -2,7 +2,7 @@
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Users, Building2, Pill, FolderTree, UserCog } from "lucide-react";
+import { Users, Building2, Pill, FolderTree, UserCog, ShieldCheck } from "lucide-react";
+
+export function AdminNavigationTabs() {
+  const pathname = usePathname();
+@@ -38,6 +38,12 @@ export function AdminNavigationTabs() {
+      icon: Pill,
+      active: pathname?.startsWith("/admin/medication-catalog") || pathname?.startsWith("/admin/medications"),
+    },
+    {
+      name: "Manage Admins",
+      href: "/admin/super-admins",
+      icon: ShieldCheck,
+      active: pathname?.startsWith("/admin/super-admins"),
+    },
+  ];
+
+  return (
+‎features/admin-dashboard/AdminDashboard.tsx‎
++15
+-1
+Lines changed: 15 additions & 1 deletion
+Original file line number	Diff line number	Diff line change
+@@ -4,7 +4,7 @@ import React from "react";
+import Link from "next/link";
+import { AdminDashboardProps } from "./types";
+import { cn } from "@/utils/tailwind-utils";
+import { Users, Building2, Pill, FolderTree, UserCog } from "lucide-react";
+import { Users, Building2, Pill, FolderTree, UserCog, ShieldCheck } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+
+import { useAdminDashboard } from "./hooks/useAdminDashboard";
+@@ -126,6 +126,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/admin/super-admins">
+            <Card className="py-6 hover:shadow-lg transition-shadow cursor-pointer">
+              <CardContent className="flex items-center gap-4">
+                <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <ShieldCheck className="h-6 w-6 text-[#1E3A8A]" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-base">Manage Admins</h3>
+                  <p className="text-xs text-muted-foreground mt-1">Create and manage super admins</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      </div>
+    </div>
+‎features/admin-dashboard/components/SuperAdminsManagement.tsx‎
++384
+Lines changed: 384 additions & 0 deletions
+Original file line number	Diff line number	Diff line change
+@@ -0,0 +1,384 @@
+"use client";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { Plus, Trash2, RefreshCw, ShieldCheck, Eye, EyeOff } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
+interface SuperAdmin {
+  user_id: string;
+  email: string;
+  full_name: string | null;
+  created_at: string;
+  last_sign_in: string | null;
+  pharmacies: Array<{
+    pharmacy_id: string;
+    pharmacies: { name: string; slug: string } | null;
+  }>;
+}
+export const SuperAdminsManagement: React.FC = () => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [admins, setAdmins] = useState<SuperAdmin[]>([]);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [deletingAdmin, setDeletingAdmin] = useState<SuperAdmin | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    email: "",
+    password: "",
+    full_name: "",
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const fetchAdmins = async () => {
+    setIsLoading(true);
+    try {
+      const response = await fetch("/api/admin/super-admins");
+      if (response.ok) {
+        const data = await response.json();
+        setAdmins(data.admins || []);
+      } else {
+        toast.error("Failed to fetch admins");
+      }
+    } catch (error) {
+      console.error("Error fetching admins:", error);
+      toast.error("Failed to fetch admins");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchAdmins();
+  }, []);
+  const generatePassword = () => {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
+    const special = "!@#$%&*";
+    let pwd = "";
+    for (let i = 0; i < 12; i++) {
+      pwd += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    pwd += special.charAt(Math.floor(Math.random() * special.length));
+    pwd += Math.floor(Math.random() * 10);
+    setFormData((prev) => ({ ...prev, password: pwd }));
+    setShowPassword(true);
+  };
+  const handleCreate = async () => {
+    if (!formData.email || !formData.password) {
+      toast.error("Email and password are required");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/admin/super-admins", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        toast.success("Super admin created successfully");
+        setIsFormOpen(false);
+        setFormData({ email: "", password: "", full_name: "" });
+        fetchAdmins();
+      } else {
+        toast.error(result.error || "Failed to create admin");
+      }
+    } catch (error) {
+      console.error("Error creating admin:", error);
+      toast.error("Failed to create admin");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  const handleDelete = async () => {
+    if (!deletingAdmin) return;
+    try {
+      const response = await fetch("/api/admin/super-admins", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id: deletingAdmin.user_id }),
+      });
+      const result = await response.json();
+      if (response.ok) {
+        toast.success("Admin access removed");
+        setDeletingAdmin(null);
+        fetchAdmins();
+      } else {
+        toast.error(result.error || "Failed to remove admin");
+      }
+    } catch (error) {
+      console.error("Error removing admin:", error);
+      toast.error("Failed to remove admin");
+    }
+  };
+  return (
+    <>
+      <div className="container max-w-5xl mx-auto py-6 space-y-6 px-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
+              Super Admins
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Platform-level administrators with full access to all pharmacies and settings
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              onClick={fetchAdmins}
+              variant="outline"
+              className="border border-border"
+              data-testid="button-refresh"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+            <Button
+              onClick={() => {
+                setFormData({ email: "", password: "", full_name: "" });
+                setShowPassword(false);
+                setIsFormOpen(true);
+              }}
+              className="bg-primary hover:bg-primary/90"
+              data-testid="button-create-admin"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Super Admin
+            </Button>
+          </div>
+        </div>
+        <div className="bg-white rounded-lg border border-border shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Admin</TableHead>
+                <TableHead>Linked Pharmacies</TableHead>
+                <TableHead>Last Sign In</TableHead>
+                <TableHead>Created</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : admins.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
+                    No super admins found.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                admins.map((admin) => (
+                  <TableRow key={admin.user_id} data-testid={`row-admin-${admin.user_id}`}>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck className="h-4 w-4 text-[#1E3A8A]" />
+                        <div>
+                          <div className="font-medium" data-testid={`text-admin-email-${admin.user_id}`}>
+                            {admin.email}
+                          </div>
+                          {admin.full_name && (
+                            <div className="text-sm text-muted-foreground">{admin.full_name}</div>
+                          )}
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-wrap gap-1">
+                        {admin.pharmacies.length > 0 ? (
+                          admin.pharmacies.map((p, i) => (
+                            <Badge key={i} variant="secondary" className="text-xs">
+                              {(p.pharmacies as { name: string } | null)?.name || "Unknown"}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-sm text-muted-foreground">Platform only</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {admin.last_sign_in
+                          ? new Date(admin.last_sign_in).toLocaleDateString()
+                          : "Never"}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(admin.created_at).toLocaleDateString()}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setDeletingAdmin(admin)}
+                        className="border border-border text-destructive hover:text-destructive"
+                        data-testid={`button-delete-admin-${admin.user_id}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+        <DialogContent className="bg-white border border-border sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Super Admin</DialogTitle>
+            <DialogDescription>
+              This creates a platform-level admin with full access to all pharmacies and settings — same privileges as your account.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="full_name">Full Name</Label>
+              <Input
+                id="full_name"
+                placeholder="e.g., John Smith"
+                value={formData.full_name}
+                onChange={(e) => setFormData((prev) => ({ ...prev, full_name: e.target.value }))}
+                data-testid="input-full-name"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="admin@example.com"
+                value={formData.email}
+                onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
+                data-testid="input-email"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="password">Password *</Label>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Strong password"
+                    value={formData.password}
+                    onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
+                    data-testid="input-password"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    onClick={() => setShowPassword(!showPassword)}
+                    data-testid="button-toggle-password"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={generatePassword}
+                  className="border border-border whitespace-nowrap"
+                  data-testid="button-generate-password"
+                >
+                  Generate
+                </Button>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsFormOpen(false)}
+              className="border border-border"
+              data-testid="button-cancel"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreate}
+              disabled={isSubmitting || !formData.email || !formData.password}
+              className="bg-primary hover:bg-primary/90"
+              data-testid="button-submit-create"
+            >
+              {isSubmitting ? "Creating..." : "Create Super Admin"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <AlertDialog open={!!deletingAdmin} onOpenChange={() => setDeletingAdmin(null)}>
+        <AlertDialogContent className="bg-white border border-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Admin Access</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove admin access for{" "}
+              <strong>{deletingAdmin?.email}</strong>? This will revoke their platform-level
+              admin privileges and unlink them from any pharmacies.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border border-border">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              Remove Access
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+};
+0 commit comments
+Comments
+0

@@ -1,0 +1,236 @@
+Check Prescription Status
+Track the processing and shipping status of submitted prescriptions. Choose the method that best fits your integration needs.
+
+Choose Your Status Tracking Method
+We offer two ways to track prescription status. You can use either method, or both for redundancy.
+Option 1: Polling
+Call our /RxRequestStatus endpoint to check status on demand.
+
+You control when to check
+Simple implementation
+Good for testing
+Option 2: Webhook
+Provide your webhook URL and we'll POST status updates to you automatically.
+
+Real-time notifications
+No polling needed
+Best for production
+Option 1: Polling (Manual Status Check)
+Call the API endpoint whenever you need to check status
+
+Endpoint Overview
+Method
+POST
+URL
+https://www.dbswebserver.com/DBSRestApi/API/RxRequestStatus
+Content-Type
+application/json
+Request Structure
+Simple request with StoreID and QueueID
+POST /RxRequestStatus
+json
+{
+  "StoreID": "190190",
+  "QueueID": "12345"
+}
+
+StoreID
+Must match your API key (same as used when submitting the prescription)
+
+QueueID
+The unique identifier returned when you submitted the prescription via /RxWebRequest
+
+Success Response
+Status information for the requested prescription
+200 OK Response
+json
+{
+  "BillingStatus": "Billed",
+  "PatPay": "15.00",
+  "PackDateTime": "2025-11-07T10:30:00Z",
+  "ApprovedDate": "2025-11-07T11:00:00Z",
+  "TrackingNumber": "1Z999AA10123456784",
+  "RxNumber": "12343",
+  "PickupDate": "2025-11-07T14:00:00Z",
+  "DeliveredDate": null
+}
+
+Carrier Handoff Note
+Once a TrackingNumber is generated, DigitalRX tracks the prescription up to the point of shipment. To retrieve the final delivery timestamp and "front-door" confirmation, you must poll the FedEx API using the provided tracking number. See the Carrier Tracking (FedEx) guide for implementation details.
+Option 2: Webhook (Automatic Status Updates)
+Receive real-time status updates pushed to your server
+
+Setting Up Your Webhook
+Receive automatic status updates without polling
+If you want us to automatically POST status updates to your server, simply provide your webhook URL during onboarding.
+
+How to Register Your Webhook
+To set up webhook notifications, please contact our integration team with your webhook URL:
+
+Email: support@smartconnects.com
+Include your StoreID and the HTTPS endpoint URL where you want to receive updates
+Webhook Requirements
+Your endpoint must be accessible via HTTPS (port 443)
+Return HTTP 200 to acknowledge receipt (we'll retry on failures)
+Process the webhook asynchronously to avoid timeouts
+Webhook Payload
+The JSON payload we'll POST to your webhook URL
+POST to Your Webhook URL
+json
+{
+  "StoreID": "001",
+  "QueueID": "12345",
+  "RxNumber": "RX98765",
+  "RxDate": "1/1/2025",
+  "DrugName": "Aspirin",
+  "DrugNDC": "12342342323",
+  "Qty": "30",
+  "DateWritten": null,
+  "Instructions": null,
+  "Daw": null,
+  "DaysSupply": "30",
+  "Notes": null,
+  "InsPaid": null,
+  "LastFilledDate": null,
+  "RefillNbr": null,
+  "Refillremaining": null,
+  "PatCopay": "3",
+  "RxRetail": null,
+  "aacCost": null,
+  "AwpCost": null,
+  "RxOrigcode": null,
+  "DeliveryType": null,
+  "DeliveryDate": "1/1/2025",
+  "TrackingNumber": "1Z999AA10123456784",
+  "PrintedDate": null,
+  "RxStatus": null,
+  "LotNumber": "LOT12345",
+  "ApprovedByInitials": null,
+  "Patient": {
+    "PatientName": "John Doe",
+    "DOB": "1980-01-01",
+    "Sex": null,
+    "Patientstreet": null,
+    "Patientcity": null,
+    "Patientstate": null,
+    "Patientzip": null,
+    "PatientPhone": null,
+    "PatientMobile": null,
+    "SSN": null,
+    "Email": null,
+    "CustomID": null,
+    "PatientFlag": null,
+    "HomeName": null,
+    "Room": null,
+    "EmployerName": null,
+    "EmployerStreet": null,
+    "EmployerCity": null,
+    "EmployerState": null,
+    "EmployerZip": null,
+    "EmployerPhone": null,
+    "DateOfInjury": null
+  },
+  "Doctor": {
+    "DoctorName": "Dr. Smith",
+    "DoctorStreet": null,
+    "DoctorCity": null,
+    "DoctorState": null,
+    "DoctorZip": null,
+    "DoctorPhone": null,
+    "DoctorFax": null,
+    "DoctorDea": null,
+    "DoctorNpi": null,
+    "ContactName": null
+  },
+  "Insurance": {
+    "InsuredName": null,
+    "Bin": null,
+    "PCN": null,
+    "CardNumber": "xxxxxxx2",
+    "GroupNumber": null,
+    "Relation": null,
+    "PersonCode": null
+  }
+}
+
+We'll send a POST request to your webhook URL whenever the prescription status changes. The payload includes the complete prescription record with Patient, Doctor, and Insurance details.
+
+Response Fields Reference
+Understanding the status information (applies to both polling and webhook)
+BillingStatus
+string
+Either "Billed" (insurance billed) or "Cash" (patient pay)
+
+PatPay
+string
+Patient copay or total amount due (as decimal string, e.g., "15.00")
+
+PackDateTime
+ISO-8601
+Timestamp when the pharmacy filled the prescription
+
+ApprovedDate
+ISO-8601
+When the pharmacist approved the prescription for shipping
+
+TrackingNumber
+string
+Carrier tracking ID (e.g., UPS, FedEx tracking number)
+
+RxNumber
+string
+Assigned prescription number - use this for refill requests
+
+PickupDate
+ISO-8601
+When the carrier picked up the package from the pharmacy
+
+DeliveredDate
+ISO-8601 | null
+When the patient received/signed for delivery (null if not yet delivered)
+
+Status Lifecycle
+Typical progression of a prescription through the system
+1
+Submitted
+
+Prescription received, QueueID assigned
+
+2
+Packed
+
+Pharmacy fills prescription (PackDateTime set)
+
+3
+Approved
+
+Pharmacist approval for shipping (ApprovedDate set)
+
+4
+Picked Up
+
+Carrier collects package (PickupDate, TrackingNumber set)
+
+5
+Delivered
+
+Patient receives prescription (DeliveredDate set)
+
+Testing Both Methods
+You can test polling and webhook simultaneously
+During development and testing, you can use both methods at the same time:
+
+Use polling to manually check status from the API Tester or your development environment
+Set up a webhook to verify you're receiving real-time updates correctly
+Compare results to ensure your webhook handler processes data correctly
+Testing Tip
+For webhook testing, you can use services like webhook.site or ngrok to create a temporary public URL that forwards to your local development server.
+Error: No Status Found
+If you receive a "No status found" error when polling, verify:
+
+You're using the exact QueueID returned by /RxWebRequest
+The StoreID matches your API key and the one used when submitting
+The prescription was successfully submitted (check your submission response)
+There's no typo in the QueueID (it's case-sensitive)
+SmartConnect
+DigitalRX

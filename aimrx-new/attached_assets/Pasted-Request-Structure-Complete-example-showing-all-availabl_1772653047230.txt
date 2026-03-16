@@ -1,0 +1,99 @@
+Request Structure
+Complete example showing all available fields
+POST /RxWebRequest
+json
+{
+  "StoreID": "1",
+  "VendorName": "Your Company Name",
+  "Patient": {
+    "FirstName": "Yousef",
+    "LastName": "Roushdy",
+    "MI": null,
+    "DOB": "1985-09-25",
+    "Sex": "M",
+    "PatientStreet": "123 Main Street",
+    "PatientCity": "Little Rock",
+    "PatientState": "AR",
+    "PatientZip": "72211",
+    "PatientPhone": "5015551234",
+    "SSN": null
+  },
+  "Doctor": {
+    "DoctorFirstName": "PDF",
+    "DoctorLastName": "Smith",
+    "DoctorStreet": "400 Clinic Rd",
+    "DoctorCity": "Little Rock",
+    "DoctorState": "AR",
+    "DoctorZip": "72212",
+    "DoctorPhone": "5015556789",
+    "DoctorDea": "BS1234567",
+    "DoctorNpi": "1234567890"
+  },
+  "RxClaim": {
+    "RxNumber": "12343",
+    "DrugName": "Dyazide",
+    "DrugNDC": "00093-0012-01",
+    "Qty": "30",
+    "Refills": "1",
+    "DateWritten": "2025-10-25",
+    "Instructions": "Take 1 capsule by mouth daily",
+    "Daw": "N",
+    "DaysSupply": "30",
+    "Notes": "Fill as is",
+    "RequestedBy": "John Pharmacist"
+  },
+  "Insurance": {
+    "Bin": "610011",
+    "PCN": "ABC123",
+    "CardNumber": "RX99887766",
+    "GroupNumber": "GROUP001"
+  },
+  "DocSignature": "<Base64 string>",
+  "MessageHashCode": "<hash string>",
+  "PDFFile": "<Base64 string>"
+}
+
+See the Field Reference for detailed descriptions of each field, including required/optional status and data types.
+Success Response
+What to expect when your request is successfully submitted
+200 OK Response
+json
+{
+  "QueueID": "12345",
+  "Message": "Request submitted successfully"
+}
+
+QueueID
+A unique identifier for tracking this prescription request. Store this value to check the prescription's processing status later.
+
+Important: Persist the QueueID along with your internal transaction ID. You'll need it to call the status endpoint.
+Required Fields Summary
+Minimum fields needed for a valid submission
+Root Level:
+
+StoreID - Your pharmacy store identifier
+VendorName - Your company/integration name
+Patient Section:
+
+FirstName - Patient's first name
+LastName - Patient's last name
+Doctor Section:
+
+DoctorFirstName - Prescriber's first name
+DoctorLastName - Prescriber's last name
+RxClaim Section:
+
+RxNumber - Prescription number
+DrugName - Medication name
+Qty - Quantity (as string)
+Important Notes
+•
+Base64 Files: Both PDFFile and DocSignature must be Base64-encoded and ≤ 64 KB each
+•
+Date Format: Use ISO-8601 format (YYYY-MM-DD) for all dates like DOB and DateWritten
+•
+All Values as Strings: Send scalar values as strings unless specifically noted otherwise
+•
+Insurance Optional: The Insurance section can be omitted for cash-pay prescriptions
+SmartConnect
+DigitalRX

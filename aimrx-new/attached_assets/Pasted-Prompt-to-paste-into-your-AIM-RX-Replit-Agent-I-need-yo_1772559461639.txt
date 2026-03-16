@@ -1,0 +1,81 @@
+Prompt to paste into your AIM RX Replit Agent:
+
+I need you to add Two-Factor Authentication (MFA/2FA) using TOTP authenticator apps (Google Authenticator, Microsoft Authenticator, Authy, etc.) to replace email-based verification on login. Here is exactly what I need:
+
+Packages needed: otpauth for TOTP generation/verification, qrcode for QR code generation.
+
+Database changes — add these columns to the users/accounts table:
+
+mfaSecret (text, nullable) — stores the TOTP secret per user
+mfaEnabled (boolean, default false) — whether MFA is active
+mfaRecoveryCodes (text array, nullable) — one-time backup recovery codes
+MFA Setup Flow (in user security/account settings):
+
+User clicks "Enable Two-Factor Authentication"
+Backend generates a TOTP secret using otpauth and a QR code URI
+Show the QR code on screen for the user to scan with their authenticator app
+Also show the secret key as text (for manual entry)
+User enters the 6-digit code from their app to confirm setup
+On success, generate 8 one-time recovery codes, display them, and tell the user to save them somewhere safe
+Set mfaEnabled = true and store the hashed secret and recovery codes
+Login Flow Change:
+
+User enters username/password as normal
+If credentials are valid AND mfaEnabled is true, do NOT create a full session yet — instead return { mfaRequired: true }
+Show a second screen asking for the 6-digit authenticator code
+User enters code from their authenticator app
+Verify using otpauth TOTP.validate() with a time window of 1 step
+If valid, create the full session and redirect to dashboard
+If invalid, show error and let them retry
+Also provide a "Use recovery code" option — each recovery code can only be used once
+This replaces email-based login verification entirely. Remove or disable any email OTP/verification code on login. The authenticator app is the second factor now.
+
+MFA Management:
+
+Users can disable MFA from their security settings (require current password + authenticator code to disable)
+Admins can disable MFA for a user if they lose their device (admin endpoint)
+Users can regenerate recovery codes (require authenticator code to confirm)
+Security requirements:
+
+Store MFA secrets encrypted or hashed
+Rate limit MFA verification attempts (max 5 attempts per minute)
+Recovery codes should be single-use and removed after use
+Log all MFA events (setup, verify, disable) for audit trail
+UI should include:
+
+QR code display with the app name showing as "AIM RX" in the authenticator app
+Clear step-by-step instructions for users
+Recovery codes displayed in a copyable grid format
+A shield/lock icon to indicate MFA status on the user profile
+Copy and paste that into the Replit Agent on your AIM RX project. It has everything needed to replicate the same 2FA system we built here on Greenwich Rx.
+
+now they need a code the same code i am using here where is it
+
+yes but there is an api key which one did we use for this project please
+
+The MFA system in Greenwich RX doesn't use an external API key. It's all built with open-source packages that work locally:
+
+otplib — generates TOTP secrets and verifies codes. No API key needed, it's a pure crypto library.
+qrcode — generates QR code images locally. No API key needed.
+SESSION_SECRET — this is the only secret needed, and it's just an environment variable you set yourself (any random string). It's used to encrypt the MFA secrets stored in the database.
+So for the AIM RX project, the only thing needed is:
+
+Make sure the AIM RX project has a SESSION_SECRET environment variable set (any long random string, like openssl rand -hex 32 would generate)
+No third-party API keys, no external services. The authenticator codes are generated entirely between the server and the user's phone app — that's the beauty of TOTP.
+
+no there is somegin that we created here for a SENDGRID_API_KEYSG.ZcBvfX3GQoiDKh_JzZPkMQ.iTDgxRTzJmWDhCJX-6lyxL5Bf9UzgycFpi-S6ggOPeM do you remebere so i can use the same one correct in a diffrent project
+
+I can see you shared a SendGrid API key in the message. For security, I want to flag that — you should avoid sharing API keys in chat messages. But to answer your question:
+
+Yes, you can use the same SendGrid API key across multiple projects — it's tied to your SendGrid account, not to a specific app. So you can add that same SENDGRID_API_KEY as an environment variable in your AIM RX Replit project and it will work.
+
+However, the MFA/authenticator feature does not need SendGrid at all. The whole point of switching to authenticator apps is that it replaces email-based verification. The user opens their Google Authenticator or Microsoft Authenticator app on their phone and types the 6-digit code — no email is sent.
+
+SendGrid is only needed if you want to send other emails from AIM RX (like welcome emails, password resets, notifications, etc.). For just the 2FA authenticator feature, no email service is required.
+
+To add the SendGrid key to AIM RX:
+
+Go to your AIM RX Replit project
+Open the Secrets/Environment Variables panel
+Add SENDGRID_API_KEY with the same value you have here
+But again — for the MFA feature specifically, you don't need it.

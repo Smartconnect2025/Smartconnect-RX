@@ -1,0 +1,348 @@
+Deploy live for 3ff3450: fix: address code review feedback on analytics dashboard - Move view mode toggle (By Provider / Pharmacy Only) to global bar, always visible regardless of active tab - Move Refresh button to header bar, always accessible even when filters are collapsed - Replace redundant Refresh in filter panel with Clear Filters button - Add completed/cancelled to status badge config - Remove duplicate view mode toggle from Details tab
+March 3, 2026 at 6:03 PM
+Deploy started for 3ff3450: fix: address code review feedback on analytics dashboard - Move view mode toggle (By Provider / Pharmacy Only) to global bar, always visible regardless of active tab - Move Refresh button to header bar, always accessible even when filters are collapsed - Replace redundant Refresh in filter panel with Clear Filters button - Add completed/cancelled to status badge config - Remove duplicate view mode toggle from Details tab
+Triggered via Deploy Hook
+March 3, 2026 at 5:57 PM
+Deploy live for 5d1df4e: feat: transform Reporting & Analytics into premium analytics dashboard - Add interactive Recharts visualizations: revenue trend (area chart), order status distribution (donut), top providers (horizontal bar), pharmacy comparison (bar chart) - Animated count-up KPI cards: total orders, revenue, avg order value, active providers, top medication - Tab interface: Overview (charts) | Details (tables) - Collapsible filters panel - Polished status badges with dot indicators - Alternating table row colors - Last updated timestamp - Same #1E3A8A navy blue theme throughout - All existing functionality preserved (filters, export, both views)
+March 3, 2026 at 5:57 PM
+Deploy started for 5d1df4e: feat: transform Reporting & Analytics into premium analytics dashboard - Add interactive Recharts visualizations: revenue trend (area chart), order status distribution (donut), top providers (horizontal bar), pharmacy comparison (bar chart) - Animated count-up KPI cards: total orders, revenue, avg order value, active providers, top medication - Tab interface: Overview (charts) | Details (tables) - Collapsible filters panel - Polished status badges with dot indicators - Alternating table row colors - Last updated timestamp - Same #1E3A8A navy blue theme throughout - All existing functionality preserved (filters, export, both views)
+Triggered via Deploy Hook
+March 3, 2026 at 5:53 PM
+Deploy live for 56daf24: fix: simplify delete handler — remove redundant client-side Supabase delete The frontend was doing a double-delete: API call + client-side Supabase delete. The client-side delete used RLS which could block the operation. Now only uses the server-side API which runs with admin privileges.
+March 3, 2026 at 5:42 PM
+Deploy started for 56daf24: fix: simplify delete handler — remove redundant client-side Supabase delete The frontend was doing a double-delete: API call + client-side Supabase delete. The client-side delete used RLS which could block the operation. Now only uses the server-side API which runs with admin privileges.
+Triggered via Deploy Hook
+March 3, 2026 at 5:38 PM
+Deploy live for 2b20799: fix: delete provider now uses createAdminClient to bypass RLS + accepts super_admin - Switched from createServerClient (RLS) to createAdminClient (bypass RLS) - Role check now accepts both admin and super_admin - Uses getUser() auth pattern for consistency - Combined provider lookup into single query (id + user_id) - Simplified cascade delete flow
+March 3, 2026 at 5:32 PM
+Deploy started for 2b20799: fix: delete provider now uses createAdminClient to bypass RLS + accepts super_admin - Switched from createServerClient (RLS) to createAdminClient (bypass RLS) - Role check now accepts both admin and super_admin - Uses getUser() auth pattern for consistency - Combined provider lookup into single query (id + user_id) - Simplified cascade delete flow
+Triggered via Deploy Hook
+March 3, 2026 at 5:28 PM
+Deploy live for 0ad38ae: fix: clean up Manage Providers table layout — compact action buttons, proper alignment - Actions: Reset/Activate/Delete buttons now icon-only (hover tooltip shows label) - Edit button keeps text label for primary action clarity - Actions column right-aligned, no more wrapping - Headers use whitespace-nowrap to prevent column header wrapping - Overall cleaner, more compact table rows
+March 3, 2026 at 5:27 PM
+Deploy started for 0ad38ae: fix: clean up Manage Providers table layout — compact action buttons, proper alignment - Actions: Reset/Activate/Delete buttons now icon-only (hover tooltip shows label) - Edit button keeps text label for primary action clarity - Actions column right-aligned, no more wrapping - Headers use whitespace-nowrap to prevent column header wrapping - Overall cleaner, more compact table rows
+Triggered via Deploy Hook
+March 3, 2026 at 5:23 PM
+Deploy live for 30a9d12: feat: add Group column to doctors/providers table on /admin/doctors page The admin navigation links to /admin/doctors (not /admin/providers), so the Group column was not visible. Added group_id, group_name, platform_manager_name to the Doctor interface and added Group column between Tier Level and Date Added showing group badge with platform manager name.
+March 3, 2026 at 5:19 PM
+Deploy started for 30a9d12: feat: add Group column to doctors/providers table on /admin/doctors page The admin navigation links to /admin/doctors (not /admin/providers), so the Group column was not visible. Added group_id, group_name, platform_manager_name to the Doctor interface and added Group column between Tier Level and Date Added showing group badge with platform manager name.
+Triggered via Deploy Hook
+March 3, 2026 at 5:15 PM
+Deploy live for aa0678f: fix: add null guard to userRole checks to fix TypeScript strict mode build error All admin route .includes(userRole) calls now have !userRole || guard to handle string | null type from getUser(), fixing Render production build.
+March 3, 2026 at 5:06 PM
+Deploy started for aa0678f: fix: add null guard to userRole checks to fix TypeScript strict mode build error All admin route .includes(userRole) calls now have !userRole || guard to handle string | null type from getUser(), fixing Render production build.
+Triggered via Deploy Hook
+March 3, 2026 at 5:00 PM
+Deploy live for aa0678f: fix: add null guard to userRole checks to fix TypeScript strict mode build error All admin route .includes(userRole) calls now have !userRole || guard to handle string | null type from getUser(), fixing Render production build.
+March 3, 2026 at 4:52 PM
+Deploy started for aa0678f: fix: add null guard to userRole checks to fix TypeScript strict mode build error All admin route .includes(userRole) calls now have !userRole || guard to handle string | null type from getUser(), fixing Render production build.
+Triggered via Deploy Hook
+March 3, 2026 at 4:48 PM
+Deploy live for aa0678f: fix: add null guard to userRole checks to fix TypeScript strict mode build error All admin route .includes(userRole) calls now have !userRole || guard to handle string | null type from getUser(), fixing Render production build.
+March 3, 2026 at 4:20 PM
+Rollback
+Deploy started for aa0678f: fix: add null guard to userRole checks to fix TypeScript strict mode build error All admin route .includes(userRole) calls now have !userRole || guard to handle string | null type from getUser(), fixing Render production build.
+Triggered via Deploy Hook
+March 3, 2026 at 4:16 PM
+Deploy failed for b582e29: fix: sanitize empty string group_id to null in provider PATCH endpoint
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 3, 2026 at 4:16 PM
+
+Rollback
+Deploy started for b582e29: fix: sanitize empty string group_id to null in provider PATCH endpoint
+Triggered via Deploy Hook
+March 3, 2026 at 4:13 PM
+Deploy failed for 92a7dbf: fix: architect review bug fixes — Supabase client, role checks, null handling 1. Groups API (route + [id]): switched from createServerClient to createAdminClient to bypass RLS policies — admin endpoints should not depend on user RLS context 2. Groups [id]: fixed Next.js 15 params to use Promise<{id}> pattern 3. All admin endpoints: unified role checks to accept both admin and super_admin (groups, groups/[id], users POST, users GET, providers, providers/[id]) 4. Provider group assignment: normalize empty string to null before PATCH to avoid uuid type violation on Supabase 5. Provider form: normalize groupId/tierLevel empty strings to undefined so they don't get sent to the API as empty strings 6. Group metrics: removed dead providerUserToGroup code
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 3, 2026 at 4:11 PM
+
+Rollback
+Deploy started for 92a7dbf: fix: architect review bug fixes — Supabase client, role checks, null handling 1. Groups API (route + [id]): switched from createServerClient to createAdminClient to bypass RLS policies — admin endpoints should not depend on user RLS context 2. Groups [id]: fixed Next.js 15 params to use Promise<{id}> pattern 3. All admin endpoints: unified role checks to accept both admin and super_admin (groups, groups/[id], users POST, users GET, providers, providers/[id]) 4. Provider group assignment: normalize empty string to null before PATCH to avoid uuid type violation on Supabase 5. Provider form: normalize groupId/tierLevel empty strings to undefined so they don't get sent to the API as empty strings 6. Group metrics: removed dead providerUserToGroup code
+Triggered via Deploy Hook
+March 3, 2026 at 4:09 PM
+Deploy failed for 66f8dc2: feat: group management enhancement — provider assignment, dashboard metrics, role fixes 1. Providers table: Added Group column with assignment dialog, group filter dropdown 2. Groups page: Expandable rows showing assigned providers, add/remove providers 3. Provider quick-create form: Added Group dropdown alongside Tier Level 4. Dashboard: Group Performance section with provider count, orders, revenue per group 5. New API: /api/admin/group-metrics for dashboard performance data 6. Role fix: All admin endpoints now accept both admin and super_admin roles 7. Provider API: Now returns group_name and platform_manager_name
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 3, 2026 at 4:06 PM
+
+Rollback
+Deploy started for 66f8dc2: feat: group management enhancement — provider assignment, dashboard metrics, role fixes 1. Providers table: Added Group column with assignment dialog, group filter dropdown 2. Groups page: Expandable rows showing assigned providers, add/remove providers 3. Provider quick-create form: Added Group dropdown alongside Tier Level 4. Dashboard: Group Performance section with provider count, orders, revenue per group 5. New API: /api/admin/group-metrics for dashboard performance data 6. Role fix: All admin endpoints now accept both admin and super_admin roles 7. Provider API: Now returns group_name and platform_manager_name
+Triggered via Deploy Hook
+March 3, 2026 at 4:04 PM
+Deploy live for 8bbadea: fix: use horizontal AIM logo matching main website style - Replaced square logo with horizontal layout (Vitruvian Man + AIM text) - Height set to h-14 (56px) with auto width for proper aspect ratio
+March 3, 2026 at 12:25 PM
+Rollback
+Deploy started for 8bbadea: fix: use horizontal AIM logo matching main website style - Replaced square logo with horizontal layout (Vitruvian Man + AIM text) - Height set to h-14 (56px) with auto width for proper aspect ratio
+Triggered via Deploy Hook
+March 3, 2026 at 12:20 PM
+Deploy live for c0ccd73: fix: increase header logo to 64px
+March 3, 2026 at 12:18 PM
+Rollback
+Deploy started for c0ccd73: fix: increase header logo to 64px
+Triggered via Deploy Hook
+March 3, 2026 at 12:14 PM
+Deploy live for 2fb64e6: fix: increase header logo from 48px to 56px for better visibility
+March 3, 2026 at 12:14 PM
+Rollback
+Deploy started for 2fb64e6: fix: increase header logo from 48px to 56px for better visibility
+Triggered via Deploy Hook
+March 3, 2026 at 12:10 PM
+Deploy live for 9626b45: fix: use transparent logo in headers only - Added logo-header.png (transparent background) for top nav bars - Updated Header, AdminHeader, ProviderHeader to use local logo-header.png - Login page and Footer still use original Imgur logo
+March 3, 2026 at 12:06 PM
+Rollback
+Deploy started for 9626b45: fix: use transparent logo in headers only - Added logo-header.png (transparent background) for top nav bars - Updated Header, AdminHeader, ProviderHeader to use local logo-header.png - Login page and Footer still use original Imgur logo
+Triggered via Deploy Hook
+March 3, 2026 at 12:00 PM
+Deploy live for d4f7e3b: revert: restore original logo (Imgur) across all headers, footer, and login page Reverted all logo changes back to the original Imgur-hosted logo. Kept webpack watchOptions and CSP fixes from next.config.ts.
+March 3, 2026 at 11:57 AM
+Rollback
+Deploy started for d4f7e3b: revert: restore original logo (Imgur) across all headers, footer, and login page Reverted all logo changes back to the original Imgur-hosted logo. Kept webpack watchOptions and CSP fixes from next.config.ts.
+Triggered via Deploy Hook
+March 3, 2026 at 11:54 AM
+Deploy live for 4e35e51: fix: use user-provided transparent logo + fix header/hero overlap - Replaced logo with user's transparent PNG - Added spacing between header and hero section (pt-6 pb-4) - Reduced hero logo from h-20 to h-16 to prevent overlap - Increased gap between hero elements
+March 3, 2026 at 11:54 AM
+Rollback
+Deploy started for 4e35e51: fix: use user-provided transparent logo + fix header/hero overlap - Replaced logo with user's transparent PNG - Added spacing between header and hero section (pt-6 pb-4) - Reduced hero logo from h-20 to h-16 to prevent overlap - Increased gap between hero elements
+Triggered via Deploy Hook
+March 3, 2026 at 11:50 AM
+Deploy live for 08a285b: fix: switch to horizontal logo with transparent background - New horizontal layout logo (Vitruvian Man + AIM text side by side) - Transparent background via ImageMagick - Responsive sizing using h-10/h-12/h-20 with w-auto - Removed redundant 'AIM Medical' text from login header
+March 3, 2026 at 11:49 AM
+Rollback
+Deploy started for 08a285b: fix: switch to horizontal logo with transparent background - New horizontal layout logo (Vitruvian Man + AIM text side by side) - Transparent background via ImageMagick - Responsive sizing using h-10/h-12/h-20 with w-auto - Removed redundant 'AIM Medical' text from login header
+Triggered via Deploy Hook
+March 3, 2026 at 11:45 AM
+Deploy live for 48a4f78: fix: transparent logo background + larger sizing - Removed white background from logo using ImageMagick (8% fuzz) - Increased header/footer logo from 48px to 56px - Increased login header logo from 40px to 48px - Increased login hero logo from 100px to 120px - Removed drop-shadow-2xl from login hero logo - Fixed webpack watchOptions: disabled polling to stop infinite recompile loop on Replit
+March 3, 2026 at 11:37 AM
+Rollback
+Deploy started for 48a4f78: fix: transparent logo background + larger sizing - Removed white background from logo using ImageMagick (8% fuzz) - Increased header/footer logo from 48px to 56px - Increased login header logo from 40px to 48px - Increased login hero logo from 100px to 120px - Removed drop-shadow-2xl from login hero logo - Fixed webpack watchOptions: disabled polling to stop infinite recompile loop on Replit
+Triggered via Deploy Hook
+March 3, 2026 at 11:34 AM
+Deploy live for 3a9f182: fix: use local high-res logo instead of Imgur-hosted image Replaced all references to the Imgur-hosted logo with a local /logo.png served from the public directory. The high-resolution source image renders cleanly at 48x48 in headers without the smudgy appearance caused by the external low-quality fetch.
+March 3, 2026 at 11:25 AM
+Rollback
+Deploy started for 3a9f182: fix: use local high-res logo instead of Imgur-hosted image Replaced all references to the Imgur-hosted logo with a local /logo.png served from the public directory. The high-resolution source image renders cleanly at 48x48 in headers without the smudgy appearance caused by the external low-quality fetch.
+Triggered via Deploy Hook
+March 3, 2026 at 11:22 AM
+Deploy live for c93cd13: fix: remove drop-shadow-2xl from logo in all headers and footer The heavy drop shadow on the logo made it look dirty/smudgy on white backgrounds. Removed from Header, AdminHeader, ProviderHeader, and Footer. Kept the shadow on the login page where it works well on the blue gradient background.
+March 3, 2026 at 11:22 AM
+Rollback
+Deploy started for c93cd13: fix: remove drop-shadow-2xl from logo in all headers and footer The heavy drop shadow on the logo made it look dirty/smudgy on white backgrounds. Removed from Header, AdminHeader, ProviderHeader, and Footer. Kept the shadow on the login page where it works well on the blue gradient background.
+Triggered via Deploy Hook
+March 3, 2026 at 11:18 AM
+Deploy live for bef76a3: fix: add missing About Us and FAQs pages Footer linked to /about and /faqs but both pages did not exist (404). Created both pages with relevant content matching the existing policy page styling.
+March 3, 2026 at 11:12 AM
+Rollback
+Deploy started for bef76a3: fix: add missing About Us and FAQs pages Footer linked to /about and /faqs but both pages did not exist (404). Created both pages with relevant content matching the existing policy page styling.
+Triggered via Deploy Hook
+March 3, 2026 at 11:08 AM
+Deploy live for 33e70f4: fix: add missing telemedicine consent policy page Footer linked to /policies/telemedicine-consent but the page did not exist (404). Created the page with standard telemedicine consent content matching the style of the existing policy pages.
+March 3, 2026 at 11:08 AM
+Rollback
+Deploy started for 33e70f4: fix: add missing telemedicine consent policy page Footer linked to /policies/telemedicine-consent but the page did not exist (404). Created the page with standard telemedicine consent content matching the style of the existing policy pages.
+Triggered via Deploy Hook
+March 3, 2026 at 11:04 AM
+Deploy live for 899a6a4: fix: detect laptop open/resume and immediately check inactivity timeout Added visibilitychange listener to InactivityTimer. When the browser tab becomes visible again (laptop opened, tab switched back), it immediately checks if the 30-minute inactivity limit has passed and logs the user out if so. Previously, the timer only ran on a 30-second interval which could miss the resume event when the browser was suspended.
+March 3, 2026 at 10:45 AM
+Rollback
+Deploy started for 899a6a4: fix: detect laptop open/resume and immediately check inactivity timeout Added visibilitychange listener to InactivityTimer. When the browser tab becomes visible again (laptop opened, tab switched back), it immediately checks if the 30-minute inactivity limit has passed and logs the user out if so. Previously, the timer only ran on a 30-second interval which could miss the resume event when the browser was suspended.
+Triggered via Deploy Hook
+March 3, 2026 at 10:42 AM
+Deploy live for 5cef453: fix: prevent session_expired for users without session_started cookie The middleware was treating a missing session_started cookie as an expired session, immediately signing out authenticated users. This affected all existing sessions from before MFA was deployed and any session where the cookie was lost. Now when session_started is missing for an authenticated user, the middleware sets it (starting the 8-hour timer) instead of killing the session. Expiry only triggers when a session_started token exists AND has exceeded the 8-hour limit.
+March 3, 2026 at 6:35 AM
+Rollback
+Deploy started for 5cef453: fix: prevent session_expired for users without session_started cookie The middleware was treating a missing session_started cookie as an expired session, immediately signing out authenticated users. This affected all existing sessions from before MFA was deployed and any session where the cookie was lost. Now when session_started is missing for an authenticated user, the middleware sets it (starting the 8-hour timer) instead of killing the session. Expiry only triggers when a session_started token exists AND has exceeded the 8-hour limit.
+Triggered via Deploy Hook
+March 3, 2026 at 6:30 AM
+Deploy live for 6f21888: fix(H9): set mfa_pending cookie on ALL response paths including 400/429/500 Architect review found gaps: the rate-limit (429), catch error (500), and missing-params (400) paths also lacked the mfa_pending cookie. Without it, a partially authenticated session could trigger middleware session_expired signout on any subsequent navigation. Now every single response from send-code sets mfa_pending, ensuring the middleware never incorrectly signs out a user mid-login-flow.
+March 3, 2026 at 6:27 AM
+Rollback
+Deploy started for 6f21888: fix(H9): set mfa_pending cookie on ALL response paths including 400/429/500 Architect review found gaps: the rate-limit (429), catch error (500), and missing-params (400) paths also lacked the mfa_pending cookie. Without it, a partially authenticated session could trigger middleware session_expired signout on any subsequent navigation. Now every single response from send-code sets mfa_pending, ensuring the middleware never incorrectly signs out a user mid-login-flow.
+Triggered via Deploy Hook
+March 3, 2026 at 6:23 AM
+Deploy live for 092648e: fix(H9): ensure mfa_pending cookie on all send-code response paths
+March 3, 2026 at 6:23 AM
+Rollback
+Deploy started for 092648e: fix(H9): ensure mfa_pending cookie on all send-code response paths
+Triggered via Deploy Hook
+March 3, 2026 at 6:19 AM
+Deploy live for b0b5bf0: fix(H11,H12,C2,M1,M3): auth on check-status, verify-NPI, DigitalRx webhook, debug pages H11: check-status now requires admin/super_admin auth H12: verify-NPI now requires authenticated user C2: DigitalRx webhook validates DIGITALRX_WEBHOOK_SECRET header when configured Removed verbose GET health check leaking API format details M1: debug-pharmacies page checks admin role client-side, redirects unauthorized M3: check-my-role requires admin auth, returns minimal info (no cookie dump) M2: Seed routes already have admin auth — no changes needed
+March 2, 2026 at 11:33 PM
+Rollback
+Deploy started for b0b5bf0: fix(H11,H12,C2,M1,M3): auth on check-status, verify-NPI, DigitalRx webhook, debug pages H11: check-status now requires admin/super_admin auth H12: verify-NPI now requires authenticated user C2: DigitalRx webhook validates DIGITALRX_WEBHOOK_SECRET header when configured Removed verbose GET health check leaking API format details M1: debug-pharmacies page checks admin role client-side, redirects unauthorized M3: check-my-role requires admin auth, returns minimal info (no cookie dump) M2: Seed routes already have admin auth — no changes needed
+Triggered via Deploy Hook
+March 2, 2026 at 11:29 PM
+Deploy live for 71a76ed: fix(C1,C3,C4): critical security — auth on 6 routes, webhook signature required, encryption hardened C1 — Added authentication + role checks to 6 unprotected API routes: - GET /api/admin/pharmacies/list — admin/super_admin only - POST /api/admin/providers/tier-assignment — admin/super_admin only - GET /api/admin/providers/[id]/tier — admin/super_admin + own provider - POST/PATCH /api/admin/test-prescription-status — admin/super_admin only - POST /api/prescriptions/status-batch — auth required, non-admin scoped to own data - POST/GET /api/patients/[id]/payment-method — auth required, ownership enforced C3 — Authorize.Net webhook signature bypass fixed: - x-anet-signature header now REQUIRED (401 if missing) - AUTHNET_SIGNATURE_KEY env var now REQUIRED (503 if not set) - Internal secret calls check env var before use, log + skip if missing C4 — Encryption fallback hardened: - Production: throws error if ENCRYPTION_KEY missing - Development: warns and uses fallback for local testing only - Key fetched per operation, not cached at module level
+March 2, 2026 at 10:47 PM
+Rollback
+Deploy started for 71a76ed: fix(C1,C3,C4): critical security — auth on 6 routes, webhook signature required, encryption hardened C1 — Added authentication + role checks to 6 unprotected API routes: - GET /api/admin/pharmacies/list — admin/super_admin only - POST /api/admin/providers/tier-assignment — admin/super_admin only - GET /api/admin/providers/[id]/tier — admin/super_admin + own provider - POST/PATCH /api/admin/test-prescription-status — admin/super_admin only - POST /api/prescriptions/status-batch — auth required, non-admin scoped to own data - POST/GET /api/patients/[id]/payment-method — auth required, ownership enforced C3 — Authorize.Net webhook signature bypass fixed: - x-anet-signature header now REQUIRED (401 if missing) - AUTHNET_SIGNATURE_KEY env var now REQUIRED (503 if not set) - Internal secret calls check env var before use, log + skip if missing C4 — Encryption fallback hardened: - Production: throws error if ENCRYPTION_KEY missing - Development: warns and uses fallback for local testing only - Key fetched per operation, not cached at module level
+Triggered via Deploy Hook
+March 2, 2026 at 10:43 PM
+Deploy live for 0f51afa: fix(H8): add MFA rate limiting and reduce code expiry - Max 5 failed attempts before 15-minute lockout - Code expiry reduced from 60 minutes to 10 minutes - Single-row-per-user tracking (no race condition with concurrent attempts) - Lockout uses fixed timestamp (locked_until) not rolling window - Failed attempt counter resets on successful verification - Returns HTTP 429 with remaining attempts or lockout duration - New mfa_verification_attempts table with unique user_id constraint
+March 2, 2026 at 10:11 PM
+Rollback
+Deploy started for 0f51afa: fix(H8): add MFA rate limiting and reduce code expiry - Max 5 failed attempts before 15-minute lockout - Code expiry reduced from 60 minutes to 10 minutes - Single-row-per-user tracking (no race condition with concurrent attempts) - Lockout uses fixed timestamp (locked_until) not rolling window - Failed attempt counter resets on successful verification - Returns HTTP 429 with remaining attempts or lockout duration - New mfa_verification_attempts table with unique user_id constraint
+Triggered via Deploy Hook
+March 2, 2026 at 10:07 PM
+Deploy live for 29bf18b: fix(H6): replace silent error swallowing with proper logging in payment webhook - All catch blocks now log errors with context (transaction ID, prescription ID, email) - Database update failures are logged with error messages - Pharmacy submission failures log HTTP status and response body - Email sending failures are logged - Idempotency skips and amount mismatches now log for debugging - Invalid signatures and missing transaction IDs are logged - Signature validation warns and allows when AUTHNET_SIGNATURE_KEY is not set - Unhandled event types are logged as warnings
+March 2, 2026 at 9:59 PM
+Rollback
+Deploy started for 29bf18b: fix(H6): replace silent error swallowing with proper logging in payment webhook - All catch blocks now log errors with context (transaction ID, prescription ID, email) - Database update failures are logged with error messages - Pharmacy submission failures log HTTP status and response body - Email sending failures are logged - Idempotency skips and amount mismatches now log for debugging - Invalid signatures and missing transaction IDs are logged - Signature validation warns and allows when AUTHNET_SIGNATURE_KEY is not set - Unhandled event types are logged as warnings
+Triggered via Deploy Hook
+March 2, 2026 at 9:55 PM
+Deploy live for 8a5f728: fix(security): stop leaking password in reset-doctor-password response - Removed newPassword and email from JSON response body - Added input validation (userId type, email format, password min 8 chars) - Extended role check to include super_admin - Replaced raw Supabase error with generic message in response
+March 2, 2026 at 9:18 PM
+Rollback
+Deploy started for 8a5f728: fix(security): stop leaking password in reset-doctor-password response - Removed newPassword and email from JSON response body - Added input validation (userId type, email format, password min 8 chars) - Extended role check to include super_admin - Replaced raw Supabase error with generic message in response
+Triggered via Deploy Hook
+March 2, 2026 at 9:14 PM
+Deploy live for 90de665: fix(security): enforce admin role check on medications route Previously, if a user was not found in pharmacy_admins, the code defaulted to treating them as a platform admin without verifying their role. Now both GET and POST check user_roles for admin or super_admin before granting platform-level access. Returns 403 for unauthorized users.
+March 2, 2026 at 9:04 PM
+Rollback
+Deploy started for 90de665: fix(security): enforce admin role check on medications route Previously, if a user was not found in pharmacy_admins, the code defaulted to treating them as a platform admin without verifying their role. Now both GET and POST check user_roles for admin or super_admin before granting platform-level access. Returns 403 for unauthorized users.
+Triggered via Deploy Hook
+March 2, 2026 at 8:59 PM
+Deploy canceled for 8da77ac: fix: add dea_number to ProviderProfile type to fix build error
+March 2, 2026 at 8:49 PM
+Deploy started for 8da77ac: fix: add dea_number to ProviderProfile type to fix build error
+Triggered via Deploy Hook
+March 2, 2026 at 8:45 PM
+Deploy live for 8da77ac: fix: add dea_number to ProviderProfile type to fix build error
+March 2, 2026 at 8:45 PM
+Rollback
+Deploy started for 8da77ac: fix: add dea_number to ProviderProfile type to fix build error
+Triggered via Deploy Hook
+March 2, 2026 at 8:41 PM
+Deploy failed for 380015e: fix: DEA number support, DigitalRx payload alignment, case-insensitive gender mapping Changes: - Added DEA number field to provider profile (NPI Section UI, form defaults, service save) - DEA number included in both prescription submission routes (DoctorDea) - Added dea_number column to providers schema - Patient sex mapping now case-insensitive (.toLowerCase()) in both routes - Removed fake NPI fallback '1234567890' - Both routes send full patient/doctor contact details and DocSignature - Drug NDC, sig, refills, DAW, notes all included in DigitalRx payload
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 2, 2026 at 8:36 PM
+
+Rollback
+Deploy started for 380015e: fix: DEA number support, DigitalRx payload alignment, case-insensitive gender mapping Changes: - Added DEA number field to provider profile (NPI Section UI, form defaults, service save) - DEA number included in both prescription submission routes (DoctorDea) - Added dea_number column to providers schema - Patient sex mapping now case-insensitive (.toLowerCase()) in both routes - Removed fake NPI fallback '1234567890' - Both routes send full patient/doctor contact details and DocSignature - Drug NDC, sig, refills, DAW, notes all included in DigitalRx payload
+Triggered via Deploy Hook
+March 2, 2026 at 8:34 PM
+Deploy live for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+March 2, 2026 at 8:00 PM
+Deploy started for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+Triggered via Deploy Hook
+March 2, 2026 at 7:56 PM
+Deploy live for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+March 2, 2026 at 7:07 PM
+Deploy started for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+Triggered via Deploy Hook
+March 2, 2026 at 7:03 PM
+Deploy live for 3711ed4: fix(H2): make patient sex mapping consistent in submit-to-pharmacy Architect review found the submit-to-pharmacy route was mapping non-male genders to "F" instead of handling unknown. Now both routes use the same logic: male→M, female→F, unknown→U.
+March 2, 2026 at 7:03 PM
+Deploy started for 3711ed4: fix(H2): make patient sex mapping consistent in submit-to-pharmacy Architect review found the submit-to-pharmacy route was mapping non-male genders to "F" instead of handling unknown. Now both routes use the same logic: male→M, female→F, unknown→U.
+Triggered via Deploy Hook
+March 2, 2026 at 6:57 PM
+Deploy live for 7f38bca: fix(H2): read patient sex from database instead of hardcoding "M" The Sex field in the DigitalRx payload was hardcoded to "M" for every prescription. Now it reads the patient's gender from their record in the patients table (data.gender field) and maps it: - "male" → "M" - "female" → "F" - not set → "U" (unknown)
+March 2, 2026 at 6:57 PM
+Deploy started for 7f38bca: fix(H2): read patient sex from database instead of hardcoding "M" The Sex field in the DigitalRx payload was hardcoded to "M" for every prescription. Now it reads the patient's gender from their record in the patients table (data.gender field) and maps it: - "male" → "M" - "female" → "F" - not set → "U" (unknown)
+Triggered via Deploy Hook
+March 2, 2026 at 6:53 PM
+Deploy live for 04a04e1: fix(H1): correct inverted DAW logic in pharmacy submission The Dispense As Written flag was sending "N" when the doctor requested no substitution, and "Y" when substitution was allowed. This is backwards — "Y" means dispense as written (no substitution) and "N" means substitution is allowed. Flipped the values.
+March 2, 2026 at 6:50 PM
+Deploy started for 04a04e1: fix(H1): correct inverted DAW logic in pharmacy submission The Dispense As Written flag was sending "N" when the doctor requested no substitution, and "Y" when substitution was allowed. This is backwards — "Y" means dispense as written (no substitution) and "N" means substitution is allowed. Flipped the values.
+Triggered via Deploy Hook
+March 2, 2026 at 6:46 PM
+Deploy live for 492a712: revert: restore AuthNet webhook signature to optional check
+March 2, 2026 at 6:46 PM
+Deploy started for 492a712: revert: restore AuthNet webhook signature to optional check
+Triggered via Deploy Hook
+March 2, 2026 at 6:42 PM
+Deploy live for be05df4: security(C5): require AuthNet webhook signature — reject unsigned requests Previously, the x-anet-signature header check was optional. If the header was missing, the request was processed without any verification. Now the signature is mandatory — requests without it or with an invalid signature get 401 Unauthorized.
+March 2, 2026 at 6:42 PM
+Deploy started for be05df4: security(C5): require AuthNet webhook signature — reject unsigned requests Previously, the x-anet-signature header check was optional. If the header was missing, the request was processed without any verification. Now the signature is mandatory — requests without it or with an invalid signature get 401 Unauthorized.
+Triggered via Deploy Hook
+March 2, 2026 at 6:39 PM
+Deploy live for d6dbf23: revert: remove C4 webhook auth — will coordinate with DigitalRx team first
+March 2, 2026 at 6:39 PM
+Deploy started for d6dbf23: revert: remove C4 webhook auth — will coordinate with DigitalRx team first
+Triggered via Deploy Hook
+March 2, 2026 at 6:35 PM
+Deploy live for 5863fd5: security(C4): add API key authentication to DigitalRx webhook Previously, the DigitalRx webhook endpoint had zero authentication. Anyone who knew the URL could send a POST request to change any prescription status to "shipped" or "delivered". Fix: - Added API key verification via x-api-key header, Authorization Bearer token, or api_key query parameter (flexible for DigitalRx) - Uses timing-safe comparison to prevent timing attacks - Unauthorized requests return 401 and are logged to system_logs with the source IP for audit trail - GET health check endpoint also requires authentication (was previously exposing payload format documentation publicly) - Webhook secret stored as DIGITALRX_WEBHOOK_SECRET env var IMPORTANT: The DIGITALRX_WEBHOOK_SECRET env var must be set in Render dev and prod environments. The DigitalRx team needs to be given the key to include in their webhook calls.
+March 2, 2026 at 6:35 PM
+Deploy started for 5863fd5: security(C4): add API key authentication to DigitalRx webhook Previously, the DigitalRx webhook endpoint had zero authentication. Anyone who knew the URL could send a POST request to change any prescription status to "shipped" or "delivered". Fix: - Added API key verification via x-api-key header, Authorization Bearer token, or api_key query parameter (flexible for DigitalRx) - Uses timing-safe comparison to prevent timing attacks - Unauthorized requests return 401 and are logged to system_logs with the source IP for audit trail - GET health check endpoint also requires authentication (was previously exposing payload format documentation publicly) - Webhook secret stored as DIGITALRX_WEBHOOK_SECRET env var IMPORTANT: The DIGITALRX_WEBHOOK_SECRET env var must be set in Render dev and prod environments. The DigitalRx team needs to be given the key to include in their webhook calls.
+Triggered via Deploy Hook
+March 2, 2026 at 6:30 PM
+Deploy live for 47cddb7: security(C3): fix MFA bypass — HMAC-signed session cookie (fail-closed) Previously, the session_started cookie contained a plain timestamp that could be forged via browser dev tools to bypass MFA entirely. Fix: - Session cookie now uses HMAC-SHA256 signed tokens (timestamp.signature) - Signed with SESSION_SECRET via Web Crypto API (works in Edge middleware) - Middleware verifies signature before trusting session — forged cookies are rejected and user is signed out - No MFA proof (session_started absent or invalid) = no access (fail-closed) - isSessionExpired is now async to support crypto verification Attack scenarios now blocked: 1. Delete mfa_pending cookie → no session_started → signed out 2. Wait for mfa_pending to expire (10min) → no session_started → signed out 3. Forge session_started with fake timestamp → HMAC verification fails → signed out 4. Forge session_started with valid timestamp but wrong sig → rejected Files changed: - core/auth/cache-helpers.ts (HMAC sign/verify, async session helpers) - core/supabase/middleware.ts (await async isSessionExpired) - app/api/auth/mfa/verify-code/route.ts (await async setSessionStarted)
+March 2, 2026 at 6:13 PM
+Deploy started for 47cddb7: security(C3): fix MFA bypass — HMAC-signed session cookie (fail-closed) Previously, the session_started cookie contained a plain timestamp that could be forged via browser dev tools to bypass MFA entirely. Fix: - Session cookie now uses HMAC-SHA256 signed tokens (timestamp.signature) - Signed with SESSION_SECRET via Web Crypto API (works in Edge middleware) - Middleware verifies signature before trusting session — forged cookies are rejected and user is signed out - No MFA proof (session_started absent or invalid) = no access (fail-closed) - isSessionExpired is now async to support crypto verification Attack scenarios now blocked: 1. Delete mfa_pending cookie → no session_started → signed out 2. Wait for mfa_pending to expire (10min) → no session_started → signed out 3. Forge session_started with fake timestamp → HMAC verification fails → signed out 4. Forge session_started with valid timestamp but wrong sig → rejected Files changed: - core/auth/cache-helpers.ts (HMAC sign/verify, async session helpers) - core/supabase/middleware.ts (await async isSessionExpired) - app/api/auth/mfa/verify-code/route.ts (await async setSessionStarted)
+Triggered via Deploy Hook
+March 2, 2026 at 6:09 PM
+Deploy live for 201b894: fix: sync inactivity timer across tabs, remove dead warning code Architect review fixes: - Use localStorage instead of sessionStorage so activity syncs across tabs - Add BroadcastChannel-style cross-tab logout via storage events - When one tab detects inactivity, all tabs log out together - Activity in any tab resets the timer for all tabs - Remove unused warning logic (warningShownRef was a no-op) - Clean up localStorage keys on logout
+March 2, 2026 at 5:45 PM
+Deploy started for 201b894: fix: sync inactivity timer across tabs, remove dead warning code Architect review fixes: - Use localStorage instead of sessionStorage so activity syncs across tabs - Add BroadcastChannel-style cross-tab logout via storage events - When one tab detects inactivity, all tabs log out together - Activity in any tab resets the timer for all tabs - Remove unused warning logic (warningShownRef was a no-op) - Clean up localStorage keys on logout
+Triggered via Deploy Hook
+March 2, 2026 at 5:41 PM
+Deploy live for ef9c6d1: security: enforce 8-hour session timeout — force re-login after expiry Previously, Supabase refresh tokens kept users logged in indefinitely. A user could come back a day later and still be authenticated without entering credentials. Fix: - Added session_started cookie set when MFA verification succeeds - Middleware checks session age on every request - If session is older than 8 hours, signs user out and redirects to login - Shows "Your session has expired" message on the login page - All session cookies properly cleared on timeout and logout Files changed: - core/auth/cache-helpers.ts (session start/expiry helpers) - core/supabase/middleware.ts (session age check before route access) - app/api/auth/mfa/verify-code/route.ts (stamps session start time)
+March 2, 2026 at 5:41 PM
+Deploy started for ef9c6d1: security: enforce 8-hour session timeout — force re-login after expiry Previously, Supabase refresh tokens kept users logged in indefinitely. A user could come back a day later and still be authenticated without entering credentials. Fix: - Added session_started cookie set when MFA verification succeeds - Middleware checks session age on every request - If session is older than 8 hours, signs user out and redirects to login - Shows "Your session has expired" message on the login page - All session cookies properly cleared on timeout and logout Files changed: - core/auth/cache-helpers.ts (session start/expiry helpers) - core/supabase/middleware.ts (session age check before route access) - app/api/auth/mfa/verify-code/route.ts (stamps session start time)
+Triggered via Deploy Hook
+March 2, 2026 at 5:37 PM
+Deploy live for ef9c6d1: security: enforce 8-hour session timeout — force re-login after expiry Previously, Supabase refresh tokens kept users logged in indefinitely. A user could come back a day later and still be authenticated without entering credentials. Fix: - Added session_started cookie set when MFA verification succeeds - Middleware checks session age on every request - If session is older than 8 hours, signs user out and redirects to login - Shows "Your session has expired" message on the login page - All session cookies properly cleared on timeout and logout Files changed: - core/auth/cache-helpers.ts (session start/expiry helpers) - core/supabase/middleware.ts (session age check before route access) - app/api/auth/mfa/verify-code/route.ts (stamps session start time)
+March 2, 2026 at 5:36 PM
+Deploy started for ef9c6d1: security: enforce 8-hour session timeout — force re-login after expiry Previously, Supabase refresh tokens kept users logged in indefinitely. A user could come back a day later and still be authenticated without entering credentials. Fix: - Added session_started cookie set when MFA verification succeeds - Middleware checks session age on every request - If session is older than 8 hours, signs user out and redirects to login - Shows "Your session has expired" message on the login page - All session cookies properly cleared on timeout and logout Files changed: - core/auth/cache-helpers.ts (session start/expiry helpers) - core/supabase/middleware.ts (session age check before route access) - app/api/auth/mfa/verify-code/route.ts (stamps session start time)
+Triggered via Deploy Hook
+March 2, 2026 at 5:32 PM
+Deploy live for 40eff00: fix: remove MFA column — all admins already use email verification on sign-in Removed MFA status column and stat card since the app already requires email verification for all admin sign-ins. Replaced MFA stat with "Never Logged In" count which is more useful. Also removes unnecessary MFA factor API calls, making the admin list load faster.
+March 2, 2026 at 5:17 PM
+Deploy started for 40eff00: fix: remove MFA column — all admins already use email verification on sign-in Removed MFA status column and stat card since the app already requires email verification for all admin sign-ins. Replaced MFA stat with "Never Logged In" count which is more useful. Also removes unnecessary MFA factor API calls, making the admin list load faster.
+Triggered via Deploy Hook
+March 2, 2026 at 5:13 PM
+Deploy live for 8d91bde: feat: enhance Manage Admins with edit, search, MFA status, password reset, pharmacy linking Enhanced Super Admins management page with: - Edit admin (update name, link/unlink pharmacies) - Reset password with generate & copy - Search admins by name or email - Filter by platform-only or pharmacy-linked - MFA status column (On/Off badges) - Summary stats (total, active 30d, MFA enabled, pharmacy linked) - "You" badge on current user row - Current user sorted to top, cannot delete self - New PATCH endpoint for updating admin details - New pharmacies-list API endpoint for pharmacy dropdown
+March 2, 2026 at 5:08 PM
+Deploy started for 8d91bde: feat: enhance Manage Admins with edit, search, MFA status, password reset, pharmacy linking Enhanced Super Admins management page with: - Edit admin (update name, link/unlink pharmacies) - Reset password with generate & copy - Search admins by name or email - Filter by platform-only or pharmacy-linked - MFA status column (On/Off badges) - Summary stats (total, active 30d, MFA enabled, pharmacy linked) - "You" badge on current user row - Current user sorted to top, cannot delete self - New PATCH endpoint for updating admin details - New pharmacies-list API endpoint for pharmacy dropdown
+Triggered via Deploy Hook
+March 2, 2026 at 5:04 PM
+Deploy live for f522edd: fix: remove non-existent created_at column from user_roles query The user_roles table only has id, user_id, and role columns. Querying created_at caused the fetch to fail silently, resulting in "No super admins found" on the page.
+March 2, 2026 at 4:47 PM
+Deploy started for f522edd: fix: remove non-existent created_at column from user_roles query The user_roles table only has id, user_id, and role columns. Querying created_at caused the fetch to fail silently, resulting in "No super admins found" on the page.
+Triggered via Deploy Hook
+March 2, 2026 at 4:43 PM
+Deploy live for 79e152b: fix: use sync createAdminClient from @core/database/client to fix build error The previous import from @core/supabase/server returns a Promise, causing "Property from does not exist on type Promise" build error. Switched to @core/database/client which exports a sync function, matching the pattern used by all other working admin routes.
+March 2, 2026 at 4:40 PM
+Deploy started for 79e152b: fix: use sync createAdminClient from @core/database/client to fix build error The previous import from @core/supabase/server returns a Promise, causing "Property from does not exist on type Promise" build error. Switched to @core/database/client which exports a sync function, matching the pattern used by all other working admin routes.
+Triggered via Deploy Hook
+March 2, 2026 at 4:37 PM
+Deploy failed for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 2, 2026 at 4:34 PM
+
+Rollback
+Deploy started for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Triggered via Deploy Hook
+March 2, 2026 at 4:33 PM
+Deploy failed for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 2, 2026 at 4:18 PM
+
+Rollback
+Deploy started for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Triggered via Deploy Hook
+March 2, 2026 at 4:15 PM
+Deploy failed for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 2, 2026 at 4:04 PM
+
+Rollback
+Deploy started for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Triggered via Deploy Hook
+March 2, 2026 at 4:01 PM
+Deploy failed for d317d91: feat: add Manage Admins section to admin dashboard Adds a new "Manage Admins" page accessible from the Platform Owner Dashboard. Super admins can now create, view, and remove platform-level admin accounts directly from the UI instead of needing database access. New files: - app/api/admin/super-admins/route.ts (GET/POST/DELETE) - features/admin-dashboard/components/SuperAdminsManagement.tsx - app/(features)/admin/super-admins/page.tsx Modified: - AdminDashboard.tsx (added Manage Admins card) - AdminNavigationTabs.tsx (added Manage Admins tab)
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 2, 2026 at 3:59 PM
+
+Rollback
+Deploy started for d317d91: feat: add Manage Admins section to admin dashboard Adds a new "Manage Admins" page accessible from the Platform Owner Dashboard. Super admins can now create, view, and remove platform-level admin accounts directly from the UI instead of needing database access. New files: - app/api/admin/super-admins/route.ts (GET/POST/DELETE) - features/admin-dashboard/components/SuperAdminsManagement.tsx - app/(features)/admin/super-admins/page.tsx Modified: - AdminDashboard.tsx (added Manage Admins card) - AdminNavigationTabs.tsx (added Manage Admins tab)
+Triggered via Deploy Hook
+March 2, 2026 at 3:57 PM
+Deploy live for d2076c4: security: add admin auth checks to 12 unprotected admin API routes Routes protected: force-seed-admins, seed-aim, seed-aim-admin, seed-prescriptions, seed-experiencecare, seed-grinethch, seed-grinethch-admin, create-mfa-table, invite-doctor, reset-doctor-password, update-pharmacy-name, seed-real-medications Each route now requires valid login (401) and admin role (403).
+March 2, 2026 at 3:42 PM
+Deploy started for d2076c4: security: add admin auth checks to 12 unprotected admin API routes Routes protected: force-seed-admins, seed-aim, seed-aim-admin, seed-prescriptions, seed-experiencecare, seed-grinethch, seed-grinethch-admin, create-mfa-table, invite-doctor, reset-doctor-password, update-pharmacy-name, seed-real-medications Each route now requires valid login (401) and admin role (403).
+Triggered via Deploy Hook
+March 2, 2026 at 3:38 PM
+Deploy live for 5bb5bf4: security: add .mcp.json to .gitignore to prevent token leaks
+March 2, 2026 at 3:27 PM
+Deploy started for 5bb5bf4: security: add .mcp.json to .gitignore to prevent token leaks
+Triggered via Deploy Hook
+March 2, 2026 at 3:24 PM

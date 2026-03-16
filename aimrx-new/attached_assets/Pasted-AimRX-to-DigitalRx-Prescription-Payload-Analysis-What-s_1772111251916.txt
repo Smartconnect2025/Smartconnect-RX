@@ -1,0 +1,120 @@
+AimRX to DigitalRx — Prescription Payload Analysis: What's Sent vs What's Missing
+Summarize this email
+
+Joseph Sughayer <joseph@smartconnects.com>
+12:15 PM (3 hours ago)
+to Jerry
+
+Hi Jerry,
+
+I've done a deep inspection of the exact data AimRX sends to the pharmacy (DigitalRx/Greenwich Rx) when a prescription is submitted after payment. Below is a complete breakdown of what's included, what's missing, and what's incorrect.
+
+THE PAYLOAD AimRX SENDS (after online payment via Authorize.Net)
+
+This is built in app/api/prescriptions/[id]/submit-to-pharmacy/route.ts (lines 193–242):
+
+{
+  "StoreID": "[from pharmacy_backends table]",
+  "VendorName": "SmartRx Demo",
+  "Patient": {
+    "FirstName": "[from patients table]",
+    "LastName": "[from patients table]",
+    "DOB": "[from patients table]",
+    "Sex": "[from patients.gender — 'M' or 'F']",
+    "PatientStreet": "[from patients.physical_address.street]",
+    "PatientCity": "[from patients.physical_address.city]",
+    "PatientState": "[from patients.physical_address.state]",
+    "PatientZip": "[from patients.physical_address.zipCode]",
+    "PatientPhone": "[from patients.phone]"
+  },
+  "Doctor": {
+    "DoctorFirstName": "[from providers table]",
+    "DoctorLastName": "[from providers table]",
+    "DoctorNpi": "[from providers.npi_number, or fallback '1234567890']",
+    "DoctorStreet": "[from providers.physical_address.street]",
+    "DoctorCity": "[from providers.physical_address.city]",
+    "DoctorState": "[from providers.physical_address.state]",
+    "DoctorZip": "[from providers.physical_address.zipCode]",
+    "DoctorPhone": "[from providers.phone]"
+  },
+  "RxClaim": {
+    "RxNumber": "[auto-generated, e.g. RX1772094772376]",
+    "DrugName": "[from prescription record]",
+    "Qty": "[from prescription record]",
+    "DateWritten": "[auto-generated, today's date]",
+    "RequestedBy": "[provider first + last name]",
+    "Refills": "[from prescription record]",
+    "DrugNDC": "[from pharmacy_medications.ndc]",
+    "Instructions": "[from prescription.sig or medication.dosage_instructions]",
+    "Notes": "[from prescription.pharmacy_notes or medication.notes]",
+    "Daw": "[Y or N from prescription.dispense_as_written]"
+  },
+  "DocSignature": "[from providers.signature_url]",
+  "PDFFile": "[base64 of stored prescription PDF]"
+}
+WHAT'S ACTUALLY ARRIVING AS EMPTY/MISSING (confirmed from Greenwich Rx pass-through monitor)
+
+Even though the code references these fields, they arrive as empty because of data issues and one code bug:
+
+Patient Section:
+
+Field	Expected	What Actually Arrives	Why
+PatientStreet	"123 Main St"	missing entirely	Patient's physical_address is null — address was never collected during intake
+PatientCity	"Little Rock"	missing entirely	Same reason
+PatientState	"AR"	missing entirely	This is the most critical field — Greenwich Rx uses patient state to route to the correct pharmacy location (Rx vs Rx II) based on licensed states. Without it, the system says "DigitalRx not configured"
+PatientZip	"72211"	missing entirely	Same reason
+PatientPhone	"5015551234"	Shows up	This one works — patients.phone field is populated
+Doctor Section:
+
+Field	Expected	What Actually Arrives	Why
+DoctorStreet	"400 Clinic Rd"	missing entirely	Provider's physical_address is null — provider never completed their profile address
+DoctorCity	"Little Rock"	missing entirely	Same reason
+DoctorState	"AR"	missing entirely	Same reason
+DoctorZip	"72212"	missing entirely	Same reason
+DoctorPhone	"5015556789"	always missing	CODE BUG: line 217 reads provider.phone but the database field is called provider.phone_number — so this will never be sent even when the provider has a phone number on file
+DoctorDea	"BS1234567"	never sent	Not in the code at all — the field is not included in the payload. Required for controlled substance prescriptions
+RxClaim Section:
+
+Field	Expected	What Actually Arrives	Why
+DrugNDC	"00093-0012-01"	"kk225245825"	NDC values in the pharmacy_medications table appear to have invalid/test data
+DaysSupply	"30"	never sent	Not in the code at all — the field is not included in the payload
+Other Missing Fields (from DigitalRx spec but not in AimRX code at all):
+
+Field	Purpose
+Insurance.Bin	Insurance routing number
+Insurance.PCN	Processor control number
+Insurance.CardNumber	Patient's insurance card number
+Insurance.GroupNumber	Insurance group
+MessageHashCode	Payload integrity hash
+Patient.SSN	Social security number (may be intentionally excluded for privacy)
+Patient.MI	Middle initial
+StoreID Issue:
+
+Pharmacy in AimRX	StoreID Being Sent	Correct DigitalRx StoreID
+Greenwich	190520	190520 ✅ (matches Greenwich Rx II)
+ECP	190670	190670 ✅
+Greenwich 2	AIM-826666	Not a real DigitalRx ID ❌
+Greenwich3	424130	Not a real DigitalRx ID ❌
+SUMMARY OF ROOT CAUSES
+
+Patient and provider address data is not being collected or is empty — The code tries to read it, but the database fields are null because the information was never entered during signup/intake.
+
+Code bug on DoctorPhone — provider.phone should be provider.phone_number. One-word fix but means doctor phone never transmits.
+
+DoctorDea and DaysSupply are not in the code — These fields were never added to the payload builder.
+
+NDC data quality — The medication catalog has invalid NDC values that don't match real drug identifiers.
+
+Some Store IDs don't match real DigitalRx assignments.
+
+WHAT NEEDS TO HAPPEN
+
+Ensure patient intake collects and requires a physical address (street, city, state, zip)
+Ensure provider onboarding collects and requires a physical address
+Fix provider.phone → provider.phone_number (line 217 in submit-to-pharmacy)
+Add DoctorDea from provider profile to the Doctor payload
+Add DaysSupply to the RxClaim payload
+Validate and correct NDC values in the pharmacy_medications table
+Correct Store IDs in pharmacy_backends table
+Let me know how you'd like to prioritize these
+

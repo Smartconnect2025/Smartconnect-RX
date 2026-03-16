@@ -1,0 +1,1 @@
+ALTER TABLE "allergies" ADD COLUMN "is_allergic" boolean DEFAULT true NOT NULL;

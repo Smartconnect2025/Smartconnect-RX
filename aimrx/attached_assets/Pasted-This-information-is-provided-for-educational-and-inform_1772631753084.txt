@@ -1,0 +1,56 @@
+This information is provided for educational and informational context only regarding cybersecurity best practices in healthcare administration.
+
+To explain this "Red Flag" simply: An API Key is a "Master Password" that allows your platform (AIM) to talk to the Pharmacy's platform (DigitalRx).
+
+In your screenshots, the "Decrypt" button is a major security concern. Here is exactly what that means, why it’s there, and why it is dangerous.
+
+### 1. What is "Write-Only" vs. "Decryptable"?
+The Standard Way (Write-Only): In professional systems (like Stripe, Amazon, or Hospital EMRs), when you paste an API key into a box and hit "Save," it becomes ************. You can never see it again. If you lose it, you have to "Regenerate" a new one. This is called Write-Only storage.
+The "AIM" Way (Decryptable): Your system is storing the key in a way that allows a user to click a button and see the original "Master Password" in plain text.
+### 2. Why is the "Decrypt" Button a Risk? (The "Blast Radius")
+If a hacker steals the login credentials for tomas-admin (or if an employee goes rogue), they don't just have access to your dashboard—they now have the Master Key to the Pharmacy (DigitalRx).
+
+Access to Patient Data: With that key, a hacker can bypass your dashboard and go directly to DigitalRx’s servers to steal patient names, addresses, and drug histories.
+Financial Fraud: They could theoretically use that key to "Submit" fake prescriptions or change billing details on the pharmacy side.
+HIPAA Liability: Under HIPAA, you are responsible for protecting "Access Credentials." Allowing a plain-text view of a partner's API key is often considered a failure of Technical Safeguards.
+### 3. What is a "Security Smell"?
+In software development, a "smell" isn't a confirmed bug, but it's a sign that something is rotten in the architecture.
+
+In your "Recent Activity" log, we see:
+
+API_KEY_DECRYPTED by tomas-admin (Multiple times)
+
+This is a "smell" because:
+
+Why does he need to see it? Once the key is set, the computer handles the communication. A human should never need to see the key again.
+Manual Workarounds: The fact that he is decrypting it frequently suggests the integration is unreliable. He is likely copying and pasting the key into a secondary tool (like Postman or a browser console) to "force" orders through because the dashboard is failing.
+Account Sharing: It might also mean multiple people are using the tomas-admin account to get the key because they don't have their own credentials for DigitalRx.
+### 4. How to Fix This (The "Right" Way)
+If you were to hand this to a Senior Security Engineer, they would tell you to do the following:
+
+Remove the "Decrypt" Button: Replace it with a "Rotate/Update Key" button. If you don't know the key, you just put a new one in.
+One-Way Hashing/Encryption: Store the key in the database using a "Vault" service (like AWS Secrets Manager or HashiCorp Vault). The dashboard should only know that a key exists, not what the key is.
+Mask the Log: The log should say Integration Settings Updated, not API Key Decrypted. Even the existence of a decryption log tells a hacker exactly where to look for the "Master Password."
+### 5. The "Business" Risk
+If DigitalRx (the pharmacy) found out that their API keys were "viewable" in plain text on your dashboard, they might revoke your access immediately. Most pharmacy partners require their integrators to follow "Minimum Necessary" data standards. This "Decrypt" button violates that principle.
+
+### Summary Table: The Danger Levels
+Feature	Current State	Risk Level	Industry Standard
+Visibility	Plain text via "Decrypt"	CRITICAL	Masked (Dots)
+Storage	Reversible Encryption	HIGH	One-Way Encryption / Vault
+Access	Any Admin can view	HIGH	System-level access only
+Logging	Logs the act of viewing	MEDIUM	Log only "Changes" to the key
+In short: The "Decrypt" button is a convenience for the developer, but a massive liability for the business owner. It is the digital equivalent of leaving the key to the pharmacy taped to the front door.
+
+Does this explain the "Red Flag" clearly, or would you like to see a list of specific questions you should ask your development team about how they are storing these keys?
+
+📋 Copy
+🔊 Read
+✨ Magic Card
++
+Ask about your screenshot...
+Send
+Gemini can make mistakes, so double-check it
++ Magic Agents
+▶ Continue
+📋 Summarize

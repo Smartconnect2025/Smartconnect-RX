@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RX Portal Pro - Client Presentation</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            color: #1E3A8A;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #1E3A8A;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #1E3A8A;
+            font-size: 2em;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e5e5;
+        }
+
+        h3 {
+            color: #2563EB;
+            font-size: 1.5em;
+            margin-top: 30px;
+            margin-bottom: 15px;
+        }
+
+        h4 {
+            color: #3B82F6;
+            font-size: 1.2em;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+
+        p {
+            margin-bottom: 15px;
+            color: #555;
+        }
+
+        ul, ol {
+            margin-left: 20px;
+            margin-bottom: 20px;
+        }
+
+        li {
+            margin-bottom: 10px;
+            color: #555;
+        }
+
+        strong {
+            color: #1E3A8A;
+        }
+
+        .feature-box {
+            background: #F9FAFB;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+            border-left: 3px solid #10B981;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: #10B981;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .highlight {
+            background: #EFF6FF;
+            padding: 20px;
+            border-radius: 6px;
+            border-left: 4px solid #2563EB;
+            margin: 20px 0;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+            .container {
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏥 RX PORTAL PRO - CLIENT PRESENTATION</h1>
+
+        <div class="highlight">
+            <h3>Platform Overview</h3>
+            <p>A complete prescription management platform connecting providers, patients, and pharmacies with real-time order processing and integrated payment system.</p>
+        </div>
+
+        <h2>👨‍💼 ADMIN DASHBOARD</h2>
+
+        <h3>Manage Providers</h3>
+        <!-- 📸 IMAGE 1: Screenshot from /admin/doctors - Invite Provider Form -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 1: Go to /admin/doctors<br>Screenshot: Invite Provider Form</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Invite New Providers:</strong> Send email invitations to healthcare professionals with secure signup links. Set their tier level (Tier 1-4) which determines their discount rates on prescriptions.</p>
+        </div>
+
+        <!-- 📸 IMAGE 2 & 3: Provider List and Tiers -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 2: Go to /admin/providers<br>Screenshot: Provider List Table</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Provider List:</strong> View all registered providers with their name, email, tier level, and activity status. Edit provider information, update tier levels, and monitor prescription activity.</p>
+        </div>
+
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 3: Go to /admin/tiers<br>Screenshot: Tier Management Page</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Tier Management:</strong> Create and manage pricing tiers (Tier 1-4). Each tier has a different discount rate that automatically applies to prescriptions. Higher tiers get better pricing.</p>
+        </div>
+
+        <h3>Manage Medications</h3>
+        <!-- 📸 IMAGE 4: Medication Catalog -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 4: Go to /admin/medication-catalog<br>Screenshot: Medication List with Categories</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Medication Catalog:</strong> Browse and search the complete medication database. View medication details including name, category, dosage forms, strengths, and pricing.</p>
+        </div>
+
+        <!-- 📸 IMAGE 5: Add Medication -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 5: Go to /admin/medications<br>Screenshot: Add Medication Form</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Add/Edit Medications:</strong> Add new medications to the catalog or update existing ones. Set pricing (AIM price, pharmacy price, patient price), configure dosage forms and strengths.</p>
+        </div>
+
+        <!-- 📸 IMAGE 6: Bulk Upload -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 6: Go to /admin/medications/bulk-upload<br>Screenshot: CSV Upload Interface</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Bulk Upload:</strong> Upload multiple medications at once via CSV file. Includes template download and validation to ensure correct format.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Categories:</strong> Organize medications by therapeutic category (Antibiotics, Pain Management, Cardiovascular, etc.) for easy browsing and filtering.</p>
+        </div>
+
+        <h3>View All Prescriptions</h3>
+        <!-- 📸 IMAGE 7: Prescriptions List -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 7: Go to /admin/prescriptions<br>Screenshot: All Prescriptions Table</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Prescription Dashboard:</strong> Complete list of all prescriptions created on the platform. View patient name, medication, provider, date created, payment status, and fulfillment status.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Filter & Search:</strong> Filter prescriptions by status (Pending Payment, Submitted, In Progress, Delivered). Search by patient name, provider name, or medication.</p>
+        </div>
+
+        <!-- 📸 IMAGE 8: Prescription Details -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 8: Click any prescription from list above<br>Screenshot: Prescription Detail View</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Prescription Details:</strong> Click any prescription to view complete details including patient info, medication details, dosage, pricing, payment status, Queue ID from pharmacy.</p>
+        </div>
+
+        <h3>Pharmacy Management</h3>
+        <!-- 📸 IMAGE 9: Pharmacy Orders -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 9: Go to /admin/pharmacy-orders<br>Screenshot: Pharmacy Queue with Queue IDs</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Pharmacy Orders Queue:</strong> View all prescriptions submitted to the pharmacy. Track order status from submission through delivery with real-time updates.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Queue ID Tracking:</strong> Each prescription receives a unique Queue ID from DigitalRx pharmacy for end-to-end tracking through their fulfillment system.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Pharmacy Reports:</strong> Generate reports on pharmacy orders, fulfillment times, and delivery statistics. Export data for analysis.</p>
+        </div>
+
+        <h3>API Logs & Monitoring</h3>
+        <!-- 📸 IMAGE 10: API Logs -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 10: Go to /admin/api-logs<br>Screenshot: API Call Logs with Timestamps</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Real-Time API Logs:</strong> Monitor all API calls to external services (DigitalRx pharmacy, Authorize.Net payments). View request/response data with timestamps.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Error Tracking:</strong> Failed API calls are flagged with error messages and HTTP status codes. Quickly identify and troubleshoot integration issues.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Webhook Logs:</strong> Track payment webhooks from Authorize.Net. Verify that payment confirmations are being received and processed correctly.</p>
+        </div>
+
+        <h3>📊 Pharmacy Order Reports</h3>
+        <!-- 📸 IMAGE: Pharmacy Order Reports -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 11: Go to /admin/pharmacy-reports<br>Screenshot: Pharmacy Order Reports with filters, metrics, and grouped order tables</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Comprehensive Reporting:</strong> Generate detailed reports and analytics for prescription orders across all pharmacies. Filter orders by pharmacy, provider, or date range, and export data to CSV for external analysis. View key performance metrics including total orders, total revenue, and average order value at a glance.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Detailed Order Tables:</strong> The reporting dashboard displays order tables grouped by pharmacy, showing Queue IDs, patient information, medication details, quantities, SIG instructions, pricing breakdowns (medication cost + provider fees), and order status. This enables pharmacy managers and administrators to track fulfillment performance, analyze revenue patterns, and identify operational bottlenecks.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Export & Analytics:</strong> Perfect for monthly reconciliation, financial reporting, and business intelligence. Export filtered data to share with accounting teams or integrate with external business analytics tools.</p>
+        </div>
+
+        <h3>🔌 Integration Settings</h3>
+        <!-- 📸 IMAGE: Integration Settings -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 12: Go to /admin/integrations<br>Screenshot: Integration Settings dashboard with configured services</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Centralized Integration Hub:</strong> Manage all third-party integrations and API connections from a single admin interface. Configure DigitalRx pharmacy fulfillment credentials, Authorize.Net payment gateway settings, and other service providers. Each integration provides secure credential management with encrypted storage and connection testing capabilities.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Status Monitoring:</strong> The integrations dashboard displays connection status for each service, including last successful sync time, API health checks, and error notifications. Administrators can enable/disable integrations, update API keys and credentials, configure webhook endpoints, and set integration-specific parameters without touching code. All changes are logged for audit compliance and troubleshooting purposes.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Seamless Onboarding:</strong> Streamlines onboarding of new pharmacy partners, payment processors, and healthcare data providers. Test connections before going live, and monitor integration performance to ensure reliable service delivery across the entire platform.</p>
+        </div>
+
+        <h3>Patient Management</h3>
+        <!-- 📸 IMAGE 13: Patient List -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 13: Go to /admin/patients<br>Screenshot: All Patients Table</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>View All Patients:</strong> Complete list of patients registered on the platform. Search by name, email, or phone number.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Patient Details:</strong> View patient demographics, contact information, medical history, and prescription history.</p>
+        </div>
+
+        <h3>System Settings</h3>
+        <div class="feature-box">
+            <p><strong>Platform Configuration:</strong> Configure payment gateway settings, email notifications, API integrations, and platform-wide settings.</p>
+        </div>
+
+        <h2>💊 PROVIDER PORTAL</h2>
+
+        <h3>Create Prescription - 3-Step Process</h3>
+
+        <!-- 📸 IMAGE 14: Step 1 -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 14: Go to /prescriptions/new/step1<br>Screenshot: Patient Search/Selection</p>
+        </div>
+
+        <div class="highlight">
+            <h4>Step 1: Select Patient</h4>
+            <ul>
+                <li>Search for existing patients by name or email</li>
+                <li>View patient details before selection</li>
+                <li>Create new patient record if not found</li>
+            </ul>
+        </div>
+
+        <!-- 📸 IMAGE 15 & 16: Step 2 -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 15: Go to /prescriptions/new/step2<br>Screenshot: Medication Search with Results</p>
+        </div>
+
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 16: Same page after selecting medication<br>Screenshot: Dosage Form, Strength, Quantity, Sig</p>
+        </div>
+
+        <div class="highlight">
+            <h4>Step 2: Select Medication & Configure Dosage</h4>
+            <ul>
+                <li><strong>Search Medications:</strong> Type-ahead search across all medications in catalog. Filter by category if needed.</li>
+                <li><strong>Select Dosage Form:</strong> Choose between tablets, capsules, liquid, injection, cream, etc.</li>
+                <li><strong>Choose Strength:</strong> Pick the appropriate strength (10mg, 25mg, 50mg, etc.)</li>
+                <li><strong>Set Quantity:</strong> Enter how many units to dispense</li>
+                <li><strong>Instructions (Sig):</strong> Type patient instructions like "Take 1 tablet by mouth twice daily with food"</li>
+                <li><strong>Refills:</strong> Specify number of allowed refills</li>
+            </ul>
+        </div>
+
+        <!-- 📸 IMAGE 17: Step 3 -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 17: Go to /prescriptions/new/step3<br>Screenshot: Review Summary with Pricing</p>
+        </div>
+
+        <div class="highlight">
+            <h4>Step 3: Review & Submit</h4>
+            <ul>
+                <li><strong>Review Summary:</strong> Complete prescription details including patient info, medication, dosage, quantity, instructions, and pricing</li>
+                <li><strong>Pharmacy Selection:</strong> Choose which pharmacy to send the prescription to</li>
+                <li><strong>Pricing Display:</strong> See AIM RX price, pharmacy price, and patient price (tier discount applied automatically)</li>
+                <li><strong>Payment Options:</strong> Direct card entry or send payment link to patient</li>
+                <li><strong>Submit:</strong> Send prescription to pharmacy and trigger payment flow</li>
+            </ul>
+        </div>
+
+        <h3>View Prescriptions</h3>
+        <!-- 📸 IMAGE 18 & 19: Prescription List and Details -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 18: Go to /prescriptions<br>Screenshot: Provider Prescription List</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Prescription List:</strong> View all prescriptions you've created. Filter by status, search by patient or medication name, view prescription details.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Status Tracking:</strong> Track each prescription from Pending Payment → Submitted → In Progress → Delivered with real-time status updates.</p>
+        </div>
+
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 19: Click any prescription from list<br>Screenshot: Prescription Detail View</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Prescription Actions:</strong> View details, resend payment link, print receipt, contact patient.</p>
+        </div>
+
+        <h3>Patient Management (EMR)</h3>
+        <!-- 📸 IMAGE 20 & 21: Patient List and Chart -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 20: Go to /basic-emr<br>Screenshot: Patient List (EMR)</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Patient List:</strong> View all your patients in one place. Search and filter to find patients quickly.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Patient Records:</strong> Create and manage patient profiles with demographics, contact info, medical history, allergies, and conditions.</p>
+        </div>
+
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 21: Click any patient → /basic-emr/patients/[id]<br>Screenshot: Patient Chart with History</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Patient Chart:</strong> View individual patient chart with prescription history, encounters, vitals, and lab results.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Encounters:</strong> Document patient visits and consultations with notes and observations.</p>
+        </div>
+
+        <h3>Provider Profile</h3>
+        <!-- 📸 IMAGE 22 & 23: Profile and Header -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 22: Go to /provider/profile<br>Screenshot: Profile with Company Name Field</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Personal Information:</strong> Manage your name, contact info, NPI number, and medical licenses.</p>
+        </div>
+
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 23: After saving company name<br>Screenshot: Header showing Company Name next to Logo</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Company Branding:</strong> Set your company name which displays in the provider platform header. Great for group practices.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Professional Info:</strong> Add specialties, board certifications, education, languages spoken, years of experience, and professional bio.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Practice Details:</strong> Configure services offered, insurance plans accepted, and hospital affiliations.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Availability:</strong> Set your working hours and availability for patient appointments.</p>
+        </div>
+        <div class="feature-box">
+            <p><strong>Payment & Billing:</strong> Configure your payment information for receiving commissions based on your tier level.</p>
+        </div>
+
+        <h2>🔐 PAYMENT PROCESSING</h2>
+
+        <h3>Payment Flow 1: Direct Card Entry</h3>
+        <!-- 📸 IMAGE 24: Direct Card Entry -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 24: Step 3 with direct card entry<br>Screenshot: Card Input Form in Step 3</p>
+        </div>
+
+        <ol>
+            <li>Provider creates prescription in 3-step wizard</li>
+            <li>Provider enters patient's card information</li>
+            <li>Authorize.Net processes payment immediately</li>
+            <li>Payment confirmed → Prescription submitted to pharmacy</li>
+            <li>Queue ID received from pharmacy</li>
+            <li>Status: "Paid" + "Submitted"</li>
+            <li>Patient receives confirmation email</li>
+        </ol>
+
+        <h3>Payment Flow 2: Payment Link</h3>
+        <ol>
+            <li>Provider creates prescription</li>
+            <li>Provider selects "Send Payment Link"</li>
+            <li>Prescription saved as "Pending Payment" (NOT sent to pharmacy yet)</li>
+            <li>Patient receives email with secure payment link</li>
+            <li>Patient clicks link and enters card information</li>
+            <li>Authorize.Net processes payment</li>
+            <li>Webhook confirms payment received</li>
+            <li>System automatically submits prescription to pharmacy</li>
+            <li>Queue ID received</li>
+            <li>Status updates to "Paid" + "Submitted"</li>
+            <li>Patient receives confirmation email</li>
+        </ol>
+
+        <h3>Payment Pages</h3>
+        <!-- 📸 IMAGE 25: Patient Payment Page -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 25: Go to /payment/[token]<br>Screenshot: Patient Payment Form</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Patient Payment Page:</strong> Secure payment form where patients enter card details. Shows prescription details, medication, quantity, and total amount.</p>
+        </div>
+
+        <!-- 📸 IMAGE 26: Payment Success -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 26: Go to /payment/success/[token]<br>Screenshot: Success Confirmation Page</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Payment Success Page:</strong> Confirmation page after successful payment with order details and tracking information.</p>
+        </div>
+
+        <!-- 📸 IMAGE 27: Payment Tracking -->
+        <div style="background:#f0f0f0; padding:40px; text-align:center; margin:20px 0; border:2px dashed #ccc; border-radius:4px;">
+            <p style="color:#666; font-size:14px;">📸 IMAGE 27: Go to /payment/track/[token]<br>Screenshot: Order Tracking Status</p>
+        </div>
+
+        <div class="feature-box">
+            <p><strong>Payment Tracking:</strong> Patients can track their order status from payment through delivery.</p>
+        </div>
+
+        <h3>Payment Security</h3>
+        <ul>
+            <li><strong>PCI-DSS Compliant:</strong> All payment processing meets PCI-DSS Level 1 requirements</li>
+            <li><strong>No Card Data Stored:</strong> Platform never stores raw credit card numbers or CVV codes</li>
+            <li><strong>Tokenized Transactions:</strong> Authorize.Net handles all sensitive payment data</li>
+            <li><strong>SSL/TLS Encryption:</strong> All payment pages use HTTPS encryption</li>
+        </ul>
+
+        <h2>🔗 INTEGRATIONS</h2>
+
+        <h3>DigitalRx Pharmacy</h3>
+        <ul>
+            <li><strong>Real-time Submission:</strong> Prescriptions are instantly sent to DigitalRx via secure API</li>
+            <li><strong>Queue ID Tracking:</strong> Each prescription receives unique Queue ID for tracking</li>
+            <li><strong>Status Updates:</strong> Pharmacy updates order status as it moves through fulfillment</li>
+        </ul>
+
+        <h3>Authorize.Net Payment Gateway</h3>
+        <ul>
+            <li><strong>Secure Processing:</strong> All credit/debit card transactions through trusted gateway</li>
+            <li><strong>Webhook Notifications:</strong> Instant notifications for payment approvals and failures</li>
+            <li><strong>Transaction Tracking:</strong> Every payment gets unique transaction ID</li>
+        </ul>
+
+        <h2>📊 KEY FEATURES</h2>
+
+        <h3>For Providers</h3>
+        <ul>
+            <li>Fast 3-step prescription creation (under 2 minutes)</li>
+            <li>Complete medication catalog with search and filtering</li>
+            <li>Tier-based pricing with automatic discount calculations</li>
+            <li>Patient management system (EMR)</li>
+            <li>Company branding in header</li>
+            <li>Prescription history and tracking</li>
+        </ul>
+
+        <h3>For Patients</h3>
+        <ul>
+            <li>Secure payment links via email</li>
+            <li>Real-time prescription status tracking</li>
+            <li>Email notifications at each stage</li>
+            <li>Simple payment process</li>
+        </ul>
+
+        <h3>For Admins</h3>
+        <ul>
+            <li>Complete platform oversight</li>
+            <li>Provider and tier management</li>
+            <li>Medication catalog management</li>
+            <li>Prescription monitoring</li>
+            <li>API logs and error tracking</li>
+            <li>Pharmacy order queue</li>
+        </ul>
+
+        <h2>📈 BENEFITS</h2>
+
+        <h3>Efficiency</h3>
+        <ul>
+            <li>⚡ Quick prescription creation (3 steps, under 2 minutes)</li>
+            <li>🔄 Automated pharmacy submission</li>
+            <li>📧 Automatic email notifications</li>
+            <li>💳 Instant or deferred payment processing</li>
+        </ul>
+
+        <h3>Revenue</h3>
+        <ul>
+            <li>💰 Tier-based provider commissions</li>
+            <li>📊 Transparent pricing for all parties</li>
+            <li>💳 Multiple payment options</li>
+        </ul>
+
+        <h3>Compliance</h3>
+        <ul>
+            <li>🔒 HIPAA-compliant data storage</li>
+            <li>🛡️ PCI-DSS payment security</li>
+            <li>📋 Complete audit logs</li>
+            <li>🔐 Role-based access control</li>
+        </ul>
+
+        <h3>User Experience</h3>
+        <ul>
+            <li>📱 Mobile-responsive design</li>
+            <li>🎯 Intuitive interfaces</li>
+            <li>📧 Clear email communications</li>
+            <li>📦 Real-time status tracking</li>
+        </ul>
+
+        <div class="highlight">
+            <h2 style="margin-top: 0;">Platform Status</h2>
+            <span class="status-badge">✅ LIVE & PRODUCTION-READY</span>
+            <p style="margin-top: 10px;"><strong>URL:</strong> <a href="https://3005.app.specode.ai" target="_blank">https://3005.app.specode.ai</a></p>
+        </div>
+    </div>
+</body>
+</html>

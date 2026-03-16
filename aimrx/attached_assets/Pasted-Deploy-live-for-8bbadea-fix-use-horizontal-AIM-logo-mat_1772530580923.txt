@@ -1,0 +1,1537 @@
+Deploy live for 8bbadea: fix: use horizontal AIM logo matching main website style - Replaced square logo with horizontal layout (Vitruvian Man + AIM text) - Height set to h-14 (56px) with auto width for proper aspect ratio
+March 3, 2026 at 12:25 PM
+Deploy started for 8bbadea: fix: use horizontal AIM logo matching main website style - Replaced square logo with horizontal layout (Vitruvian Man + AIM text) - Height set to h-14 (56px) with auto width for proper aspect ratio
+Triggered via Deploy Hook
+March 3, 2026 at 12:20 PM
+Deploy live for c0ccd73: fix: increase header logo to 64px
+March 3, 2026 at 12:18 PM
+Deploy started for c0ccd73: fix: increase header logo to 64px
+Triggered via Deploy Hook
+March 3, 2026 at 12:14 PM
+Deploy live for 2fb64e6: fix: increase header logo from 48px to 56px for better visibility
+March 3, 2026 at 12:14 PM
+Deploy started for 2fb64e6: fix: increase header logo from 48px to 56px for better visibility
+Triggered via Deploy Hook
+March 3, 2026 at 12:10 PM
+Deploy live for 9626b45: fix: use transparent logo in headers only - Added logo-header.png (transparent background) for top nav bars - Updated Header, AdminHeader, ProviderHeader to use local logo-header.png - Login page and Footer still use original Imgur logo
+March 3, 2026 at 12:06 PM
+Deploy started for 9626b45: fix: use transparent logo in headers only - Added logo-header.png (transparent background) for top nav bars - Updated Header, AdminHeader, ProviderHeader to use local logo-header.png - Login page and Footer still use original Imgur logo
+Triggered via Deploy Hook
+March 3, 2026 at 12:00 PM
+Deploy live for d4f7e3b: revert: restore original logo (Imgur) across all headers, footer, and login page Reverted all logo changes back to the original Imgur-hosted logo. Kept webpack watchOptions and CSP fixes from next.config.ts.
+March 3, 2026 at 11:57 AM
+Deploy started for d4f7e3b: revert: restore original logo (Imgur) across all headers, footer, and login page Reverted all logo changes back to the original Imgur-hosted logo. Kept webpack watchOptions and CSP fixes from next.config.ts.
+Triggered via Deploy Hook
+March 3, 2026 at 11:54 AM
+Deploy live for 4e35e51: fix: use user-provided transparent logo + fix header/hero overlap - Replaced logo with user's transparent PNG - Added spacing between header and hero section (pt-6 pb-4) - Reduced hero logo from h-20 to h-16 to prevent overlap - Increased gap between hero elements
+March 3, 2026 at 11:54 AM
+Rollback
+Deploy started for 4e35e51: fix: use user-provided transparent logo + fix header/hero overlap - Replaced logo with user's transparent PNG - Added spacing between header and hero section (pt-6 pb-4) - Reduced hero logo from h-20 to h-16 to prevent overlap - Increased gap between hero elements
+Triggered via Deploy Hook
+March 3, 2026 at 11:50 AM
+Deploy live for 08a285b: fix: switch to horizontal logo with transparent background - New horizontal layout logo (Vitruvian Man + AIM text side by side) - Transparent background via ImageMagick - Responsive sizing using h-10/h-12/h-20 with w-auto - Removed redundant 'AIM Medical' text from login header
+March 3, 2026 at 11:49 AM
+Rollback
+Deploy started for 08a285b: fix: switch to horizontal logo with transparent background - New horizontal layout logo (Vitruvian Man + AIM text side by side) - Transparent background via ImageMagick - Responsive sizing using h-10/h-12/h-20 with w-auto - Removed redundant 'AIM Medical' text from login header
+Triggered via Deploy Hook
+March 3, 2026 at 11:45 AM
+Deploy live for 48a4f78: fix: transparent logo background + larger sizing - Removed white background from logo using ImageMagick (8% fuzz) - Increased header/footer logo from 48px to 56px - Increased login header logo from 40px to 48px - Increased login hero logo from 100px to 120px - Removed drop-shadow-2xl from login hero logo - Fixed webpack watchOptions: disabled polling to stop infinite recompile loop on Replit
+March 3, 2026 at 11:37 AM
+Rollback
+Deploy started for 48a4f78: fix: transparent logo background + larger sizing - Removed white background from logo using ImageMagick (8% fuzz) - Increased header/footer logo from 48px to 56px - Increased login header logo from 40px to 48px - Increased login hero logo from 100px to 120px - Removed drop-shadow-2xl from login hero logo - Fixed webpack watchOptions: disabled polling to stop infinite recompile loop on Replit
+Triggered via Deploy Hook
+March 3, 2026 at 11:34 AM
+Deploy live for 3a9f182: fix: use local high-res logo instead of Imgur-hosted image Replaced all references to the Imgur-hosted logo with a local /logo.png served from the public directory. The high-resolution source image renders cleanly at 48x48 in headers without the smudgy appearance caused by the external low-quality fetch.
+March 3, 2026 at 11:25 AM
+Rollback
+Deploy started for 3a9f182: fix: use local high-res logo instead of Imgur-hosted image Replaced all references to the Imgur-hosted logo with a local /logo.png served from the public directory. The high-resolution source image renders cleanly at 48x48 in headers without the smudgy appearance caused by the external low-quality fetch.
+Triggered via Deploy Hook
+March 3, 2026 at 11:22 AM
+Deploy live for c93cd13: fix: remove drop-shadow-2xl from logo in all headers and footer The heavy drop shadow on the logo made it look dirty/smudgy on white backgrounds. Removed from Header, AdminHeader, ProviderHeader, and Footer. Kept the shadow on the login page where it works well on the blue gradient background.
+March 3, 2026 at 11:22 AM
+Rollback
+Deploy started for c93cd13: fix: remove drop-shadow-2xl from logo in all headers and footer The heavy drop shadow on the logo made it look dirty/smudgy on white backgrounds. Removed from Header, AdminHeader, ProviderHeader, and Footer. Kept the shadow on the login page where it works well on the blue gradient background.
+Triggered via Deploy Hook
+March 3, 2026 at 11:18 AM
+Deploy live for bef76a3: fix: add missing About Us and FAQs pages Footer linked to /about and /faqs but both pages did not exist (404). Created both pages with relevant content matching the existing policy page styling.
+March 3, 2026 at 11:12 AM
+Rollback
+Deploy started for bef76a3: fix: add missing About Us and FAQs pages Footer linked to /about and /faqs but both pages did not exist (404). Created both pages with relevant content matching the existing policy page styling.
+Triggered via Deploy Hook
+March 3, 2026 at 11:08 AM
+Deploy live for 33e70f4: fix: add missing telemedicine consent policy page Footer linked to /policies/telemedicine-consent but the page did not exist (404). Created the page with standard telemedicine consent content matching the style of the existing policy pages.
+March 3, 2026 at 11:08 AM
+Rollback
+Deploy started for 33e70f4: fix: add missing telemedicine consent policy page Footer linked to /policies/telemedicine-consent but the page did not exist (404). Created the page with standard telemedicine consent content matching the style of the existing policy pages.
+Triggered via Deploy Hook
+March 3, 2026 at 11:04 AM
+Deploy live for 899a6a4: fix: detect laptop open/resume and immediately check inactivity timeout Added visibilitychange listener to InactivityTimer. When the browser tab becomes visible again (laptop opened, tab switched back), it immediately checks if the 30-minute inactivity limit has passed and logs the user out if so. Previously, the timer only ran on a 30-second interval which could miss the resume event when the browser was suspended.
+March 3, 2026 at 10:45 AM
+Rollback
+Deploy started for 899a6a4: fix: detect laptop open/resume and immediately check inactivity timeout Added visibilitychange listener to InactivityTimer. When the browser tab becomes visible again (laptop opened, tab switched back), it immediately checks if the 30-minute inactivity limit has passed and logs the user out if so. Previously, the timer only ran on a 30-second interval which could miss the resume event when the browser was suspended.
+Triggered via Deploy Hook
+March 3, 2026 at 10:42 AM
+Deploy live for 5cef453: fix: prevent session_expired for users without session_started cookie The middleware was treating a missing session_started cookie as an expired session, immediately signing out authenticated users. This affected all existing sessions from before MFA was deployed and any session where the cookie was lost. Now when session_started is missing for an authenticated user, the middleware sets it (starting the 8-hour timer) instead of killing the session. Expiry only triggers when a session_started token exists AND has exceeded the 8-hour limit.
+March 3, 2026 at 6:35 AM
+Rollback
+Deploy started for 5cef453: fix: prevent session_expired for users without session_started cookie The middleware was treating a missing session_started cookie as an expired session, immediately signing out authenticated users. This affected all existing sessions from before MFA was deployed and any session where the cookie was lost. Now when session_started is missing for an authenticated user, the middleware sets it (starting the 8-hour timer) instead of killing the session. Expiry only triggers when a session_started token exists AND has exceeded the 8-hour limit.
+Triggered via Deploy Hook
+March 3, 2026 at 6:30 AM
+Deploy live for 6f21888: fix(H9): set mfa_pending cookie on ALL response paths including 400/429/500 Architect review found gaps: the rate-limit (429), catch error (500), and missing-params (400) paths also lacked the mfa_pending cookie. Without it, a partially authenticated session could trigger middleware session_expired signout on any subsequent navigation. Now every single response from send-code sets mfa_pending, ensuring the middleware never incorrectly signs out a user mid-login-flow.
+March 3, 2026 at 6:27 AM
+Rollback
+Deploy started for 6f21888: fix(H9): set mfa_pending cookie on ALL response paths including 400/429/500 Architect review found gaps: the rate-limit (429), catch error (500), and missing-params (400) paths also lacked the mfa_pending cookie. Without it, a partially authenticated session could trigger middleware session_expired signout on any subsequent navigation. Now every single response from send-code sets mfa_pending, ensuring the middleware never incorrectly signs out a user mid-login-flow.
+Triggered via Deploy Hook
+March 3, 2026 at 6:23 AM
+Deploy live for 092648e: fix(H9): ensure mfa_pending cookie on all send-code response paths
+March 3, 2026 at 6:23 AM
+Rollback
+Deploy started for 092648e: fix(H9): ensure mfa_pending cookie on all send-code response paths
+Triggered via Deploy Hook
+March 3, 2026 at 6:19 AM
+Deploy live for b0b5bf0: fix(H11,H12,C2,M1,M3): auth on check-status, verify-NPI, DigitalRx webhook, debug pages H11: check-status now requires admin/super_admin auth H12: verify-NPI now requires authenticated user C2: DigitalRx webhook validates DIGITALRX_WEBHOOK_SECRET header when configured Removed verbose GET health check leaking API format details M1: debug-pharmacies page checks admin role client-side, redirects unauthorized M3: check-my-role requires admin auth, returns minimal info (no cookie dump) M2: Seed routes already have admin auth — no changes needed
+March 2, 2026 at 11:33 PM
+Rollback
+Deploy started for b0b5bf0: fix(H11,H12,C2,M1,M3): auth on check-status, verify-NPI, DigitalRx webhook, debug pages H11: check-status now requires admin/super_admin auth H12: verify-NPI now requires authenticated user C2: DigitalRx webhook validates DIGITALRX_WEBHOOK_SECRET header when configured Removed verbose GET health check leaking API format details M1: debug-pharmacies page checks admin role client-side, redirects unauthorized M3: check-my-role requires admin auth, returns minimal info (no cookie dump) M2: Seed routes already have admin auth — no changes needed
+Triggered via Deploy Hook
+March 2, 2026 at 11:29 PM
+Deploy live for 71a76ed: fix(C1,C3,C4): critical security — auth on 6 routes, webhook signature required, encryption hardened C1 — Added authentication + role checks to 6 unprotected API routes: - GET /api/admin/pharmacies/list — admin/super_admin only - POST /api/admin/providers/tier-assignment — admin/super_admin only - GET /api/admin/providers/[id]/tier — admin/super_admin + own provider - POST/PATCH /api/admin/test-prescription-status — admin/super_admin only - POST /api/prescriptions/status-batch — auth required, non-admin scoped to own data - POST/GET /api/patients/[id]/payment-method — auth required, ownership enforced C3 — Authorize.Net webhook signature bypass fixed: - x-anet-signature header now REQUIRED (401 if missing) - AUTHNET_SIGNATURE_KEY env var now REQUIRED (503 if not set) - Internal secret calls check env var before use, log + skip if missing C4 — Encryption fallback hardened: - Production: throws error if ENCRYPTION_KEY missing - Development: warns and uses fallback for local testing only - Key fetched per operation, not cached at module level
+March 2, 2026 at 10:47 PM
+Rollback
+Deploy started for 71a76ed: fix(C1,C3,C4): critical security — auth on 6 routes, webhook signature required, encryption hardened C1 — Added authentication + role checks to 6 unprotected API routes: - GET /api/admin/pharmacies/list — admin/super_admin only - POST /api/admin/providers/tier-assignment — admin/super_admin only - GET /api/admin/providers/[id]/tier — admin/super_admin + own provider - POST/PATCH /api/admin/test-prescription-status — admin/super_admin only - POST /api/prescriptions/status-batch — auth required, non-admin scoped to own data - POST/GET /api/patients/[id]/payment-method — auth required, ownership enforced C3 — Authorize.Net webhook signature bypass fixed: - x-anet-signature header now REQUIRED (401 if missing) - AUTHNET_SIGNATURE_KEY env var now REQUIRED (503 if not set) - Internal secret calls check env var before use, log + skip if missing C4 — Encryption fallback hardened: - Production: throws error if ENCRYPTION_KEY missing - Development: warns and uses fallback for local testing only - Key fetched per operation, not cached at module level
+Triggered via Deploy Hook
+March 2, 2026 at 10:43 PM
+Deploy live for 0f51afa: fix(H8): add MFA rate limiting and reduce code expiry - Max 5 failed attempts before 15-minute lockout - Code expiry reduced from 60 minutes to 10 minutes - Single-row-per-user tracking (no race condition with concurrent attempts) - Lockout uses fixed timestamp (locked_until) not rolling window - Failed attempt counter resets on successful verification - Returns HTTP 429 with remaining attempts or lockout duration - New mfa_verification_attempts table with unique user_id constraint
+March 2, 2026 at 10:11 PM
+Rollback
+Deploy started for 0f51afa: fix(H8): add MFA rate limiting and reduce code expiry - Max 5 failed attempts before 15-minute lockout - Code expiry reduced from 60 minutes to 10 minutes - Single-row-per-user tracking (no race condition with concurrent attempts) - Lockout uses fixed timestamp (locked_until) not rolling window - Failed attempt counter resets on successful verification - Returns HTTP 429 with remaining attempts or lockout duration - New mfa_verification_attempts table with unique user_id constraint
+Triggered via Deploy Hook
+March 2, 2026 at 10:07 PM
+Deploy live for 29bf18b: fix(H6): replace silent error swallowing with proper logging in payment webhook - All catch blocks now log errors with context (transaction ID, prescription ID, email) - Database update failures are logged with error messages - Pharmacy submission failures log HTTP status and response body - Email sending failures are logged - Idempotency skips and amount mismatches now log for debugging - Invalid signatures and missing transaction IDs are logged - Signature validation warns and allows when AUTHNET_SIGNATURE_KEY is not set - Unhandled event types are logged as warnings
+March 2, 2026 at 9:59 PM
+Rollback
+Deploy started for 29bf18b: fix(H6): replace silent error swallowing with proper logging in payment webhook - All catch blocks now log errors with context (transaction ID, prescription ID, email) - Database update failures are logged with error messages - Pharmacy submission failures log HTTP status and response body - Email sending failures are logged - Idempotency skips and amount mismatches now log for debugging - Invalid signatures and missing transaction IDs are logged - Signature validation warns and allows when AUTHNET_SIGNATURE_KEY is not set - Unhandled event types are logged as warnings
+Triggered via Deploy Hook
+March 2, 2026 at 9:55 PM
+Deploy live for 8a5f728: fix(security): stop leaking password in reset-doctor-password response - Removed newPassword and email from JSON response body - Added input validation (userId type, email format, password min 8 chars) - Extended role check to include super_admin - Replaced raw Supabase error with generic message in response
+March 2, 2026 at 9:18 PM
+Rollback
+Deploy started for 8a5f728: fix(security): stop leaking password in reset-doctor-password response - Removed newPassword and email from JSON response body - Added input validation (userId type, email format, password min 8 chars) - Extended role check to include super_admin - Replaced raw Supabase error with generic message in response
+Triggered via Deploy Hook
+March 2, 2026 at 9:14 PM
+Deploy live for 90de665: fix(security): enforce admin role check on medications route Previously, if a user was not found in pharmacy_admins, the code defaulted to treating them as a platform admin without verifying their role. Now both GET and POST check user_roles for admin or super_admin before granting platform-level access. Returns 403 for unauthorized users.
+March 2, 2026 at 9:04 PM
+Rollback
+Deploy started for 90de665: fix(security): enforce admin role check on medications route Previously, if a user was not found in pharmacy_admins, the code defaulted to treating them as a platform admin without verifying their role. Now both GET and POST check user_roles for admin or super_admin before granting platform-level access. Returns 403 for unauthorized users.
+Triggered via Deploy Hook
+March 2, 2026 at 8:59 PM
+Deploy canceled for 8da77ac: fix: add dea_number to ProviderProfile type to fix build error
+March 2, 2026 at 8:49 PM
+Deploy started for 8da77ac: fix: add dea_number to ProviderProfile type to fix build error
+Triggered via Deploy Hook
+March 2, 2026 at 8:45 PM
+Deploy live for 8da77ac: fix: add dea_number to ProviderProfile type to fix build error
+March 2, 2026 at 8:45 PM
+Rollback
+Deploy started for 8da77ac: fix: add dea_number to ProviderProfile type to fix build error
+Triggered via Deploy Hook
+March 2, 2026 at 8:41 PM
+Deploy failed for 380015e: fix: DEA number support, DigitalRx payload alignment, case-insensitive gender mapping Changes: - Added DEA number field to provider profile (NPI Section UI, form defaults, service save) - DEA number included in both prescription submission routes (DoctorDea) - Added dea_number column to providers schema - Patient sex mapping now case-insensitive (.toLowerCase()) in both routes - Removed fake NPI fallback '1234567890' - Both routes send full patient/doctor contact details and DocSignature - Drug NDC, sig, refills, DAW, notes all included in DigitalRx payload
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 2, 2026 at 8:36 PM
+
+Rollback
+Deploy started for 380015e: fix: DEA number support, DigitalRx payload alignment, case-insensitive gender mapping Changes: - Added DEA number field to provider profile (NPI Section UI, form defaults, service save) - DEA number included in both prescription submission routes (DoctorDea) - Added dea_number column to providers schema - Patient sex mapping now case-insensitive (.toLowerCase()) in both routes - Removed fake NPI fallback '1234567890' - Both routes send full patient/doctor contact details and DocSignature - Drug NDC, sig, refills, DAW, notes all included in DigitalRx payload
+Triggered via Deploy Hook
+March 2, 2026 at 8:34 PM
+Deploy live for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+March 2, 2026 at 8:00 PM
+Rollback
+Deploy started for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+Triggered via Deploy Hook
+March 2, 2026 at 7:56 PM
+Deploy live for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+March 2, 2026 at 7:07 PM
+Rollback
+Deploy started for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+Triggered via Deploy Hook
+March 2, 2026 at 7:03 PM
+Deploy live for 3711ed4: fix(H2): make patient sex mapping consistent in submit-to-pharmacy Architect review found the submit-to-pharmacy route was mapping non-male genders to "F" instead of handling unknown. Now both routes use the same logic: male→M, female→F, unknown→U.
+March 2, 2026 at 7:03 PM
+Rollback
+Deploy started for 3711ed4: fix(H2): make patient sex mapping consistent in submit-to-pharmacy Architect review found the submit-to-pharmacy route was mapping non-male genders to "F" instead of handling unknown. Now both routes use the same logic: male→M, female→F, unknown→U.
+Triggered via Deploy Hook
+March 2, 2026 at 6:57 PM
+Deploy live for 7f38bca: fix(H2): read patient sex from database instead of hardcoding "M" The Sex field in the DigitalRx payload was hardcoded to "M" for every prescription. Now it reads the patient's gender from their record in the patients table (data.gender field) and maps it: - "male" → "M" - "female" → "F" - not set → "U" (unknown)
+March 2, 2026 at 6:57 PM
+Rollback
+Deploy started for 7f38bca: fix(H2): read patient sex from database instead of hardcoding "M" The Sex field in the DigitalRx payload was hardcoded to "M" for every prescription. Now it reads the patient's gender from their record in the patients table (data.gender field) and maps it: - "male" → "M" - "female" → "F" - not set → "U" (unknown)
+Triggered via Deploy Hook
+March 2, 2026 at 6:53 PM
+Deploy live for 04a04e1: fix(H1): correct inverted DAW logic in pharmacy submission The Dispense As Written flag was sending "N" when the doctor requested no substitution, and "Y" when substitution was allowed. This is backwards — "Y" means dispense as written (no substitution) and "N" means substitution is allowed. Flipped the values.
+March 2, 2026 at 6:50 PM
+Rollback
+Deploy started for 04a04e1: fix(H1): correct inverted DAW logic in pharmacy submission The Dispense As Written flag was sending "N" when the doctor requested no substitution, and "Y" when substitution was allowed. This is backwards — "Y" means dispense as written (no substitution) and "N" means substitution is allowed. Flipped the values.
+Triggered via Deploy Hook
+March 2, 2026 at 6:46 PM
+Deploy live for 492a712: revert: restore AuthNet webhook signature to optional check
+March 2, 2026 at 6:46 PM
+Rollback
+Deploy started for 492a712: revert: restore AuthNet webhook signature to optional check
+Triggered via Deploy Hook
+March 2, 2026 at 6:42 PM
+Deploy live for be05df4: security(C5): require AuthNet webhook signature — reject unsigned requests Previously, the x-anet-signature header check was optional. If the header was missing, the request was processed without any verification. Now the signature is mandatory — requests without it or with an invalid signature get 401 Unauthorized.
+March 2, 2026 at 6:42 PM
+Rollback
+Deploy started for be05df4: security(C5): require AuthNet webhook signature — reject unsigned requests Previously, the x-anet-signature header check was optional. If the header was missing, the request was processed without any verification. Now the signature is mandatory — requests without it or with an invalid signature get 401 Unauthorized.
+Triggered via Deploy Hook
+March 2, 2026 at 6:39 PM
+Deploy live for d6dbf23: revert: remove C4 webhook auth — will coordinate with DigitalRx team first
+March 2, 2026 at 6:39 PM
+Rollback
+Deploy started for d6dbf23: revert: remove C4 webhook auth — will coordinate with DigitalRx team first
+Triggered via Deploy Hook
+March 2, 2026 at 6:35 PM
+Deploy live for 5863fd5: security(C4): add API key authentication to DigitalRx webhook Previously, the DigitalRx webhook endpoint had zero authentication. Anyone who knew the URL could send a POST request to change any prescription status to "shipped" or "delivered". Fix: - Added API key verification via x-api-key header, Authorization Bearer token, or api_key query parameter (flexible for DigitalRx) - Uses timing-safe comparison to prevent timing attacks - Unauthorized requests return 401 and are logged to system_logs with the source IP for audit trail - GET health check endpoint also requires authentication (was previously exposing payload format documentation publicly) - Webhook secret stored as DIGITALRX_WEBHOOK_SECRET env var IMPORTANT: The DIGITALRX_WEBHOOK_SECRET env var must be set in Render dev and prod environments. The DigitalRx team needs to be given the key to include in their webhook calls.
+March 2, 2026 at 6:35 PM
+Rollback
+Deploy started for 5863fd5: security(C4): add API key authentication to DigitalRx webhook Previously, the DigitalRx webhook endpoint had zero authentication. Anyone who knew the URL could send a POST request to change any prescription status to "shipped" or "delivered". Fix: - Added API key verification via x-api-key header, Authorization Bearer token, or api_key query parameter (flexible for DigitalRx) - Uses timing-safe comparison to prevent timing attacks - Unauthorized requests return 401 and are logged to system_logs with the source IP for audit trail - GET health check endpoint also requires authentication (was previously exposing payload format documentation publicly) - Webhook secret stored as DIGITALRX_WEBHOOK_SECRET env var IMPORTANT: The DIGITALRX_WEBHOOK_SECRET env var must be set in Render dev and prod environments. The DigitalRx team needs to be given the key to include in their webhook calls.
+Triggered via Deploy Hook
+March 2, 2026 at 6:30 PM
+Deploy live for 47cddb7: security(C3): fix MFA bypass — HMAC-signed session cookie (fail-closed) Previously, the session_started cookie contained a plain timestamp that could be forged via browser dev tools to bypass MFA entirely. Fix: - Session cookie now uses HMAC-SHA256 signed tokens (timestamp.signature) - Signed with SESSION_SECRET via Web Crypto API (works in Edge middleware) - Middleware verifies signature before trusting session — forged cookies are rejected and user is signed out - No MFA proof (session_started absent or invalid) = no access (fail-closed) - isSessionExpired is now async to support crypto verification Attack scenarios now blocked: 1. Delete mfa_pending cookie → no session_started → signed out 2. Wait for mfa_pending to expire (10min) → no session_started → signed out 3. Forge session_started with fake timestamp → HMAC verification fails → signed out 4. Forge session_started with valid timestamp but wrong sig → rejected Files changed: - core/auth/cache-helpers.ts (HMAC sign/verify, async session helpers) - core/supabase/middleware.ts (await async isSessionExpired) - app/api/auth/mfa/verify-code/route.ts (await async setSessionStarted)
+March 2, 2026 at 6:13 PM
+Deploy started for 47cddb7: security(C3): fix MFA bypass — HMAC-signed session cookie (fail-closed) Previously, the session_started cookie contained a plain timestamp that could be forged via browser dev tools to bypass MFA entirely. Fix: - Session cookie now uses HMAC-SHA256 signed tokens (timestamp.signature) - Signed with SESSION_SECRET via Web Crypto API (works in Edge middleware) - Middleware verifies signature before trusting session — forged cookies are rejected and user is signed out - No MFA proof (session_started absent or invalid) = no access (fail-closed) - isSessionExpired is now async to support crypto verification Attack scenarios now blocked: 1. Delete mfa_pending cookie → no session_started → signed out 2. Wait for mfa_pending to expire (10min) → no session_started → signed out 3. Forge session_started with fake timestamp → HMAC verification fails → signed out 4. Forge session_started with valid timestamp but wrong sig → rejected Files changed: - core/auth/cache-helpers.ts (HMAC sign/verify, async session helpers) - core/supabase/middleware.ts (await async isSessionExpired) - app/api/auth/mfa/verify-code/route.ts (await async setSessionStarted)
+Triggered via Deploy Hook
+March 2, 2026 at 6:09 PM
+Deploy live for 201b894: fix: sync inactivity timer across tabs, remove dead warning code Architect review fixes: - Use localStorage instead of sessionStorage so activity syncs across tabs - Add BroadcastChannel-style cross-tab logout via storage events - When one tab detects inactivity, all tabs log out together - Activity in any tab resets the timer for all tabs - Remove unused warning logic (warningShownRef was a no-op) - Clean up localStorage keys on logout
+March 2, 2026 at 5:45 PM
+Deploy started for 201b894: fix: sync inactivity timer across tabs, remove dead warning code Architect review fixes: - Use localStorage instead of sessionStorage so activity syncs across tabs - Add BroadcastChannel-style cross-tab logout via storage events - When one tab detects inactivity, all tabs log out together - Activity in any tab resets the timer for all tabs - Remove unused warning logic (warningShownRef was a no-op) - Clean up localStorage keys on logout
+Triggered via Deploy Hook
+March 2, 2026 at 5:41 PM
+Deploy live for ef9c6d1: security: enforce 8-hour session timeout — force re-login after expiry Previously, Supabase refresh tokens kept users logged in indefinitely. A user could come back a day later and still be authenticated without entering credentials. Fix: - Added session_started cookie set when MFA verification succeeds - Middleware checks session age on every request - If session is older than 8 hours, signs user out and redirects to login - Shows "Your session has expired" message on the login page - All session cookies properly cleared on timeout and logout Files changed: - core/auth/cache-helpers.ts (session start/expiry helpers) - core/supabase/middleware.ts (session age check before route access) - app/api/auth/mfa/verify-code/route.ts (stamps session start time)
+March 2, 2026 at 5:41 PM
+Deploy started for ef9c6d1: security: enforce 8-hour session timeout — force re-login after expiry Previously, Supabase refresh tokens kept users logged in indefinitely. A user could come back a day later and still be authenticated without entering credentials. Fix: - Added session_started cookie set when MFA verification succeeds - Middleware checks session age on every request - If session is older than 8 hours, signs user out and redirects to login - Shows "Your session has expired" message on the login page - All session cookies properly cleared on timeout and logout Files changed: - core/auth/cache-helpers.ts (session start/expiry helpers) - core/supabase/middleware.ts (session age check before route access) - app/api/auth/mfa/verify-code/route.ts (stamps session start time)
+Triggered via Deploy Hook
+March 2, 2026 at 5:37 PM
+Deploy live for ef9c6d1: security: enforce 8-hour session timeout — force re-login after expiry Previously, Supabase refresh tokens kept users logged in indefinitely. A user could come back a day later and still be authenticated without entering credentials. Fix: - Added session_started cookie set when MFA verification succeeds - Middleware checks session age on every request - If session is older than 8 hours, signs user out and redirects to login - Shows "Your session has expired" message on the login page - All session cookies properly cleared on timeout and logout Files changed: - core/auth/cache-helpers.ts (session start/expiry helpers) - core/supabase/middleware.ts (session age check before route access) - app/api/auth/mfa/verify-code/route.ts (stamps session start time)
+March 2, 2026 at 5:36 PM
+Deploy started for ef9c6d1: security: enforce 8-hour session timeout — force re-login after expiry Previously, Supabase refresh tokens kept users logged in indefinitely. A user could come back a day later and still be authenticated without entering credentials. Fix: - Added session_started cookie set when MFA verification succeeds - Middleware checks session age on every request - If session is older than 8 hours, signs user out and redirects to login - Shows "Your session has expired" message on the login page - All session cookies properly cleared on timeout and logout Files changed: - core/auth/cache-helpers.ts (session start/expiry helpers) - core/supabase/middleware.ts (session age check before route access) - app/api/auth/mfa/verify-code/route.ts (stamps session start time)
+Triggered via Deploy Hook
+March 2, 2026 at 5:32 PM
+Deploy live for 40eff00: fix: remove MFA column — all admins already use email verification on sign-in Removed MFA status column and stat card since the app already requires email verification for all admin sign-ins. Replaced MFA stat with "Never Logged In" count which is more useful. Also removes unnecessary MFA factor API calls, making the admin list load faster.
+March 2, 2026 at 5:17 PM
+Deploy started for 40eff00: fix: remove MFA column — all admins already use email verification on sign-in Removed MFA status column and stat card since the app already requires email verification for all admin sign-ins. Replaced MFA stat with "Never Logged In" count which is more useful. Also removes unnecessary MFA factor API calls, making the admin list load faster.
+Triggered via Deploy Hook
+March 2, 2026 at 5:13 PM
+Deploy live for 8d91bde: feat: enhance Manage Admins with edit, search, MFA status, password reset, pharmacy linking Enhanced Super Admins management page with: - Edit admin (update name, link/unlink pharmacies) - Reset password with generate & copy - Search admins by name or email - Filter by platform-only or pharmacy-linked - MFA status column (On/Off badges) - Summary stats (total, active 30d, MFA enabled, pharmacy linked) - "You" badge on current user row - Current user sorted to top, cannot delete self - New PATCH endpoint for updating admin details - New pharmacies-list API endpoint for pharmacy dropdown
+March 2, 2026 at 5:08 PM
+Deploy started for 8d91bde: feat: enhance Manage Admins with edit, search, MFA status, password reset, pharmacy linking Enhanced Super Admins management page with: - Edit admin (update name, link/unlink pharmacies) - Reset password with generate & copy - Search admins by name or email - Filter by platform-only or pharmacy-linked - MFA status column (On/Off badges) - Summary stats (total, active 30d, MFA enabled, pharmacy linked) - "You" badge on current user row - Current user sorted to top, cannot delete self - New PATCH endpoint for updating admin details - New pharmacies-list API endpoint for pharmacy dropdown
+Triggered via Deploy Hook
+March 2, 2026 at 5:04 PM
+Deploy live for f522edd: fix: remove non-existent created_at column from user_roles query The user_roles table only has id, user_id, and role columns. Querying created_at caused the fetch to fail silently, resulting in "No super admins found" on the page.
+March 2, 2026 at 4:47 PM
+Deploy started for f522edd: fix: remove non-existent created_at column from user_roles query The user_roles table only has id, user_id, and role columns. Querying created_at caused the fetch to fail silently, resulting in "No super admins found" on the page.
+Triggered via Deploy Hook
+March 2, 2026 at 4:43 PM
+Deploy live for 79e152b: fix: use sync createAdminClient from @core/database/client to fix build error The previous import from @core/supabase/server returns a Promise, causing "Property from does not exist on type Promise" build error. Switched to @core/database/client which exports a sync function, matching the pattern used by all other working admin routes.
+March 2, 2026 at 4:40 PM
+Deploy started for 79e152b: fix: use sync createAdminClient from @core/database/client to fix build error The previous import from @core/supabase/server returns a Promise, causing "Property from does not exist on type Promise" build error. Switched to @core/database/client which exports a sync function, matching the pattern used by all other working admin routes.
+Triggered via Deploy Hook
+March 2, 2026 at 4:37 PM
+Deploy failed for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 2, 2026 at 4:34 PM
+
+Rollback
+Deploy started for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Triggered via Deploy Hook
+March 2, 2026 at 4:33 PM
+Deploy failed for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 2, 2026 at 4:18 PM
+
+Rollback
+Deploy started for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Triggered via Deploy Hook
+March 2, 2026 at 4:15 PM
+Deploy failed for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 2, 2026 at 4:04 PM
+
+Rollback
+Deploy started for b69bb36: fix: add welcome email to super admin creation + improve error handling - POST /api/admin/super-admins now sends SendGrid welcome email with login credentials matching the invite-doctor and pharmacy-admins flow - DELETE endpoint now has proper error handling for role/pharmacy removal - Fixed full_name display logic (operator precedence bug)
+Triggered via Deploy Hook
+March 2, 2026 at 4:01 PM
+Deploy failed for d317d91: feat: add Manage Admins section to admin dashboard Adds a new "Manage Admins" page accessible from the Platform Owner Dashboard. Super admins can now create, view, and remove platform-level admin accounts directly from the UI instead of needing database access. New files: - app/api/admin/super-admins/route.ts (GET/POST/DELETE) - features/admin-dashboard/components/SuperAdminsManagement.tsx - app/(features)/admin/super-admins/page.tsx Modified: - AdminDashboard.tsx (added Manage Admins card) - AdminNavigationTabs.tsx (added Manage Admins tab)
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 2, 2026 at 3:59 PM
+
+Rollback
+Deploy started for d317d91: feat: add Manage Admins section to admin dashboard Adds a new "Manage Admins" page accessible from the Platform Owner Dashboard. Super admins can now create, view, and remove platform-level admin accounts directly from the UI instead of needing database access. New files: - app/api/admin/super-admins/route.ts (GET/POST/DELETE) - features/admin-dashboard/components/SuperAdminsManagement.tsx - app/(features)/admin/super-admins/page.tsx Modified: - AdminDashboard.tsx (added Manage Admins card) - AdminNavigationTabs.tsx (added Manage Admins tab)
+Triggered via Deploy Hook
+March 2, 2026 at 3:57 PM
+Deploy live for d2076c4: security: add admin auth checks to 12 unprotected admin API routes Routes protected: force-seed-admins, seed-aim, seed-aim-admin, seed-prescriptions, seed-experiencecare, seed-grinethch, seed-grinethch-admin, create-mfa-table, invite-doctor, reset-doctor-password, update-pharmacy-name, seed-real-medications Each route now requires valid login (401) and admin role (403).
+March 2, 2026 at 3:42 PM
+Deploy started for d2076c4: security: add admin auth checks to 12 unprotected admin API routes Routes protected: force-seed-admins, seed-aim, seed-aim-admin, seed-prescriptions, seed-experiencecare, seed-grinethch, seed-grinethch-admin, create-mfa-table, invite-doctor, reset-doctor-password, update-pharmacy-name, seed-real-medications Each route now requires valid login (401) and admin role (403).
+Triggered via Deploy Hook
+March 2, 2026 at 3:38 PM
+Deploy live for 5bb5bf4: security: add .mcp.json to .gitignore to prevent token leaks
+March 2, 2026 at 3:27 PM
+Deploy started for 5bb5bf4: security: add .mcp.json to .gitignore to prevent token leaks
+Triggered via Deploy Hook
+March 2, 2026 at 3:24 PM
+Deploy live for 3952bc5: cleanup: remove Replit connection test
+March 1, 2026 at 10:32 PM
+Deploy started for 3952bc5: cleanup: remove Replit connection test
+Triggered via Deploy Hook
+March 1, 2026 at 10:28 PM
+Deploy canceled for 3952bc5: cleanup: remove Replit connection test
+March 1, 2026 at 10:15 PM
+Deploy started for 3952bc5: cleanup: remove Replit connection test
+Manually triggered by you via Dashboard
+March 1, 2026 at 10:14 PM
+Deploy live for ec79ee3: joseph feedback
+February 28, 2026 at 12:42 AM
+Deploy started for ec79ee3: joseph feedback
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 28, 2026 at 12:38 AM
+Service restarted by
+t
+tomasg@topflightapps.com
+February 28, 2026 at 12:38 AM
+Deploy live for bd6cbe4: add ncpdp number
+February 27, 2026 at 6:17 AM
+Deploy started for bd6cbe4: add ncpdp number
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 27, 2026 at 6:12 AM
+Deploy live for 5614aa6: fix feedback
+February 27, 2026 at 5:48 AM
+Deploy started for 5614aa6: fix feedback
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 27, 2026 at 5:43 AM
+Deploy live for 9318947: add csv export
+February 25, 2026 at 11:56 PM
+Deploy started for 9318947: add csv export
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 25, 2026 at 11:51 PM
+Deploy live for cb7cafc: add page
+February 25, 2026 at 8:56 PM
+Deploy started for cb7cafc: add page
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 25, 2026 at 8:52 PM
+Deploy live for 9e8213d: done
+February 24, 2026 at 10:41 PM
+Deploy started for 9e8213d: done
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 24, 2026 at 10:36 PM
+Deploy live for d552b43: improve refill engine
+February 24, 2026 at 5:07 PM
+Deploy started for d552b43: improve refill engine
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 24, 2026 at 5:01 PM
+Deploy live for 6cd3867: imrpove cron
+February 24, 2026 at 4:08 PM
+Deploy started for 6cd3867: imrpove cron
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 24, 2026 at 4:02 PM
+Deploy live for 6b139c1: fix test endpoint
+February 24, 2026 at 7:12 AM
+Deploy started for 6b139c1: fix test endpoint
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 24, 2026 at 7:08 AM
+Deploy live for 64d69d1: fix refill frecuency days
+February 23, 2026 at 11:12 PM
+Deploy started for 64d69d1: fix refill frecuency days
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 23, 2026 at 11:07 PM
+Deploy live for f2e8544: refills cron method
+February 23, 2026 at 9:59 PM
+Deploy started for f2e8544: refills cron method
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 23, 2026 at 9:55 PM
+Deploy canceled for ea57e01: pdf generation feature
+February 20, 2026 at 3:31 AM
+Deploy started for ea57e01: pdf generation feature
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 20, 2026 at 3:31 AM
+Deploy live for ea57e01: pdf generation feature
+February 19, 2026 at 6:22 PM
+Deploy started for ea57e01: pdf generation feature
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 19, 2026 at 6:15 PM
+Deploy live for 9d81384: add default 0 when a reason is specified
+February 17, 2026 at 10:33 PM
+Deploy started for 9d81384: add default 0 when a reason is specified
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 17, 2026 at 10:28 PM
+Deploy live for d93e7a4: Merge branch 'production' into main
+February 17, 2026 at 10:04 PM
+Deploy started for d93e7a4: Merge branch 'production' into main
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 17, 2026 at 9:59 PM
+Deploy live for e31bb95: fix colors
+February 17, 2026 at 9:49 PM
+Deploy started for e31bb95: fix colors
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 17, 2026 at 9:45 PM
+Deploy live for 10dee72: improve billpatientmodal
+February 17, 2026 at 9:33 PM
+Deploy started for 10dee72: improve billpatientmodal
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 17, 2026 at 9:29 PM
+Deploy live for 87fbffe: removel og
+February 17, 2026 at 9:21 PM
+Deploy started for 87fbffe: removel og
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 17, 2026 at 9:17 PM
+Deploy live for 139d99f: save consultation fee reason
+February 17, 2026 at 8:07 PM
+Deploy started for 139d99f: save consultation fee reason
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 17, 2026 at 8:01 PM
+Deploy live for 92ea296: merged with main
+February 17, 2026 at 5:37 PM
+Deploy started for 92ea296: merged with main
+Environment updated
+February 17, 2026 at 5:33 PM
+Deploy live for 3298cc4: Merge pull request #39 from Smartconnect2025/fedex fedex integration
+February 16, 2026 at 7:07 PM
+Deploy started for 3298cc4: Merge pull request #39 from Smartconnect2025/fedex fedex integration
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 16, 2026 at 7:01 PM
+Deploy live for 7930ab9: Done prescription session storage
+February 13, 2026 at 6:08 PM
+Deploy started for 7930ab9: Done prescription session storage
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 13, 2026 at 6:04 PM
+Deploy live for 7aee5d2: improve checkout ux
+February 13, 2026 at 2:15 AM
+Deploy started for 7aee5d2: improve checkout ux
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 13, 2026 at 2:11 AM
+Deploy live for 482316b: new provider portal
+February 12, 2026 at 7:26 PM
+Deploy started for 482316b: new provider portal
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 12, 2026 at 7:22 PM
+Deploy live for 1f0acca: remove doctor price
+February 11, 2026 at 3:26 AM
+Deploy started for 1f0acca: remove doctor price
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 11, 2026 at 3:22 AM
+Deploy canceled for 637ef3f: Override custom address prescription and fix pricing bugs
+February 11, 2026 at 3:22 AM
+Deploy started for 637ef3f: Override custom address prescription and fix pricing bugs
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 11, 2026 at 3:21 AM
+Deploy live for bb4ee1a: Override custom address prescription
+February 11, 2026 at 2:55 AM
+Deploy started for bb4ee1a: Override custom address prescription
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 11, 2026 at 2:52 AM
+Deploy live for 8758e12: add custom prescription address
+February 11, 2026 at 2:22 AM
+Deploy started for 8758e12: add custom prescription address
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 11, 2026 at 2:18 AM
+Deploy live for 164f523: shipping fee third iteration payment related
+February 11, 2026 at 12:13 AM
+Deploy started for 164f523: shipping fee third iteration payment related
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 11, 2026 at 12:09 AM
+Deploy live for 04250e8: make csv accept dolars instead of cents
+February 10, 2026 at 11:17 PM
+Deploy started for 04250e8: make csv accept dolars instead of cents
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 10, 2026 at 11:13 PM
+Deploy live for 9525a71: make csv accept dolars instead of cents
+February 10, 2026 at 11:00 PM
+Deploy started for 9525a71: make csv accept dolars instead of cents
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 10, 2026 at 10:57 PM
+Deploy live for 9dd6559: Shipping fee addition first iteration
+February 10, 2026 at 9:59 PM
+Deploy started for 9dd6559: Shipping fee addition first iteration
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 10, 2026 at 9:55 PM
+Deploy live for 08b3bce: fix UX print receipt
+February 9, 2026 at 8:55 PM
+Deploy started for 08b3bce: fix UX print receipt
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 9, 2026 at 8:52 PM
+Deploy live for 88c317e: fix csv upload
+February 9, 2026 at 7:22 PM
+Deploy started for 88c317e: fix csv upload
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 9, 2026 at 7:18 PM
+Deploy live for 5708200: fix build and automatically add notes
+February 7, 2026 at 1:19 AM
+Deploy started for 5708200: fix build and automatically add notes
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 7, 2026 at 1:15 AM
+Deploy failed for 639bd24: add sig instructions automatically
+Exited with status 1 while building your code. Check your deploy logs for more information.
+February 7, 2026 at 1:07 AM
+
+Rollback
+Deploy started for 639bd24: add sig instructions automatically
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 7, 2026 at 1:05 AM
+Deploy live for 0e4ddf2: apply tier discount
+February 6, 2026 at 11:37 PM
+Deploy started for 0e4ddf2: apply tier discount
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 6, 2026 at 11:33 PM
+Deploy live for 4707447: fix pricing stuff
+February 6, 2026 at 10:47 PM
+Deploy started for 4707447: fix pricing stuff
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 6, 2026 at 10:44 PM
+Deploy live for 0969852: add migration
+February 6, 2026 at 8:38 PM
+Deploy started for 0969852: add migration
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 6, 2026 at 8:32 PM
+Deploy canceled for f52924f: fix category creation
+February 6, 2026 at 8:32 PM
+Deploy started for f52924f: fix category creation
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 6, 2026 at 8:31 PM
+Deploy live for 5ac6751: digital rx integration clean up
+February 6, 2026 at 2:17 AM
+Deploy started for 5ac6751: digital rx integration clean up
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 6, 2026 at 2:14 AM
+Deploy live for 3483edc: digital rx integration clean up
+February 6, 2026 at 2:12 AM
+Deploy started for 3483edc: digital rx integration clean up
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 6, 2026 at 2:09 AM
+Deploy live for 4e0a44d: normalize ulrs and add logs
+February 5, 2026 at 10:42 PM
+Deploy started for 4e0a44d: normalize ulrs and add logs
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 5, 2026 at 10:39 PM
+Deploy live for a703480: fix patient creation
+February 5, 2026 at 10:33 PM
+Deploy started for a703480: fix patient creation
+Environment updated
+February 5, 2026 at 10:29 PM
+Deploy live for a703480: fix patient creation
+February 5, 2026 at 9:40 PM
+Deploy started for a703480: fix patient creation
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 5, 2026 at 9:36 PM
+Deploy live for 6a1460f: fix patients rls policy
+February 5, 2026 at 8:21 PM
+Deploy started for 6a1460f: fix patients rls policy
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 5, 2026 at 8:18 PM
+Deploy live for f2e7579: add phisical address from access request and fix build
+February 5, 2026 at 8:09 PM
+Deploy started for f2e7579: add phisical address from access request and fix build
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 5, 2026 at 8:05 PM
+Deploy live for e5aaf2b: add email after access request submission
+February 5, 2026 at 7:24 PM
+Deploy started for e5aaf2b: add email after access request submission
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 5, 2026 at 7:20 PM
+Deploy live for af66356: fix company name propagation
+February 5, 2026 at 7:09 PM
+Deploy started for af66356: fix company name propagation
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 5, 2026 at 7:04 PM
+Deploy live for 812a3c8: add emails
+February 5, 2026 at 6:34 PM
+Deploy started for 812a3c8: add emails
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 5, 2026 at 6:30 PM
+Deploy live for c999636: removed unsafe logs
+February 5, 2026 at 3:07 AM
+Deploy started for c999636: removed unsafe logs
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 5, 2026 at 3:02 AM
+Deploy live for b8be9ce: fix default pharmacy
+February 4, 2026 at 8:37 PM
+Deploy started for b8be9ce: fix default pharmacy
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 4, 2026 at 8:33 PM
+Deploy live for 0b7456a: restore RLS
+February 4, 2026 at 8:22 PM
+Deploy started for 0b7456a: restore RLS
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 4, 2026 at 8:18 PM
+Deploy live for 24b0b2d: remove rls temp
+February 4, 2026 at 8:05 PM
+Deploy started for 24b0b2d: remove rls temp
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 4, 2026 at 8:00 PM
+Deploy live for 0277158: add user _role rls
+February 4, 2026 at 6:03 PM
+Deploy started for 0277158: add user _role rls
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 4, 2026 at 5:59 PM
+Deploy live for 71a1d08: add user _role rls
+February 4, 2026 at 5:55 PM
+Deploy started for 71a1d08: add user _role rls
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 4, 2026 at 5:52 PM
+Deploy live for f4adf17: fix pateint header
+February 4, 2026 at 3:34 AM
+Deploy started for f4adf17: fix pateint header
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 4, 2026 at 3:31 AM
+Deploy live for 4b6338d: fix build
+February 4, 2026 at 3:19 AM
+Deploy started for 4b6338d: fix build
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 4, 2026 at 3:01 AM
+Deploy failed for 85de405: latest security fixes
+Exited with status 1 while building your code. Check your deploy logs for more information.
+February 4, 2026 at 2:55 AM
+
+Rollback
+Deploy started for 85de405: latest security fixes
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 4, 2026 at 2:46 AM
+Deploy live for df78b27: add address to submition
+February 3, 2026 at 8:55 PM
+Deploy started for df78b27: add address to submition
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 3, 2026 at 8:52 PM
+Deploy live for a95476a: fix pateint columns
+February 3, 2026 at 8:51 PM
+Deploy started for a95476a: fix pateint columns
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 3, 2026 at 8:48 PM
+Deploy live for 873202b: terst migration
+February 2, 2026 at 9:08 PM
+Deploy started for 873202b: terst migration
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 2, 2026 at 9:03 PM
+Deploy live for d3e0909: sync schemas
+February 2, 2026 at 8:52 PM
+Deploy started for d3e0909: sync schemas
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 2, 2026 at 8:49 PM
+Deploy live for 46df5f2: new baseline
+February 2, 2026 at 8:24 PM
+Deploy started for 46df5f2: new baseline
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 2, 2026 at 8:20 PM
+Deploy live for 46df5f2: new baseline
+February 2, 2026 at 8:09 PM
+Deploy started for 46df5f2: new baseline
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 2, 2026 at 8:06 PM
+Deploy live for e5b9786: pull updates
+February 2, 2026 at 6:34 PM
+Deploy started for e5b9786: pull updates
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+February 2, 2026 at 6:30 PM
+Deploy live for 1dec9d0: fix success page
+January 29, 2026 at 2:28 AM
+Deploy started for 1dec9d0: fix success page
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 29, 2026 at 2:25 AM
+Deploy live for c106078: refactored bill patient modals
+January 28, 2026 at 11:34 PM
+Deploy started for c106078: refactored bill patient modals
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 28, 2026 at 11:31 PM
+Deploy live for 6f78a3a: fix prescription history in patient emr
+January 28, 2026 at 12:28 AM
+Deploy started for 6f78a3a: fix prescription history in patient emr
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 28, 2026 at 12:24 AM
+Deploy live for a5f34d6: fix prescription history in patient emr
+January 28, 2026 at 12:18 AM
+Deploy started for a5f34d6: fix prescription history in patient emr
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 28, 2026 at 12:15 AM
+Deploy live for c83df2f: Add download pdf convert it to base64 and add it to rx submition
+January 27, 2026 at 11:39 PM
+Deploy started for c83df2f: Add download pdf convert it to base64 and add it to rx submition
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 27, 2026 at 11:36 PM
+Deploy live for 5ad9a5a: add logs to debug
+January 27, 2026 at 11:08 PM
+Deploy started for 5ad9a5a: add logs to debug
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 27, 2026 at 11:05 PM
+Deploy live for ba647f8: add logs to debug
+January 27, 2026 at 10:58 PM
+Deploy started for ba647f8: add logs to debug
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 27, 2026 at 10:55 PM
+Deploy live for c57139a: fix build
+January 27, 2026 at 10:34 PM
+Deploy started for c57139a: fix build
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 27, 2026 at 10:30 PM
+Deploy failed for 2dbaf3e: fix build
+Exited with status 1 while building your code. Check your deploy logs for more information.
+January 27, 2026 at 10:25 PM
+
+Rollback
+Deploy started for 2dbaf3e: fix build
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 27, 2026 at 10:24 PM
+Deploy failed for 5421b45: PDF prescription file, creation storage, relations and submition
+Exited with status 1 while building your code. Check your deploy logs for more information.
+January 27, 2026 at 10:17 PM
+
+Rollback
+Deploy started for 5421b45: PDF prescription file, creation storage, relations and submition
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 27, 2026 at 10:15 PM
+Deploy live for d6d662e: fix naming convension
+January 26, 2026 at 9:28 PM
+Deploy started for d6d662e: fix naming convension
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 26, 2026 at 9:24 PM
+Deploy live for 94c4400: remove notification bell
+January 26, 2026 at 8:21 PM
+Deploy started for 94c4400: remove notification bell
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 26, 2026 at 8:18 PM
+Deploy live for cfa492a: add filter status to incoming queue
+January 26, 2026 at 8:09 PM
+Deploy started for cfa492a: add filter status to incoming queue
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 26, 2026 at 8:07 PM
+Deploy live for 6c3fd6c: improved report
+January 26, 2026 at 6:46 PM
+Deploy started for 6c3fd6c: improved report
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 26, 2026 at 6:43 PM
+Deploy live for 5f6f705: update favicon
+January 26, 2026 at 4:03 PM
+Deploy started for 5f6f705: update favicon
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 26, 2026 at 4:00 PM
+Deploy live for 4f5c3fe: Add pharmacy admins deletion
+January 26, 2026 at 6:55 AM
+Deploy started for 4f5c3fe: Add pharmacy admins deletion
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 26, 2026 at 6:52 AM
+Deploy live for 47d8eae: fix build
+January 23, 2026 at 9:32 PM
+Deploy started for 47d8eae: fix build
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 23, 2026 at 9:28 PM
+Deploy failed for 0817c4c: Finish paid manual sumition flow
+Exited with status 1 while building your code. Check your deploy logs for more information.
+January 23, 2026 at 9:23 PM
+
+Rollback
+Deploy started for 0817c4c: Finish paid manual sumition flow
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 23, 2026 at 9:22 PM
+Deploy live for 11a1c43: improve toast
+January 22, 2026 at 9:52 PM
+Deploy started for 11a1c43: improve toast
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 22, 2026 at 9:49 PM
+Deploy live for 7f1458c: add logging
+January 22, 2026 at 9:34 PM
+Deploy started for 7f1458c: add logging
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 22, 2026 at 9:31 PM
+Deploy live for e6158fb: 22 january polishment and robustisizing security
+January 22, 2026 at 9:29 PM
+Deploy started for e6158fb: 22 january polishment and robustisizing security
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 22, 2026 at 9:26 PM
+Deploy live for e23aa2b: fix login link
+January 22, 2026 at 9:26 PM
+Deploy started for e23aa2b: fix login link
+Environment updated
+January 22, 2026 at 9:22 PM
+Deploy live for e23aa2b: fix login link
+January 22, 2026 at 6:12 AM
+Deploy started for e23aa2b: fix login link
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 22, 2026 at 6:09 AM
+Deploy live for 61a27a6: fix endpoint overlapsing route
+January 22, 2026 at 6:01 AM
+Deploy started for 61a27a6: fix endpoint overlapsing route
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 22, 2026 at 5:58 AM
+Deploy live for 342e0df: fix endpoint overlapsing route
+January 22, 2026 at 5:56 AM
+Deploy started for 342e0df: fix endpoint overlapsing route
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 22, 2026 at 5:52 AM
+Deploy live for 4f74f55: reorder bill patient modal logic and flow
+January 22, 2026 at 5:42 AM
+Deploy started for 4f74f55: reorder bill patient modal logic and flow
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 22, 2026 at 5:39 AM
+Deploy live for 43cdecd: finish bill patient modal enhancements
+January 22, 2026 at 1:08 AM
+Deploy started for 43cdecd: finish bill patient modal enhancements
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 22, 2026 at 1:05 AM
+Deploy live for 661f32c: Fix provider creation generation flow depending in the state of the payment link paid, pending expired, and show correct ui and actionables to move forward
+January 21, 2026 at 10:53 PM
+Deploy started for 661f32c: Fix provider creation generation flow depending in the state of the payment link paid, pending expired, and show correct ui and actionables to move forward
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 21, 2026 at 10:50 PM
+Deploy live for 9a5da82: fix payment flow table update post-purchase
+January 21, 2026 at 7:38 PM
+Deploy started for 9a5da82: fix payment flow table update post-purchase
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 21, 2026 at 7:35 PM
+Deploy live for f8f149c: add column to avoid crash and update prescription order status
+January 21, 2026 at 5:43 PM
+Deploy started for f8f149c: add column to avoid crash and update prescription order status
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 21, 2026 at 5:40 PM
+Deploy live for 7bf9fac: Fix prescriptions. providers and auth users relations
+January 21, 2026 at 5:18 PM
+Deploy started for 7bf9fac: Fix prescriptions. providers and auth users relations
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 21, 2026 at 5:15 PM
+Deploy live for ec88b69: done
+January 21, 2026 at 5:10 PM
+Deploy started for ec88b69: done
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 21, 2026 at 5:07 PM
+Deploy live for 069ae58: add debug logs
+January 21, 2026 at 5:00 PM
+Deploy started for 069ae58: add debug logs
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 21, 2026 at 4:57 PM
+Deploy live for 7499a04: Add prescription id param identify logic to be able to submit to pharmacy now that is payed
+January 21, 2026 at 4:13 AM
+Deploy started for 7499a04: Add prescription id param identify logic to be able to submit to pharmacy now that is payed
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 21, 2026 at 4:10 AM
+Deploy live for 1d4c58e: fix wrong environment variable
+January 21, 2026 at 4:01 AM
+Deploy started for 1d4c58e: fix wrong environment variable
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 21, 2026 at 3:58 AM
+Deploy live for 8939d6f: add authnet ref id
+January 21, 2026 at 3:41 AM
+Deploy started for 8939d6f: add authnet ref id
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 21, 2026 at 3:39 AM
+Deploy live for 0da24bd: add logs to debug webhook
+January 21, 2026 at 3:24 AM
+Deploy started for 0da24bd: add logs to debug webhook
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 21, 2026 at 3:20 AM
+Deploy live for 2bf95d1: add webhook info for the record
+January 20, 2026 at 10:12 PM
+Deploy started for 2bf95d1: add webhook info for the record
+Environment updated
+January 20, 2026 at 10:09 PM
+Deploy live for 2bf95d1: add webhook info for the record
+January 20, 2026 at 9:18 PM
+Deploy started for 2bf95d1: add webhook info for the record
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 20, 2026 at 9:15 PM
+Deploy live for 3352e88: done
+January 20, 2026 at 7:54 PM
+Deploy started for 3352e88: done
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 20, 2026 at 7:51 PM
+Deploy live for f3bd505: Merge pull request #4 from Smartconnect2025/payment fix build for payment iterationg
+January 20, 2026 at 7:25 PM
+Deploy started for f3bd505: Merge pull request #4 from Smartconnect2025/payment fix build for payment iterationg
+Environment updated
+January 20, 2026 at 7:22 PM
+Deploy live for f3bd505: Merge pull request #4 from Smartconnect2025/payment fix build for payment iterationg
+January 20, 2026 at 7:13 PM
+Deploy started for f3bd505: Merge pull request #4 from Smartconnect2025/payment fix build for payment iterationg
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 20, 2026 at 7:10 PM
+Deploy failed for de63a6b: Merge pull request #3 from Smartconnect2025/payment [render preview] Payment
+Exited with status 1 while building your code. Check your deploy logs for more information.
+January 20, 2026 at 7:05 PM
+
+Rollback
+Deploy started for de63a6b: Merge pull request #3 from Smartconnect2025/payment [render preview] Payment
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 20, 2026 at 7:03 PM
+Deploy live for bf08da1: misc fixes details about medication filters, admin provider company name edition ability etc
+January 20, 2026 at 6:14 PM
+Deploy started for bf08da1: misc fixes details about medication filters, admin provider company name edition ability etc
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 20, 2026 at 6:11 PM
+Deploy live for 9249b03: fix build
+January 20, 2026 at 4:12 PM
+Deploy started for 9249b03: fix build
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 20, 2026 at 4:09 PM
+Deploy failed for 2446380: Vibe coded clean up for features introduced 18 january 2026
+Exited with status 1 while building your code. Check your deploy logs for more information.
+January 20, 2026 at 8:57 AM
+
+Rollback
+Deploy started for 2446380: Vibe coded clean up for features introduced 18 january 2026
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 20, 2026 at 8:56 AM
+Deploy live for 8ab814f: new updates
+January 19, 2026 at 6:32 PM
+Deploy started for 8ab814f: new updates
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 19, 2026 at 6:29 PM
+Deploy live for 1f424e4: finish clean up of shcema bypass workaround, finish fixing the whole NPI flow
+January 16, 2026 at 12:32 AM
+Deploy started for 1f424e4: finish clean up of shcema bypass workaround, finish fixing the whole NPI flow
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 16, 2026 at 12:28 AM
+Deploy live for 25a0bc3: FIX NPI REGISTRY RETRIEVAL
+January 15, 2026 at 10:31 PM
+Deploy started for 25a0bc3: FIX NPI REGISTRY RETRIEVAL
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 15, 2026 at 10:28 PM
+Deploy live for e121371: fix dialog
+January 15, 2026 at 9:16 PM
+Deploy started for e121371: fix dialog
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 15, 2026 at 9:13 PM
+Deploy live for a201bbc: fix: require NPI completion before creating prescriptions and add unique constraint
+January 15, 2026 at 9:04 PM
+Deploy started for a201bbc: fix: require NPI completion before creating prescriptions and add unique constraint
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 15, 2026 at 9:01 PM
+Deploy live for 48beab6: fix tier mock store by removing it and using the db and fix checkProviderActive security iisues
+January 14, 2026 at 6:52 PM
+Deploy started for 48beab6: fix tier mock store by removing it and using the db and fix checkProviderActive security iisues
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 14, 2026 at 6:48 PM
+Deploy live for 89079cb: fix pharmacy admins
+January 14, 2026 at 6:20 PM
+Deploy started for 89079cb: fix pharmacy admins
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 14, 2026 at 6:17 PM
+Deploy live for 4811b1d: fix pharmacy deletion
+January 14, 2026 at 6:02 PM
+Deploy started for 4811b1d: fix pharmacy deletion
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 14, 2026 at 5:59 PM
+Deploy live for 1445e85: fix prescriptions receipt
+January 14, 2026 at 4:51 PM
+Deploy started for 1445e85: fix prescriptions receipt
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 14, 2026 at 4:48 PM
+Deploy live for 46cb6dc: fix link generation
+January 14, 2026 at 4:31 PM
+Deploy started for 46cb6dc: fix link generation
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 14, 2026 at 4:28 PM
+Deploy live for ac50941: unify email provider
+January 14, 2026 at 4:12 PM
+Deploy started for ac50941: unify email provider
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 14, 2026 at 4:08 PM
+Deploy live for de0574a: Add manual payment migration API endpoint for database setup
+January 13, 2026 at 7:33 PM
+Deploy started for de0574a: Add manual payment migration API endpoint for database setup
+Environment updated
+January 13, 2026 at 7:30 PM
+Deploy live for de0574a: Add manual payment migration API endpoint for database setup
+January 13, 2026 at 7:17 PM
+Deploy started for de0574a: Add manual payment migration API endpoint for database setup
+Environment updated
+January 13, 2026 at 7:14 PM
+Deploy live for df11859: done
+January 13, 2026 at 12:45 AM
+Deploy started for df11859: done
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 13, 2026 at 12:42 AM
+Deploy live for 9a55134: polish patient dash
+January 13, 2026 at 12:36 AM
+Deploy started for 9a55134: polish patient dash
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 13, 2026 at 12:33 AM
+Deploy live for 4e31aa0: Fix Zod schema type mismatch in intake forms Changed .optional() to .default("") in InsuranceForm and MedicalHistoryForm schemas to match the form data types that expect string instead of string | undefined. 🤖 Generated with [Claude Code](https://claude.com/claude-code) Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+January 13, 2026 at 12:18 AM
+Deploy started for 4e31aa0: Fix Zod schema type mismatch in intake forms Changed .optional() to .default("") in InsuranceForm and MedicalHistoryForm schemas to match the form data types that expect string instead of string | undefined. 🤖 Generated with [Claude Code](https://claude.com/claude-code) Co-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 13, 2026 at 12:15 AM
+Deploy failed for 23dd450: fix build issues
+Exited with status 1 while building your code. Check your deploy logs for more information.
+January 13, 2026 at 12:10 AM
+
+Rollback
+Deploy started for 23dd450: fix build issues
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 13, 2026 at 12:09 AM
+Deploy failed for 6d005c2: add page
+Exited with status 1 while building your code. Check your deploy logs for more information.
+January 13, 2026 at 12:05 AM
+
+Rollback
+Deploy started for 6d005c2: add page
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 13, 2026 at 12:04 AM
+Deploy canceled for fcc3bf8: set mfa code to 1 hs to match supabase
+January 13, 2026 at 12:03 AM
+Deploy started for fcc3bf8: set mfa code to 1 hs to match supabase
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 13, 2026 at 12:03 AM
+Deploy live for fcc3bf8: set mfa code to 1 hs to match supabase
+January 12, 2026 at 11:56 PM
+Deploy started for fcc3bf8: set mfa code to 1 hs to match supabase
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 12, 2026 at 11:53 PM
+Deploy live for d85f48d: fix redirectio after mfa verification
+January 12, 2026 at 10:01 PM
+Deploy started for d85f48d: fix redirectio after mfa verification
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 12, 2026 at 9:58 PM
+Deploy live for 96a4a10: fix patient upload document flow
+January 12, 2026 at 9:10 PM
+Deploy started for 96a4a10: fix patient upload document flow
+Environment updated
+January 12, 2026 at 9:06 PM
+Deploy live for 96a4a10: fix patient upload document flow
+January 12, 2026 at 9:06 PM
+Deploy started for 96a4a10: fix patient upload document flow
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 12, 2026 at 9:03 PM
+Deploy live for d0a29fd: fix reset link from supabase
+January 9, 2026 at 11:23 PM
+Deploy started for d0a29fd: fix reset link from supabase
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 9, 2026 at 11:19 PM
+Deploy live for ac68734: Fix reset password flow
+January 9, 2026 at 10:44 PM
+Deploy started for ac68734: Fix reset password flow
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 9, 2026 at 10:41 PM
+Deploy live for e77ae18: fix patient reset password flow
+January 9, 2026 at 10:26 PM
+Deploy started for e77ae18: fix patient reset password flow
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 9, 2026 at 10:23 PM
+Deploy live for 2cb9d37: fix digitalRX submit flot
+January 9, 2026 at 9:10 PM
+Deploy started for 2cb9d37: fix digitalRX submit flot
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 9, 2026 at 9:07 PM
+Deploy live for 5262c6f: fix submit route credential missmatch
+January 9, 2026 at 8:21 PM
+Deploy started for 5262c6f: fix submit route credential missmatch
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 9, 2026 at 8:18 PM
+Deploy live for ca6b784: updated local repo
+January 9, 2026 at 7:57 PM
+Deploy started for ca6b784: updated local repo
+Environment updated
+January 9, 2026 at 7:54 PM
+Deploy live for ca6b784: updated local repo
+January 9, 2026 at 6:24 PM
+Deploy started for ca6b784: updated local repo
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+January 9, 2026 at 6:20 PM
+Deploy live for cd5505e: fix deployment 2
+December 30, 2025 at 9:07 PM
+Deploy started for cd5505e: fix deployment 2
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+December 30, 2025 at 9:04 PM
+Deploy live for bc3c270: Enable MFA for support@aimrx.com by removing from demo account bypass
+December 30, 2025 at 8:56 PM
+Deploy started for bc3c270: Enable MFA for support@aimrx.com by removing from demo account bypass
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+December 30, 2025 at 8:53 PM
+Deploy live for c6b71a7: fix deploymen
+December 29, 2025 at 11:28 PM
+Deploy started for c6b71a7: fix deploymen
+Environment updated
+December 29, 2025 at 11:24 PM
+Maintenance deploy finished
+December 29, 2025 at 7:19 PM
+Maintenance deploy started
+Render periodically runs zero-downtime maintenance to ensure platform reliability.
+December 29, 2025 at 7:18 PM
+Deploy live for c6b71a7: fix deploymen
+December 27, 2025 at 12:44 AM
+Deploy started for c6b71a7: fix deploymen
+Environment updated
+December 27, 2025 at 12:42 AM
+Deploy live for c6b71a7: fix deploymen
+December 27, 2025 at 12:36 AM
+Deploy started for c6b71a7: fix deploymen
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+December 27, 2025 at 12:34 AM
+Deploy live for bb15e71: fix deploy
+December 27, 2025 at 12:27 AM
+Deploy started for bb15e71: fix deploy
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+Build cache cleared
+December 27, 2025 at 12:24 AM
+Deploy live for bb15e71: fix deploy
+December 27, 2025 at 12:23 AM
+Deploy started for bb15e71: fix deploy
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+December 27, 2025 at 12:20 AM
+Deploy live for 949c764: fix build
+December 27, 2025 at 12:16 AM
+Deploy started for 949c764: fix build
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+Build cache cleared
+December 27, 2025 at 12:14 AM
+Deploy live for 949c764: fix build
+December 27, 2025 at 12:14 AM
+Deploy started for 949c764: fix build
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+Build cache cleared
+December 27, 2025 at 12:11 AM
+Deploy canceled for 949c764: fix build
+December 27, 2025 at 12:11 AM
+Deploy started for 949c764: fix build
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+December 27, 2025 at 12:11 AM
+Deploy live for 949c764: fix build
+December 27, 2025 at 12:05 AM
+Deploy started for 949c764: fix build
+Environment updated
+December 27, 2025 at 12:00 AM
+Deploy failed for 949c764: fix build
+Exited with status 1 while building your code. Check your deploy logs for more information.
+December 26, 2025 at 11:56 PM
+
+Rollback
+Deploy started for 949c764: fix build
+Manually triggered by
+t
+tomasg@topflightapps.com
+via Dashboard
+December 26, 2025 at 11:54 PM
+Deploy failed for 50e7aa2: Clean install dependencies to resolve TypeScript module resolution
+Exited with status 1 while building your code. Check your deploy logs for more information.
+December 26, 2025 at 11:37 PM
+
+Rollback
+First deploy started for 50e7aa2: Clean install dependencies to resolve TypeScript module resolution
+December 26, 2025 at 11:34 PM

@@ -1,0 +1,123 @@
+Deploy live for 8233014: URL-based category nav, horizontal carousel, unique category images - Category selection uses ?category=xxx URL params so browser back button returns to all-categories view instead of leaving the catalog - Replaced 4-row grid with horizontal scrollable carousel (auto-scroll, arrow buttons, pause on hover/touch) - Generated 8 unique images for categories that were sharing or missing: Metabolic, Growth Hormone, Standard Formulations, Sexual Health, Sleep Aid, Hormonal, Sleep & Recovery, Immune Health
+March 7, 2026 at 2:39 PM
+Deploy started for 8233014: URL-based category nav, horizontal carousel, unique category images - Category selection uses ?category=xxx URL params so browser back button returns to all-categories view instead of leaving the catalog - Replaced 4-row grid with horizontal scrollable carousel (auto-scroll, arrow buttons, pause on hover/touch) - Generated 8 unique images for categories that were sharing or missing: Metabolic, Growth Hormone, Standard Formulations, Sexual Health, Sleep Aid, Hormonal, Sleep & Recovery, Immune Health
+Triggered via Deploy Hook
+March 7, 2026 at 2:36 PM
+Deploy live for 01a4569: Fix build: remove stale dbCategories reference in catalog-preview
+March 7, 2026 at 12:47 AM
+Rollback
+Deploy started for 01a4569: Fix build: remove stale dbCategories reference in catalog-preview
+Triggered via Deploy Hook
+March 7, 2026 at 12:44 AM
+Deploy failed for 58a3d8e: Fix build: remove stale dbCategories reference in provider catalog
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 7, 2026 at 12:43 AM
+
+Rollback
+Deploy started for 58a3d8e: Fix build: remove stale dbCategories reference in provider catalog
+Triggered via Deploy Hook
+March 7, 2026 at 12:41 AM
+Deploy failed for f9664ec: Fix session persistence and restore individual category display with images
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 7, 2026 at 12:38 AM
+
+Rollback
+Deploy started for f9664ec: Fix session persistence and restore individual category display with images
+Triggered via Deploy Hook
+March 7, 2026 at 12:36 AM
+Deploy live for 9f97947: Map medication categories to AIM parent categories with images The actual medications have granular category values (Anti-Aging, Weight Loss, Sexual Health, etc.) that didn't match the 10 AIM parent categories. Added a category-mapping system that groups medication categories under AIM parent categories. - New lib/category-mapping.ts with mapping logic - Browse by Category now shows AIM categories with images - Clicking a category filters to all matching subcategories - Both provider and public catalog pages updated - Category descriptions shown when filtering - Seed endpoint now deactivates old categories if delete blocked by FK
+March 7, 2026 at 12:20 AM
+Rollback
+Deploy started for 9f97947: Map medication categories to AIM parent categories with images The actual medications have granular category values (Anti-Aging, Weight Loss, Sexual Health, etc.) that didn't match the 10 AIM parent categories. Added a category-mapping system that groups medication categories under AIM parent categories. - New lib/category-mapping.ts with mapping logic - Browse by Category now shows AIM categories with images - Clicking a category filters to all matching subcategories - Both provider and public catalog pages updated - Category descriptions shown when filtering - Seed endpoint now deactivates old categories if delete blocked by FK
+Triggered via Deploy Hook
+March 7, 2026 at 12:16 AM
+Deploy live for 42adf4d: Improve category seed: clean up old categories on sync Seed endpoint now removes or deactivates old categories not in the canonical AIM set. Tries delete first; if FK constraints block it, deactivates instead. Cleaned up 6 legacy categories from DB.
+March 7, 2026 at 12:13 AM
+Rollback
+Deploy started for 42adf4d: Improve category seed: clean up old categories on sync Seed endpoint now removes or deactivates old categories not in the canonical AIM set. Tries delete first; if FK constraints block it, deactivates instead. Cleaned up 6 legacy categories from DB.
+Triggered via Deploy Hook
+March 7, 2026 at 12:09 AM
+Deploy live for 85e497a: Add AIM peptide categories with images and hero section - 10 AIM-aligned categories: Weight Loss & Metabolism, Cognitive & Neuron Health, Cell & Mitochondrial Health, Anti-Inflammatory & Healing, Fertility & Reproductive Health, Longevity & Anti-Aging, Performance & Fitness, Nootropics & Stress Management, NAD+ & Biohacking, Peptides - Generated professional category images for each - Updated catalog hero with AIM branding and messaging - Category descriptions from AIM website content - Updated provider catalog with matching category mappings - Added categories seed API for database population
+March 7, 2026 at 12:00 AM
+Rollback
+Deploy started for 85e497a: Add AIM peptide categories with images and hero section - 10 AIM-aligned categories: Weight Loss & Metabolism, Cognitive & Neuron Health, Cell & Mitochondrial Health, Anti-Inflammatory & Healing, Fertility & Reproductive Health, Longevity & Anti-Aging, Performance & Fitness, Nootropics & Stress Management, NAD+ & Biohacking, Peptides - Generated professional category images for each - Updated catalog hero with AIM branding and messaging - Category descriptions from AIM website content - Updated provider catalog with matching category mappings - Added categories seed API for database population
+Triggered via Deploy Hook
+March 6, 2026 at 11:55 PM
+Deploy live for e1fafd9: Handle race condition in bucket auto-creation Ignore 'already exists' error when creating buckets, so concurrent uploads don't fail if another request created the bucket first.
+March 6, 2026 at 11:48 PM
+Rollback
+Deploy started for e1fafd9: Handle race condition in bucket auto-creation Ignore 'already exists' error when creating buckets, so concurrent uploads don't fail if another request created the bucket first.
+Triggered via Deploy Hook
+March 6, 2026 at 11:44 PM
+Deploy live for 69c8fa5: Remove duplicate Category Images button/dialog from Medication Catalog Category image management is now handled exclusively in the dedicated Manage Categories page (/admin/categories). Removes the redundant button and dialog from the catalog page.
+March 6, 2026 at 11:44 PM
+Rollback
+Deploy started for 69c8fa5: Remove duplicate Category Images button/dialog from Medication Catalog Category image management is now handled exclusively in the dedicated Manage Categories page (/admin/categories). Removes the redundant button and dialog from the catalog page.
+Triggered via Deploy Hook
+March 6, 2026 at 11:40 PM
+Deploy live for 4c335b8: Fix category image upload: auto-create storage bucket if missing The category-images bucket did not exist in Supabase Storage. Upload endpoint now auto-creates any missing bucket (public, 3MB, JPG/PNG/WebP).
+March 6, 2026 at 11:38 PM
+Rollback
+Deploy started for 4c335b8: Fix category image upload: auto-create storage bucket if missing The category-images bucket did not exist in Supabase Storage. Upload endpoint now auto-creates any missing bucket (public, 3MB, JPG/PNG/WebP).
+Triggered via Deploy Hook
+March 6, 2026 at 11:34 PM
+Deploy live for d381526: Add Manage Categories quick action to admin dashboard - Added Manage Categories card with LayoutGrid icon to dashboard Quick Actions grid - Links to /admin/categories page for full category management
+March 6, 2026 at 9:50 PM
+Rollback
+Deploy started for d381526: Add Manage Categories quick action to admin dashboard - Added Manage Categories card with LayoutGrid icon to dashboard Quick Actions grid - Links to /admin/categories page for full category management
+Triggered via Deploy Hook
+March 6, 2026 at 9:46 PM
+Deploy live for dc1e322: Fix double header on provider catalog page Remove duplicate DefaultLayout wrapper from provider/catalog/page.tsx. The parent provider/layout.tsx already wraps all provider pages in DefaultLayout, so the catalog page was rendering two headers.
+March 6, 2026 at 9:42 PM
+Rollback
+Deploy started for dc1e322: Fix double header on provider catalog page Remove duplicate DefaultLayout wrapper from provider/catalog/page.tsx. The parent provider/layout.tsx already wraps all provider pages in DefaultLayout, so the catalog page was rendering two headers.
+Triggered via Deploy Hook
+March 6, 2026 at 9:38 PM
+Deploy live for d580e43: Remove Physical Address from profile completion check - Providers no longer blocked by missing physical address on prescriptions page - Removed physicalAddress from profile-check API response - Removed from CompleteProfileModal component interface and UI - Removed from both profile check calls in prescriptions page - Only NPI, medical license, and signature are now required
+March 6, 2026 at 9:38 PM
+Rollback
+Deploy started for d580e43: Remove Physical Address from profile completion check - Providers no longer blocked by missing physical address on prescriptions page - Removed physicalAddress from profile-check API response - Removed from CompleteProfileModal component interface and UI - Removed from both profile check calls in prescriptions page - Only NPI, medical license, and signature are now required
+Triggered via Deploy Hook
+March 6, 2026 at 9:34 PM
+Deploy live for c09b1af: Add Categories management page with full CRUD, reorder, image uploads, pharmacy counts - New Manage Categories tab in AdminNavigationTabs - Full categories page at /admin/categories - Category image upload/change/remove - Reorder with up/down arrows (optimistic UI) - Per-pharmacy medication counts (expandable) - PUT cascades name changes to pharmacy_medications - DELETE clears pharmacy_medications refs before deleting
+March 6, 2026 at 9:34 PM
+Rollback
+Deploy started for c09b1af: Add Categories management page with full CRUD, reorder, image uploads, pharmacy counts - New Manage Categories tab in AdminNavigationTabs - Full categories page at /admin/categories - Category image upload/change/remove - Reorder with up/down arrows (optimistic UI) - Per-pharmacy medication counts (expandable) - PUT cascades name changes to pharmacy_medications - DELETE clears pharmacy_medications refs before deleting
+Triggered via Deploy Hook
+March 6, 2026 at 9:29 PM
+Deploy live for f8d96b7: Harden profile API: add credentials, improve error handling, fix provider-not-found edge case - Add credentials:'include' to all fetch calls for cookie-based auth - Profile-check now handles missing provider row by checking user_roles - PaymentBillingForm handles 404/error responses gracefully - Non-provider users no longer see false-positive profile completion modal
+March 6, 2026 at 9:13 PM
+Rollback
+Deploy started for f8d96b7: Harden profile API: add credentials, improve error handling, fix provider-not-found edge case - Add credentials:'include' to all fetch calls for cookie-based auth - Profile-check now handles missing provider row by checking user_roles - PaymentBillingForm handles 404/error responses gracefully - Non-provider users no longer see false-positive profile completion modal
+Triggered via Deploy Hook
+March 6, 2026 at 9:09 PM
+Deploy live for df2ed08: Add provider profile API endpoints for reliable profile save and check
+March 6, 2026 at 9:09 PM
+Rollback
+Deploy started for df2ed08: Add provider profile API endpoints for reliable profile save and check
+Triggered via Deploy Hook
+March 6, 2026 at 9:00 PM
+Deploy live for dfc1ec9: Add image upload feature with category image manager, admin role checks, and orphan cleanup - Upload API at /api/admin/upload with admin role verification - Category Images Manager dialog in medication catalog - Client-side validation (file type, size) before upload - Orphaned file cleanup if DB update fails - Pharmacy admin scoping for medication images
+March 6, 2026 at 8:50 PM
+Rollback
+Deploy started for dfc1ec9: Add image upload feature with category image manager, admin role checks, and orphan cleanup - Upload API at /api/admin/upload with admin role verification - Category Images Manager dialog in medication catalog - Client-side validation (file type, size) before upload - Orphaned file cleanup if DB update fails - Pharmacy admin scoping for medication images
+Triggered via Deploy Hook
+March 6, 2026 at 8:47 PM
+Deploy live for d96481e: feat: Add product catalog with images, browsing experience, and MFA fix - Provider catalog with product images, category images, and pricing - Public catalog preview at /catalog-preview (no auth required) - Category cards with AI-generated images - Product cards with image area (real photos + gradient placeholders) - Browsing-first experience - Prescribe is secondary action - Fix email MFA login flow (cookie + verify-mfa redirect) - Dev login helper for testing
+March 6, 2026 at 8:26 PM
+Rollback
+Deploy started for d96481e: feat: Add product catalog with images, browsing experience, and MFA fix - Provider catalog with product images, category images, and pricing - Public catalog preview at /catalog-preview (no auth required) - Category cards with AI-generated images - Product cards with image area (real photos + gradient placeholders) - Browsing-first experience - Prescribe is secondary action - Fix email MFA login flow (cookie + verify-mfa redirect) - Dev login helper for testing
+Triggered via Deploy Hook
+March 6, 2026 at 8:21 PM
+Deploy live for 9a94731: Update login logo to original colors in white rounded box - Center logo: original colors inside white rounded-2xl box with shadow - Header logo: original colors inside small white pill badge - Matches approved design reference
+March 6, 2026 at 8:35 AM
+Rollback
+Deploy started for 9a94731: Update login logo to original colors in white rounded box - Center logo: original colors inside white rounded-2xl box with shadow - Header logo: original colors inside small white pill badge - Matches approved design reference
+Triggered via Deploy Hook
+March 6, 2026 at 8:31 AM
+Deploy live for f604841: Implement dual MFA (email PIN + authenticator app) with preference switching - Add mfa_method column to user_roles (default "email") - Create preference API (GET/PATCH) with CSRF origin check - Update login to route by MFA preference with error handling - Update middleware for dual MFA flows (email pending + TOTP AAL) - Clear stale mfa_pending on AAL2 achievement - Add method-switch links on all MFA pages with send-code error handling - Add MFA method toggle in security settings - Handle all edge cases: missing cookies, API failures, listFactors errors - Architect-reviewed: all 7 components confirmed PASS
+March 6, 2026 at 1:04 AM
+Rollback
+Deploy started for f604841: Implement dual MFA (email PIN + authenticator app) with preference switching - Add mfa_method column to user_roles (default "email") - Create preference API (GET/PATCH) with CSRF origin check - Update login to route by MFA preference with error handling - Update middleware for dual MFA flows (email pending + TOTP AAL) - Clear stale mfa_pending on AAL2 achievement - Add method-switch links on all MFA pages with send-code error handling - Add MFA method toggle in security settings - Handle all edge cases: missing cookies, API failures, listFactors errors - Architect-reviewed: all 7 components confirmed PASS
+Triggered via Deploy Hook
+March 6, 2026 at 12:58 AM

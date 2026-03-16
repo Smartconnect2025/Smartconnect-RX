@@ -1,0 +1,89 @@
+oseph Sughayer <joseph@smartconnects.com>
+Mon, Mar 2, 3:27 PM (1 day ago)
+to Jerry
+
+CRITICAL (5) — Security risks that are exploitable right now
+C1. .mcp.json exposes live Supabase token on public GitHub
+
+File: .mcp.json
+Risk: Anyone can access your database
+Fix: Remove the file or remove the token from it
+C2. 13 admin API routes have no login check
+
+Files: force-seed-admins, seed-aim, seed-aim-admin, seed-prescriptions, seed-experiencecare, seed-grinethch, seed-grinethch-admin, create-mfa-table, invite-doctor, reset-doctor-password, update-pharmacy-name, seed-real-medications
+Risk: Anyone can create admin accounts, reset passwords, seed fake data
+Fix: Add authentication to each route
+C3. MFA can be bypassed
+
+File: core/supabase/middleware.ts
+Risk: Attacker with a stolen password can skip MFA entirely
+Fix: Change logic to require MFA verification (fail-closed)
+C4. DigitalRx webhook has zero authentication
+
+File: app/api/webhook/digitalrx/route.ts
+Risk: Anyone can change prescription status to "shipped" or "delivered"
+Fix: Add API key or secret verification
+C5. AuthNet webhook signature validation is optional
+
+File: app/api/webhooks/authnet/route.ts
+Risk: Anyone can fake a successful payment
+Fix: Require the signature header, reject requests without it
+HIGH (7) — Bugs affecting real users and prescriptions
+H1. DAW (Dispense As Written) logic is inverted
+
+File: app/api/prescriptions/[id]/submit-to-pharmacy/route.ts line 237
+Risk: Doctor says "no substitution" → pharmacy gets told "substitution allowed"
+Fix: Flip "N" and "Y"
+H2. Patient Sex hardcoded to "M" in prescription creation
+
+File: app/api/prescriptions/submit/route.ts line 207
+Risk: Every new prescription says patient is Male
+Fix: Read from patient record
+H3. Missing patient/doctor address in prescription creation
+
+File: app/api/prescriptions/submit/route.ts
+Risk: Prescriptions created without address data
+Fix: Include address fields from patient and provider records
+H5. Encryption falls back to hardcoded dev key
+
+File: core/security/encryption.ts
+Risk: If env var is missing, all encrypted data uses a known key
+Fix: Throw error instead of falling back
+H6. AuthNet payment succeeds but pharmacy submission fails silently
+
+File: app/api/webhooks/authnet/route.ts
+Risk: Patient charged but prescription never sent to pharmacy
+Fix: Add retry mechanism or admin alert
+H7. Mark-paid recalculates total instead of using stored value
+
+File: app/api/prescriptions/[id]/mark-paid/route.ts
+Risk: Rounding discrepancies between records
+Fix: Use the already-stored total_paid_cents
+H8. MFA verification has no rate limiting
+
+File: app/api/auth/mfa/verify-code/route.ts
+Risk: 6-digit code can be brute-forced
+Fix: Lock after 5 failed attempts
+MEDIUM (5) — Code quality and reliability
+M1. MFA code valid for 1 hour (should be 5-10 minutes)
+
+File: core/services/mfa/mfaService.ts
+M2. Hardcoded admin credentials in seed files
+
+File: core/database/seeds/admin.ts
+M3. DigitalRx webhook status desync (cancelled/rejected don't update order_progress)
+
+File: app/api/webhook/digitalrx/route.ts
+M4. Inconsistent amount units (dollars vs cents)
+
+File: app/api/prescriptions/submit/route.ts
+M5. User role cached in cookies (could be manipulated)
+
+File: core/supabase/middleware.ts
+SUMMARY
+Priority	Count	What happens if not fixed
+Critical	5	Hackers can access your database, create admin accounts, fake payments
+High	7	Wrong medications dispensed, patients charged without prescriptions sent
+Medium	5	Code quality issues, could cause problems over time
+I can start fixing all of these right now on a separate replit-fixes branch. This keeps them isolated from Tomas's work — no conflicts. When you're happy, we merge.
+

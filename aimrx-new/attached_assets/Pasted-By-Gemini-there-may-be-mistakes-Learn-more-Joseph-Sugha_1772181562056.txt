@@ -1,0 +1,167 @@
+By Gemini; there may be mistakes. Learn more
+
+Joseph Sughayer <joseph@smartconnects.com>
+Feb 26, 2026, 4:28 PM (19 hours ago)
+to Tomas, Jerry
+
+Hi Tomas,
+
+I’ve completed a final audit of the AimRX platform as we prepare for launch. To ensure everything is 100% robust for the providers and the pharmacy, I’ve distilled our findings into three main areas that need attention.
+
+These are high-impact but straightforward fixes that should be easily completed today if the team focuses on them.
+
+1. Payload & Data Integrity (Pharmacy Routing) We found a few gaps in the information being sent to DigitalRx and Greenwich Rx. Currently, some prescriptions might fail because the payload is missing critical routing data (like Patient/Provider addresses and DEA numbers). We need to:
+
+Make physical addresses mandatory during intake.
+Fix a few field-name mappings (e.g., ensuring the phone and DEA numbers pull correctly from the database).
+Sync the "Initial Creation" payload with the "Final Submission" payload.
+2. System Security & API Hardening To meet industry security benchmarks, we need to tighten the "outer perimeter" of the app:
+
+Admin Guards: Adding our standard authentication check to the admin API routes so they aren't accessible to the public.
+Webhook Verification: Ensuring the Authorize.Net signature is mandatory to prevent any payment spoofing.
+Rate Limiting: Adding basic protection to login and MFA screens to prevent brute-force attempts.
+3. System Stability & Session Reliability To ensure the providers have a smooth experience without technical interruptions:
+
+Session Persistence: Optimizing the middleware to prevent providers from being randomly logged out during their workflow.
+UI Feedback: Adding clear error messages so if a session does expire, the provider knows exactly what happened instead of seeing a blank screen.
+Data Cleanup: Auditing the medication table to ensure all drug identifiers (NDCs) are real and valid.
+Summary: These three items are the final "blockers" for a seamless launch. Given the current state of the code, these should be relatively quick to implement today. Once finished, the platform will be significantly more stable, secure, and compliant.
+
+I’m ready to walk the team through the specific file locations for these fixes to speed things up.
+
+Best regards,
+
+Joseph Sughayar 
+
+
+Jerry Horani
+Feb 26, 2026, 5:25 PM (18 hours ago)
+to me, Tomas
+
+I recommend that you 2 get together this AM to solve these bugs so we can go in production tonight bug free . 
+
+Joseph Sughayer <joseph@smartconnects.com>
+Feb 26, 2026, 5:34 PM (18 hours ago)
+to Jerry, Tomas
+
+Hello Tomas, let’s jump on a call now to go over the 3 Blockers I identified. We need to review the issues  immediately to stay on track for tonight's production deployment. Are you available for a 10-minute sync?
+
+Tomas Goldenberg
+6:27 AM (5 hours ago)
+to me, Jerry
+
+Hi Guys sorry i had a ultra busy day because tomorrow im getting married hehe 
+
+Ok, regarding your feedback joseph.
+Point one
+(a,b,c) - Done added dea number and ncpdp
+
+Point two
+(a,b) Done,
+(c) its not a good idea to start playing adding login to the login flow one day before production deploy, i dont think this is a blocker, lets do it next sprint
+
+Point 3 
+(a,b) - Done
+(c) - i do not know how to check the  validity of the NDC of the drugs
+
+Anyways all these 3 items. with subitems are not nothing newly introduced the new items to test where the refill engine + UI | The groups and platform manager fields for Crm-like tooling  which i tested today. and also i deploy it to production and tested it there
+
+Also tested and fixed misc bugs of groups and platform managers new feature
+Production deployment done 
+
+Tomorrow i will be available after 2pm CST 
+
+Jerry Horani
+6:44 AM (4 hours ago)
+to Tomas, me
+
+Thanks Tomas , we will test more in production in the am and let you know . 
+Thanks
+Jerry Horani
+
+On Feb 26, 2026, at 9:27 PM, Tomas Goldenberg <tomasg@topflightapps.com> wrote:
+
+Joseph Sughayer <joseph@smartconnects.com>
+11:01 AM (37 minutes ago)
+to Jerry, Tomas
+
+
+Subject: Bug — Profile Tab Save Wipes Physical Address
+
+Hi Tomas,
+
+I found a bug causing the "Missing: Physical Address" modal to appear on the Prescriptions page even after the provider has filled in their address.
+
+What's happening:
+
+The provider fills in their Physical Address on the Payment & Billing tab and saves it — the address goes into the database correctly. Later, when they go to the Profile tab and click "Save Changes," their address is erased from the database.
+
+This happens because the Profile tab's save function (updatePersonalInfo in provider-profile-service.ts, line 106) includes physical_address in the update payload. Since the Profile tab doesn't actually show the address fields on screen, the form sends empty values, and the save overwrites the real address with null.
+
+Then when the provider goes to create a prescription, the check on prescriptions/page.tsx (lines 526-531) looks up physical_address, finds it empty, and shows the "Complete Your Profile" modal.
+
+Where the bug is:
+
+File: features/provider-profile/services/provider-profile-service.ts
+Line 106: physical_address: hasPhysicalAddressData ? data.physicalAddress : null
+Line 107: billing_address: hasBillingAddressData ? data.billingAddress : null
+The fix:
+
+Remove physical_address and billing_address from the updateData object in the updatePersonalInfo function. These fields are only entered on the Payment & Billing tab, so they should only be saved by PaymentBillingForm.tsx — the Profile tab shouldn't touch them.
+
+Also worth noting: the Profile tab saves empty address fields to localStorage (provider-profile-${userId}), which can make the problem worse when the form reloads and merges stale localStorage data over DB values. Consider excluding physicalAddress and billingAddress from the localStorage persistence in ProfileForm as well.
+
+Thanks
+
+image.png
+
+Joseph Sughayer <joseph@smartconnects.com>
+11:28 AM (10 minutes ago)
+to Jerry, Tomas
+
+ Root Cause Found — Patient Address Missing from Pharmacy Payload
+
+Hi Tomas,
+
+We traced why the Feb 26 payload to Greenwich Rx had no patient address even though the patient's address was in the database.
+
+Bug 1 — Patient Address Override (the main issue)
+
+File: app/api/prescriptions/[id]/submit-to-pharmacy/route.ts, lines 188-190
+
+const patientAddress = prescription.has_custom_address && prescription.custom_address
+  ? prescription.custom_address
+  : patient?.physical_address;
+When has_custom_address is true but custom_address is an empty object {}, JavaScript treats {} as truthy. So the code picks the empty custom_address instead of the patient's real address from the database. All address fields become undefined and get silently dropped from the JSON payload.
+
+This was added in commit bb4ee1a on Feb 10 ("Override custom address prescription"). Before that, the code read the patient address directly and it would have worked.
+
+Fix: Check that custom_address actually has real data inside it before using it:
+
+const hasValidCustomAddress = prescription.has_custom_address
+  && prescription.custom_address
+  && prescription.custom_address.street
+  && prescription.custom_address.city
+  && prescription.custom_address.state
+  && (prescription.custom_address.zipCode || prescription.custom_address.zip);
+const patientAddress = hasValidCustomAddress
+  ? prescription.custom_address
+  : patient?.physical_address;
+Bug 2 — DoctorPhone always undefined
+
+Same file, line 217: DoctorPhone: provider.phone
+
+The providers table column is phone_number, not phone. So DoctorPhone is always undefined and never sent.
+
+Fix: Change to provider.phone_number
+
+Bug 3 — Patient Sex always "F"
+
+Same file, line 200: Sex: prescription.patients.gender === "male" ? "M" : "F"
+
+The patients table has no gender column. Gender is stored inside the data JSON field as patient.data.gender. So prescription.patients.gender is always undefined, the comparison is always false, and Sex always defaults to "F".
+
+Fix: Change to prescription.patients.data?.gender === "male" ? "M" : "F"
+
+Thanks,
+Joseph 

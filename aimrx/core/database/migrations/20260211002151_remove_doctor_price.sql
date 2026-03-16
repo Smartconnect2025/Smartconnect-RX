@@ -1,0 +1,1 @@
+ALTER TABLE "prescriptions" DROP COLUMN "doctor_price";

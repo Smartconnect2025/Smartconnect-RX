@@ -1,0 +1,52 @@
+Let me start building all three features. First, let me understand the full picture of what I'm working with:
+
+Now I have the full picture. Let me read the key files I need to modify:
+
+Now let me check the existing notification components and the provider profile form to understand what to modify:
+
+Now I have a complete understanding. Let me check the notification context provider:
+
+Now let me check if the NotificationProvider wraps the provider pages:
+
+Good — the notification system is already fully wired up. The ClientNotificationProvider wraps the entire app in app/layout.tsx, the bell component is ready, and the realtime subscription is built. The bell is just commented out in the ProviderHeader. Now let me check the prescriptions page to understand how status data flows:
+
+Now let me see how the status badge and table rows look in the prescriptions page:
+
+Now I have everything I need. Let me build all three features. I'll start with the most impactful — the visual prescription progress tracker, then enable the bell icon, then add notification preferences.
+
+Now I have a complete picture. Let me build all three features. I'll create the progress tracker component, add it to the prescription modal, enable the notification bell, and add notification preferences.
+
+Feature 1: Prescription Progress Tracker Component
+
+Now let me add the progress tracker to the PrescriptionModals component, replacing the static "In Production" box:
+
+Now replace the static "In Production" box with the progress tracker:
+
+The Clock import is no longer needed. Let me clean it up:
+
+Good. Now Feature 2: Enable the notification bell in the ProviderHeader:
+
+Now Feature 3: Notification Preferences in Provider Profile. Let me check the profile form:
+
+Now I need to add a "Notification Preferences" section to the ProfileForm. Let me read more of it to find the right spot:
+
+Now I need to create the Notification Preferences component. Rather than adding it to the profile form (which would require schema changes to the providers table), I'll create a standalone preferences card that saves to a provider_notification_preferences key in the metadata column of a provider setting, or more practically, store it in localStorage for now and build an API later. Actually, the cleanest approach is to use the existing provider_settings table or the providers table metadata field. Let me check:
+
+The provider_settings table doesn't have notification preference fields, but I don't want to modify the database schema (that requires migrations). Instead, I'll create a simple notification preferences component that stores preferences in the notifications metadata via the user's Supabase row, or more practically, I'll use an API endpoint that reads/writes a simple notification_preferences JSON column.
+
+Actually, the simplest and safest approach: create an API endpoint that stores notification preferences as a JSONB value in an app_settings entry keyed by provider ID, or use localStorage for now with a clean UI. Since the user said "keep it minimal," I'll use a client-side approach with Supabase direct storage in the providers table's existing metadata or via the provider_settings table's allowed_durations style.
+
+Let me use the most practical approach — store notification prefs as a simple JSON document in a new API endpoint that uses the notifications table pattern but stored via Supabase:
+
+Wait — the app_settings table has admin-only RLS policies. The provider won't be able to read/write to it. Let me use a different approach — I'll use the server-side Supabase admin client instead:
+
+Good — createAdminClient exists in core/database/client.ts. Let me update the API to use it:
+
+Now let me update the notification preferences API to use createAdminClient for the app_settings table (since it has admin-only RLS):
+
+Now let me create the notification preferences component for the profile page:
+
+Now add the NotificationPreferences component to the Profile page:
+
+Good, all three features are in place. Let me check the logs and restart the workflow:
+

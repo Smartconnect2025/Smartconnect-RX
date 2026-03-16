@@ -1,0 +1,161 @@
+Ref	Date & Time	Patient Name	Medication + Strength/Dosage	Quantity / Refills	Pharmacy	Status	Actions
+16C7	Mar 5, 2026, 2:27 AM	Aprilaa Harton	
+5-Amino capsule 50mg
+1mg
+Qty: 1
+Refills: 0
+Greenwich	
+Pending Payment
+View
+021D	Mar 5, 2026, 2:10 AM	Aprilaa Harton	
+5-Amino capsule 50mg
+1mg
+Qty: 1
+Refills: 0
+Greenwich	
+Submitted
+Queue: 1709218
+View
+1734	Mar 5, 2026, 12:23 AM	Aprilaa Harton	
+AOD 9604 - 1.2 mg/mL
+1mg
+Qty: 1
+Refills: 0
+Greenwich	
+Submitted
+Queue: 1708061
+View
+87D1	Mar 3, 2026, 11:10 PM	Aprilaa Harton	
+AOD-9604/MOTs-C 1.2mg/2mg/mL
+10mg
+Qty: 1
+Refills: 2
+Greenwich	
+Submitted
+Queue: 1697871
+View
+0F56	Mar 3, 2026, 11:05 PM	Aprilaa Harton	
+BPC-157/GHK-U/KPV/TB500 3mg/10mg/3mg/3mg/mL
+10mg
+Qty: 1
+Refills: 0
+Greenwich	
+Submitted
+Queue: 1697804
+View
+A5CD	Feb 18, 2026, 7:48 PM	Aprilaa Harton	
+AOD 9604 TEST - 1.2 mg/mL (5ml)
+1mg
+Qty: 1
+Refills: 0
+Greenwich3	
+Submitted
+Queue: 1597532
+View
+927A	Feb 18, 2026, 6:32 PM	Aprilaa Harton	
+AOD 9604 TEST - 1.2 mg/mL (5ml)
+3mg
+Qty: 1
+Refills: 0
+Greenwich3	
+Payment Received
+View
+DDBD	Feb 18, 2026, 5:58 PM	Aprilaa Harton	
+AOD 9604 TEST - 1.2 mg/mL (5ml)
+1mg
+Qty: 1
+Refills: 0
+Greenwich3	
+Payment Received
+View
+F729	Feb 16, 2026, 11:37 PM	Aprilaa Harton	
+AOD test - 1.2 mg/mL (5ml)
+1mg
+Qty: 1
+Refills: 0
+Greenwich 2	
+Payment Received
+View
+7D5E	Feb 16, 2026, 10:56 PM	Aprilaa Harton	
+AOD test - 1.2 mg/mL (5ml)
+1mg
+Qty: 1
+Refills: 0
+Greenwich 2	
+Pending Payment
+View
+D470	Feb 16, 2026, 10:52 PM	Aprilaa Harton	
+AOD test - 1.2 mg/mL (5ml)
+1mg
+Qty: 1
+Refills: 0
+Greenwich 2	
+Payment Received
+View
+D565	Feb 16, 2026, 10:50 PM	Aprilaa Harton	
+AOD test - 1.2 mg/mL (5ml)
+1mg
+Qty: 1
+Refills: 0
+Greenwich 2	
+Payment Received
+View
+F43E	Feb 16, 2026, 10:48 PM	Aprilaa Harton	
+AOD test - 1.2 mg/mL (5ml)
+1mg
+Qty: 1
+Refills: 0
+Greenwich 2	
+Pending Payment
+View
+907C	Feb 16, 2026, 10:37 PM	Aprilaa Harton	
+AOD test - 1.2 mg/mL (5ml)
+1mg
+Qty: 1
+Refills: 0
+Greenwich 2	
+Payment Received
+View
+DE69	Feb 12, 2026, 5:16 PM	Aprilaa Harton	
+AOD-9604/MOTs-C 1.2mg/2mg/mL
+10mg
+Qty: 1
+Refills: 0
+Greenwich	
+Submitted
+Queue: 1708079
+View
+AD1D	Feb 12, 2026, 4:38 PM	Aprilaa Harton	
+AOD 9604 - 1.2 mg/mL
+9mg
+Qty: 1
+Refills: 0
+Greenwich	
+Submitted
+Queue: 1708324
+View
+3513	Feb 7, 2026, 12:33 AM	Aprilaa Harton	
+AOD 9604 - 1.2 mg/mL (5ml)
+10mg
+Qty: 1
+Refills: 0
+Greenwich	
+Submitted
+Queue: 1709364
+View
+0479	Feb 6, 2026, 9:44 PM	Aprilaa Harton	
+LL-37 2mg/5mg
+10mg
+Qty: 1
+Refills: 0
+ECP	
+Pending Payment
+View
+E6B4	Feb 6, 2026, 5:27 PM	Aprilaa Harton	
+Epithalon 2mg/mL
+10units
+Qty: 1
+Refills: 0
+ECP	
+Pending Payment
+View

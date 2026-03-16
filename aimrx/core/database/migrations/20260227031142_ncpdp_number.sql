@@ -1,0 +1,1 @@
+ALTER TABLE "pharmacies" ADD COLUMN "ncpdp_number" text;

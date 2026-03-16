@@ -1,0 +1,16 @@
+Deploy live for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+March 2, 2026 at 8:00 PM
+Deploy started for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+Triggered via Deploy Hook
+March 2, 2026 at 7:56 PM
+Deploy live for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+March 2, 2026 at 7:07 PM
+Rollback
+Deploy started for a7e0734: improve: enhance signature pad UX for smoother drawing Changes: - Taller drawing area (200px vs 150px) - Velocity-based stroke smoothing (velocityFilterWeight 0.7) - Variable pen width (1.5–3.5px) for natural pressure feel - Touch-action: none to prevent scroll conflicts on mobile - Visual border feedback when actively signing - "Sign here" placeholder with pen icon when empty - Signature guideline at bottom - Fixed canvas scaling on resize (reset transform before scale) - Removed custom hover states on Clear button per repo rules - Changed cursor from crosshair to default
+Triggered via Deploy Hook
+March 2, 2026 at 7:03 PM
+Deploy live for 3711ed4: fix(H2): make patient sex mapping consistent in submit-to-pharmacy Architect review found the submit-to-pharmacy route was mapping non-male genders to "F" instead of handling unknown. Now both routes use the same logic: male→M, female→F, unknown→U.
+March 2, 2026 at 7:03 PM
+Rollback
+Deploy started for 3711ed4: fix(H2): make patient sex mapping consistent in submit-to-pharmacy Architect review found the submit-to-pharmacy route was mapping non-male genders to "F" instead of handling unknown. Now both routes use the same logic: male→M, female→F, unknown→U.
+Triggered via Deploy Hook

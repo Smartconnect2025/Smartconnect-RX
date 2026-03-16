@@ -1,0 +1,55 @@
+ok thesere is an issue i noticed i want to fix there iwhen i pess the categorey it opens but when i pess back agai the from the window back space i nticed we dotn go to the cateogry page we go to the oher pages wew ant it to be like someone wh is searching and then he finds categorys then he has t ahve a smooth experience now as syeeing thignsinot smotth at al;; ll please anlayse what i said and tell me the solution
+
+now another isssue the actegorys are protrayed too in four lines and this is too not correct we want it to be better maybe scrollaber bar so the doctore can scropll through them this is better than having them like this also we can make ti auto scroll so that the it always shows all the cateogorys find the best preacise and inform me and then implement
+
+another issues we cant ahve the same iamae for diffent actegroys iw ant it to be speacial each category should have an image and all images are diffrent ,,,tow fixes soemcategorys dont ahve images and some are the same fix both issues then ask archtiect then fi again and then push
+
+Let me first see the current image mapping and what catalog images are available:
+
+Now let me check which actual images exist in the public/catalog folder:
+
+I can see the problem clearly. The current mapping groups many categories to the same image (e.g., "Metabolic" → weight-loss image, "Sleep Aid" and "Sleep & Recovery" both → nootropics image, "Immune Health" → anti-inflammatory image). And some categories like "Standard Formulations" have no image at all.
+
+I have 17 image files available. Let me identify which categories from the screenshot need unique images, and I'll generate new images for the ones that are currently sharing or missing. Let me first see what categories actually appear:
+
+Loaded media-generation skill
+Now I understand the problem. Looking at the screenshot, I can see categories like "Metabolic", "Sleep Aid", "Sleep & Recovery", "Immune Health", "Hormonal", and "Standard Formulations" all share images with other categories or have no image. I need to generate unique images for each category that currently shares one.
+
+Let me identify exactly which categories need new unique images:
+
+I need 8 new unique images. Let me generate them:
+
+All 8 images generated. Now let me update the CATEGORY_IMAGES mapping in both files to give each category a unique image:
+
+Now I'll update both files with the new unique image mappings. The key changes: Metabolic, Growth Hormone, Standard Formulations, Sexual Health, Sleep Aid, Hormonal, Sleep & Recovery, and Immune Health each get their own unique image.
+
+Now update the Growth Hormone and Sleep entries in the same file:
+
+Now update the same entries in catalog-preview/page.tsx:
+
+Let me verify compilation:
+
+Checked console and system logs
+Compiling cleanly with no errors. Now let me run the architect review:
+
+The architect review passed. Now let me verify the images load properly by checking they exist:
+
+All 8 images exist and are properly sized. Everything compiles and the architect review passed.
+
+Here's a summary of what was done:
+
+Fixed: Every category now has its own unique image
+
+8 new images were generated for categories that were previously sharing images or had no image:
+
+Category	Before	After
+Metabolic	Shared weight-loss image	New unique metabolic pathways image
+Growth Hormone	Shared performance image	New unique GH molecules image
+Standard Formulations	No image at all	New compounding lab image
+Sexual Health	Shared fertility image	New unique wellness image
+Sleep Aid	Shared nootropics image	New moon/melatonin image
+Hormonal	Shared fertility image	New endocrine system image
+Sleep & Recovery	Shared nootropics image	New tissue regeneration image
+Immune Health	Shared anti-inflammatory image	New immune defense image
+Both the provider catalog and catalog-preview pages are updated. The GitHub push is blocked by an expired auth token — once you re-authorize, I can push this along with the carousel change from earlier. Want me to try pushing, or do you need to update the GitHub credentials first?
+

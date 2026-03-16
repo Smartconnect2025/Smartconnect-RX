@@ -1,0 +1,34 @@
+Tomas said he fixed these items. Here's what actually happened:
+
+POINT 1: Payload & Data Integrity — Tomas said "Done, added DEA and NCPDP"
+Item	Tomas's Claim	What Actually Happened
+DEA number	Done	He added a dea_number column to the pharmacies table. But DEA belongs on the provider/doctor, not the pharmacy. And DoctorDea is still NOT in the submit-to-pharmacy payload — grep returns nothing. ❌
+NCPDP number	Done	He added a ncpdp_number column to the pharmacies table. That's fine for pharmacy records, but it's not in the payload either. Partially done.
+DoctorPhone	Not mentioned	Still broken — provider.phone instead of provider.phone_number. ❌
+Patient address override	Not mentioned	Still broken — empty {} custom_address swallows real address. ❌
+Patient Sex	Not mentioned	Still broken — always returns "F". ❌
+DaysSupply	Not mentioned	Still missing from payload entirely. ❌
+Mark-as-paid → pharmacy submission	Not mentioned	Still broken — mark-paid does NOT trigger submit-to-pharmacy. ❌
+POINT 2: Security — Tomas said "Done" for (a) and (b)
+Item	Tomas's Claim	What Actually Happened
+Admin guards on new routes	Done	He added auth to 18 newer admin routes (categories, groups, patients, etc.). ✅
+Admin guards on original 11 seed routes	Done?	ALL 10 original seed routes still have ZERO auth. force-seed-admins, seed-aim-admin, seed-grinethch-admin, seed-aim, seed-grinethch, seed-prescriptions, seed-real-medications, seed-experiencecare, create-mfa-table, invite-doctor — all wide open. ❌
+Webhook signature	Done	Still broken — line 19 is still if (signature). Signature is optional, not required. Anyone can skip it. ❌
+Rate limiting on login	Skipped	He said "not a good idea one day before production." Fair, but it's noted. ⏸️
+POINT 3: Session & Stability — Tomas said "Done" for (a) and (b)
+Item	Tomas's Claim	What Actually Happened
+Session UI feedback	Done	He added AuthInterceptorProvider.tsx — intercepts 401 responses and redirects to login with session_expired message. ✅ This is real.
+Session persistence/TTL	Done?	The middleware file shows no TTL changes. Session instability root cause not addressed. ❌
+NDC data cleanup	Skipped	He said "I don't know how to check NDC validity." Noted. ⏸️
+NEW BUGS (from today's emails, not yet addressed by Tomas)
+Item	Status
+Profile tab wipes physical address	Not fixed — email just sent ❌
+Patient address override ({} truthy bug)	Not fixed — email just sent ❌
+DoctorPhone wrong field name	Not fixed — email just sent ❌
+Patient Sex always "F"	Not fixed — email just sent ❌
+Bottom line: Out of everything Tomas claimed he fixed, the only things that are actually done are:
+
+Auth guards on the 18 newer admin routes ✅
+DEA/NCPDP columns added to pharmacies table (but not in payload) ✅ partial
+AuthInterceptorProvider for session expiry UI ✅
+Everything else is either still broken or untouched. Want me to draft a follow-up email summarizing this status?

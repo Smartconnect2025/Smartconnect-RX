@@ -1,0 +1,160 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1770054443059,
+      "tag": "20260202174723_baseline",
+      "breakpoints": false
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1770055353701,
+      "tag": "20260202180233_add_test_field",
+      "breakpoints": false
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1770216724226,
+      "tag": "20260204145204_user_role_rls",
+      "breakpoints": false
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1770224392536,
+      "tag": "20260204165952_remove_rls_temp",
+      "breakpoints": false
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1770225479308,
+      "tag": "20260204171759_restore_rls",
+      "breakpoints": false
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1770311834746,
+      "tag": "20260205171714_update_patient_rls",
+      "breakpoints": false
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1770332907304,
+      "tag": "20260205230827_rx_number_to_prescription",
+      "breakpoints": false
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1770399104780,
+      "tag": "20260206173144_add-default-category",
+      "breakpoints": false
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1770406931361,
+      "tag": "20260206194211_remove-doctor-markup",
+      "breakpoints": false
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1770749697987,
+      "tag": "20260210185457_shipping_fee_addition",
+      "breakpoints": false
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1770757743619,
+      "tag": "20260210210903_add-payment-transactions-shipping-fee",
+      "breakpoints": false
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1770765484215,
+      "tag": "20260210231804_prescription_custom_address",
+      "breakpoints": false
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1770769311892,
+      "tag": "20260211002151_remove_doctor_price",
+      "breakpoints": false
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1771257514425,
+      "tag": "20260216155834_fedex_integration",
+      "breakpoints": false
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1771347408659,
+      "tag": "20260217165648_add_consultation_reason",
+      "breakpoints": false
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1771870517951,
+      "tag": "20260223181517_refills_cron_job",
+      "breakpoints": false
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1771941643549,
+      "tag": "20260224140043_add_cron_details",
+      "breakpoints": false
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1772044503316,
+      "tag": "20260225183503_groups",
+      "breakpoints": false
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1772050257558,
+      "tag": "20260225201057_platform-manager",
+      "breakpoints": false
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1772157714404,
+      "tag": "20260227020154_dea_number",
+      "breakpoints": false
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1772161902321,
+      "tag": "20260227031142_ncpdp_number",
+      "breakpoints": false
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1772654596330,
+      "tag": "20260304200316_add_digitalrx_fields",
+      "breakpoints": false
+    }
+  ]
+}

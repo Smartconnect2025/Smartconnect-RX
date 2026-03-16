@@ -1,0 +1,16 @@
+Deploy failed for 92a7dbf: fix: architect review bug fixes — Supabase client, role checks, null handling 1. Groups API (route + [id]): switched from createServerClient to createAdminClient to bypass RLS policies — admin endpoints should not depend on user RLS context 2. Groups [id]: fixed Next.js 15 params to use Promise<{id}> pattern 3. All admin endpoints: unified role checks to accept both admin and super_admin (groups, groups/[id], users POST, users GET, providers, providers/[id]) 4. Provider group assignment: normalize empty string to null before PATCH to avoid uuid type violation on Supabase 5. Provider form: normalize groupId/tierLevel empty strings to undefined so they don't get sent to the API as empty strings 6. Group metrics: removed dead providerUserToGroup code
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 3, 2026 at 4:11 PM
+
+Rollback
+Deploy started for 92a7dbf: fix: architect review bug fixes — Supabase client, role checks, null handling 1. Groups API (route + [id]): switched from createServerClient to createAdminClient to bypass RLS policies — admin endpoints should not depend on user RLS context 2. Groups [id]: fixed Next.js 15 params to use Promise<{id}> pattern 3. All admin endpoints: unified role checks to accept both admin and super_admin (groups, groups/[id], users POST, users GET, providers, providers/[id]) 4. Provider group assignment: normalize empty string to null before PATCH to avoid uuid type violation on Supabase 5. Provider form: normalize groupId/tierLevel empty strings to undefined so they don't get sent to the API as empty strings 6. Group metrics: removed dead providerUserToGroup code
+Triggered via Deploy Hook
+March 3, 2026 at 4:09 PM
+Deploy failed for 66f8dc2: feat: group management enhancement — provider assignment, dashboard metrics, role fixes 1. Providers table: Added Group column with assignment dialog, group filter dropdown 2. Groups page: Expandable rows showing assigned providers, add/remove providers 3. Provider quick-create form: Added Group dropdown alongside Tier Level 4. Dashboard: Group Performance section with provider count, orders, revenue per group 5. New API: /api/admin/group-metrics for dashboard performance data 6. Role fix: All admin endpoints now accept both admin and super_admin roles 7. Provider API: Now returns group_name and platform_manager_name
+Exited with status 1 while building your code. Check your deploy logs for more information.
+March 3, 2026 at 4:06 PM
+
+Rollback
+Deploy started for 66f8dc2: feat: group management enhancement — provider assignment, dashboard metrics, role fixes 1. Providers table: Added Group column with assignment dialog, group filter dropdown 2. Groups page: Expandable rows showing assigned providers, add/remove providers 3. Provider quick-create form: Added Group dropdown alongside Tier Level 4. Dashboard: Group Performance section with provider count, orders, revenue per group 5. New API: /api/admin/group-metrics for dashboard performance data 6. Role fix: All admin endpoints now accept both admin and super_admin roles 7. Provider API: Now returns group_name and platform_manager_name
+Triggered via Deploy Hook
+March 3, 2026 at 4:04 PM

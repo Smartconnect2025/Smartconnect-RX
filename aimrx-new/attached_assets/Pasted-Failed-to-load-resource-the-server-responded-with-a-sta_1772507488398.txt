@@ -1,0 +1,72 @@
+Failed to load resource: the server responded with a status of 404 ()Understand this error
+psftyvmqepctqgzvatge.supabase.co/auth/v1/token?grant_type=password:1  Failed to load resource: the server responded with a status of 400 ()Understand this error
+page-29d0d666a05be131.js:1 Login error details: Object
+C @ page-29d0d666a05be131.js:1Understand this error
+/api/klaviyo/user-logged-in:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+psftyvmqepctqgzvatge.supabase.co/rest/v1/user_roles?select=role&user_id=eq.8acd5666-4ea6-46eb-a38e-0576d7cc3d42:1  Failed to load resource: the server responded with a status of 406 ()Understand this error
+/api/provider/pharmacy:1  Failed to load resource: the server responded with a status of 401 ()Understand this error
+259-18f185bb799aeace.js:1  GET https://psftyvmqepctqgzvatge.supabase.co/rest/v1/user_roles?select=role&user_id=eq.8acd5666-4ea6-46eb-a38e-0576d7cc3d42 406 (Not Acceptable)
+t @ 259-18f185bb799aeace.js:1
+(anonymous) @ 9535-18480fbcd863a958.js:37
+(anonymous) @ 9535-18480fbcd863a958.js:37
+await in (anonymous)
+then @ 9535-18480fbcd863a958.js:1Understand this error
+259-18f185bb799aeace.js:1  GET https://aimrx-dev.onrender.com/api/provider/pharmacy 401 (Unauthorized)
+t @ 259-18f185bb799aeace.js:1
+m @ layout-826440fa24e174c8.js:1
+(anonymous) @ layout-826440fa24e174c8.js:1
+o0 @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+uS @ 4bd1b696-cc729d47eba2cee4.js:1
+ux @ 4bd1b696-cc729d47eba2cee4.js:1
+iT @ 4bd1b696-cc729d47eba2cee4.js:1
+(anonymous) @ 4bd1b696-cc729d47eba2cee4.js:1
+w @ 5964-b14196516283122f.js:1Understand this error

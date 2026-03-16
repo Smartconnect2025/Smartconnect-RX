@@ -1,0 +1,41 @@
+Objective
+Implement Jerry's full group/manager enhancement: provider-group assignment, group visibility in providers table, group detail with provider list, group dropdown in quick-add form, and dashboard group performance metrics.
+
+Tasks
+T001: Update Provider Type and API to include group/manager info
+Blocked By: []
+Details:
+Add group_id, group_name, platform_manager_name to Provider type in features/admin-dashboard/types.ts
+Update app/api/admin/providers/route.ts to join groups + platform_managers and return group_name/platform_manager_name
+Files: features/admin-dashboard/types.ts, app/api/admin/providers/route.ts
+T002: Add Group column to Providers table + group assignment
+Blocked By: [T001]
+Details:
+Add "Group" column to ProvidersManagement table showing group name badge
+Add a group assignment dropdown/dialog for changing a provider's group from the providers page
+Keep the table clean - group shown as compact text, not cluttered
+Files: features/admin-dashboard/components/ProvidersManagement.tsx
+T003: Add Group dropdown to ProviderFormDialog (quick-add)
+Blocked By: [T001]
+Details:
+Fetch groups when dialog opens
+Add Group dropdown alongside Tier Level
+Pass groupId to the API on create
+Update app/api/admin/users/route.ts to accept and save groupId
+Files: features/admin-dashboard/components/ProviderFormDialog.tsx, app/api/admin/users/route.ts
+T004: Enhance Groups page with provider count + expandable provider list
+Blocked By: [T001]
+Details:
+Add "Providers" count column to groups table
+Make rows expandable (chevron) to show assigned providers
+Add "Assign Provider" button within expanded view
+Allow removing a provider from group
+Update groups API to return provider counts
+Files: features/admin-dashboard/components/GroupsManagement.tsx, app/api/admin/groups/route.ts
+T005: Dashboard group performance metrics
+Blocked By: [T001]
+Details:
+Add a "Group Performance" section to the admin dashboard
+Show cards per group with: provider count, order count, revenue
+Create a new API endpoint for group metrics
+Files: features/admin-dashboard/AdminDashboard.tsx, features/admin-dashboard/hooks/useAdminDashboard.ts, new API route

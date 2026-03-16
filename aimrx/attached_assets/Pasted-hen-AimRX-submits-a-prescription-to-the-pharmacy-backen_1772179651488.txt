@@ -1,0 +1,107 @@
+hen AimRX submits a prescription to the pharmacy backend (via /api/prescriptions/[id]/submit-to-pharmacy), the payload is missing critical patient location fields. Here is what was actually received by the Greenwich Rx pass-through system on Feb 26, 2026:
+
+{
+  "StoreID": "123",
+  "VendorName": "SmartRX Test",
+  "Patient": {
+    "DOB": "20XX-XX-X2",
+    "Sex": "F",
+    "LastName": "H****n",
+    "FirstName": "A******4",
+    "PatientPhone": "0********9"
+  },
+  "Doctor": {
+    "DoctorNpi": "1467453001",
+    "DoctorLastName": "H****n",
+    "DoctorFirstName": "T**t"
+  },
+  "RxClaim": {
+    "Daw": "Y",
+    "Qty": "1",
+    "DrugNDC": "kk225245825",
+    "Refills": "0",
+    "DrugName": "TEST MEDICATION - 1.2 mg/mL (5ml)",
+    "RxNumber": "RX1772094772376",
+    "DateWritten": "2026-02-26",
+    "RequestedBy": "Test Harton",
+    "Instructions": "o*******T"
+  },
+  "DocSignature": "(base64 data present)",
+  "PDFFile": "(base64 data present)"
+}
+What's missing from the Patient object:
+
+PatientStreet — not sent
+PatientCity — not sent
+PatientState — not sent (this is the most critical — Greenwich Rx uses patient state to route prescriptions to the correct pharmacy location based on licensed states)
+PatientZip — not sent
+What's missing from the Doctor object:
+
+DoctorStreet — not sent
+DoctorCity — not sent
+DoctorState — not sent
+DoctorZip — not sent
+DoctorPhone — not sent
+DoctorDea — not sent (required for controlled substances)
+What's wrong with existing fields:
+
+StoreID is "123" — this does not match any real DigitalRx Store ID. The correct IDs from DigitalRx are: Greenwich Rx = 190190, Greenwich Rx II = 190520, Experience Care = 190670
+DrugNDC is "kk225245825" — this is not a valid NDC format. Real NDCs look like 00093-0012-01
+Why this matters: Greenwich Rx has two pharmacy locations split by licensed states (Rx handles one set of states, Rx II handles another). Without PatientState, the system cannot determine which pharmacy location should fill the prescription. The Greenwich Rx pass-through monitor confirms this — the prescription was "Validated but DigitalRx not configured" because it couldn't route without the patient's state.
+
+The data IS available — the patients table has a physical_address JSON field with street, city, state, and zipCode. The providers table has physical_address, phone_number, and npi_number. The code in submit-to-pharmacy/route.ts (lines 188-217) does reference these fields, but they are coming through as null/undefined, which means either:
+
+The patient's physical address was never collected during intake
+The address fields are not being read correctly from the database
+This needs to be investigated and the payload must include all DigitalRx-required fields.
+
+ISSUE #2 — CRITICAL: "Mark as Paid" Does Not Submit Prescription to Pharmacy
+
+There are two payment paths in AimRX:
+
+Path A — Online Payment (works correctly):
+Provider creates prescription → status = pending_payment → patient pays via Authorize.Net → webhook fires → webhook calls /api/prescriptions/[id]/submit-to-pharmacy → full payload sent to DigitalRx → pharmacy receives it ✅
+
+Path B — Office Payment / Manual Mark as Paid (BROKEN):
+Provider creates prescription → status = pending_payment → provider clicks "Mark as Paid" → /api/prescriptions/[id]/mark-paid is called → status updated to paid / payment_received → NOTHING ELSE HAPPENS → prescription is never submitted to DigitalRx → pharmacy never receives it ❌
+
+The mark-paid/route.ts file (lines 129-138) updates the prescription status but does NOT trigger the pharmacy submission. Compare this to the Authorize.Net webhook (webhooks/authnet/route.ts lines 198-215) which explicitly calls submit-to-pharmacy after payment.
+
+Impact: Any prescription where the provider marks payment as received at the office will sit in the database forever. The pharmacy never gets it. The patient never gets their medication shipped.
+
+Fix needed: After marking as paid, the mark-paid route must also call /api/prescriptions/[id]/submit-to-pharmacy — the same way the payment webhook does.
+
+ISSUE #3 — HIGH: Unprotected Admin API Routes
+
+The following API routes use the Supabase service role key (full database access) with zero authentication checks. Anyone on the internet can call them:
+
+Route	Risk
+POST /api/admin/force-seed-admins	Creates admin accounts with hardcoded passwords
+POST /api/admin/seed-aim-admin	Creates AIM pharmacy admin
+POST /api/admin/seed-grinethch-admin	Creates Greenwich pharmacy admin
+POST /api/admin/seed-aim	Modifies AIM pharmacy data
+POST /api/admin/seed-grinethch	Modifies Greenwich pharmacy data
+POST /api/admin/seed-prescriptions	Injects prescription records
+POST /api/admin/seed-real-medications	Modifies medication catalog
+POST /api/admin/seed-experiencecare	Modifies ExperienceCare data
+GET /api/admin/create-mfa-table	Executes raw SQL on the database
+POST /api/admin/invite-doctor	Creates provider accounts with confirmed email
+These routes need authentication added (check for admin role before executing), or they should be removed from production entirely.
+
+Additionally, force-seed-admins and the seed admin routes contain hardcoded passwords in the source code (AIM2025!, Grin2025!). These are visible in the GitHub repository.
+
+ISSUE #4 — HIGH: Authorize.Net Webhook Signature Bypass
+
+In app/api/webhooks/authnet/route.ts (line 19), the webhook signature validation only runs IF the x-anet-signature header is present:
+
+if (signature) {
+  // validate...
+}
+If someone sends a request WITHOUT the header, the code skips validation entirely and processes the webhook. This means an attacker could fake payment confirmations, mark prescriptions as paid, and trigger pharmacy submissions.
+
+Fix needed: The code should REQUIRE the signature header and reject requests that don't include it.
+
+ISSUE #5 — MEDIUM: Session Instability
+
+Render logs show user sessions dropping intermittently. The /api/auth/me endpoint returns authenticated data (1,136 bytes) on one call, then returns null (29 bytes) on the next call for the same user within minutes. This causes users to be randomly logged out.
+
