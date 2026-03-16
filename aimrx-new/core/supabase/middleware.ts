@@ -76,6 +76,11 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const pathname = request.nextUrl.pathname;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/prescriptions") || pathname === "/") {
+    console.log(`[MW] ${pathname} | user=${user?.id?.slice(0,8) ?? 'NONE'} | totp=${request.cookies.get("totp_verified")?.value} | mfa_method=${request.cookies.get("mfa_method")?.value} | mfa_pending=${request.cookies.get("mfa_pending")?.value} | session=${request.cookies.get("session_started")?.value?.slice(0,8)} | role_cache=${request.cookies.get("user_role_cache")?.value}`);
+  }
+
   if (!user) {
     const staleCookies = ["totp_verified", "session_started", "user_role_cache", "user_role", "user_role_uid", "intake_complete_cache", "provider_active_cache", "mfa_pending", "mfa_method"];
     staleCookies.forEach((name) => {
@@ -84,8 +89,6 @@ export async function updateSession(request: NextRequest) {
       }
     });
   }
-
-  const pathname = request.nextUrl.pathname;
 
   if (user) {
     const cached = getCachedUserData(request);
