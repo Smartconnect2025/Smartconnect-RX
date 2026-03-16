@@ -1,33 +1,30 @@
-import express, { type Express } from "express";
-import cors from "cors";
 import http from "http";
-import router from "./routes";
 
-const app: Express = express();
+const TARGET_PORT = 5000;
 
-app.use(cors());
-
-app.use("/api", (req, res, next) => {
-  const options = {
+const server = http.createServer((req, res) => {
+  const options: http.RequestOptions = {
     hostname: "localhost",
-    port: 5000,
-    path: req.originalUrl,
+    port: TARGET_PORT,
+    path: req.url,
     method: req.method,
-    headers: { ...req.headers, host: "localhost:5000" },
+    headers: { ...req.headers, host: `localhost:${TARGET_PORT}` },
   };
 
   const proxyReq = http.request(options, (proxyRes) => {
-    res.writeHead(proxyRes.statusCode || 500, proxyRes.headers);
+    const headers = { ...proxyRes.headers };
+    res.writeHead(proxyRes.statusCode || 500, headers);
     proxyRes.pipe(res, { end: true });
   });
 
   proxyReq.on("error", () => {
     if (!res.headersSent) {
-      next();
+      res.writeHead(502);
+      res.end("API proxy: upstream unavailable");
     }
   });
 
   req.pipe(proxyReq, { end: true });
 });
 
-export default app;
+export default server;

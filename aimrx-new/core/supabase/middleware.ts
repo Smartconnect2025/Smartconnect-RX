@@ -78,7 +78,11 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   if (pathname.startsWith("/admin") || pathname.startsWith("/prescriptions") || pathname === "/") {
-    console.log(`[MW] ${pathname} | user=${user?.id?.slice(0,8) ?? 'NONE'} | totp=${request.cookies.get("totp_verified")?.value} | mfa_method=${request.cookies.get("mfa_method")?.value} | mfa_pending=${request.cookies.get("mfa_pending")?.value} | session=${request.cookies.get("session_started")?.value?.slice(0,8)} | role_cache=${request.cookies.get("user_role_cache")?.value}`);
+    const allCookieNames = request.cookies.getAll().map(c => c.name).join(", ");
+    const sbCookies = request.cookies.getAll().filter(c => c.name.startsWith("sb-")).map(c => `${c.name}=${c.value.slice(0,20)}...`).join("; ");
+    console.log(`[MW] ${pathname} | user=${user?.id?.slice(0,8) ?? 'NONE'} | totp=${request.cookies.get("totp_verified")?.value} | session=${request.cookies.get("session_started")?.value?.slice(0,8)} | role_cache=${request.cookies.get("user_role_cache")?.value}`);
+    console.log(`[MW] cookies: ${allCookieNames}`);
+    if (sbCookies) console.log(`[MW] sb cookies: ${sbCookies}`);
   }
 
   if (!user) {
