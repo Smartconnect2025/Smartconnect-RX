@@ -73,6 +73,7 @@ const nextConfig: NextConfig = {
             "https://*.repl.co",
             "https://*.replit.app",
             "https://*.riker.replit.dev",
+            "https://*.spock.replit.dev",
           ]
         : []),
     ].join(" ");
