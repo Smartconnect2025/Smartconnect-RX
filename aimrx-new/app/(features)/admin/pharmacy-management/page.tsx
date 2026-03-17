@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -36,6 +37,8 @@ import {
   Info,
   Trash2,
   RefreshCw,
+  CreditCard,
+  ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminNavigationTabs } from "@/components/layout/AdminNavigationTabs";
@@ -45,6 +48,7 @@ interface Pharmacy {
   name: string;
   slug: string;
   primary_color: string;
+  logo_url: string | null;
   tagline: string | null;
   address: string | null;
   npi: string | null;
@@ -53,6 +57,12 @@ interface Pharmacy {
   phone: string | null;
   is_active: boolean;
   created_at: string;
+}
+
+interface PharmacyGatewayInfo {
+  configured: boolean;
+  gateway: string | null;
+  environment?: string;
 }
 
 interface PharmacyBackend {
@@ -124,6 +134,7 @@ interface AccessRequest {
 }
 
 export default function PharmacyManagementPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<
     "pharmacies" | "administrators" | "integrations" | "pending"
   >("pharmacies");
@@ -200,6 +211,7 @@ export default function PharmacyManagementPage() {
     slug: "",
     primary_color: "#00AEEF",
     tagline: "",
+    logo_url: "",
     phone: "",
     npi: "",
     dea_number: "",
@@ -211,8 +223,17 @@ export default function PharmacyManagementPage() {
     api_key: "",
     shared_secret: "",
     location_id: "",
+    payment_gateway: "none" as "none" | "stripe" | "authorizenet",
+    payment_environment: "sandbox" as "sandbox" | "production",
+    stripe_secret_key: "",
+    stripe_publishable_key: "",
+    stripe_webhook_secret: "",
+    authnet_api_login_id: "",
+    authnet_transaction_key: "",
+    authnet_signature_key: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [pharmacyGateways, setPharmacyGateways] = useState<Record<string, PharmacyGatewayInfo>>({});
 
   // Admin modal states
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
@@ -266,6 +287,22 @@ export default function PharmacyManagementPage() {
       if (pharmaciesData.success) {
         setPharmacies(pharmaciesData.pharmacies || []);
         setFilteredPharmacies(pharmaciesData.pharmacies || []);
+
+        const gatewayResults: Record<string, PharmacyGatewayInfo> = {};
+        const pharmacyList = pharmaciesData.pharmacies || [];
+        const gatewayPromises = pharmacyList.map(async (p: Pharmacy) => {
+          try {
+            const res = await fetch(`/api/payments/pharmacy-gateway?pharmacyId=${p.id}`);
+            const data = await res.json();
+            if (data.success) {
+              gatewayResults[p.id] = { configured: data.configured, gateway: data.gateway, environment: data.environment };
+            }
+          } catch {
+            // ignore
+          }
+        });
+        await Promise.all(gatewayPromises);
+        setPharmacyGateways(gatewayResults);
       }
       if (backendsData.success) {
         setBackends(backendsData.backends || []);
@@ -429,6 +466,7 @@ export default function PharmacyManagementPage() {
       slug: "",
       primary_color: "#00AEEF",
       tagline: "",
+      logo_url: "",
       phone: "",
       npi: "",
       dea_number: "",
@@ -440,14 +478,22 @@ export default function PharmacyManagementPage() {
       api_key: "",
       shared_secret: "",
       location_id: "",
+      payment_gateway: "none",
+      payment_environment: "sandbox",
+      stripe_secret_key: "",
+      stripe_publishable_key: "",
+      stripe_webhook_secret: "",
+      authnet_api_login_id: "",
+      authnet_transaction_key: "",
+      authnet_signature_key: "",
     });
     setWizardStep(1);
     setIsPharmacyWizardOpen(true);
   };
 
   const handleEditPharmacy = async (pharmacy: Pharmacy) => {
-    // Load backend data for this pharmacy
     const backend = backends.find((b) => b.pharmacy_id === pharmacy.id);
+    const gatewayInfo = pharmacyGateways[pharmacy.id];
 
     setEditingPharmacy(pharmacy);
     setPharmacyForm({
@@ -455,6 +501,7 @@ export default function PharmacyManagementPage() {
       slug: pharmacy.slug,
       primary_color: pharmacy.primary_color,
       tagline: pharmacy.tagline || "",
+      logo_url: pharmacy.logo_url || "",
       phone: pharmacy.phone || "",
       npi: pharmacy.npi || "",
       dea_number: pharmacy.dea_number || "",
@@ -466,6 +513,14 @@ export default function PharmacyManagementPage() {
       api_key: "",
       shared_secret: "",
       location_id: backend?.location_id || "",
+      payment_gateway: (gatewayInfo?.configured ? gatewayInfo.gateway : "none") as "none" | "stripe" | "authorizenet",
+      payment_environment: (gatewayInfo?.environment || "sandbox") as "sandbox" | "production",
+      stripe_secret_key: "",
+      stripe_publishable_key: "",
+      stripe_webhook_secret: "",
+      authnet_api_login_id: "",
+      authnet_transaction_key: "",
+      authnet_signature_key: "",
     });
     setWizardStep(1);
     setIsPharmacyWizardOpen(true);
@@ -563,6 +618,47 @@ export default function PharmacyManagementPage() {
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || "Failed to save pharmacy");
+      }
+
+      const pharmacyId = editingPharmacy?.id || data.pharmacy?.id;
+
+      if (pharmacyId && pharmacyForm.payment_gateway !== "none") {
+        try {
+          const paymentBody: Record<string, string> = {
+            pharmacyId,
+            gateway: pharmacyForm.payment_gateway,
+            environment: pharmacyForm.payment_environment,
+          };
+
+          if (pharmacyForm.payment_gateway === "stripe") {
+            if (pharmacyForm.stripe_secret_key) paymentBody.stripeSecretKey = pharmacyForm.stripe_secret_key;
+            if (pharmacyForm.stripe_publishable_key) paymentBody.stripePublishableKey = pharmacyForm.stripe_publishable_key;
+            if (pharmacyForm.stripe_webhook_secret) paymentBody.stripeWebhookSecret = pharmacyForm.stripe_webhook_secret;
+          } else {
+            if (pharmacyForm.authnet_api_login_id) paymentBody.authnetApiLoginId = pharmacyForm.authnet_api_login_id;
+            if (pharmacyForm.authnet_transaction_key) paymentBody.authnetTransactionKey = pharmacyForm.authnet_transaction_key;
+            if (pharmacyForm.authnet_signature_key) paymentBody.authnetSignatureKey = pharmacyForm.authnet_signature_key;
+          }
+
+          const hasCredentials = pharmacyForm.payment_gateway === "stripe"
+            ? (pharmacyForm.stripe_secret_key && pharmacyForm.stripe_publishable_key)
+            : (pharmacyForm.authnet_api_login_id && pharmacyForm.authnet_transaction_key);
+
+          if (hasCredentials) {
+            const payRes = await fetch("/api/admin/pharmacy-payment-config", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(paymentBody),
+            });
+            const payData = await payRes.json();
+            if (!payRes.ok || !payData.success) {
+              toast.error(`Payment config warning: ${payData.error || "Could not save payment settings"}`);
+            }
+          }
+        } catch (payError) {
+          console.error("Error saving payment config:", payError);
+          toast.error("Pharmacy saved but payment configuration failed. You can configure it later from Payment Settings.");
+        }
       }
 
       toast.success(
@@ -954,6 +1050,7 @@ export default function PharmacyManagementPage() {
                         <TableHead className="font-semibold">Slug</TableHead>
                         <TableHead className="font-semibold">Phone</TableHead>
                         <TableHead className="font-semibold">System</TableHead>
+                        <TableHead className="font-semibold">Payment</TableHead>
                         <TableHead className="font-semibold">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -961,7 +1058,7 @@ export default function PharmacyManagementPage() {
                       {filteredPharmacies.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={5}
+                            colSpan={6}
                             className="text-center text-muted-foreground py-8"
                           >
                             No pharmacies found
@@ -998,6 +1095,21 @@ export default function PharmacyManagementPage() {
                                 )}
                               </TableCell>
                               <TableCell>
+                                {(() => {
+                                  const gw = pharmacyGateways[pharmacy.id];
+                                  if (gw?.configured && gw.gateway) {
+                                    return (
+                                      <Badge variant="outline" className="text-xs">
+                                        {gw.gateway === "stripe" ? "Stripe" : "Authorize.Net"}
+                                      </Badge>
+                                    );
+                                  }
+                                  return (
+                                    <span className="text-xs text-muted-foreground">Not configured</span>
+                                  );
+                                })()}
+                              </TableCell>
+                              <TableCell>
                                 <div className="flex gap-2">
                                   <Button
                                     variant="ghost"
@@ -1016,6 +1128,15 @@ export default function PharmacyManagementPage() {
                                     title="Edit Pharmacy"
                                   >
                                     <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => router.push(`/admin/pharmacy-payment-settings?pharmacyId=${pharmacy.id}`)}
+                                    className="text-green-600 hover:text-green-700 hover:bg-green-50 p-2"
+                                    title="Payment Settings"
+                                  >
+                                    <CreditCard className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     variant="ghost"
@@ -1431,12 +1552,14 @@ export default function PharmacyManagementPage() {
             <DialogHeader>
               <DialogTitle>
                 {editingPharmacy ? "Edit Pharmacy" : "Add New Pharmacy"} - Step{" "}
-                {wizardStep} of 2
+                {wizardStep} of 3
               </DialogTitle>
               <DialogDescription>
                 {wizardStep === 1
                   ? "Enter basic pharmacy information"
-                  : "Configure backend system integration"}
+                  : wizardStep === 2
+                    ? "Configure backend system integration"
+                    : "Configure payment gateway"}
               </DialogDescription>
             </DialogHeader>
 
@@ -1548,6 +1671,40 @@ export default function PharmacyManagementPage() {
                     />
                   </div>
 
+                  <div className="space-y-2">
+                    <Label htmlFor="pharmacy-logo-url" className="flex items-center gap-2">
+                      <ImageIcon className="h-4 w-4" />
+                      Pharmacy Logo URL
+                    </Label>
+                    <Input
+                      id="pharmacy-logo-url"
+                      value={pharmacyForm.logo_url}
+                      onChange={(e) =>
+                        setPharmacyForm({
+                          ...pharmacyForm,
+                          logo_url: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., https://example.com/logo.png"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Logo will appear on patient-facing payment pages and confirmation emails
+                    </p>
+                    {pharmacyForm.logo_url && (
+                      <div className="mt-2 p-2 border rounded-md bg-gray-50 flex items-center gap-3">
+                        <img
+                          src={pharmacyForm.logo_url}
+                          alt="Logo preview"
+                          className="h-10 w-auto max-w-[120px] object-contain"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = "none";
+                          }}
+                        />
+                        <span className="text-xs text-gray-500">Preview</span>
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex justify-end gap-2 pt-4">
                     <Button
                       type="button"
@@ -1567,7 +1724,7 @@ export default function PharmacyManagementPage() {
                     </Button>
                   </div>
                 </div>
-              ) : (
+              ) : wizardStep === 2 ? (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="pharmacy-system">Pharmacy System *</Label>
@@ -1690,6 +1847,162 @@ export default function PharmacyManagementPage() {
                       type="button"
                       variant="outline"
                       onClick={() => setWizardStep(1)}
+                    >
+                      Back
+                    </Button>
+                    <Button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setWizardStep(3);
+                      }}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Payment Gateway
+                    </Label>
+                    <Select
+                      value={pharmacyForm.payment_gateway}
+                      onValueChange={(value) =>
+                        setPharmacyForm({ ...pharmacyForm, payment_gateway: value as "none" | "stripe" | "authorizenet" })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select payment gateway" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">No Payment Gateway (Skip)</SelectItem>
+                        <SelectItem value="stripe">Stripe</SelectItem>
+                        <SelectItem value="authorizenet">Authorize.Net</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-gray-500">
+                      Choose which payment processor this pharmacy will use to receive payments
+                    </p>
+                  </div>
+
+                  {pharmacyForm.payment_gateway !== "none" && (
+                    <>
+                      <div className="space-y-2">
+                        <Label>Environment</Label>
+                        <Select
+                          value={pharmacyForm.payment_environment}
+                          onValueChange={(value) =>
+                            setPharmacyForm({ ...pharmacyForm, payment_environment: value as "sandbox" | "production" })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
+                            <SelectItem value="production">Production (Live)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {pharmacyForm.payment_gateway === "stripe" ? (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="stripe-secret-key">Stripe Secret Key *</Label>
+                            <Input
+                              id="stripe-secret-key"
+                              type="password"
+                              value={pharmacyForm.stripe_secret_key}
+                              onChange={(e) =>
+                                setPharmacyForm({ ...pharmacyForm, stripe_secret_key: e.target.value })
+                              }
+                              placeholder="sk_test_..."
+                              required={!editingPharmacy}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="stripe-pub-key">Stripe Publishable Key *</Label>
+                            <Input
+                              id="stripe-pub-key"
+                              value={pharmacyForm.stripe_publishable_key}
+                              onChange={(e) =>
+                                setPharmacyForm({ ...pharmacyForm, stripe_publishable_key: e.target.value })
+                              }
+                              placeholder="pk_test_..."
+                              required={!editingPharmacy}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="stripe-webhook">Stripe Webhook Secret</Label>
+                            <Input
+                              id="stripe-webhook"
+                              type="password"
+                              value={pharmacyForm.stripe_webhook_secret}
+                              onChange={(e) =>
+                                setPharmacyForm({ ...pharmacyForm, stripe_webhook_secret: e.target.value })
+                              }
+                              placeholder="whsec_..."
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="space-y-2">
+                            <Label htmlFor="authnet-login">API Login ID *</Label>
+                            <Input
+                              id="authnet-login"
+                              value={pharmacyForm.authnet_api_login_id}
+                              onChange={(e) =>
+                                setPharmacyForm({ ...pharmacyForm, authnet_api_login_id: e.target.value })
+                              }
+                              placeholder="Enter API Login ID"
+                              required={!editingPharmacy}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="authnet-trans-key">Transaction Key *</Label>
+                            <Input
+                              id="authnet-trans-key"
+                              type="password"
+                              value={pharmacyForm.authnet_transaction_key}
+                              onChange={(e) =>
+                                setPharmacyForm({ ...pharmacyForm, authnet_transaction_key: e.target.value })
+                              }
+                              placeholder="Enter Transaction Key"
+                              required={!editingPharmacy}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="authnet-sig-key">Signature Key</Label>
+                            <Input
+                              id="authnet-sig-key"
+                              type="password"
+                              value={pharmacyForm.authnet_signature_key}
+                              onChange={(e) =>
+                                setPharmacyForm({ ...pharmacyForm, authnet_signature_key: e.target.value })
+                              }
+                              placeholder="Enter Signature Key (for webhooks)"
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {editingPharmacy && (
+                        <p className="text-xs text-gray-500">
+                          Leave credential fields blank to keep existing values. Only fill in fields you want to update.
+                        </p>
+                      )}
+                    </>
+                  )}
+
+                  <div className="flex justify-end gap-2 pt-4">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setWizardStep(2)}
                     >
                       Back
                     </Button>
