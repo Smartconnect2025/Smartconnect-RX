@@ -1,0 +1,77 @@
+Your free instance will spin down with inactivity, which can delay requests by 50 seconds or more.
+Upgrade now
+March 17, 2026 at 7:19 AM
+failed
+e290af9
+Provide SQL to add foreign key constraints to database tables Create a page to display foreign key SQL and update the SQL script to handle missing columns by skipping them. Replit-Commit-Author: Agent Replit-Commit-Session-Id: ce09a16d-c5ac-40d8-ac2a-e08b3853f111 Replit-Commit-Checkpoint-Type: full_checkpoint Replit-Commit-Event-Id: 570c9c03-5896-48a8-8085-8cc7db249529 Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/c5a9dbd1-1b6e-4eff-a868-457131d3f4e1/ce09a16d-c5ac-40d8-ac2a-e08b3853f111/Cr7U8q3 Replit-Helium-Checkpoint-Created: true
+
+Rollback
+Exited with status 1 while building your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Mar 17, 7:18 AM - 7:23 AM
+GMT+3
+
+
+
+==> It looks like we don't have access to your repo, but we'll try to clone it anyway.
+==> Cloning from https://github.com/Smartconnect2025/Smartconnect-RX
+==> Checking out commit e290af924033444ebf31a9b25a8df2681c1bd01e in branch main
+==> Using Node.js version 22.22.0 (default)
+==> Docs on specifying a Node.js version: https://render.com/docs/node-version
+==> Running build command 'npm install && npm run build'...
+added 546 packages, and audited 547 packages in 21s
+172 packages are looking for funding
+  run `npm fund` for details
+8 vulnerabilities (1 low, 3 moderate, 3 high, 1 critical)
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+Some issues need review, and may require choosing
+a different dependency.
+Run `npm audit` for details.
+> rx-portal-pro-101@1.0.0 build
+> next build
+ ⚠ Installing TypeScript as it was not found while loading "next.config.ts".
+Installing devDependencies (npm):
+- typescript
+added 311 packages, and audited 858 packages in 8s
+Menu
+312 packages are looking for funding
+  run `npm fund` for details
+14 vulnerabilities (1 low, 7 moderate, 5 high, 1 critical)
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+Some issues need review, and may require choosing
+a different dependency.
+Run `npm audit` for details.
+ ⚠ Warning: Found multiple lockfiles. Selecting /opt/render/project/src/pnpm-lock.yaml.
+   Consider removing the lockfiles at:
+   * /opt/render/project/src/aimrx-new/package-lock.json
+⚠ No build cache found. Please configure build caching for faster rebuilds. Read more: https://nextjs.org/docs/messages/no-cache
+   ▲ Next.js 15.4.10
+   Creating an optimized production build ...
+<w> [webpack.cache.PackFileCacheStrategy] Serializing big strings (133kiB) impacts deserialization performance (consider using Buffer instead and decode when needed)
+ ✓ Compiled successfully in 58s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+./app/api/mfa/verify-setup/route.ts:52:7
+Type error: Object literal may only specify known properties, and 'window' does not exist in type 'OTPVerifyOptions'.
+  50 |       secret,
+  51 |       crypto: cryptoPlugin,
+> 52 |       window: 1,
+     |       ^
+  53 |     });
+  54 |
+  55 |     if (!result.valid) {
+Next.js build worker exited with code: 1 and signal: null
+==> Build failed 😞
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys

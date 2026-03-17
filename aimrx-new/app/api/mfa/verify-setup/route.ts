@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       secret,
       crypto: cryptoPlugin,
       window: 1,
-    });
+    } as any);
 
     if (!result.valid) {
       return NextResponse.json(

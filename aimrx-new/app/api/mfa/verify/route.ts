@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       secret: meta.totp_secret,
       crypto: cryptoPlugin,
       window: 1,
-    });
+    } as any);
     isValid = totpResult.valid;
 
     if (!isValid && meta.totp_recovery_codes?.length) {
