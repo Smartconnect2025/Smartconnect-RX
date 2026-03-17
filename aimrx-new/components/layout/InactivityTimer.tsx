@@ -41,12 +41,25 @@ export function InactivityTimer() {
   useEffect(() => {
     if (isAuthPage) return;
 
+    const now = Date.now();
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        lastActivityRef.current = parseInt(stored, 10);
+        const storedTime = parseInt(stored, 10);
+        const elapsed = now - storedTime;
+        if (elapsed >= INACTIVITY_LIMIT_MS) {
+          localStorage.setItem(STORAGE_KEY, now.toString());
+          lastActivityRef.current = now;
+        } else {
+          lastActivityRef.current = storedTime;
+        }
+      } else {
+        localStorage.setItem(STORAGE_KEY, now.toString());
+        lastActivityRef.current = now;
       }
-    } catch {}
+    } catch {
+      lastActivityRef.current = now;
+    }
 
     ACTIVITY_EVENTS.forEach((event) =>
       document.addEventListener(event, recordActivity, { passive: true })

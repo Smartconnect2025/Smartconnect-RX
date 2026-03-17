@@ -61,6 +61,11 @@ export default function MFASetupPage() {
         throw new Error(data.error || "Invalid code");
       }
 
+      try {
+        localStorage.setItem("last_activity", Date.now().toString());
+        localStorage.removeItem("inactivity_logout");
+      } catch {}
+
       if (alreadyEnabled) {
         toast.success("Authentication successful!");
         setStep("done");
