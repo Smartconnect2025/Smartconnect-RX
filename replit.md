@@ -55,6 +55,24 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 2. **MFA bypass**: `app/auth/login/page.tsx` skips MFA in development mode
 3. **allowedDevOrigins**: `next.config.ts` includes Replit domains (spock, riker, picard)
 
+### Pharmacy Backend Integration (Multi-System Support)
+- **Supported systems**: DigitalRx, PioneerRx (QS1, Liberty, BestRx, Custom defined in enum but not yet implemented)
+- **Architecture**: `pharmacy_backends` table stores per-pharmacy credentials; `pharmacy-dispatcher.ts` auto-routes to correct system
+- **Key files**:
+  - `app/api/prescriptions/_shared/pharmacy-dispatcher.ts` — resolves which backend system a pharmacy uses
+  - `app/api/prescriptions/_shared/digitalrx-helpers.ts` — DigitalRx API calls, status mapping
+  - `app/api/prescriptions/_shared/pioneerrx-helpers.ts` — PioneerRx API calls (HMAC-SHA512 auth), status mapping, price check
+  - `app/api/prescriptions/[id]/submit-to-pharmacy/route.ts` — submits paid Rx (dispatches to DigitalRx or PioneerRx)
+  - `app/api/prescriptions/submit/route.ts` — creates Rx (pending payment)
+  - `app/api/prescriptions/[id]/check-status/route.ts` — checks status from correct backend
+  - `app/api/prescriptions/status-batch/route.ts` — batch status check (both systems)
+  - `app/api/webhook/digitalrx/route.ts` — DigitalRx status webhooks
+  - `app/api/webhook/pioneerrx/route.ts` — PioneerRx status webhooks
+  - `app/api/admin/pioneer-test/route.ts` — test PioneerRx connection (admin only)
+- **PioneerRx auth**: API key stored as `api_key|shared_secret` in `api_key_encrypted` field (pipe-separated)
+- **PioneerRx signature**: SHA512 hash of (ISO timestamp + shared secret), UTF-16-LE encoded, base64 output
+- **Admin UI**: Pharmacy management page already has DigitalRx/PioneerRx selector
+
 ### Critical Files (DO NOT modify without understanding the auth system)
 - `core/supabase/middleware.ts` — session management
 - `core/routing/routes-config.ts` — route access rules

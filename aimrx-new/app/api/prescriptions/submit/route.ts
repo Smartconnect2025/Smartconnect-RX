@@ -5,13 +5,15 @@ import { checkProviderActive } from "@/core/auth/check-provider-active";
 import { requireNonDemo, createGuardErrorResponse } from "@core/auth/api-guards";
 
 /**
- * DigitalRx Prescription Submission API
+ * Prescription Submission API
  *
- * Submits prescriptions to the DigitalRx API and stores the response in the database.
+ * Submits prescriptions to the pharmacy backend (DigitalRx or PioneerRx)
+ * and stores the response in the database.
  * Uses pharmacy-specific credentials from pharmacy_backends table.
  */
 
-// Fallback base URL if not configured in pharmacy_backends
+import { resolvePharmacyBackendAny } from "./_shared/pharmacy-dispatcher";
+
 const DEFAULT_DIGITALRX_BASE_URL =
   process.env.NEXT_PUBLIC_DIGITALRX_BASE_URL ||
   "https://www.dbswebserver.com/DBSRestApi/API";
@@ -149,29 +151,31 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get pharmacy backend credentials
-    const { data: backend } = await supabaseAdmin
-      .from("pharmacy_backends")
-      .select("api_key_encrypted, api_url, store_id")
-      .eq("pharmacy_id", body.pharmacy_id)
-      .eq("is_active", true)
-      .eq("system_type", "DigitalRx")
-      .single();
+    // Get pharmacy backend credentials (supports DigitalRx and PioneerRx)
+    const resolvedBackend = await resolvePharmacyBackendAny(supabaseAdmin, body.pharmacy_id);
 
-    // Validate and fix pharmacy backend URL
-    if (backend?.api_url) {
-      // Fix malformed URLs (https//: or https//: -> https://)
-      // Handle cases like: https//:example.com, http//:example.com, https://:example.com
-      backend.api_url = backend.api_url
-        .replace(/^https?\/\/:/, "https://") // https//: -> https://
-        .replace(/^https?:\/\/:/, "https://") // https://: -> https://
-        .replace(/^https?\/\/\/+/, "https://"); // https:/// -> https://
+    if (!resolvedBackend) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Selected pharmacy does not have a pharmacy backend configured.",
+        },
+        { status: 400 },
+      );
+    }
 
-      // Validate URL format
+    let DIGITALRX_BASE_URL = resolvedBackend.baseUrl || DEFAULT_DIGITALRX_BASE_URL;
+
+    if (DIGITALRX_BASE_URL) {
+      DIGITALRX_BASE_URL = DIGITALRX_BASE_URL
+        .replace(/^https?\/\/:/, "https://")
+        .replace(/^https?:\/\/:/, "https://")
+        .replace(/^https?\/\/\/+/, "https://");
+
       try {
-        new URL(backend.api_url);
+        new URL(DIGITALRX_BASE_URL);
       } catch {
-        console.error("Invalid pharmacy API URL:", backend.api_url);
+        console.error("Invalid pharmacy API URL:", DIGITALRX_BASE_URL);
         return NextResponse.json(
           {
             success: false,
@@ -182,19 +186,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    if (!backend) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Selected pharmacy does not have DigitalRx configured.",
-        },
-        { status: 400 },
-      );
-    }
-
-    const DIGITALRX_API_KEY = backend.api_key_encrypted;
-    const DIGITALRX_BASE_URL = backend.api_url || DEFAULT_DIGITALRX_BASE_URL;
-    const STORE_ID = backend.store_id;
+    const DIGITALRX_API_KEY = resolvedBackend.apiKey;
+    const STORE_ID = resolvedBackend.storeId;
+    const systemType = resolvedBackend.systemType;
 
     // Generate unique RxNumber for this prescription
     const rxNumber = `RX${Date.now()}`;
@@ -443,7 +437,7 @@ export async function POST(request: NextRequest) {
       user_email: body.prescriber.first_name + "@example.com",
       user_name: `Dr. ${body.prescriber.first_name} ${body.prescriber.last_name}`,
       action: "PRESCRIPTION_SUBMITTED",
-      details: `DigitalRx: ${body.medication} ${body.dosage} for ${body.patient.first_name} ${body.patient.last_name}`,
+      details: `${systemType}: ${body.medication} ${body.dosage} for ${body.patient.first_name} ${body.patient.last_name}`,
       queue_id: queueId,
       status: "success",
     });
