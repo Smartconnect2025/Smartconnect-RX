@@ -5,4 +5,4 @@ generated = []
 id = "wRPYAzh1Qk5ph4gGlt8vV"
 uri = "file://aimrx-new/add_foreign_keys.txt"
 type = "text"
-title = "Foreign Key SQL - Copy all contents and paste in Supabase SQL Editor"
+title = "CORRECTED Foreign Key SQL - Paste in Supabase SQL Editor"

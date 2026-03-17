@@ -23,7 +23,7 @@ DO $$ BEGIN
   ALTER TABLE public."allergies"
     ADD CONSTRAINT "allergies_encounter_id_encounters_fk"
     FOREIGN KEY ("encounter_id") REFERENCES public."encounters"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -52,8 +52,16 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  ALTER TABLE public."billing_groups"
-    ADD CONSTRAINT "billing_groups_billing_group_id_billing_groups_fk"
+  ALTER TABLE public."billing_diagnoses"
+    ADD CONSTRAINT "billing_diagnoses_billing_group_id_billing_groups_fk"
+    FOREIGN KEY ("billing_group_id") REFERENCES public."billing_groups"("id")
+    ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE public."billing_procedures"
+    ADD CONSTRAINT "billing_procedures_billing_group_id_billing_groups_fk"
     FOREIGN KEY ("billing_group_id") REFERENCES public."billing_groups"("id")
     ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
@@ -71,7 +79,7 @@ DO $$ BEGIN
   ALTER TABLE public."conditions"
     ADD CONSTRAINT "conditions_encounter_id_encounters_fk"
     FOREIGN KEY ("encounter_id") REFERENCES public."encounters"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -127,7 +135,7 @@ DO $$ BEGIN
   ALTER TABLE public."encounters"
     ADD CONSTRAINT "encounters_appointment_id_appointments_fk"
     FOREIGN KEY ("appointment_id") REFERENCES public."appointments"("id")
-    ON DELETE NO ACTION;
+    ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -135,7 +143,7 @@ DO $$ BEGIN
   ALTER TABLE public."encounters"
     ADD CONSTRAINT "encounters_order_id_orders_fk"
     FOREIGN KEY ("order_id") REFERENCES public."orders"("id")
-    ON DELETE NO ACTION;
+    ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -148,10 +156,18 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  ALTER TABLE public."goals"
-    ADD CONSTRAINT "goals_goal_id_goals_fk"
+  ALTER TABLE public."goal_progress"
+    ADD CONSTRAINT "goal_progress_goal_id_goals_fk"
     FOREIGN KEY ("goal_id") REFERENCES public."goals"("id")
     ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE public."groups"
+    ADD CONSTRAINT "groups_platform_manager_id_platform_managers_fk"
+    FOREIGN KEY ("platform_manager_id") REFERENCES public."platform_managers"("id")
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -167,7 +183,7 @@ DO $$ BEGIN
   ALTER TABLE public."medications"
     ADD CONSTRAINT "medications_encounter_id_encounters_fk"
     FOREIGN KEY ("encounter_id") REFERENCES public."encounters"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -180,8 +196,8 @@ EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  ALTER TABLE public."notifications"
-    ADD CONSTRAINT "notifications_notification_id_notifications_fk"
+  ALTER TABLE public."notification_actions"
+    ADD CONSTRAINT "notification_actions_notification_id_notifications_fk"
     FOREIGN KEY ("notification_id") REFERENCES public."notifications"("id")
     ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
@@ -205,17 +221,33 @@ END $$;
 
 DO $$ BEGIN
   ALTER TABLE public."orders"
-    ADD CONSTRAINT "orders_order_id_orders_fk"
+    ADD CONSTRAINT "orders_billing_address_id_user_addresses_fk"
+    FOREIGN KEY ("billing_address_id") REFERENCES public."user_addresses"("id")
+    ON DELETE NO ACTION;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE public."order_line_items"
+    ADD CONSTRAINT "order_line_items_order_id_orders_fk"
     FOREIGN KEY ("order_id") REFERENCES public."orders"("id")
     ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  ALTER TABLE public."orders"
-    ADD CONSTRAINT "orders_product_id_products_fk"
+  ALTER TABLE public."order_line_items"
+    ADD CONSTRAINT "order_line_items_product_id_products_fk"
     FOREIGN KEY ("product_id") REFERENCES public."products"("id")
     ON DELETE NO ACTION;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE public."order_activities"
+    ADD CONSTRAINT "order_activities_order_id_orders_fk"
+    FOREIGN KEY ("order_id") REFERENCES public."orders"("id")
+    ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -229,9 +261,17 @@ END $$;
 
 DO $$ BEGIN
   ALTER TABLE public."patient_documents"
+    ADD CONSTRAINT "patient_documents_prescription_id_prescriptions_fk"
+    FOREIGN KEY ("prescription_id") REFERENCES public."prescriptions"("id")
+    ON DELETE CASCADE;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE public."patient_documents"
     ADD CONSTRAINT "patient_documents_uploaded_by_users_fk"
     FOREIGN KEY ("uploaded_by") REFERENCES auth.users("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -255,7 +295,7 @@ DO $$ BEGIN
   ALTER TABLE public."payment_transactions"
     ADD CONSTRAINT "payment_transactions_prescription_id_prescriptions_fk"
     FOREIGN KEY ("prescription_id") REFERENCES public."prescriptions"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -263,7 +303,7 @@ DO $$ BEGIN
   ALTER TABLE public."payment_transactions"
     ADD CONSTRAINT "payment_transactions_patient_id_patients_fk"
     FOREIGN KEY ("patient_id") REFERENCES public."patients"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -271,7 +311,7 @@ DO $$ BEGIN
   ALTER TABLE public."payment_transactions"
     ADD CONSTRAINT "payment_transactions_provider_id_providers_fk"
     FOREIGN KEY ("provider_id") REFERENCES public."providers"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -279,7 +319,7 @@ DO $$ BEGIN
   ALTER TABLE public."payment_transactions"
     ADD CONSTRAINT "payment_transactions_pharmacy_id_pharmacies_fk"
     FOREIGN KEY ("pharmacy_id") REFERENCES public."pharmacies"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -335,7 +375,7 @@ DO $$ BEGIN
   ALTER TABLE public."prescriptions"
     ADD CONSTRAINT "prescriptions_encounter_id_encounters_fk"
     FOREIGN KEY ("encounter_id") REFERENCES public."encounters"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -343,7 +383,15 @@ DO $$ BEGIN
   ALTER TABLE public."prescriptions"
     ADD CONSTRAINT "prescriptions_appointment_id_appointments_fk"
     FOREIGN KEY ("appointment_id") REFERENCES public."appointments"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+DO $$ BEGIN
+  ALTER TABLE public."prescriptions"
+    ADD CONSTRAINT "prescriptions_medication_id_pharmacy_medications_fk"
+    FOREIGN KEY ("medication_id") REFERENCES public."pharmacy_medications"("id")
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -351,7 +399,7 @@ DO $$ BEGIN
   ALTER TABLE public."prescriptions"
     ADD CONSTRAINT "prescriptions_pharmacy_id_pharmacies_fk"
     FOREIGN KEY ("pharmacy_id") REFERENCES public."pharmacies"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
@@ -359,13 +407,13 @@ DO $$ BEGIN
   ALTER TABLE public."prescriptions"
     ADD CONSTRAINT "prescriptions_backend_id_pharmacy_backends_fk"
     FOREIGN KEY ("backend_id") REFERENCES public."pharmacy_backends"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  ALTER TABLE public."categories"
-    ADD CONSTRAINT "categories_category_id_categories_fk"
+  ALTER TABLE public."products"
+    ADD CONSTRAINT "products_category_id_categories_fk"
     FOREIGN KEY ("category_id") REFERENCES public."categories"("id")
     ON DELETE NO ACTION;
 EXCEPTION WHEN duplicate_object THEN NULL;
@@ -431,13 +479,13 @@ DO $$ BEGIN
   ALTER TABLE public."providers"
     ADD CONSTRAINT "providers_group_id_groups_fk"
     FOREIGN KEY ("group_id") REFERENCES public."groups"("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
 DO $$ BEGIN
-  ALTER TABLE public."app_settings"
-    ADD CONSTRAINT "app_settings_provider_id_providers_fk"
+  ALTER TABLE public."provider_settings"
+    ADD CONSTRAINT "provider_settings_provider_id_providers_fk"
     FOREIGN KEY ("provider_id") REFERENCES public."providers"("id")
     ON DELETE CASCADE;
 EXCEPTION WHEN duplicate_object THEN NULL;
@@ -447,7 +495,7 @@ DO $$ BEGIN
   ALTER TABLE public."system_logs"
     ADD CONSTRAINT "system_logs_user_id_users_fk"
     FOREIGN KEY ("user_id") REFERENCES auth.users("id")
-    ON DELETE NO ACTION;
+    ON DELETE SET NULL;
 EXCEPTION WHEN duplicate_object THEN NULL;
 END $$;
 
