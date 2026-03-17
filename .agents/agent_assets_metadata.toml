@@ -6,3 +6,9 @@ id = "wRPYAzh1Qk5ph4gGlt8vV"
 uri = "file://aimrx-new/add_foreign_keys.txt"
 type = "text"
 title = "FIXED Foreign Key SQL - Now skips missing columns"
+
+[[outputs]]
+id = "-jXgS5KeZgc3Td_cdTCKM"
+uri = "file://aimrx-new/PioneerRX_Integration_Documentation.md"
+type = "text"
+title = "Pioneer RX Integration Documentation (Email to Jerry)"
