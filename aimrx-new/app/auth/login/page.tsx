@@ -90,9 +90,6 @@ export default function LoginPage() {
         localStorage.removeItem("inactivity_logout");
       } catch {}
 
-      const mfaRes = await fetch("/api/mfa/status", { credentials: "same-origin" });
-      const mfaData = await mfaRes.json();
-
       const { data: roleData } = await supabase
         .from("user_roles")
         .select("role")
