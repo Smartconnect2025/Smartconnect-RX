@@ -4,6 +4,9 @@ import net from "net";
 const PORT = parseInt(process.env.PORT) || 26196;
 const TARGET_PORT = 5000;
 const TARGET_HOST = "127.0.0.1";
+const HEALTH_CHECK_INTERVAL = 2000;
+const MAX_RETRIES = 3;
+const RETRY_DELAY = 500;
 
 const NO_CACHE_HEADERS = {
   "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
@@ -19,7 +22,25 @@ const STARTUP_HTML = `<!DOCTYPE html>
 @keyframes spin{to{transform:rotate(360deg);}}</style></head>
 <body><div class="box"><div class="spinner"></div><h2>SmartConnect RX</h2><p>Starting up... this page will refresh automatically.</p></div></body></html>`;
 
-const server = http.createServer((req, res) => {
+let upstreamReady = false;
+
+function checkUpstream() {
+  const req = http.request(
+    { hostname: TARGET_HOST, port: TARGET_PORT, path: "/", method: "HEAD", timeout: 3000 },
+    (res) => {
+      upstreamReady = true;
+      res.resume();
+    }
+  );
+  req.on("error", () => { upstreamReady = false; });
+  req.on("timeout", () => { req.destroy(); upstreamReady = false; });
+  req.end();
+}
+
+checkUpstream();
+setInterval(checkUpstream, HEALTH_CHECK_INTERVAL);
+
+function proxyRequest(req, res, retriesLeft) {
   const options = {
     hostname: TARGET_HOST,
     port: TARGET_PORT,
@@ -29,19 +50,36 @@ const server = http.createServer((req, res) => {
   };
 
   const proxyReq = http.request(options, (proxyRes) => {
+    upstreamReady = true;
     const mergedHeaders = { ...proxyRes.headers, ...NO_CACHE_HEADERS };
     res.writeHead(proxyRes.statusCode, mergedHeaders);
     proxyRes.pipe(res, { end: true });
   });
 
   proxyReq.on("error", () => {
-    if (!res.headersSent) {
+    if (retriesLeft > 0) {
+      setTimeout(() => proxyRequest(req, res, retriesLeft - 1), RETRY_DELAY);
+    } else if (!res.headersSent) {
+      upstreamReady = false;
       res.writeHead(503, { ...NO_CACHE_HEADERS, "Content-Type": "text/html" });
       res.end(STARTUP_HTML);
     }
   });
 
-  req.pipe(proxyReq, { end: true });
+  if (req.readable) {
+    req.pipe(proxyReq, { end: true });
+  } else {
+    proxyReq.end();
+  }
+}
+
+const server = http.createServer((req, res) => {
+  if (!upstreamReady) {
+    res.writeHead(503, { ...NO_CACHE_HEADERS, "Content-Type": "text/html" });
+    res.end(STARTUP_HTML);
+    return;
+  }
+  proxyRequest(req, res, MAX_RETRIES);
 });
 
 server.on("upgrade", (req, socket, head) => {
