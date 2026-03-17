@@ -12,7 +12,7 @@ import { requireNonDemo, createGuardErrorResponse } from "@core/auth/api-guards"
  * Uses pharmacy-specific credentials from pharmacy_backends table.
  */
 
-import { resolvePharmacyBackendAny } from "./_shared/pharmacy-dispatcher";
+import { resolvePharmacyBackendAny } from "../_shared/pharmacy-dispatcher";
 
 const DEFAULT_DIGITALRX_BASE_URL =
   process.env.NEXT_PUBLIC_DIGITALRX_BASE_URL ||

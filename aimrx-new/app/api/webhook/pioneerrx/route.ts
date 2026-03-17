@@ -59,8 +59,8 @@ function mapToOrderProgress(status: string): string {
 
 function validateToken(request: NextRequest): boolean {
   if (!PIONEERRX_WEBHOOK_SECRET) {
-    console.warn("[webhook/pioneerrx] PIONEERRX_WEBHOOK_SECRET not configured — allowing request (set secret to enforce auth)");
-    return true;
+    console.error("[webhook/pioneerrx] PIONEERRX_WEBHOOK_SECRET not configured — rejecting request. Set PIONEERRX_WEBHOOK_SECRET env var.");
+    return false;
   }
 
   const urlToken = request.nextUrl.searchParams.get("token");
@@ -68,9 +68,6 @@ function validateToken(request: NextRequest): boolean {
 
   const headerSecret = request.headers.get("x-webhook-secret");
   if (headerSecret === PIONEERRX_WEBHOOK_SECRET) return true;
-
-  const apiKeyHeader = request.headers.get("prx-api-key");
-  if (apiKeyHeader === PIONEERRX_WEBHOOK_SECRET) return true;
 
   return false;
 }

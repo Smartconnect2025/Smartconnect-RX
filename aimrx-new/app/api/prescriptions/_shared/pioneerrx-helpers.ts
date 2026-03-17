@@ -41,7 +41,7 @@ function generatePioneerRxHeaders(apiKey: string, sharedSecret: string) {
 
   const saltedValue = timestamp + sharedSecret;
   const encoded = Buffer.from(saltedValue, "utf16le");
-  const signature = crypto.createHmac("sha512", Buffer.from(sharedSecret, "utf16le"))
+  const signature = crypto.createHash("sha512")
     .update(encoded)
     .digest("base64");
 
@@ -99,10 +99,15 @@ function resolveBackendRow(row: PharmacyBackendRow): PioneerRxBackend {
   let apiKey = rawKey;
   let sharedSecret = "";
 
-  if (rawKey.includes("|")) {
-    const parts = rawKey.split("|");
-    apiKey = parts[0];
-    sharedSecret = parts[1];
+  const pipeIndex = rawKey.indexOf("|");
+  if (pipeIndex > 0 && pipeIndex < rawKey.length - 1) {
+    apiKey = rawKey.substring(0, pipeIndex);
+    sharedSecret = rawKey.substring(pipeIndex + 1);
+  } else if (pipeIndex >= 0) {
+    console.error("[pioneerrx] INVALID api_key format — expected 'apiKey|sharedSecret' but got malformed value with pipe at position", pipeIndex);
+    apiKey = rawKey.replace(/\|/g, "");
+  } else {
+    console.error("[pioneerrx] INVALID api_key format — expected 'apiKey|sharedSecret' but no pipe separator found. PioneerRx auth will fail without a shared secret.");
   }
 
   return {
@@ -118,29 +123,21 @@ export async function resolvePioneerRxBackend(
   supabase: SupabaseClient,
   pharmacyId: string | null,
 ): Promise<PioneerRxBackend | null> {
-  if (pharmacyId) {
-    const { data } = await supabase
-      .from("pharmacy_backends")
-      .select("api_key_encrypted, api_url, store_id, location_id")
-      .eq("pharmacy_id", pharmacyId)
-      .eq("is_active", true)
-      .eq("system_type", "PioneerRx")
-      .single();
-
-    if (data) return resolveBackendRow(data);
+  if (!pharmacyId) {
+    console.warn("[pioneerrx] No pharmacy_id provided, cannot resolve PioneerRx backend");
+    return null;
   }
 
-  const { data: defaultBackend, error } = await supabase
+  const { data } = await supabase
     .from("pharmacy_backends")
     .select("api_key_encrypted, api_url, store_id, location_id")
+    .eq("pharmacy_id", pharmacyId)
     .eq("is_active", true)
     .eq("system_type", "PioneerRx")
-    .limit(1)
     .single();
 
-  if (!defaultBackend || error) return null;
-
-  return resolveBackendRow(defaultBackend);
+  if (!data) return null;
+  return resolveBackendRow(data);
 }
 
 export async function resolvePioneerRxBackendsBatch(
@@ -163,18 +160,6 @@ export async function resolvePioneerRxBackendsBatch(
         backendMap.set(b.pharmacy_id, resolveBackendRow(b));
       }
     }
-  }
-
-  const { data: defaultBackend } = await supabase
-    .from("pharmacy_backends")
-    .select("api_key_encrypted, api_url, store_id, location_id")
-    .eq("is_active", true)
-    .eq("system_type", "PioneerRx")
-    .limit(1)
-    .single();
-
-  if (defaultBackend) {
-    backendMap.set("__default__", resolveBackendRow(defaultBackend));
   }
 
   return backendMap;
@@ -260,7 +245,7 @@ export async function submitPioneerRxEScript(
   const headers = generatePioneerRxHeaders(backend.apiKey, backend.sharedSecret);
   const eScriptUrl = `${backend.baseUrl}/api/v1/EScript/New`;
 
-  const eScriptPayload = {
+  const eScriptPayload: Record<string, unknown> = {
     patient: {
       firstName: payload.patient.firstName,
       lastName: payload.patient.lastName,
@@ -302,6 +287,13 @@ export async function submitPioneerRxEScript(
     pdfDocument: payload.pdfBase64 || null,
     prescriberSignature: payload.signatureUrl || null,
   };
+
+  if (backend.storeId) {
+    eScriptPayload.storeID = backend.storeId;
+  }
+  if (backend.locationId) {
+    eScriptPayload.locationID = backend.locationId;
+  }
 
   try {
     const response = await fetch(eScriptUrl, {

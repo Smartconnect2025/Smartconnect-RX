@@ -42,10 +42,17 @@ function resolveRow(row: PharmacyBackendInfo): ResolvedPharmacyBackend {
   let apiKey = rawKey;
   let sharedSecret = "";
 
-  if (systemType === "PioneerRx" && rawKey.includes("|")) {
-    const parts = rawKey.split("|");
-    apiKey = parts[0];
-    sharedSecret = parts[1];
+  if (systemType === "PioneerRx") {
+    const pipeIndex = rawKey.indexOf("|");
+    if (pipeIndex > 0 && pipeIndex < rawKey.length - 1) {
+      apiKey = rawKey.substring(0, pipeIndex);
+      sharedSecret = rawKey.substring(pipeIndex + 1);
+    } else if (pipeIndex >= 0) {
+      console.error("[pharmacy-dispatcher] PioneerRx: INVALID api_key format — expected 'apiKey|sharedSecret' but got malformed value");
+      apiKey = rawKey.replace(/\|/g, "");
+    } else {
+      console.error("[pharmacy-dispatcher] PioneerRx: INVALID api_key format — expected 'apiKey|sharedSecret' but no pipe separator found. Auth will fail.");
+    }
   }
 
   return {
