@@ -1,0 +1,596 @@
+[
+  {
+    "table": "addendums",
+    "col": "encounter_id",
+    "targetTable": "encounters",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "addendums.ts",
+    "line": 18
+  },
+  {
+    "table": "allergies",
+    "col": "patient_id",
+    "targetTable": "patients",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "allergies.ts",
+    "line": 26
+  },
+  {
+    "table": "allergies",
+    "col": "encounter_id",
+    "targetTable": "encounters",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "allergies.ts",
+    "line": 28
+  },
+  {
+    "table": "appointments",
+    "col": "provider_id",
+    "targetTable": "providers",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "appointments.ts",
+    "line": 26
+  },
+  {
+    "table": "appointments",
+    "col": "patient_id",
+    "targetTable": "patients",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "appointments.ts",
+    "line": 29
+  },
+  {
+    "table": "billing_groups",
+    "col": "encounter_id",
+    "targetTable": "encounters",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "billing.ts",
+    "line": 25
+  },
+  {
+    "table": "billing_groups",
+    "col": "billing_group_id",
+    "targetTable": "billing_groups",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "billing.ts",
+    "line": 113
+  },
+  {
+    "table": "billing_groups",
+    "col": "billing_group_id",
+    "targetTable": "billing_groups",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "billing.ts",
+    "line": 205
+  },
+  {
+    "table": "conditions",
+    "col": "patient_id",
+    "targetTable": "patients",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "conditions.ts",
+    "line": 27
+  },
+  {
+    "table": "conditions",
+    "col": "encounter_id",
+    "targetTable": "encounters",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "conditions.ts",
+    "line": 29
+  },
+  {
+    "table": "emr_orders",
+    "col": "patient_id",
+    "targetTable": "patients",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "emr_orders.ts",
+    "line": 34
+  },
+  {
+    "table": "emr_orders",
+    "col": "encounter_id",
+    "targetTable": "encounters",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "emr_orders.ts",
+    "line": 37
+  },
+  {
+    "table": "emr_orders",
+    "col": "ordered_by",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "NO ACTION",
+    "file": "emr_orders.ts",
+    "line": 41
+  },
+  {
+    "table": "encounters",
+    "col": "patient_id",
+    "targetTable": "patients",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "encounters.ts",
+    "line": 51
+  },
+  {
+    "table": "encounters",
+    "col": "provider_id",
+    "targetTable": "providers",
+    "targetCol": "id",
+    "on": "NO ACTION",
+    "file": "encounters.ts",
+    "line": 53
+  },
+  {
+    "table": "encounters",
+    "col": "finalized_by",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "NO ACTION",
+    "file": "encounters.ts",
+    "line": 54
+  },
+  {
+    "table": "encounters",
+    "col": "appointment_id",
+    "targetTable": "appointments",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "encounters.ts",
+    "line": 70
+  },
+  {
+    "table": "encounters",
+    "col": "order_id",
+    "targetTable": "orders",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "encounters.ts",
+    "line": 75
+  },
+  {
+    "table": "goals",
+    "col": "user_id",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "goals.ts",
+    "line": 25
+  },
+  {
+    "table": "goals",
+    "col": "goal_id",
+    "targetTable": "goals",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "goals.ts",
+    "line": 99
+  },
+  {
+    "table": "groups",
+    "col": "platform_manager_id",
+    "targetTable": "platform_managers",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "groups.ts",
+    "line": 25
+  },
+  {
+    "table": "medications",
+    "col": "patient_id",
+    "targetTable": "patients",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "medications.ts",
+    "line": 26
+  },
+  {
+    "table": "medications",
+    "col": "encounter_id",
+    "targetTable": "encounters",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "medications.ts",
+    "line": 28
+  },
+  {
+    "table": "notifications",
+    "col": "user_id",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "notifications.ts",
+    "line": 26
+  },
+  {
+    "table": "notifications",
+    "col": "notification_id",
+    "targetTable": "notifications",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "notifications.ts",
+    "line": 94
+  },
+  {
+    "table": "orders",
+    "col": "user_id",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "orders.ts",
+    "line": 38
+  },
+  {
+    "table": "orders",
+    "col": "shipping_address_id",
+    "targetTable": "user_addresses",
+    "targetCol": "id",
+    "on": "NO ACTION",
+    "file": "orders.ts",
+    "line": 46
+  },
+  {
+    "table": "orders",
+    "col": "billing_address_id",
+    "targetTable": "user_addresses",
+    "targetCol": "id",
+    "on": "NO ACTION",
+    "file": "orders.ts",
+    "line": 48
+  },
+  {
+    "table": "orders",
+    "col": "order_id",
+    "targetTable": "orders",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "orders.ts",
+    "line": 108
+  },
+  {
+    "table": "orders",
+    "col": "product_id",
+    "targetTable": "products",
+    "targetCol": "id",
+    "on": "NO ACTION",
+    "file": "orders.ts",
+    "line": 113
+  },
+  {
+    "table": "orders",
+    "col": "order_id",
+    "targetTable": "orders",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "orders.ts",
+    "line": 193
+  },
+  {
+    "table": "patient_documents",
+    "col": "patient_id",
+    "targetTable": "patients",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "patient_documents.ts",
+    "line": 24
+  },
+  {
+    "table": "patient_documents",
+    "col": "prescription_id",
+    "targetTable": "prescriptions",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "patient_documents.ts",
+    "line": 37
+  },
+  {
+    "table": "patient_documents",
+    "col": "uploaded_by",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "patient_documents.ts",
+    "line": 43
+  },
+  {
+    "table": "patients",
+    "col": "user_id",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "patients.ts",
+    "line": 27
+  },
+  {
+    "table": "patients",
+    "col": "provider_id",
+    "targetTable": "providers",
+    "targetCol": "id",
+    "on": "NO ACTION",
+    "file": "patients.ts",
+    "line": 47
+  },
+  {
+    "table": "payment_transactions",
+    "col": "prescription_id",
+    "targetTable": "prescriptions",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "payment_transactions.ts",
+    "line": 27
+  },
+  {
+    "table": "payment_transactions",
+    "col": "patient_id",
+    "targetTable": "patients",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "payment_transactions.ts",
+    "line": 40
+  },
+  {
+    "table": "payment_transactions",
+    "col": "provider_id",
+    "targetTable": "providers",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "payment_transactions.ts",
+    "line": 48
+  },
+  {
+    "table": "payment_transactions",
+    "col": "pharmacy_id",
+    "targetTable": "pharmacies",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "payment_transactions.ts",
+    "line": 54
+  },
+  {
+    "table": "pharmacy_admins",
+    "col": "user_id",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "pharmacy_admins.ts",
+    "line": 21
+  },
+  {
+    "table": "pharmacy_admins",
+    "col": "pharmacy_id",
+    "targetTable": "pharmacies",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "pharmacy_admins.ts",
+    "line": 24
+  },
+  {
+    "table": "pharmacy_backends",
+    "col": "pharmacy_id",
+    "targetTable": "pharmacies",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "pharmacy_backends.ts",
+    "line": 33
+  },
+  {
+    "table": "pharmacy_medications",
+    "col": "pharmacy_id",
+    "targetTable": "pharmacies",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "pharmacy_medications.ts",
+    "line": 24
+  },
+  {
+    "table": "prescriptions",
+    "col": "prescriber_id",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "prescriptions.ts",
+    "line": 42
+  },
+  {
+    "table": "prescriptions",
+    "col": "patient_id",
+    "targetTable": "patients",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "prescriptions.ts",
+    "line": 47
+  },
+  {
+    "table": "prescriptions",
+    "col": "encounter_id",
+    "targetTable": "encounters",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "prescriptions.ts",
+    "line": 51
+  },
+  {
+    "table": "prescriptions",
+    "col": "appointment_id",
+    "targetTable": "appointments",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "prescriptions.ts",
+    "line": 56
+  },
+  {
+    "table": "prescriptions",
+    "col": "medication_id",
+    "targetTable": "pharmacy_medications",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "prescriptions.ts",
+    "line": 88
+  },
+  {
+    "table": "prescriptions",
+    "col": "pharmacy_id",
+    "targetTable": "pharmacies",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "prescriptions.ts",
+    "line": 94
+  },
+  {
+    "table": "prescriptions",
+    "col": "backend_id",
+    "targetTable": "pharmacy_backends",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "prescriptions.ts",
+    "line": 97
+  },
+  {
+    "table": "categories",
+    "col": "category_id",
+    "targetTable": "categories",
+    "targetCol": "id",
+    "on": "NO ACTION",
+    "file": "products.ts",
+    "line": 84
+  },
+  {
+    "table": "provider_availability",
+    "col": "provider_id",
+    "targetTable": "providers",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "provider_availability.ts",
+    "line": 25
+  },
+  {
+    "table": "provider_availability_exceptions",
+    "col": "provider_id",
+    "targetTable": "providers",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "provider_availability_exceptions.ts",
+    "line": 26
+  },
+  {
+    "table": "provider_patient_mappings",
+    "col": "provider_id",
+    "targetTable": "providers",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "provider_patient_mappings.ts",
+    "line": 26
+  },
+  {
+    "table": "provider_patient_mappings",
+    "col": "patient_id",
+    "targetTable": "patients",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "provider_patient_mappings.ts",
+    "line": 29
+  },
+  {
+    "table": "provider_pharmacy_links",
+    "col": "provider_id",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "provider_pharmacy_links.ts",
+    "line": 21
+  },
+  {
+    "table": "provider_pharmacy_links",
+    "col": "pharmacy_id",
+    "targetTable": "pharmacies",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "provider_pharmacy_links.ts",
+    "line": 24
+  },
+  {
+    "table": "providers",
+    "col": "user_id",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "providers.ts",
+    "line": 44
+  },
+  {
+    "table": "providers",
+    "col": "group_id",
+    "targetTable": "groups",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "providers.ts",
+    "line": 48
+  },
+  {
+    "table": "app_settings",
+    "col": "provider_id",
+    "targetTable": "providers",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "settings.ts",
+    "line": 77
+  },
+  {
+    "table": "system_logs",
+    "col": "user_id",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "SET NULL",
+    "file": "system_logs.ts",
+    "line": 15
+  },
+  {
+    "table": "user_addresses",
+    "col": "user_id",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "user_addresses.ts",
+    "line": 24
+  },
+  {
+    "table": "user_roles",
+    "col": "user_id",
+    "targetTable": "auth.users",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "user_roles.ts",
+    "line": 15
+  },
+  {
+    "table": "vitals",
+    "col": "patient_id",
+    "targetTable": "patients",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "vitals.ts",
+    "line": 27
+  },
+  {
+    "table": "vitals",
+    "col": "encounter_id",
+    "targetTable": "encounters",
+    "targetCol": "id",
+    "on": "CASCADE",
+    "file": "vitals.ts",
+    "line": 30
+  }
+]
