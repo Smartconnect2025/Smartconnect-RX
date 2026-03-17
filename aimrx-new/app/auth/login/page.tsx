@@ -90,13 +90,8 @@ export default function LoginPage() {
         localStorage.removeItem("inactivity_logout");
       } catch {}
 
-      document.cookie = "totp_verified=true;path=/;max-age=28800;samesite=lax";
-      document.cookie = "mfa_pending=;path=/;max-age=0";
-
-      await fetch("/api/auth/mfa/complete-setup", {
-        method: "POST",
-        credentials: "same-origin",
-      });
+      const mfaRes = await fetch("/api/mfa/status", { credentials: "same-origin" });
+      const mfaData = await mfaRes.json();
 
       const { data: roleData } = await supabase
         .from("user_roles")
@@ -112,7 +107,12 @@ export default function LoginPage() {
         targetUrl = "/prescriptions";
       }
 
-      window.location.href = targetUrl;
+      if (mfaData.mfaEnabled) {
+        document.cookie = "mfa_pending=true;path=/;max-age=600;samesite=lax";
+        window.location.href = "/auth/mfa-verify?redirect=" + encodeURIComponent(targetUrl);
+      } else {
+        window.location.href = "/auth/mfa-setup?redirect=" + encodeURIComponent(targetUrl);
+      }
     } catch (error: unknown) {
       toast.error(
         error instanceof Error ? error.message : "An unknown error occurred",

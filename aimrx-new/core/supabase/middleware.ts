@@ -87,11 +87,13 @@ export async function updateSession(request: NextRequest) {
     const cached = getCachedUserData(request);
 
     const authExemptPaths = [
-      "/auth/mfa-enroll",
+      "/auth/mfa-setup",
       "/auth/mfa-verify",
+      "/auth/mfa-enroll",
       "/auth/verify-mfa",
       "/auth/logout",
       "/auth/login",
+      "/api/mfa/",
       "/api/auth/mfa/",
       "/api/auth/logout",
     ];
@@ -112,75 +114,26 @@ export async function updateSession(request: NextRequest) {
       }
 
       const totpVerified = request.cookies.get("totp_verified")?.value === "true";
-      const userMfaMethod = request.cookies.get("mfa_method")?.value;
 
       if (!totpVerified) {
-        const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-
-        if (userMfaMethod === "email") { // explicit email flow; missing/undefined/totp all use TOTP AAL path below
-          if (aalData?.currentLevel === "aal2") {
-            supabaseResponse.cookies.set("totp_verified", "true", {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === "production",
-              sameSite: "lax",
-              path: "/",
-            });
-            if (request.cookies.get("mfa_pending")?.value) {
-              supabaseResponse.cookies.set("mfa_pending", "", { path: "/", maxAge: 0 });
-            }
-            if (!cached.sessionToken) {
-              await setSessionStarted(supabaseResponse);
-            }
-          } else {
-            const mfaPending = request.cookies.get("mfa_pending")?.value === "true";
-            if (mfaPending) {
-              const verifyUrl = new URL("/auth/verify-mfa", request.url);
-              verifyUrl.searchParams.set("redirect", pathname);
-              const mfaRedirect = NextResponse.redirect(verifyUrl);
-              for (const cookie of supabaseResponse.cookies.getAll()) {
-                mfaRedirect.cookies.set(cookie.name, cookie.value);
-              }
-              return mfaRedirect;
-            }
-            const loginUrl = new URL("/auth/login", request.url);
-            loginUrl.searchParams.set("redirect", pathname);
-            const loginRedirect = NextResponse.redirect(loginUrl);
-            for (const cookie of supabaseResponse.cookies.getAll()) {
-              loginRedirect.cookies.set(cookie.name, cookie.value);
-            }
-            return loginRedirect;
+        const mfaPending = request.cookies.get("mfa_pending")?.value === "true";
+        if (mfaPending) {
+          const verifyUrl = new URL("/auth/mfa-verify", request.url);
+          verifyUrl.searchParams.set("redirect", pathname);
+          const mfaRedirect = NextResponse.redirect(verifyUrl);
+          for (const cookie of supabaseResponse.cookies.getAll()) {
+            mfaRedirect.cookies.set(cookie.name, cookie.value);
           }
-        } else {
-          if (aalData?.nextLevel === "aal2" && aalData?.currentLevel === "aal1") {
-            const verifyUrl = new URL("/auth/mfa-verify", request.url);
-            verifyUrl.searchParams.set("redirect", pathname);
-            const mfaRedirect = NextResponse.redirect(verifyUrl);
-            for (const cookie of supabaseResponse.cookies.getAll()) {
-              mfaRedirect.cookies.set(cookie.name, cookie.value);
-            }
-            return mfaRedirect;
-          }
-
-          if (aalData?.currentLevel === "aal2") {
-            supabaseResponse.cookies.set("totp_verified", "true", {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === "production",
-              sameSite: "lax",
-              path: "/",
-            });
-            if (!cached.sessionToken) {
-              await setSessionStarted(supabaseResponse);
-            }
-          } else if (aalData?.nextLevel === "aal1" || !aalData?.nextLevel) {
-            const enrollUrl = new URL("/auth/mfa-enroll", request.url);
-            enrollUrl.searchParams.set("redirect", pathname);
-            const enrollRedirect = NextResponse.redirect(enrollUrl);
-            for (const cookie of supabaseResponse.cookies.getAll()) {
-              enrollRedirect.cookies.set(cookie.name, cookie.value);
-            }
-            return enrollRedirect;
-          }
+          return mfaRedirect;
         }
+
+        const setupUrl = new URL("/auth/mfa-setup", request.url);
+        setupUrl.searchParams.set("redirect", pathname);
+        const setupRedirect = NextResponse.redirect(setupUrl);
+        for (const cookie of supabaseResponse.cookies.getAll()) {
+          setupRedirect.cookies.set(cookie.name, cookie.value);
+        }
+        return setupRedirect;
       } else if (!cached.sessionToken) {
         await setSessionStarted(supabaseResponse);
       }
