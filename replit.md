@@ -71,7 +71,10 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - `app/api/admin/pioneer-test/route.ts` — test PioneerRx connection (admin only)
 - **PioneerRx auth**: API key stored as `api_key|shared_secret` in `api_key_encrypted` field (pipe-separated)
 - **PioneerRx signature**: SHA512 hash of (ISO timestamp + shared secret), UTF-16-LE encoded, base64 output
-- **Admin UI**: Pharmacy management page already has DigitalRx/PioneerRx selector
+- **Admin UI**: Pharmacy management page has DigitalRx/PioneerRx selector with separate Shared Secret field for PioneerRx
+- **Integration Settings**: `/admin/settings` page with DigitalRx and Pioneer RX tabs — shows API configs, webhook URLs, connection tests, and endpoint reference
+  - `app/(features)/admin/settings/page.tsx` — tabbed integration settings UI
+  - `app/api/admin/test-pioneer-connection/route.ts` — tests Pioneer RX API connectivity using `/api/v1/Test/IsAvailableWithAuth`
 
 ### Critical Files (DO NOT modify without understanding the auth system)
 - `core/supabase/middleware.ts` — session management
