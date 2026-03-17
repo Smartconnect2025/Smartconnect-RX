@@ -89,12 +89,9 @@ export async function updateSession(request: NextRequest) {
     const authExemptPaths = [
       "/auth/mfa-setup",
       "/auth/mfa-verify",
-      "/auth/mfa-enroll",
-      "/auth/verify-mfa",
       "/auth/logout",
       "/auth/login",
       "/api/mfa/",
-      "/api/auth/mfa/",
       "/api/auth/logout",
     ];
 

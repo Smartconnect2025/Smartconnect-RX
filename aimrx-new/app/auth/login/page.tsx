@@ -100,7 +100,7 @@ export default function LoginPage() {
         .single();
 
       const role = roleData?.role;
-      let targetUrl = redirectUrl || "/dashboard";
+      let targetUrl = redirectUrl || "/";
       if (role === "admin" || role === "super_admin" || role === "pharmacy_admin") {
         targetUrl = "/admin";
       } else if (role === "provider") {

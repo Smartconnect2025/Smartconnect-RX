@@ -15,7 +15,7 @@ const AUTH_EXCLUDED_PATHS = [
   "/auth/register",
   "/auth/forgot-password",
   "/auth/reset-password",
-  "/auth/verify-mfa",
+  "/auth/mfa-verify",
 ];
 
 /**

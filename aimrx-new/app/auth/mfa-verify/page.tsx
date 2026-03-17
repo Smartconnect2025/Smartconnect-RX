@@ -52,11 +52,11 @@ export default function MFAVerifyPage() {
         } else if (role === "provider") {
           targetUrl = "/prescriptions";
         } else {
-          targetUrl = "/dashboard";
+          targetUrl = "/";
         }
       }
 
-      window.location.href = targetUrl || "/dashboard";
+      window.location.href = targetUrl || "/";
     } catch (error: unknown) {
       const errMsg = error instanceof Error ? error.message : String(error);
       if (errMsg.includes("Not authenticated") || errMsg.includes("session")) {
