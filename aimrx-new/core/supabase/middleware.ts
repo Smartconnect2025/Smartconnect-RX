@@ -23,7 +23,9 @@ import { getCachedUserData, isSessionExpired, setSessionStarted } from "@core/au
  * @returns A Next.js response, either the original response with updated cookies or a redirect
  */
 export async function updateSession(request: NextRequest) {
-  const isDev = process.env.NODE_ENV === 'development';
+  if (process.env.NODE_ENV === 'development') {
+    return NextResponse.next({ request });
+  }
 
   let supabaseResponse = NextResponse.next({
     request,
@@ -77,16 +79,6 @@ export async function updateSession(request: NextRequest) {
         supabaseResponse.cookies.set(name, "", { path: "/", maxAge: 0 });
       }
     });
-  }
-
-  if (isDev) {
-    if (user) {
-      const cached = getCachedUserData(request);
-      if (!cached.sessionToken) {
-        await setSessionStarted(supabaseResponse);
-      }
-    }
-    return supabaseResponse;
   }
 
   const pathname = request.nextUrl.pathname;
