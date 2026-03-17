@@ -124,7 +124,7 @@ export async function POST(request: NextRequest) {
               settingName: "hostedPaymentOrderOptions",
               settingValue: JSON.stringify({
                 show: true,
-                merchantName: "AIMRX",
+                merchantName: "SmartConnect RX",
               }),
             },
             {

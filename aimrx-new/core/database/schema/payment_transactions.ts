@@ -56,15 +56,17 @@ export const paymentTransactions = pgTable(
     }),
     pharmacyName: text("pharmacy_name"),
 
-    // Authorize.Net reference ID (20 chars max for Authorize.Net compatibility)
-    // This is used as refId and invoiceNumber when communicating with Authorize.Net
+    paymentGateway: text("payment_gateway").notNull().default("authorizenet"),
+
     authnetRefId: text("authnet_ref_id").unique(),
 
-    // Authorize.Net transaction details
     authnetTransactionId: text("authnet_transaction_id"),
     authnetAuthorizationCode: text("authnet_authorization_code"),
     authnetResponseCode: text("authnet_response_code"),
     authnetResponseReason: text("authnet_response_reason"),
+
+    stripePaymentIntentId: text("stripe_payment_intent_id"),
+    stripeSessionId: text("stripe_session_id"),
 
     // Payment link (magic link)
     paymentToken: text("payment_token").notNull().unique(),
@@ -182,7 +184,14 @@ export type PaymentTransaction = typeof paymentTransactions.$inferSelect;
 export type InsertPaymentTransaction = typeof paymentTransactions.$inferInsert;
 export type UpdatePaymentTransaction = Partial<InsertPaymentTransaction>;
 
-// Payment status enum
+export const PaymentGateway = {
+  AUTHORIZENET: "authorizenet",
+  STRIPE: "stripe",
+} as const;
+
+export type PaymentGatewayType =
+  (typeof PaymentGateway)[keyof typeof PaymentGateway];
+
 export const PaymentStatus = {
   PENDING: "pending",
   COMPLETED: "completed",

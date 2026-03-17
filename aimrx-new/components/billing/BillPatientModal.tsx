@@ -432,6 +432,7 @@ export function BillPatientModal({
   const [isExistingLink, setIsExistingLink] = useState(false);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [linkGateway, setLinkGateway] = useState<string>("authorizenet");
 
   // Reset form state from props when modal opens or props change
   useEffect(() => {
@@ -502,6 +503,8 @@ export function BillPatientModal({
           setDescription(data.existingLink.description);
         if (data.existingLink.patientEmail)
           setPatientEmail(data.existingLink.patientEmail);
+        if (data.existingLink.paymentGateway)
+          setLinkGateway(data.existingLink.paymentGateway);
       }
     } catch (error) {
       // Silently handle check errors
@@ -653,7 +656,7 @@ export function BillPatientModal({
 
     try {
       setLoading(true);
-      await redirectToHostedCheckout(paymentToken);
+      await redirectToHostedCheckout(paymentToken, linkGateway);
     } catch (error) {
       console.error("[BillPatientModal] Charge directly error:", error);
       toast.error("Failed to process payment. Please try again.");
@@ -662,34 +665,52 @@ export function BillPatientModal({
     }
   };
 
-  const redirectToHostedCheckout = async (token: string) => {
-    const tokenResponse = await fetch("/api/payments/get-hosted-token", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ paymentToken: token, from: "provider-dashboard" }),
-    });
+  const redirectToHostedCheckout = async (token: string, gateway?: string) => {
+    const paymentGateway = gateway || "authorizenet";
 
-    const tokenData = await tokenResponse.json();
-    if (!tokenResponse.ok || !tokenData.success) {
-      toast.error(tokenData.error || "Failed to initialize payment gateway");
-      return;
+    if (paymentGateway === "stripe") {
+      const sessionResponse = await fetch("/api/payments/create-stripe-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ paymentToken: token, from: "provider-dashboard" }),
+      });
+
+      const sessionData = await sessionResponse.json();
+      if (!sessionResponse.ok || !sessionData.success) {
+        toast.error(sessionData.error || "Failed to initialize Stripe checkout");
+        return;
+      }
+
+      window.location.href = sessionData.sessionUrl;
+    } else {
+      const tokenResponse = await fetch("/api/payments/get-hosted-token", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ paymentToken: token, from: "provider-dashboard" }),
+      });
+
+      const tokenData = await tokenResponse.json();
+      if (!tokenResponse.ok || !tokenData.success) {
+        toast.error(tokenData.error || "Failed to initialize payment gateway");
+        return;
+      }
+
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = tokenData.paymentUrl;
+      form.target = "_self";
+
+      const tokenInput = document.createElement("input");
+      tokenInput.type = "hidden";
+      tokenInput.name = "token";
+      tokenInput.value = tokenData.formToken;
+      form.appendChild(tokenInput);
+
+      document.body.appendChild(form);
+      form.submit();
     }
-
-    // Create form and redirect to Authorize.Net
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = tokenData.paymentUrl;
-    form.target = "_self";
-
-    const tokenInput = document.createElement("input");
-    tokenInput.type = "hidden";
-    tokenInput.name = "token";
-    tokenInput.value = tokenData.formToken;
-    form.appendChild(tokenInput);
-
-    document.body.appendChild(form);
-    form.submit();
   };
 
   const handleCopyLink = () => {
@@ -756,6 +777,7 @@ export function BillPatientModal({
     setIsExistingLink(false);
     setExpiresAt(null);
     setEmailSent(false);
+    setLinkGateway("authorizenet");
     onClose();
   };
 

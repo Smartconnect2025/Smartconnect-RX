@@ -157,7 +157,7 @@ export default function PaymentCancelledPage() {
                   If you&apos;re experiencing issues with payment, please contact us:
                 </p>
                 <p className="text-sm font-medium text-gray-900">
-                  AIM Medical Technologies
+                  SmartConnect RX
                 </p>
                 <p className="text-sm text-gray-600">(512) 377-9898 · Mon–Fri 9AM–6PM CST</p>
               </div>

@@ -211,29 +211,33 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate Authorize.Net credentials are configured
-    if (!envConfig.AUTHNET_API_LOGIN_ID || !envConfig.AUTHNET_TRANSACTION_KEY) {
-      return NextResponse.json(
-        {
-          error: "Payment system not configured. Please contact administrator.",
-        },
-        { status: 500 },
-      );
+    const rawGateway = body.paymentGateway || "authorizenet";
+    const paymentGateway = rawGateway === "stripe" ? "stripe" : "authorizenet";
+
+    if (paymentGateway === "authorizenet") {
+      if (!envConfig.AUTHNET_API_LOGIN_ID || !envConfig.AUTHNET_TRANSACTION_KEY) {
+        return NextResponse.json(
+          { error: "Authorize.Net is not configured. Please contact administrator." },
+          { status: 500 },
+        );
+      }
+    } else if (paymentGateway === "stripe") {
+      if (!envConfig.STRIPE_SECRET_KEY) {
+        return NextResponse.json(
+          { error: "Stripe is not configured. Please contact administrator." },
+          { status: 500 },
+        );
+      }
     }
 
-    // Calculate total amount
     const totalAmountCents = consultationFeeCents + medicationCostCents + (shippingFeeCents || 0);
     const totalAmountDollars = (totalAmountCents / 100).toFixed(2);
 
-    // Generate unique payment token (for patient magic link URL)
     const paymentToken = crypto.randomBytes(32).toString("hex");
 
-    // Generate unique Authorize.Net reference ID (20 chars max for Authorize.Net compatibility)
-    const authnetRefId =
-      `PAY${Date.now().toString(36).toUpperCase()}${crypto.randomBytes(4).toString("hex").toUpperCase()}`.substring(
-        0,
-        20,
-      );
+    const authnetRefId = paymentGateway === "authorizenet"
+      ? `PAY${Date.now().toString(36).toUpperCase()}${crypto.randomBytes(4).toString("hex").toUpperCase()}`.substring(0, 20)
+      : null;
 
     // Create payment transaction record
     const patient = Array.isArray(prescription.patient)
@@ -262,6 +266,7 @@ export async function POST(request: NextRequest) {
         pharmacy_id: prescription.pharmacy_id,
         pharmacy_name: pharmacy?.name,
         payment_token: paymentToken,
+        payment_gateway: paymentGateway,
         authnet_ref_id: authnetRefId,
         payment_status: "pending",
         order_progress: "payment_pending",

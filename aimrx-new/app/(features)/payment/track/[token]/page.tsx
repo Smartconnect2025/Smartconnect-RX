@@ -362,7 +362,7 @@ export default function OrderTrackingPage() {
 
             <div className="mt-6 pt-6 border-t">
               <p className="text-sm text-gray-600 mb-2">Questions about your order?</p>
-              <p className="text-sm font-medium text-gray-900">AIM Medical Technologies</p>
+              <p className="text-sm font-medium text-gray-900">SmartConnect RX</p>
               <p className="text-sm text-gray-600">(512) 377-9898 · Mon–Fri 9AM–6PM CST</p>
             </div>
           </CardContent>

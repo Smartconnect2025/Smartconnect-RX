@@ -70,6 +70,7 @@ export async function GET(
         paymentStatus: payment.payment_status,
         orderProgress: payment.order_progress,
         deliveryMethod: payment.delivery_method || "pickup",
+        paymentGateway: payment.payment_gateway || "authorizenet",
         expiresAt: payment.payment_link_expires_at,
       },
     });

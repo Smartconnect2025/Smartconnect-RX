@@ -3,7 +3,7 @@ import sgMail from "@sendgrid/mail";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "noreply@aimrx.com";
-const FROM_NAME = process.env.SENDGRID_FROM_NAME || "AIM Medical";
+const FROM_NAME = process.env.SENDGRID_FROM_NAME || "SmartConnect RX";
 
 // Internal API key for server-to-server calls (prevents external abuse)
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
@@ -78,7 +78,7 @@ This link expires in 7 days.
 
 Questions? Contact your provider or reply to this email.
 
-© ${new Date().getFullYear()} AIM Medical Technologies
+© ${new Date().getFullYear()} SmartConnect RX
       `,
       html: `
 <!DOCTYPE html>
@@ -146,7 +146,7 @@ Questions? Contact your provider or reply to this email.
               <!-- Security Note -->
               <div style="margin-top: 30px; padding: 15px; background-color: #f0f7ff; border-radius: 6px; border-left: 4px solid #1E3A8A;">
                 <p style="margin: 0; font-size: 13px; line-height: 18px; color: #1E3A8A;">
-                  <strong>🔒 Secure Payment:</strong> This link directs you to our secure payment processor (Authorize.Net). Your payment information is encrypted and protected.
+                  <strong>🔒 Secure Payment:</strong> This link directs you to our secure payment processor. Your payment information is encrypted and protected.
                 </p>
               </div>
             </td>
@@ -167,7 +167,7 @@ Questions? Contact your provider or reply to this email.
 
         <!-- Unsubscribe -->
         <p style="margin: 20px 0 0; font-size: 11px; line-height: 16px; color: #999999; text-align: center;">
-          © ${new Date().getFullYear()} AIM Medical Technologies. All rights reserved.
+          © ${new Date().getFullYear()} SmartConnect RX. All rights reserved.
         </p>
       </td>
     </tr>

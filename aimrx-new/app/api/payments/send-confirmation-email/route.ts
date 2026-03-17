@@ -3,7 +3,7 @@ import sgMail from "@sendgrid/mail";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "noreply@aimrx.com";
-const FROM_NAME = process.env.SENDGRID_FROM_NAME || "AIM Medical";
+const FROM_NAME = process.env.SENDGRID_FROM_NAME || "SmartConnect RX";
 
 // Internal API key for server-to-server calls (prevents external abuse)
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
@@ -110,7 +110,7 @@ Questions? Contact your provider or reply to this email.
 
 Keep this email for your records.
 
-© ${new Date().getFullYear()} AIM Medical Technologies
+© ${new Date().getFullYear()} SmartConnect RX
       `,
       html: `
 <!DOCTYPE html>
@@ -222,7 +222,7 @@ Keep this email for your records.
 
         <!-- Footer Text -->
         <p style="margin: 20px 0 0; font-size: 11px; line-height: 16px; color: #999999; text-align: center;">
-          © ${new Date().getFullYear()} AIM Medical Technologies. All rights reserved.
+          © ${new Date().getFullYear()} SmartConnect RX. All rights reserved.
         </p>
       </td>
     </tr>

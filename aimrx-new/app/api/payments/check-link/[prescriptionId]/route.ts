@@ -66,7 +66,7 @@ export async function GET(
     const { data: existingPayment } = await supabase
       .from("payment_transactions")
       .select(
-        "id, payment_link_url, payment_token, payment_link_expires_at, total_amount_cents, consultation_fee_cents, medication_cost_cents, shipping_fee_cents, description, patient_email"
+        "id, payment_link_url, payment_token, payment_link_expires_at, total_amount_cents, consultation_fee_cents, medication_cost_cents, shipping_fee_cents, description, patient_email, payment_gateway"
       )
       .eq("prescription_id", prescriptionId)
       .eq("payment_status", "pending")
@@ -115,6 +115,7 @@ export async function GET(
         shippingFeeCents: existingPayment.shipping_fee_cents,
         description: existingPayment.description,
         patientEmail: existingPayment.patient_email,
+        paymentGateway: existingPayment.payment_gateway || "authorizenet",
       },
     });
   } catch (error) {

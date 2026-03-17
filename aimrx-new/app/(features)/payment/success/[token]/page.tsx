@@ -529,7 +529,7 @@ export default function PaymentSuccessPage() {
                   Questions about your order?
                 </p>
                 <p className="text-sm font-medium text-gray-900">
-                  Contact AIM Medical Technologies
+                  Contact SmartConnect RX
                 </p>
                 <p className="text-sm text-gray-600">
                   (512) 377-9898 · Mon–Fri 9AM–6PM CST
