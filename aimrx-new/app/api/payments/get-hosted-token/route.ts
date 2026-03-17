@@ -65,6 +65,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (transaction.payment_gateway !== "authorizenet") {
+      return NextResponse.json(
+        { success: false, error: "This payment is not configured for Authorize.Net" },
+        { status: 400 },
+      );
+    }
+
     let authnetLoginId: string | undefined;
     let authnetTransKey: string | undefined;
     let authnetEnvironment: "sandbox" | "production" = envConfig.AUTHNET_ENVIRONMENT;
