@@ -385,8 +385,14 @@ export async function POST(
     let result;
     if (backend.systemType === "PioneerRx") {
       result = await submitToPioneerRx(backend, prescription, patient, provider, pharmacyMedication, supabaseAdmin);
-    } else {
+    } else if (backend.systemType === "DigitalRx") {
       result = await submitToDigitalRx(backend, prescription, patient, provider, pharmacyMedication, supabaseAdmin);
+    } else {
+      console.error(`❌ [submit-to-pharmacy] Unsupported pharmacy system type: ${backend.systemType}`);
+      return NextResponse.json(
+        { success: false, error: `Unsupported pharmacy system type: ${backend.systemType}` },
+        { status: 400 },
+      );
     }
 
     if (!result.success) {

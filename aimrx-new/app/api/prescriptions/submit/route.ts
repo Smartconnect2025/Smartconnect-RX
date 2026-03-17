@@ -94,9 +94,15 @@ export async function POST(request: NextRequest) {
     const demoCheck = await requireNonDemo();
     if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
 
+    if (!userRole || !["provider", "admin", "super_admin", "pharmacy_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { success: false, error: "You do not have permission to submit prescriptions" },
+        { status: 403 },
+      );
+    }
+
     const body: SubmitPrescriptionRequest = await request.json();
 
-    // Validate required fields
     if (
       !body.prescriber_id ||
       !body.patient_id ||
@@ -106,6 +112,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { success: false, error: "Missing required fields" },
         { status: 400 },
+      );
+    }
+
+    if (userRole === "provider" && body.prescriber_id !== user.id) {
+      return NextResponse.json(
+        { success: false, error: "Providers can only submit prescriptions under their own account" },
+        { status: 403 },
       );
     }
 
