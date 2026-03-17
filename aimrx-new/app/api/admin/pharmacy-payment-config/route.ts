@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@core/database/client";
+import { createServerClient } from "@core/supabase/server";
 import {
   getPaymentConfigsForPharmacy,
   upsertPaymentConfig,
@@ -9,7 +9,7 @@ import Stripe from "stripe";
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -174,7 +174,7 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();

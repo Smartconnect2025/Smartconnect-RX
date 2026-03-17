@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@core/database/client";
+import { createServerClient } from "@core/supabase/server";
 import { getActivePaymentConfig } from "@/core/services/pharmacyPaymentConfigService";
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const supabase = await createServerClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
