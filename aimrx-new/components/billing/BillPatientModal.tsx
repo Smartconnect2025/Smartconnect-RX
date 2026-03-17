@@ -562,6 +562,7 @@ export function BillPatientModal({
           description,
           patientEmail,
           sendEmail: true,
+          paymentGateway: linkGateway,
         }),
       });
 
@@ -573,6 +574,7 @@ export function BillPatientModal({
         setEmailSent(data.emailSent || false);
         setIsExistingLink(data.existing || false);
         setExpiresAt(data.expiresAt || null);
+        if (data.paymentGateway) setLinkGateway(data.paymentGateway);
 
         if (data.existing) {
           toast.info("Payment link already exists for this prescription", {
@@ -626,6 +628,7 @@ export function BillPatientModal({
           description,
           patientEmail,
           sendEmail: false,
+          paymentGateway: linkGateway,
         }),
       });
 
@@ -637,8 +640,10 @@ export function BillPatientModal({
         return;
       }
 
+      const gateway = generateData.paymentGateway || linkGateway;
+
       // Step 2: Get hosted token and redirect
-      await redirectToHostedCheckout(generateData.paymentToken);
+      await redirectToHostedCheckout(generateData.paymentToken, gateway);
     } catch (error) {
       console.error("[BillPatientModal] Charge now error:", error);
       toast.error("Failed to process payment. Please try again.");

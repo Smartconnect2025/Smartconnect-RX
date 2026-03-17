@@ -193,6 +193,7 @@ export async function POST(request: NextRequest) {
           transactionId: existingPayment.id,
           expiresAt: existingPayment.payment_link_expires_at,
           emailSent,
+          paymentGateway: existingPayment.payment_gateway || "authorizenet",
         });
       }
     }
@@ -352,6 +353,7 @@ export async function POST(request: NextRequest) {
       transactionId: paymentTransaction.id,
       expiresAt: paymentTransaction.payment_link_expires_at,
       emailSent,
+      paymentGateway,
     });
   } catch (error) {
     console.error("[GENERATE-LINK] ========== FATAL ERROR ==========");

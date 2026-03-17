@@ -232,7 +232,7 @@ export function PrescriptionModals({
               <div className="text-center pt-4">
                 <img
                   src="https://i.imgur.com/r65O4DB.png"
-                  alt="AIM Medical Technologies"
+                  alt="SmartConnect RX"
                   className="h-[80px] mx-auto print-logo"
                 />
               </div>
@@ -240,7 +240,7 @@ export function PrescriptionModals({
               {/* Letterhead */}
               <div className="text-center text-sm text-gray-600 border-b pb-4 print-letterhead">
                 <p className="font-semibold text-gray-900">
-                  AIM Medical Technologies
+                  SmartConnect RX
                 </p>
                 <p>106 E 6th St, Suite 900 · Austin, TX 78701</p>
                 <p>(512) 377-9898 · Mon–Fri 9AM–6PM CST</p>
@@ -564,7 +564,7 @@ export function PrescriptionModals({
                       Pickup Location
                     </h3>
                     <p className="font-semibold text-gray-900 print-text">
-                      AIM Medical Technologies
+                      SmartConnect RX
                     </p>
                     <a
                       href="https://maps.google.com/?q=106+E+6th+St+Suite+900+Austin+TX+78701"

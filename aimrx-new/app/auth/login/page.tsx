@@ -321,7 +321,7 @@ export default function LoginPage() {
         <div className="mt-auto z-10">
           {/* Footer */}
           <div className="text-center py-3 text-white text-xs">
-            By invitation only • Built exclusively for AIM Medical Technologies
+            By invitation only • Built exclusively for SmartConnect RX
           </div>
         </div>
     </div>

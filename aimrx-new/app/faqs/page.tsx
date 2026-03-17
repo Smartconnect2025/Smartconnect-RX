@@ -2,12 +2,12 @@ import { SimplifiedHeader } from "@/components/layout/SimplifiedHeader";
 
 const faqs = [
   {
-    question: "What is AimRX?",
-    answer: "AimRX is a healthcare technology marketplace that connects patients, providers, and pharmacies. Our platform enables telemedicine consultations, electronic prescriptions, and convenient medication fulfillment — all in one place.",
+    question: "What is SmartConnect RX?",
+    answer: "SmartConnect RX is a healthcare technology marketplace that connects patients, providers, and pharmacies. Our platform enables telemedicine consultations, electronic prescriptions, and convenient medication fulfillment — all in one place.",
   },
   {
-    question: "Is AimRX a healthcare provider?",
-    answer: "No. AimRX is a technology platform, not a licensed healthcare provider. We connect you with licensed healthcare providers who deliver medical consultations and prescriptions through our platform.",
+    question: "Is SmartConnect RX a healthcare provider?",
+    answer: "No. SmartConnect RX is a technology platform, not a licensed healthcare provider. We connect you with licensed healthcare providers who deliver medical consultations and prescriptions through our platform.",
   },
   {
     question: "How do telemedicine consultations work?",
@@ -18,7 +18,7 @@ const faqs = [
     answer: "Yes. Our platform is fully HIPAA compliant. All patient data is encrypted and stored securely in compliance with federal privacy standards. We use industry-standard security measures to protect your information.",
   },
   {
-    question: "How do prescriptions work on AimRX?",
+    question: "How do prescriptions work on SmartConnect RX?",
     answer: "When a provider issues a prescription through our platform, it is sent electronically to a pharmacy. You can choose from available pharmacies in our marketplace for competitive pricing and convenient fulfillment options, including delivery.",
   },
   {
@@ -31,7 +31,7 @@ const faqs = [
   },
   {
     question: "What if I have a medical emergency?",
-    answer: "AimRX and telemedicine services are not intended for medical emergencies. If you are experiencing a medical emergency, call 911 or go to your nearest emergency room immediately.",
+    answer: "SmartConnect RX and telemedicine services are not intended for medical emergencies. If you are experiencing a medical emergency, call 911 or go to your nearest emergency room immediately.",
   },
   {
     question: "How do I contact support?",
@@ -54,7 +54,7 @@ export default function FAQsPage() {
               Frequently Asked Questions
             </h1>
             <p className="text-gray-500 mb-8" style={{ fontFamily: 'Inter, sans-serif' }}>
-              Find answers to common questions about AimRX and our services.
+              Find answers to common questions about SmartConnect RX and our services.
             </p>
 
             <div className="space-y-6" style={{ fontFamily: 'Inter, sans-serif' }}>

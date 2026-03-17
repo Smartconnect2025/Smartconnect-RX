@@ -82,7 +82,7 @@ export default function QuickStartGuidePage() {
           <div className="mb-6 p-6 rounded-lg" style={{ backgroundColor: "#E1F5FE", border: "2px solid #00AEEF" }}>
             <div className="flex items-center gap-2 mb-3">
               <div className="w-6 h-6 rounded-full" style={{ backgroundColor: "#00AEEF" }}></div>
-              <h3 className="font-bold text-xl">AIM Medical Technologies</h3>
+              <h3 className="font-bold text-xl">SmartConnect RX</h3>
             </div>
             <div className="space-y-2">
               <div>
@@ -155,7 +155,7 @@ export default function QuickStartGuidePage() {
             <div className="p-6 rounded-lg" style={{ backgroundColor: "#E1F5FE", border: "3px solid #00AEEF" }}>
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-8 h-8 rounded-full" style={{ backgroundColor: "#00AEEF" }}></div>
-                <h3 className="font-bold text-xl">AIM Medical Technologies</h3>
+                <h3 className="font-bold text-xl">SmartConnect RX</h3>
                 <span className="text-sm text-gray-600">(slug: aim)</span>
               </div>
               <div className="text-sm text-gray-700">

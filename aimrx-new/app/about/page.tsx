@@ -9,13 +9,13 @@ export default function AboutPage() {
         <div className="max-w-4xl mx-auto px-4 py-12">
           <div className="bg-white rounded-[4px] shadow-sm border border-gray-200 p-8">
             <h1 className="text-3xl font-bold text-[#1E3A8A] mb-6" style={{ fontFamily: 'Inter, sans-serif' }}>
-              About AIM Medical Technologies
+              About SmartConnect RX
             </h1>
 
             <div className="space-y-8 text-gray-700" style={{ fontFamily: 'Inter, sans-serif' }}>
               <section>
                 <p className="text-lg leading-relaxed">
-                  AIM Medical Technologies is a healthcare technology company headquartered in Austin, Texas. We build tools that connect patients, providers, and pharmacies — making prescriptions, consultations, and medication management simpler and more accessible.
+                  SmartConnect RX is a healthcare technology company headquartered in Austin, Texas. We build tools that connect patients, providers, and pharmacies — making prescriptions, consultations, and medication management simpler and more accessible.
                 </p>
               </section>
 
@@ -77,7 +77,7 @@ export default function AboutPage() {
                   Contact Us
                 </h2>
                 <div className="bg-gray-50 rounded-lg p-6 space-y-2">
-                  <p className="font-semibold text-gray-900">AIM Medical Technologies</p>
+                  <p className="font-semibold text-gray-900">SmartConnect RX</p>
                   <p>106 E 6th St, Suite 900</p>
                   <p>Austin, TX 78701</p>
                   <p className="pt-2">Phone: (512) 377-9898</p>

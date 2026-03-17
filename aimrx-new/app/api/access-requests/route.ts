@@ -8,11 +8,11 @@ async function sendConfirmationEmailToApplicant(
   firstName: string
 ) {
   const confirmationSubject =
-    "Thank you for your interest in AIM Medical Marketplace";
+    "Thank you for your interest in SmartConnect RX Marketplace";
   const confirmationHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
       <div style="background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #00AEEF 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-        <img src="https://i.imgur.com/r65O4DB.png" alt="AIM Medical Technologies" style="height: 80px; margin-bottom: 15px;" />
+        <img src="https://i.imgur.com/r65O4DB.png" alt="SmartConnect RX" style="height: 80px; margin-bottom: 15px;" />
         <h1 style="color: white; margin: 0; font-size: 24px;">Request Received</h1>
       </div>
 
@@ -22,7 +22,7 @@ async function sendConfirmationEmailToApplicant(
         </p>
 
         <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-          Thank you for reaching out to join the AIM Medical Marketplace. We've received your request for access and are excited to have you join our network of providers.
+          Thank you for reaching out to join the SmartConnect RX Marketplace. We've received your request for access and are excited to have you join our network of providers.
         </p>
 
         <div style="background: #DBEAFE; border-left: 4px solid #2563EB; padding: 15px; margin: 20px 0; border-radius: 4px;">
@@ -49,7 +49,7 @@ async function sendConfirmationEmailToApplicant(
       </div>
 
       <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
-        <p style="margin: 5px 0;">© ${new Date().getFullYear()} AIM Medical Technologies. All rights reserved.</p>
+        <p style="margin: 5px 0;">© ${new Date().getFullYear()} SmartConnect RX. All rights reserved.</p>
       </div>
     </div>
   `;
@@ -57,7 +57,7 @@ async function sendConfirmationEmailToApplicant(
   const msg = {
     to: email,
     from: {
-      email: process.env.SENDGRID_FROM_EMAIL || "noreply@aimrx.com",
+      email: process.env.SENDGRID_FROM_EMAIL || "noreply@smartconnectrx.com",
       name: process.env.SENDGRID_FROM_NAME || "AIM RX Portal",
     },
     subject: confirmationSubject,
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
       const adminMsg = {
         to: "support@aimrx.com",
         from: {
-          email: process.env.SENDGRID_FROM_EMAIL || "noreply@aimrx.com",
+          email: process.env.SENDGRID_FROM_EMAIL || "noreply@smartconnectrx.com",
           name: process.env.SENDGRID_FROM_NAME || "AIM RX Portal"
         },
         subject: emailSubject,

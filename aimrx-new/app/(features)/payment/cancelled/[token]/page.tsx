@@ -84,7 +84,7 @@ export default function PaymentCancelledPage() {
           </div>
           <img
             src="https://i.imgur.com/r65O4DB.png"
-            alt="AIM Medical Technologies"
+            alt="SmartConnect RX"
             className="h-24 mx-auto mb-4"
           />
         </div>

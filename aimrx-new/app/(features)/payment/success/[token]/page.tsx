@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CheckCircle2, Package, Clock, LogIn } from "lucide-react";
@@ -244,8 +244,9 @@ interface PaymentDetails {
 export default function PaymentSuccessPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const token = params.token as string;
-  const from = params.from as string;
+  const from = searchParams.get("from") || "";
 
   const [loading, setLoading] = useState(true);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(
@@ -391,7 +392,7 @@ export default function PaymentSuccessPage() {
             </div>
             <img
               src="https://i.imgur.com/r65O4DB.png"
-              alt="AIM Medical Technologies"
+              alt="SmartConnect RX"
               className="h-[80px] mx-auto mb-4 print-logo"
             />
           </div>

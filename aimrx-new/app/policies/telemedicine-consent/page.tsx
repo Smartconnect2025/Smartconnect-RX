@@ -30,13 +30,13 @@ export default function TelemedicineConsentPage() {
                   2. Nature of Telemedicine Services
                 </h2>
                 <p>
-                  By consenting to telemedicine services through AIM Medical Technologies, you understand that:
+                  By consenting to telemedicine services through SmartConnect RX, you understand that:
                 </p>
                 <ul className="list-disc pl-6 mt-2 space-y-2">
                   <li>Healthcare services will be provided remotely using secure telecommunications technology.</li>
                   <li>Your provider will review your medical history, symptoms, and any relevant information you provide.</li>
                   <li>Prescriptions may be issued electronically based on the clinical evaluation conducted via telemedicine.</li>
-                  <li>AimRX is a technology platform and is not itself a licensed healthcare provider.</li>
+                  <li>SmartConnect RX is a technology platform and is not itself a licensed healthcare provider.</li>
                 </ul>
               </section>
 
@@ -87,7 +87,7 @@ export default function TelemedicineConsentPage() {
                   7. Consent
                 </h2>
                 <p>
-                  By using the telemedicine services available through AIM Medical Technologies, you acknowledge that you have read, understand, and agree to the terms described in this consent form. You consent to receive healthcare services via telemedicine and understand the limitations and risks involved.
+                  By using the telemedicine services available through SmartConnect RX, you acknowledge that you have read, understand, and agree to the terms described in this consent form. You consent to receive healthcare services via telemedicine and understand the limitations and risks involved.
                 </p>
               </section>
 

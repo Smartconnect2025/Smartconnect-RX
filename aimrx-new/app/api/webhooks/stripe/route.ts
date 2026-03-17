@@ -134,7 +134,7 @@ async function handleCheckoutCompleted(
     }
   }
 
-  const { error: updateError, data: updatedRows } = await supabase
+  const updateResult = await supabase
     .from("payment_transactions")
     .update({
       payment_status: "completed",
@@ -151,13 +151,13 @@ async function handleCheckoutCompleted(
     .eq("payment_status", "pending")
     .select("id");
 
-  if (!updatedRows || updatedRows.length === 0) {
-    console.log(`[STRIPE-WEBHOOK] Payment ${paymentTransaction.id} already processed by another request — skipping`);
+  if (updateResult.error) {
+    console.error(`[STRIPE-WEBHOOK] Failed to update payment ${paymentTransaction.id}:`, updateResult.error.message);
     return;
   }
 
-  if (updateError) {
-    console.error(`[STRIPE-WEBHOOK] Failed to update payment ${paymentTransaction.id}:`, updateError.message);
+  if (!updateResult.data || updateResult.data.length === 0) {
+    console.log(`[STRIPE-WEBHOOK] Payment ${paymentTransaction.id} already processed by another request — skipping`);
     return;
   }
 
@@ -247,6 +247,7 @@ async function handleCheckoutCompleted(
           totalAmount: (paymentTransaction.total_amount_cents / 100).toFixed(2),
           transactionId: stripePaymentIntentId || session.id,
           pharmacyName: paymentTransaction.pharmacy_name,
+          deliveryMethod: paymentTransaction.delivery_method,
         }),
       });
 

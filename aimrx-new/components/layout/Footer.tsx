@@ -90,12 +90,12 @@ export function Footer() {
               >
                 <img
                   src="https://i.imgur.com/JjQDNtL.png"
-                  alt="AIM Medical Technologies Logo"
+                  alt="SmartConnect RX Logo"
                   width={48}
                   height={48}
                 />
                 <span className="text-2xl font-bold text-white">
-                  AIM Medical Technologies
+                  SmartConnect RX
                 </span>
               </Link>
 
@@ -116,7 +116,7 @@ export function Footer() {
             <div className="space-y-4 text-center md:text-right">
               <div className="space-y-1">
                 <h3 className="text-primary-foreground/90 font-semibold">
-                  AIM Medical Technologies
+                  SmartConnect RX
                 </h3>
                 <p className="text-sm text-primary-foreground/70">
                   106 E 6th St, Suite 900
@@ -169,13 +169,13 @@ export function Footer() {
                 & Secure • Meeting Federal Privacy Standards
               </p>
               <p className="text-xs text-primary-foreground/70 max-w-4xl italic bg-primary-foreground/10 px-4 py-2 rounded-md">
-                AimRX is a technology marketplace platform that connects
-                patients, providers, and pharmacies. AimRX is not a licensed
+                SmartConnect RX is a technology marketplace platform that connects
+                patients, providers, and pharmacies. SmartConnect RX is not a licensed
                 healthcare provider and does not diagnose, treat, or provide
                 medical advice.
               </p>
               <p className="text-sm text-primary-foreground/90">
-                &copy; 2026 AIM Medical Technologies – Elevating patient care
+                &copy; 2026 SmartConnect RX – Elevating patient care
                 with AI-driven clinical innovations
               </p>
               <div className="flex flex-wrap gap-4 sm:gap-6 justify-center">

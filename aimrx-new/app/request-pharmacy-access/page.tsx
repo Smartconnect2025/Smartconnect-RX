@@ -162,7 +162,7 @@ export default function RequestPharmacyAccessPage() {
         <div className="flex flex-col items-center gap-2">
           <img
             src="https://i.imgur.com/r65O4DB.png"
-            alt="AIM Medical Technologies"
+            alt="SmartConnect RX"
             className="h-[120px] mb-2"
           />
           <h1 className="text-3xl font-bold text-white drop-shadow-2xl">AIM Marketplace</h1>
@@ -563,7 +563,7 @@ export default function RequestPharmacyAccessPage() {
 
       {/* Footer */}
       <div className="text-center py-4 text-white/70 text-xs z-10">
-        By invitation only • Built exclusively for AIM Medical Technologies
+        By invitation only • Built exclusively for SmartConnect RX
       </div>
     </div>
   );
