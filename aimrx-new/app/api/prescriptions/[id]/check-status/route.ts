@@ -111,7 +111,7 @@ export async function POST(
       newStatus = mapped.newStatus;
       trackingNumber = mapped.trackingNumber;
       lastUpdated = apiResult.data.lastUpdated || new Date().toISOString();
-    } else {
+    } else if (backend.systemType === "DigitalRx") {
       const digitalBackend = await resolvePharmacyBackend(supabaseAdmin, prescription.pharmacy_id);
 
       if (!digitalBackend) {
@@ -143,6 +143,11 @@ export async function POST(
       newStatus = mapped.newStatus;
       trackingNumber = mapped.trackingNumber;
       lastUpdated = apiResult.data.LastUpdated || new Date().toISOString();
+    } else {
+      return NextResponse.json(
+        { success: false, error: `Unsupported pharmacy system type: ${backend.systemType}` },
+        { status: 400 },
+      );
     }
 
     const { error: updateError } = await supabaseAdmin

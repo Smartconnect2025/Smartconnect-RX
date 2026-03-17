@@ -255,14 +255,19 @@ export async function POST(
       console.error("⚠️ [submit-to-pharmacy] INTERNAL_API_SECRET not configured — rejecting internal call. Set INTERNAL_API_SECRET env var.");
     }
 
+    let authenticatedUserId: string | null = null;
+    let authenticatedUserRole: string | null = null;
+
     if (!isInternalCall) {
-      const { user } = await getUser();
+      const { user, userRole } = await getUser();
       if (!user) {
         return NextResponse.json(
           { success: false, error: "Unauthorized" },
           { status: 401 },
         );
       }
+      authenticatedUserId = user.id;
+      authenticatedUserRole = userRole;
     }
 
     const supabaseAdmin = createAdminClient();
@@ -279,6 +284,18 @@ export async function POST(
         { success: false, error: "Prescription not found" },
         { status: 404 },
       );
+    }
+
+    if (!isInternalCall && authenticatedUserId) {
+      const isAdmin = authenticatedUserRole && ["admin", "super_admin", "pharmacy_admin"].includes(authenticatedUserRole);
+      const isPrescriber = prescription.prescriber_id === authenticatedUserId;
+      if (!isAdmin && !isPrescriber) {
+        console.error("❌ [submit-to-pharmacy] User", authenticatedUserId, "not authorized for prescription", prescriptionId);
+        return NextResponse.json(
+          { success: false, error: "You are not authorized to submit this prescription" },
+          { status: 403 },
+        );
+      }
     }
 
     const { data: provider, error: providerError } = await supabaseAdmin

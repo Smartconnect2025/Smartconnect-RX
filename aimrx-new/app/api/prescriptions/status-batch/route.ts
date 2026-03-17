@@ -113,13 +113,14 @@ async function processPrescription(
         if (mapped.trackingNumber) updates.tracking_number = mapped.trackingNumber;
 
         if (Object.keys(updates).length > 0) {
-          await supabase.from("prescriptions").update(updates).eq("id", prescription.id);
+          const { error: dbErr } = await supabase.from("prescriptions").update(updates).eq("id", prescription.id);
+          if (dbErr) console.error(`[status-batch] DB update failed for prescription ${prescription.id}:`, dbErr.message);
         }
       } else {
         console.error(`[status-batch] PioneerRx status check failed for prescription ${prescription.id}:`, apiResult.error || "Unknown error");
         return { ...dbResult, success: false, error: `PioneerRx status check failed: ${apiResult.error || "Unknown error"}` };
       }
-    } else {
+    } else if (unifiedBackend.systemType === "DigitalRx") {
       const digitalBackend = digitalBackendMap.get(prescription.pharmacy_id);
 
       if (digitalBackend) {
@@ -135,13 +136,17 @@ async function processPrescription(
           if (mapped.trackingNumber) updates.tracking_number = mapped.trackingNumber;
 
           if (Object.keys(updates).length > 0) {
-            await supabase.from("prescriptions").update(updates).eq("id", prescription.id);
+            const { error: dbErr } = await supabase.from("prescriptions").update(updates).eq("id", prescription.id);
+            if (dbErr) console.error(`[status-batch] DB update failed for prescription ${prescription.id}:`, dbErr.message);
           }
         } else {
           console.error(`[status-batch] DigitalRx status check failed for prescription ${prescription.id}:`, apiResult.error || "Unknown error");
           return { ...dbResult, success: false, error: `DigitalRx status check failed: ${apiResult.error || "Unknown error"}` };
         }
       }
+    } else {
+      console.error(`[status-batch] Unsupported system type '${unifiedBackend.systemType}' for prescription ${prescription.id}`);
+      return { ...dbResult, success: false, error: `Unsupported pharmacy system type: ${unifiedBackend.systemType}` };
     }
   } catch (err) {
     console.error(`[status-batch] Pharmacy API error for prescription ${prescription.id}:`, err instanceof Error ? err.message : err);
