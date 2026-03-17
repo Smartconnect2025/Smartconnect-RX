@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
-import { ensureEncrypted } from "@/core/security/encryption";
+import { ensureEncrypted, decryptApiKey } from "@/core/security/encryption";
 
 /**
  * Update a pharmacy
@@ -44,6 +44,7 @@ export async function PUT(
       system_type,
       api_url,
       api_key,
+      shared_secret,
       store_id,
       location_id,
     } = body;
@@ -101,9 +102,33 @@ export async function PUT(
         location_id: location_id || null,
       };
 
-      // Only update API key if provided (not empty)
-      if (api_key) {
-        backendData.api_key_encrypted = ensureEncrypted(api_key);
+      if (api_key || (shared_secret && system_type === "PioneerRx")) {
+        if (system_type === "PioneerRx" && existingBackend) {
+          let existingApiKey = "";
+          let existingSecret = "";
+          const { data: backendRow } = await supabase
+            .from("pharmacy_backends")
+            .select("api_key_encrypted")
+            .eq("id", existingBackend.id)
+            .single();
+          if (backendRow?.api_key_encrypted) {
+            const decrypted = decryptApiKey(backendRow.api_key_encrypted);
+            if (decrypted.includes("|")) {
+              [existingApiKey, existingSecret] = decrypted.split("|", 2);
+            } else {
+              existingApiKey = decrypted;
+            }
+          }
+          const finalApiKey = api_key || existingApiKey;
+          const finalSecret = shared_secret || existingSecret;
+          if (finalApiKey && finalSecret) {
+            backendData.api_key_encrypted = ensureEncrypted(`${finalApiKey}|${finalSecret}`);
+          } else if (finalApiKey) {
+            backendData.api_key_encrypted = ensureEncrypted(finalApiKey);
+          }
+        } else if (api_key) {
+          backendData.api_key_encrypted = ensureEncrypted(api_key);
+        }
       }
 
       if (existingBackend) {

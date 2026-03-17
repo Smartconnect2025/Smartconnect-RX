@@ -25,7 +25,7 @@ export async function POST(request: Request) {
 
     // Parse request body
     const body = await request.json();
-    const { name, slug, logo_url, primary_color, tagline, address, npi, dea_number, ncpdp_number, phone, system_type, api_url, api_key, store_id, location_id } = body;
+    const { name, slug, logo_url, primary_color, tagline, address, npi, dea_number, ncpdp_number, phone, system_type, api_url, api_key, shared_secret, store_id, location_id } = body;
 
     // Validate required fields
     if (!name || !slug) {
@@ -74,6 +74,10 @@ export async function POST(request: Request) {
       );
     }
 
+    const credentialValue = system_type === "PioneerRx" && shared_secret
+      ? `${api_key}|${shared_secret}`
+      : api_key;
+
     // Create pharmacy backend integration
     const { error: backendError } = await supabase
       .from("pharmacy_backends")
@@ -81,7 +85,7 @@ export async function POST(request: Request) {
         pharmacy_id: pharmacy.id,
         system_type,
         api_url: api_url || null,
-        api_key_encrypted: encryptApiKey(api_key),
+        api_key_encrypted: encryptApiKey(credentialValue),
         store_id,
         location_id: location_id || null,
         is_active: true,

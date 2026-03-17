@@ -167,6 +167,7 @@ export default function PharmacyManagementPage() {
     store_id: "",
     api_url: "",
     api_key: "",
+    shared_secret: "",
     location_id: "",
     primary_color: "#00AEEF",
     tagline: "",
@@ -208,6 +209,7 @@ export default function PharmacyManagementPage() {
     store_id: "",
     api_url: "",
     api_key: "",
+    shared_secret: "",
     location_id: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -436,6 +438,7 @@ export default function PharmacyManagementPage() {
       store_id: "",
       api_url: "",
       api_key: "",
+      shared_secret: "",
       location_id: "",
     });
     setWizardStep(1);
@@ -460,7 +463,8 @@ export default function PharmacyManagementPage() {
       system_type: backend?.system_type || "DigitalRx",
       store_id: backend?.store_id || "",
       api_url: backend?.api_url || "",
-      api_key: "", // Don't pre-fill API key for security
+      api_key: "",
+      shared_secret: "",
       location_id: backend?.location_id || "",
     });
     setWizardStep(1);
@@ -687,14 +691,15 @@ export default function PharmacyManagementPage() {
       name: request.form_data?.pharmacyName || "",
       slug: generateSlug(request.form_data?.pharmacyName || ""),
       phone: request.form_data?.phone || request.phone || "",
-      npi: "", // Not in access request form
+      npi: "",
       dea_number: request.form_data?.deaNumber || "",
       ncpdp_number: request.form_data?.ncpdpNumber || "",
       address: fullAddress,
-      system_type: "DigitalRx", // Default, admin selects
+      system_type: "DigitalRx",
       store_id: "",
       api_url: "",
       api_key: "",
+      shared_secret: "",
       location_id: "",
       primary_color: "#00AEEF",
       tagline: "",
@@ -1639,6 +1644,30 @@ export default function PharmacyManagementPage() {
                     </p>
                   </div>
 
+                  {pharmacyForm.system_type === "PioneerRx" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="pharmacy-shared-secret">Shared Secret *</Label>
+                      <Input
+                        id="pharmacy-shared-secret"
+                        type="password"
+                        value={pharmacyForm.shared_secret}
+                        onChange={(e) =>
+                          setPharmacyForm({
+                            ...pharmacyForm,
+                            shared_secret: e.target.value,
+                          })
+                        }
+                        placeholder="Enter shared secret for signature generation"
+                        required={!editingPharmacy}
+                      />
+                      <p className="text-xs text-gray-500">
+                        {editingPharmacy
+                          ? "Leave blank to keep existing secret"
+                          : "Used to generate the SHA-512 signature for Pioneer RX authentication"}
+                      </p>
+                    </div>
+                  )}
+
                   <div className="space-y-2">
                     <Label htmlFor="pharmacy-location-id">
                       Location ID (Optional)
@@ -2259,6 +2288,28 @@ export default function PharmacyManagementPage() {
                     required
                   />
                 </div>
+
+                {approvalForm.system_type === "PioneerRx" && (
+                  <div className="space-y-2 mt-4">
+                    <Label htmlFor="approve-shared-secret">Shared Secret *</Label>
+                    <Input
+                      id="approve-shared-secret"
+                      type="password"
+                      value={approvalForm.shared_secret}
+                      onChange={(e) =>
+                        setApprovalForm({
+                          ...approvalForm,
+                          shared_secret: e.target.value,
+                        })
+                      }
+                      placeholder="Enter shared secret"
+                      required
+                    />
+                    <p className="text-xs text-gray-500">
+                      Used to generate the SHA-512 signature for Pioneer RX authentication
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-4">
