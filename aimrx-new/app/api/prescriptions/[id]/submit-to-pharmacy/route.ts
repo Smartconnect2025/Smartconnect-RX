@@ -39,7 +39,10 @@ async function submitToDigitalRx(
     ? customAddr
     : (patient as Record<string, unknown>)?.physical_address as Record<string, string> | undefined;
 
-  const patients = (prescription as Record<string, unknown>).patients as Record<string, unknown>;
+  const patients = (prescription as Record<string, unknown>).patients as Record<string, unknown> | null;
+  if (!patients) {
+    return { success: false as const, error: "Patient data not found for this prescription", status: 400 };
+  }
   const patientGender = (patients?.data as Record<string, unknown>)?.gender;
   const patientSex = typeof patientGender === "string"
     ? (patientGender.toLowerCase() === "male" ? "M" : patientGender.toLowerCase() === "female" ? "F" : "U")
@@ -49,9 +52,9 @@ async function submitToDigitalRx(
     StoreID: backend.storeId,
     VendorName: VENDOR_NAME,
     Patient: {
-      FirstName: patients.first_name,
-      LastName: patients.last_name,
-      DOB: patients.date_of_birth,
+      FirstName: patients.first_name || "",
+      LastName: patients.last_name || "",
+      DOB: patients.date_of_birth || "",
       Sex: patientSex,
       PatientStreet: patientAddress?.street,
       PatientCity: patientAddress?.city,
@@ -146,7 +149,10 @@ async function submitToPioneerRx(
   supabaseAdmin: ReturnType<typeof createAdminClient>,
 ) {
   const rxNumber = `RX${Date.now()}`;
-  const patients = (prescription as Record<string, unknown>).patients as Record<string, unknown>;
+  const patients = (prescription as Record<string, unknown>).patients as Record<string, unknown> | null;
+  if (!patients) {
+    return { success: false as const, error: "Patient data not found for this prescription", status: 400 };
+  }
   const patientGender = (patients?.data as Record<string, unknown>)?.gender;
   const gender = typeof patientGender === "string"
     ? (patientGender.toLowerCase() === "male" ? "M" : patientGender.toLowerCase() === "female" ? "F" : "U")
@@ -245,9 +251,8 @@ export async function POST(
 
     if (configuredSecret && internalSecret && internalSecret === configuredSecret) {
       isInternalCall = true;
-    } else if (internalSecret === "webhook-auto-submit") {
-      console.warn("⚠️ [submit-to-pharmacy] Using fallback internal auth (INTERNAL_API_SECRET not configured on server)");
-      isInternalCall = true;
+    } else if (!configuredSecret && internalSecret) {
+      console.error("⚠️ [submit-to-pharmacy] INTERNAL_API_SECRET not configured — rejecting internal call. Set INTERNAL_API_SECRET env var.");
     }
 
     if (!isInternalCall) {
@@ -342,8 +347,12 @@ export async function POST(
 
     const criticalErrors: string[] = [];
     if (!backend.storeId && backend.systemType === "DigitalRx") criticalErrors.push("StoreID missing — pharmacy backend not configured");
-    if (!prescription.patients.first_name) criticalErrors.push("Patient FirstName missing");
-    if (!prescription.patients.last_name) criticalErrors.push("Patient LastName missing");
+    const rxPatients = prescription.patients as Record<string, unknown> | null;
+    if (!rxPatients) criticalErrors.push("Patient record missing");
+    else {
+      if (!rxPatients.first_name) criticalErrors.push("Patient FirstName missing");
+      if (!rxPatients.last_name) criticalErrors.push("Patient LastName missing");
+    }
     if (!prescription.medication) criticalErrors.push("DrugName missing");
 
     if (criticalErrors.length > 0) {

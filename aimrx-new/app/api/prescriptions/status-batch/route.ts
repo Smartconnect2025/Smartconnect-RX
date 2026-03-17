@@ -115,6 +115,9 @@ async function processPrescription(
         if (Object.keys(updates).length > 0) {
           await supabase.from("prescriptions").update(updates).eq("id", prescription.id);
         }
+      } else {
+        console.error(`[status-batch] PioneerRx status check failed for prescription ${prescription.id}:`, apiResult.error || "Unknown error");
+        return { ...dbResult, success: false, error: `PioneerRx status check failed: ${apiResult.error || "Unknown error"}` };
       }
     } else {
       const digitalBackend = digitalBackendMap.get(prescription.pharmacy_id);
@@ -134,11 +137,19 @@ async function processPrescription(
           if (Object.keys(updates).length > 0) {
             await supabase.from("prescriptions").update(updates).eq("id", prescription.id);
           }
+        } else {
+          console.error(`[status-batch] DigitalRx status check failed for prescription ${prescription.id}:`, apiResult.error || "Unknown error");
+          return { ...dbResult, success: false, error: `DigitalRx status check failed: ${apiResult.error || "Unknown error"}` };
         }
       }
     }
-  } catch {
-    // Pharmacy API failed — continue with DB data
+  } catch (err) {
+    console.error(`[status-batch] Pharmacy API error for prescription ${prescription.id}:`, err instanceof Error ? err.message : err);
+    return {
+      ...dbResult,
+      success: false,
+      error: `Pharmacy API error: ${err instanceof Error ? err.message : "Unknown error"}`,
+    };
   }
 
   let fedexStatus = prescription.fedex_status;
@@ -166,8 +177,8 @@ async function processPrescription(
             })
             .eq("id", prescription.id);
         }
-      } catch {
-        // FedEx failed — continue with DB data
+      } catch (fedexErr) {
+        console.error(`[status-batch] FedEx tracking error for prescription ${prescription.id}:`, fedexErr instanceof Error ? fedexErr.message : fedexErr);
       }
     }
   }

@@ -52,8 +52,8 @@ function mapToOrderProgress(status: string): string {
 
 function validateToken(request: NextRequest): boolean {
   if (!DIGITALRX_WEBHOOK_SECRET) {
-    console.warn("[webhook/digitalrx] DIGITALRX_WEBHOOK_SECRET not configured — allowing request (set secret to enforce auth)");
-    return true;
+    console.error("[webhook/digitalrx] DIGITALRX_WEBHOOK_SECRET not configured — rejecting request. Set env var to enable webhook.");
+    return false;
   }
 
   const urlToken = request.nextUrl.searchParams.get("token");

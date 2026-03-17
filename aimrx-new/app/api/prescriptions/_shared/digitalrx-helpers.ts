@@ -101,40 +101,32 @@ function resolveBackendRow(row: PharmacyBackendRow): ResolvedBackend {
 
 /**
  * Fetches and decrypts a single pharmacy backend configuration.
- * Tries the specific pharmacy_id first, then falls back to any active DigitalRx backend.
+ * Strictly scoped to the specified pharmacy_id — no cross-pharmacy fallback.
  */
 export async function resolvePharmacyBackend(
   supabase: SupabaseClient,
   pharmacyId: string | null,
 ): Promise<ResolvedBackend | null> {
-  if (pharmacyId) {
-    const { data } = await supabase
-      .from("pharmacy_backends")
-      .select("api_key_encrypted, api_url, store_id")
-      .eq("pharmacy_id", pharmacyId)
-      .eq("is_active", true)
-      .eq("system_type", "DigitalRx")
-      .single();
-
-    if (data) return resolveBackendRow(data);
+  if (!pharmacyId) {
+    console.warn("[digitalrx] No pharmacy_id provided, cannot resolve DigitalRx backend");
+    return null;
   }
 
-  const { data: defaultBackend, error } = await supabase
+  const { data } = await supabase
     .from("pharmacy_backends")
     .select("api_key_encrypted, api_url, store_id")
+    .eq("pharmacy_id", pharmacyId)
     .eq("is_active", true)
     .eq("system_type", "DigitalRx")
-    .limit(1)
     .single();
 
-  if (!defaultBackend || error) return null;
-
-  return resolveBackendRow(defaultBackend);
+  if (!data) return null;
+  return resolveBackendRow(data);
 }
 
 /**
  * Fetches all pharmacy backends for a set of pharmacy IDs in a single query.
- * Returns a Map keyed by pharmacy_id, with "__default__" for the fallback backend.
+ * Returns a Map keyed by pharmacy_id. Strictly pharmacy-scoped — no cross-pharmacy fallback.
  * Solves the N+1 query problem for batch operations.
  */
 export async function resolvePharmacyBackendsBatch(
@@ -157,19 +149,6 @@ export async function resolvePharmacyBackendsBatch(
         backendMap.set(b.pharmacy_id, resolveBackendRow(b));
       }
     }
-  }
-
-  // Fetch default backend as fallback
-  const { data: defaultBackend } = await supabase
-    .from("pharmacy_backends")
-    .select("api_key_encrypted, api_url, store_id")
-    .eq("is_active", true)
-    .eq("system_type", "DigitalRx")
-    .limit(1)
-    .single();
-
-  if (defaultBackend) {
-    backendMap.set("__default__", resolveBackendRow(defaultBackend));
   }
 
   return backendMap;
