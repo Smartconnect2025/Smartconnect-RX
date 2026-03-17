@@ -10,7 +10,7 @@ const THROTTLE_MS = 10 * 1000;
 const STORAGE_KEY = "last_activity";
 const LOGOUT_SIGNAL_KEY = "inactivity_logout";
 
-const AUTH_PATHS = ["/auth/login", "/auth/logout", "/auth/verify-mfa", "/auth/mfa-verify", "/auth/mfa-enroll", "/auth/signup"];
+const AUTH_PATHS = ["/auth/login", "/auth/logout", "/auth/mfa-verify", "/auth/mfa-setup", "/auth/signup"];
 
 export function InactivityTimer() {
   const lastActivityRef = useRef(Date.now());
