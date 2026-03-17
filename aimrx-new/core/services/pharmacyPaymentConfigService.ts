@@ -179,6 +179,21 @@ export async function deactivatePaymentConfig(
   return { success: true };
 }
 
+export async function deactivateAllGatewaysForPharmacy(
+  pharmacyId: string,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase
+    .from("pharmacy_payment_configs")
+    .update({ is_active: false, updated_at: new Date().toISOString() })
+    .eq("pharmacy_id", pharmacyId)
+    .eq("is_active", true);
+
+  if (error) return { success: false, error: error.message };
+  return { success: true };
+}
+
 function decryptConfig(raw: Record<string, unknown>): DecryptedPaymentConfig {
   const config: DecryptedPaymentConfig = {
     id: raw.id as string,

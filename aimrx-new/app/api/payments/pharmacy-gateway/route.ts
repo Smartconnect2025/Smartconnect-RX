@@ -21,6 +21,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (userRole?.role !== "admin") {
+      const { data: pharmacyAdmin } = await supabase
+        .from("pharmacy_admins")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("pharmacy_id", pharmacyId)
+        .single();
+
+      if (!pharmacyAdmin) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
     const config = await getActivePaymentConfig(pharmacyId);
 
     if (!config) {

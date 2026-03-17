@@ -3,6 +3,7 @@ import { createServerClient } from "@core/supabase/server";
 import {
   getPaymentConfigsForPharmacy,
   upsertPaymentConfig,
+  deactivateAllGatewaysForPharmacy,
   maskCredential,
 } from "@/core/services/pharmacyPaymentConfigService";
 import Stripe from "stripe";
@@ -87,18 +88,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { pharmacyId, gateway, environment, label } = body;
+    const { pharmacyId, gateway, environment, label, deactivate } = body;
 
-    if (!pharmacyId || !gateway) {
+    if (!pharmacyId) {
       return NextResponse.json(
-        { error: "pharmacyId and gateway are required" },
-        { status: 400 },
-      );
-    }
-
-    if (!["stripe", "authorizenet"].includes(gateway)) {
-      return NextResponse.json(
-        { error: "gateway must be 'stripe' or 'authorizenet'" },
+        { error: "pharmacyId is required" },
         { status: 400 },
       );
     }
@@ -120,6 +114,27 @@ export async function POST(request: NextRequest) {
       if (!pharmacyAdmin) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
+    }
+
+    if (deactivate) {
+      const result = await deactivateAllGatewaysForPharmacy(pharmacyId);
+      if (!result.success) {
+        return NextResponse.json(
+          { error: result.error || "Failed to deactivate payment config" },
+          { status: 500 },
+        );
+      }
+      return NextResponse.json({
+        success: true,
+        message: "Payment gateway deactivated",
+      });
+    }
+
+    if (!gateway || !["stripe", "authorizenet"].includes(gateway)) {
+      return NextResponse.json(
+        { error: "gateway must be 'stripe' or 'authorizenet'" },
+        { status: 400 },
+      );
     }
 
     if (gateway === "stripe") {

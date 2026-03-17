@@ -623,28 +623,31 @@ export default function PharmacyManagementPage() {
       const pharmacyId = editingPharmacy?.id || data.pharmacy?.id;
 
       if (pharmacyId && pharmacyForm.payment_gateway !== "none") {
-        try {
-          const paymentBody: Record<string, string> = {
-            pharmacyId,
-            gateway: pharmacyForm.payment_gateway,
-            environment: pharmacyForm.payment_environment,
-          };
+        const isNewGateway = !editingPharmacy;
+        const hasCredentials = pharmacyForm.payment_gateway === "stripe"
+          ? !!(pharmacyForm.stripe_secret_key && pharmacyForm.stripe_publishable_key)
+          : !!(pharmacyForm.authnet_api_login_id && pharmacyForm.authnet_transaction_key);
 
-          if (pharmacyForm.payment_gateway === "stripe") {
-            if (pharmacyForm.stripe_secret_key) paymentBody.stripeSecretKey = pharmacyForm.stripe_secret_key;
-            if (pharmacyForm.stripe_publishable_key) paymentBody.stripePublishableKey = pharmacyForm.stripe_publishable_key;
-            if (pharmacyForm.stripe_webhook_secret) paymentBody.stripeWebhookSecret = pharmacyForm.stripe_webhook_secret;
-          } else {
-            if (pharmacyForm.authnet_api_login_id) paymentBody.authnetApiLoginId = pharmacyForm.authnet_api_login_id;
-            if (pharmacyForm.authnet_transaction_key) paymentBody.authnetTransactionKey = pharmacyForm.authnet_transaction_key;
-            if (pharmacyForm.authnet_signature_key) paymentBody.authnetSignatureKey = pharmacyForm.authnet_signature_key;
-          }
+        if (isNewGateway && !hasCredentials) {
+          toast.error("Payment credentials are required when setting up a new gateway.");
+        } else if (hasCredentials) {
+          try {
+            const paymentBody: Record<string, string> = {
+              pharmacyId,
+              gateway: pharmacyForm.payment_gateway,
+              environment: pharmacyForm.payment_environment,
+            };
 
-          const hasCredentials = pharmacyForm.payment_gateway === "stripe"
-            ? (pharmacyForm.stripe_secret_key && pharmacyForm.stripe_publishable_key)
-            : (pharmacyForm.authnet_api_login_id && pharmacyForm.authnet_transaction_key);
+            if (pharmacyForm.payment_gateway === "stripe") {
+              if (pharmacyForm.stripe_secret_key) paymentBody.stripeSecretKey = pharmacyForm.stripe_secret_key;
+              if (pharmacyForm.stripe_publishable_key) paymentBody.stripePublishableKey = pharmacyForm.stripe_publishable_key;
+              if (pharmacyForm.stripe_webhook_secret) paymentBody.stripeWebhookSecret = pharmacyForm.stripe_webhook_secret;
+            } else {
+              if (pharmacyForm.authnet_api_login_id) paymentBody.authnetApiLoginId = pharmacyForm.authnet_api_login_id;
+              if (pharmacyForm.authnet_transaction_key) paymentBody.authnetTransactionKey = pharmacyForm.authnet_transaction_key;
+              if (pharmacyForm.authnet_signature_key) paymentBody.authnetSignatureKey = pharmacyForm.authnet_signature_key;
+            }
 
-          if (hasCredentials) {
             const payRes = await fetch("/api/admin/pharmacy-payment-config", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -654,10 +657,33 @@ export default function PharmacyManagementPage() {
             if (!payRes.ok || !payData.success) {
               toast.error(`Payment config warning: ${payData.error || "Could not save payment settings"}`);
             }
+          } catch (payError) {
+            console.error("Error saving payment config:", payError);
+            toast.error("Pharmacy saved but payment configuration failed. You can configure it later from Payment Settings.");
           }
-        } catch (payError) {
-          console.error("Error saving payment config:", payError);
-          toast.error("Pharmacy saved but payment configuration failed. You can configure it later from Payment Settings.");
+        }
+      }
+
+      if (pharmacyId && editingPharmacy && pharmacyForm.payment_gateway === "none") {
+        const currentGw = pharmacyGateways[editingPharmacy.id];
+        if (currentGw?.configured) {
+          try {
+            const deactivateRes = await fetch("/api/admin/pharmacy-payment-config", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                pharmacyId,
+                gateway: currentGw.gateway,
+                environment: currentGw.environment || "sandbox",
+                deactivate: true,
+              }),
+            });
+            if (deactivateRes.ok) {
+              toast.success("Payment gateway deactivated");
+            }
+          } catch (deactivateError) {
+            console.error("Error deactivating payment config:", deactivateError);
+          }
         }
       }
 
@@ -1717,6 +1743,10 @@ export default function PharmacyManagementPage() {
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
+                        if (!pharmacyForm.name.trim() || !pharmacyForm.slug.trim()) {
+                          toast.error("Pharmacy Name and Slug are required");
+                          return;
+                        }
                         setWizardStep(2);
                       }}
                     >
@@ -1854,6 +1884,10 @@ export default function PharmacyManagementPage() {
                       type="button"
                       onClick={(e) => {
                         e.preventDefault();
+                        if (!pharmacyForm.system_type) {
+                          toast.error("Please select a Pharmacy System");
+                          return;
+                        }
                         setWizardStep(3);
                       }}
                     >
