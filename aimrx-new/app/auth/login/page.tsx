@@ -107,12 +107,8 @@ export default function LoginPage() {
         targetUrl = "/prescriptions";
       }
 
-      if (mfaData.mfaEnabled) {
-        document.cookie = "mfa_pending=true;path=/;max-age=600;samesite=lax";
-        window.location.href = "/auth/mfa-verify?redirect=" + encodeURIComponent(targetUrl);
-      } else {
-        window.location.href = "/auth/mfa-setup?redirect=" + encodeURIComponent(targetUrl);
-      }
+      document.cookie = "mfa_pending=true;path=/;max-age=600;samesite=lax";
+      window.location.href = "/auth/mfa-setup?redirect=" + encodeURIComponent(targetUrl);
     } catch (error: unknown) {
       toast.error(
         error instanceof Error ? error.message : "An unknown error occurred",

@@ -20,15 +20,22 @@ export async function POST() {
 
     const admin = createAdminClient();
     const { data: userData } = await admin.auth.admin.getUserById(user.id);
+    const meta = userData?.user?.user_metadata;
+    const alreadyEnabled = !!meta?.totp_enabled;
 
-    if (userData?.user?.user_metadata?.totp_enabled) {
-      return NextResponse.json(
-        { success: false, error: "MFA is already enabled" },
-        { status: 400 },
-      );
+    let secret: string;
+    if (alreadyEnabled && meta?.totp_secret) {
+      secret = meta.totp_secret;
+    } else {
+      secret = generateSecret();
+      await admin.auth.admin.updateUserById(user.id, {
+        user_metadata: {
+          ...meta,
+          totp_secret: secret,
+        },
+      });
     }
 
-    const secret = generateSecret();
     const issuer = "SmartConnect RX";
     const label = user.email || user.id;
     const otpauth = generateURI({
@@ -40,18 +47,12 @@ export async function POST() {
 
     const qrCode = await QRCode.toDataURL(otpauth);
 
-    await admin.auth.admin.updateUserById(user.id, {
-      user_metadata: {
-        ...userData?.user?.user_metadata,
-        totp_secret: secret,
-      },
-    });
-
     return NextResponse.json({
       success: true,
       secret,
       qrCode,
       otpauth,
+      alreadyEnabled,
     });
   } catch (error) {
     console.error("MFA setup error:", error);

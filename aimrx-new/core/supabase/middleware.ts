@@ -115,7 +115,7 @@ export async function updateSession(request: NextRequest) {
       if (!totpVerified) {
         const mfaPending = request.cookies.get("mfa_pending")?.value === "true";
         if (mfaPending) {
-          const verifyUrl = new URL("/auth/mfa-verify", request.url);
+          const verifyUrl = new URL("/auth/mfa-setup", request.url);
           verifyUrl.searchParams.set("redirect", pathname);
           const mfaRedirect = NextResponse.redirect(verifyUrl);
           for (const cookie of supabaseResponse.cookies.getAll()) {
