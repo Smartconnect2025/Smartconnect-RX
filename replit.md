@@ -76,25 +76,28 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - `app/(features)/admin/settings/page.tsx` — tabbed integration settings UI
   - `app/api/admin/test-pioneer-connection/route.ts` — tests Pioneer RX API connectivity using `/api/v1/Test/IsAvailableWithAuth`
 
-### Payment Processing (Dual Gateway: Authorize.Net + Stripe)
-- **Architecture**: Both Authorize.Net and Stripe run in parallel; `payment_gateway` field on `payment_transactions` determines which processor handles each payment
+### Payment Processing (Dual Gateway: Authorize.Net + Stripe, Per-Pharmacy Config)
+- **Architecture**: Per-pharmacy payment gateway configuration. Each pharmacy sets its own Stripe or Authorize.Net credentials; payments go directly to that pharmacy's merchant account. Falls back to system-level env var credentials if no pharmacy config exists.
 - **Gateway values**: `authorizenet` (default) or `stripe`
-- **Key files**:
-  - `app/api/payments/generate-link/route.ts` — creates payment transaction, accepts `paymentGateway` param
-  - `app/api/payments/get-hosted-token/route.ts` — Authorize.Net hosted payment page token
-  - `app/api/payments/create-stripe-session/route.ts` — Stripe Checkout Session creation
-  - `app/api/webhooks/authnet/route.ts` — Authorize.Net webhook handler (HMAC-SHA512 verification)
-  - `app/api/webhooks/stripe/route.ts` — Stripe webhook handler (signature verification)
-  - `app/(features)/payment/[token]/page.tsx` — patient payment page (auto-detects gateway)
-  - `app/(features)/payment/success/[token]/page.tsx` — success page with polling
-  - `app/(features)/payment/cancelled/[token]/page.tsx` — cancellation page
-  - `components/billing/BillPatientModal.tsx` — provider billing modal (supports both gateways)
-  - `app/api/payments/send-payment-email/route.ts` — magic link email (SendGrid)
-  - `app/api/payments/send-confirmation-email/route.ts` — payment confirmation email (SendGrid)
-  - `core/database/schema/payment_transactions.ts` — schema with both gateway fields
-- **DB columns**: `payment_gateway`, `authnet_ref_id`, `authnet_transaction_id`, `stripe_payment_intent_id`, `stripe_session_id`
-- **Env vars**: `AUTHNET_API_LOGIN_ID`, `AUTHNET_TRANSACTION_KEY`, `AUTHNET_SIGNATURE_KEY`, `AUTHNET_ENVIRONMENT`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`
-- **Post-payment flow**: Both webhooks auto-update prescription status → auto-submit to pharmacy → send confirmation email
+- **Per-pharmacy config**:
+  - `pharmacy_payment_configs` table: stores encrypted credentials per pharmacy+gateway (unique constraint), with `is_active` flag, `environment` (sandbox/production)
+  - `payment_transactions.payment_config_id` FK links each transaction to the config used
+  - `core/services/pharmacyPaymentConfigService.ts` — CRUD, encrypt/decrypt, mask helpers
+  - `app/api/admin/pharmacy-payment-config/route.ts` — admin CRUD + test connection API (admin/pharmacy-admin only)
+  - `app/api/payments/pharmacy-gateway/route.ts` — lightweight gateway detection for providers (any authenticated user)
+  - `app/(features)/admin/pharmacy-payment-settings/page.tsx` — pharmacy admin UI for configuring payment credentials
+- **Key payment files**:
+  - `app/api/payments/generate-link/route.ts` — looks up pharmacy config, auto-selects gateway, stores `payment_config_id`
+  - `app/api/payments/get-hosted-token/route.ts` — uses pharmacy's AuthNet credentials (falls back to env vars)
+  - `app/api/payments/create-stripe-session/route.ts` — uses pharmacy's Stripe key (falls back to env vars)
+  - `app/api/webhooks/authnet/route.ts` — tries all pharmacy signature keys + system key for verification
+  - `app/api/webhooks/stripe/route.ts` — tries all pharmacy webhook secrets + system secret for verification
+  - `components/billing/BillPatientModal.tsx` — auto-detects gateway from pharmacy config, shows badge
+  - `app/api/payments/send-confirmation-email/route.ts` — branded emails with pharmacy name/logo
+- **DB columns**: `payment_gateway`, `payment_config_id`, `authnet_ref_id`, `authnet_transaction_id`, `stripe_payment_intent_id`, `stripe_session_id`
+- **Env vars (system fallback)**: `AUTHNET_API_LOGIN_ID`, `AUTHNET_TRANSACTION_KEY`, `AUTHNET_SIGNATURE_KEY`, `AUTHNET_ENVIRONMENT`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`
+- **Encryption**: All pharmacy credentials encrypted at rest using AES-256-GCM (`core/security/encryption.ts`), requires `ENCRYPTION_KEY` env var
+- **Post-payment flow**: Both webhooks auto-update prescription status → auto-submit to pharmacy → send branded confirmation email with pharmacy name/logo
 
 ### Critical Files (DO NOT modify without understanding the auth system)
 - `core/supabase/middleware.ts` — session management

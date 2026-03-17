@@ -41,6 +41,7 @@ interface Prescription {
   vialSize?: string;
   dosageAmount?: string;
   dosageUnit?: string;
+  pharmacyId?: string;
   pharmacyName?: string;
   pharmacyColor?: string;
   profitCents?: number;
@@ -706,6 +707,7 @@ export function PrescriptionModals({
           isOpen={isBillModalOpen}
           onClose={() => setIsBillModalOpen(false)}
           prescriptionId={selectedPrescription.id}
+          pharmacyId={selectedPrescription.pharmacyId}
           patientName={selectedPrescription.patientName}
           patientEmail={selectedPrescription.patientEmail}
           medication={selectedPrescription.medication}

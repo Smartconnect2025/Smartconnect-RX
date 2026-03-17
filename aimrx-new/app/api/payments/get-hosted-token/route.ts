@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { envConfig } from "@/core/config/envConfig";
+import { getPaymentConfigById } from "@/core/services/pharmacyPaymentConfigService";
 
 /**
  * Authorize.Net API endpoints
@@ -32,17 +33,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate Authorize.Net credentials are configured
-    if (!envConfig.AUTHNET_API_LOGIN_ID || !envConfig.AUTHNET_TRANSACTION_KEY) {
-      return NextResponse.json(
-        { success: false, error: "Payment system not configured" },
-        { status: 500 },
-      );
-    }
-
     const supabase = createAdminClient();
 
-    // Get payment transaction by token
     const { data: transaction, error: transactionError } = await supabase
       .from("payment_transactions")
       .select("*")
@@ -56,7 +48,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if payment is already completed
     if (transaction.payment_status === "completed") {
       return NextResponse.json(
         { success: false, error: "Payment has already been completed" },
@@ -64,7 +55,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if payment link has expired
     if (
       transaction.payment_link_expires_at &&
       new Date(transaction.payment_link_expires_at) < new Date()
@@ -75,20 +65,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate amount in dollars
-    const totalAmountDollars = (transaction.total_amount_cents / 100).toFixed(
-      2,
-    );
+    let authnetLoginId: string | undefined;
+    let authnetTransKey: string | undefined;
+    let authnetEnvironment: "sandbox" | "production" = envConfig.AUTHNET_ENVIRONMENT;
 
-    // Build site URL for return URLs
+    if (transaction.payment_config_id) {
+      const pharmacyConfig = await getPaymentConfigById(transaction.payment_config_id);
+      if (pharmacyConfig?.authnetApiLoginId && pharmacyConfig?.authnetTransactionKey) {
+        authnetLoginId = pharmacyConfig.authnetApiLoginId;
+        authnetTransKey = pharmacyConfig.authnetTransactionKey;
+        authnetEnvironment = pharmacyConfig.environment as "sandbox" | "production";
+      }
+    }
+
+    if (!authnetLoginId || !authnetTransKey) {
+      authnetLoginId = envConfig.AUTHNET_API_LOGIN_ID;
+      authnetTransKey = envConfig.AUTHNET_TRANSACTION_KEY;
+    }
+
+    if (!authnetLoginId || !authnetTransKey) {
+      return NextResponse.json(
+        { success: false, error: "Payment system not configured" },
+        { status: 500 },
+      );
+    }
+
+    const totalAmountDollars = (transaction.total_amount_cents / 100).toFixed(2);
     const siteUrl = envConfig.NEXT_PUBLIC_SITE_URL || "https://localhost:3000";
 
-    // Build the getHostedPaymentPageRequest
     const hostedPaymentRequest = {
       getHostedPaymentPageRequest: {
         merchantAuthentication: {
-          name: envConfig.AUTHNET_API_LOGIN_ID,
-          transactionKey: envConfig.AUTHNET_TRANSACTION_KEY,
+          name: authnetLoginId,
+          transactionKey: authnetTransKey,
         },
         refId: transaction.authnet_ref_id,
         transactionRequest: {
@@ -161,9 +170,8 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    // Determine API URL based on environment
-    const apiUrl = AUTHNET_API_URLS[envConfig.AUTHNET_ENVIRONMENT];
-    const hostedUrl = AUTHNET_HOSTED_URLS[envConfig.AUTHNET_ENVIRONMENT];
+    const apiUrl = AUTHNET_API_URLS[authnetEnvironment];
+    const hostedUrl = AUTHNET_HOSTED_URLS[authnetEnvironment];
 
     // Call Authorize.Net API
     const authnetResponse = await fetch(apiUrl, {

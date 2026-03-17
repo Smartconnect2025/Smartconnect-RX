@@ -238,6 +238,7 @@ interface Prescription {
   vialSize?: string;
   dosageAmount?: string;
   dosageUnit?: string;
+  pharmacyId?: string;
   pharmacyName?: string;
   pharmacyColor?: string;
   profitCents?: number;
@@ -451,6 +452,7 @@ export default function PrescriptionsPage() {
           vialSize: rx.vial_size,
           dosageAmount: rx.dosage_amount,
           dosageUnit: rx.dosage_unit,
+          pharmacyId: rx.pharmacy_id,
           pharmacyName: pharmacy?.name,
           pharmacyColor: pharmacy?.primary_color,
           profitCents: rx.profit_cents,

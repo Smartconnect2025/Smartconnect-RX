@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { envConfig } from "@/core/config/envConfig";
+import { getPaymentConfigById } from "@/core/services/pharmacyPaymentConfigService";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -15,14 +16,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!envConfig.STRIPE_SECRET_KEY) {
-      return NextResponse.json(
-        { success: false, error: "Stripe is not configured" },
-        { status: 500 },
-      );
-    }
-
-    const stripe = new Stripe(envConfig.STRIPE_SECRET_KEY);
     const supabase = createAdminClient();
 
     const { data: transaction, error: transactionError } = await supabase
@@ -51,6 +44,25 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    let stripeSecretKey: string | undefined;
+    if (transaction.payment_config_id) {
+      const pharmacyConfig = await getPaymentConfigById(transaction.payment_config_id);
+      if (pharmacyConfig?.stripeSecretKey) {
+        stripeSecretKey = pharmacyConfig.stripeSecretKey;
+      }
+    }
+    if (!stripeSecretKey) {
+      stripeSecretKey = envConfig.STRIPE_SECRET_KEY;
+    }
+    if (!stripeSecretKey) {
+      return NextResponse.json(
+        { success: false, error: "Stripe is not configured" },
+        { status: 500 },
+      );
+    }
+
+    const stripe = new Stripe(stripeSecretKey);
 
     if (transaction.stripe_session_id) {
       try {

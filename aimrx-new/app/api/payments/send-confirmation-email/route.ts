@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
       transactionId,
       deliveryMethod,
       pharmacyName,
+      pharmacyLogoUrl,
     } = body;
 
     if (!patientEmail || !transactionId) {
@@ -128,10 +129,12 @@ Keep this email for your records.
           <!-- Header -->
           <tr>
             <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #10B981 0%, #059669 100%); border-radius: 8px 8px 0 0;">
+              ${pharmacyLogoUrl ? `<img src="${pharmacyLogoUrl}" alt="${pharmacyName || 'Pharmacy'}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px;" />` : ''}
               <div style="width: 64px; height: 64px; margin: 0 auto 16px; background-color: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                 <span style="font-size: 36px;">✓</span>
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Payment Confirmed!</h1>
+              ${pharmacyName ? `<p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">via ${pharmacyName}</p>` : ''}
             </td>
           </tr>
 

@@ -383,6 +383,7 @@ interface BillPatientModalProps {
   isOpen: boolean;
   onClose: () => void;
   prescriptionId: string;
+  pharmacyId?: string;
   patientName: string;
   patientEmail?: string;
   medication: string;
@@ -396,6 +397,7 @@ export function BillPatientModal({
   isOpen,
   onClose,
   prescriptionId,
+  pharmacyId,
   patientName,
   patientEmail: initialPatientEmail,
   medication,
@@ -433,6 +435,25 @@ export function BillPatientModal({
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [linkGateway, setLinkGateway] = useState<string>("authorizenet");
+  const [pharmacyGatewayLabel, setPharmacyGatewayLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen && pharmacyId) {
+      fetch(`/api/payments/pharmacy-gateway?pharmacyId=${pharmacyId}`, {
+        credentials: "include",
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.configured && data.gateway) {
+            setLinkGateway(data.gateway);
+            setPharmacyGatewayLabel(
+              data.gateway === "stripe" ? "Stripe" : "Authorize.Net",
+            );
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isOpen, pharmacyId]);
 
   // Reset form state from props when modal opens or props change
   useEffect(() => {
@@ -783,6 +804,7 @@ export function BillPatientModal({
     setExpiresAt(null);
     setEmailSent(false);
     setLinkGateway("authorizenet");
+    setPharmacyGatewayLabel(null);
     onClose();
   };
 
@@ -794,7 +816,15 @@ export function BillPatientModal({
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Bill Patient</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-2xl">Bill Patient</DialogTitle>
+            {pharmacyGatewayLabel && (
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                <CreditCard className="h-3 w-3" />
+                {pharmacyGatewayLabel}
+              </span>
+            )}
+          </div>
           <DialogDescription>
             Generate a secure payment link for {patientName}
           </DialogDescription>

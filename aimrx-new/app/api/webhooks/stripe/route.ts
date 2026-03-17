@@ -1,17 +1,63 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { envConfig } from "@/core/config/envConfig";
+import { getPaymentConfigById } from "@/core/services/pharmacyPaymentConfigService";
 import { notifyPrescriptionStatusChange } from "@/features/notifications/services/serverNotificationService";
 import Stripe from "stripe";
 
+async function resolveStripeCredentials(
+  supabase: ReturnType<typeof createAdminClient>,
+  rawBody: string,
+  signature: string,
+): Promise<{ event: Stripe.Event; stripe: Stripe } | { error: string; status: number }> {
+  const { data: configs } = await supabase
+    .from("pharmacy_payment_configs")
+    .select("id, stripe_secret_key_encrypted, stripe_webhook_secret_encrypted")
+    .eq("gateway", "stripe")
+    .eq("is_active", true);
+
+  const candidates: Array<{ secretKey: string; webhookSecret: string }> = [];
+
+  if (configs && configs.length > 0) {
+    for (const cfg of configs) {
+      if (cfg.stripe_webhook_secret_encrypted) {
+        try {
+          const fullConfig = await getPaymentConfigById(cfg.id);
+          if (fullConfig?.stripeSecretKey && fullConfig?.stripeWebhookSecret) {
+            candidates.push({
+              secretKey: fullConfig.stripeSecretKey,
+              webhookSecret: fullConfig.stripeWebhookSecret,
+            });
+          }
+        } catch { /* skip */ }
+      }
+    }
+  }
+
+  if (envConfig.STRIPE_SECRET_KEY && envConfig.STRIPE_WEBHOOK_SECRET) {
+    candidates.push({
+      secretKey: envConfig.STRIPE_SECRET_KEY,
+      webhookSecret: envConfig.STRIPE_WEBHOOK_SECRET,
+    });
+  }
+
+  if (candidates.length === 0) {
+    return { error: "No Stripe webhook secrets configured", status: 503 };
+  }
+
+  for (const candidate of candidates) {
+    try {
+      const stripe = new Stripe(candidate.secretKey);
+      const event = stripe.webhooks.constructEvent(rawBody, signature, candidate.webhookSecret);
+      return { event, stripe };
+    } catch { /* try next */ }
+  }
+
+  return { error: "Invalid signature", status: 401 };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    if (!envConfig.STRIPE_SECRET_KEY) {
-      console.error("[STRIPE-WEBHOOK] STRIPE_SECRET_KEY not configured");
-      return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
-    }
-
-    const stripe = new Stripe(envConfig.STRIPE_SECRET_KEY);
     const rawBody = await request.text();
     const signature = request.headers.get("stripe-signature");
 
@@ -20,25 +66,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
 
-    let event: Stripe.Event;
-
-    if (!envConfig.STRIPE_WEBHOOK_SECRET) {
-      console.error("[STRIPE-WEBHOOK] STRIPE_WEBHOOK_SECRET not configured — rejecting all events");
-      return NextResponse.json({ error: "Webhook secret not configured" }, { status: 503 });
-    }
-
-    try {
-      event = stripe.webhooks.constructEvent(
-        rawBody,
-        signature,
-        envConfig.STRIPE_WEBHOOK_SECRET,
-      );
-    } catch (err) {
-      console.error("[STRIPE-WEBHOOK] Signature verification failed:", err instanceof Error ? err.message : "Unknown");
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
-
     const supabase = createAdminClient();
+
+    const result = await resolveStripeCredentials(supabase, rawBody, signature);
+    if ("error" in result) {
+      console.error(`[STRIPE-WEBHOOK] ${result.error}`);
+      return NextResponse.json({ error: result.error }, { status: result.status });
+    }
+
+    const { event, stripe } = result;
 
     switch (event.type) {
       case "checkout.session.completed":
@@ -233,6 +269,16 @@ async function handleCheckoutCompleted(
       const internalApiKey = process.env.INTERNAL_API_KEY || "webhook-auto-email";
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
+      let pharmacyLogoUrl: string | undefined;
+      if (paymentTransaction.pharmacy_id) {
+        const { data: pharmacy } = await supabase
+          .from("pharmacies")
+          .select("logo_url")
+          .eq("id", paymentTransaction.pharmacy_id)
+          .single();
+        pharmacyLogoUrl = pharmacy?.logo_url || undefined;
+      }
+
       const emailResponse = await fetch(`${siteUrl}/api/payments/send-confirmation-email`, {
         method: "POST",
         headers: {
@@ -248,6 +294,7 @@ async function handleCheckoutCompleted(
           transactionId: stripePaymentIntentId || session.id,
           pharmacyName: paymentTransaction.pharmacy_name,
           deliveryMethod: paymentTransaction.delivery_method,
+          pharmacyLogoUrl,
         }),
       });
 

@@ -13,6 +13,7 @@ import { prescriptions } from "./prescriptions";
 import { patients } from "./patients";
 import { providers } from "./providers";
 import { pharmacies } from "./pharmacies";
+import { pharmacyPaymentConfigs } from "./pharmacy_payment_configs";
 
 /**
  * Payment Transactions table
@@ -57,6 +58,10 @@ export const paymentTransactions = pgTable(
     pharmacyName: text("pharmacy_name"),
 
     paymentGateway: text("payment_gateway").notNull().default("authorizenet"),
+    paymentConfigId: uuid("payment_config_id").references(
+      () => pharmacyPaymentConfigs.id,
+      { onDelete: "set null" },
+    ),
 
     authnetRefId: text("authnet_ref_id").unique(),
 
