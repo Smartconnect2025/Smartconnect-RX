@@ -1,0 +1,177 @@
+
+Public
+ENVIRONMENT
+No Environment
+LAYOUT
+Single Column
+LANGUAGE
+Swift - URLSession
+PioneerRx Prescription Process API
+Introduction
+Authentication:
+POST
+New EScript
+POST
+Refill
+POST
+Edit Rx
+POST
+RxPostEdit - Unblock
+POST
+Edit RxTransaction
+POST
+Cancel RxTransaction
+GET
+Claims Get by RxTransactionID
+GET
+RxPostEdit - Active
+GET
+Rx Item Price Check
+GET
+Test
+GET
+Test with Auth
+PioneerRx Prescription Process API
+Authentication:
+Required Request Headers
+
+Headers are required for all Enterprise API Requests
+
+HeaderName	Description
+prx-api-key	This is the value given to you upon enrollment with Enterprise
+prx-timestamp	Represents the UTC time the request is made
+prx-signature	A Hashed string salted with your shared secret (see example and information below)
+How to create the signature hash
+
+Generate a DateTime value as ISO formatted UTC to use as the timestamp of the request.
+
+Salt the timestamp value with your shared secret by concatenating two values (timestamp value + shared secret)
+
+Using the salted timestamp generate an UTF-16-LE encoded byte array.
+
+Use a SHA512 hashing algorithm to compute a hash for the encoded byte array from step 3.
+
+Convert the resulting byte array from the hash as a base64 string.
+
+The base64 string can now be used in the request header.
+
+For more information on Unicode Encoding, see Wikipedia
+
+GET
+Rx Item Price Check
+https://pioneerserver:42957/api/v1/Item/Pricing/PriceCheck/Rx/<ndc>
+CalculatePriceUsingType List:
+
+Use Third Party = 1,
+Usual and Customary = 2,
+Price Schedule = 3
+
+HEADERS
+Content-Type
+application/json
+
+Body
+raw (json)
+json
+{
+  "calculatePriceUsingTypeID": 2,
+  "priceScheduleID": "<guid?>",
+  "patientCategoryID": "<guid?>",
+  "thirdPartyID": "<guid?>",
+  "quantity": 30,
+  "daysSupply": 30
+}
+Example Request
+Rx Item Price Check - Success
+View More
+swift
+let parameters = "{\r\n  \"calculatePriceUsingTypeID\": 2,\r\n  \"priceScheduleID\": null,\r\n  \"patientCategoryID\": null,\r\n  \"thirdPartyID\": null,\r\n  \"quantity\": 30,\r\n  \"daysSupply\": 30\r\n}"
+let postData = parameters.data(using: .utf8)
+
+var request = URLRequest(url: URL(string: "https://pioneerserver:42957/api/v1/Item/Pricing/PriceCheck/Rx/70710128601")!,timeoutInterval: Double.infinity)
+request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+request.httpMethod = "POST"
+request.httpBody = postData
+
+let task = URLSession.shared.dataTask(with: request) { data, response, error in 
+  guard let data = data else {
+    print(String(describing: error))
+    return
+  }
+  print(String(data: data, encoding: .utf8)!)
+}
+
+task.resume()
+200 OK
+Example Response
+Body
+Headers (1)
+View More
+json
+{
+  "itemName": "Baclofen 20 Mg Tablet",
+  "ndc": "70710-1286-01",
+  "manufacturer": "Zydus Pharmaceu",
+  "packageSize": "100 EA",
+  "price": 204.69,
+  "grossProfit": 200.637,
+  "awp": 153.909,
+  "mac": 0,
+  "cost": 4.053,
+  "tax": 0,
+  "total": 204.69,
+  "wac": 6.936,
+  "nadac": 1.5306,
+  "usualAndCustomary": 204.69
+}
+GET
+Test
+https://pioneerserver:42957/api/v1/Test/IsAvailable
+Example Request
+Test
+View More
+swift
+var request = URLRequest(url: URL(string: "https://pioneerserver:5005/api/Test/IsAvailable")!,timeoutInterval: Double.infinity)
+request.httpMethod = "GET"
+
+let task = URLSession.shared.dataTask(with: request) { data, response, error in 
+  guard let data = data else {
+    print(String(describing: error))
+    return
+  }
+  print(String(data: data, encoding: .utf8)!)
+}
+
+task.resume()
+200 OK
+Example Response
+Body
+Headers (0)
+Text
+true
+GET
+Test with Auth
+https://pioneerserver:42957/api/v1/Test/IsAvailableWithAuth
+Example Request
+Test
+View More
+swift
+var request = URLRequest(url: URL(string: "https://pioneerserver:5005/api/Test/IsAvailableWithAuth")!,timeoutInterval: Double.infinity)
+request.httpMethod = "GET"
+
+let task = URLSession.shared.dataTask(with: request) { data, response, error in 
+  guard let data = data else {
+    print(String(describing: error))
+    return
+  }
+  print(String(data: data, encoding: .utf8)!)
+}
+
+task.resume()
+200 OK
+Example Response
+Body
+Headers (0)
+Text
+true
