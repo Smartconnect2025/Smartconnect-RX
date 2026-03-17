@@ -4,11 +4,11 @@ const TARGET_PORT = 5000;
 
 const server = http.createServer((req, res) => {
   const options: http.RequestOptions = {
-    hostname: "localhost",
+    hostname: "127.0.0.1",
     port: TARGET_PORT,
     path: req.url,
     method: req.method,
-    headers: { ...req.headers, host: `localhost:${TARGET_PORT}` },
+    headers: { ...req.headers, host: `127.0.0.1:${TARGET_PORT}` },
   };
 
   const proxyReq = http.request(options, (proxyRes) => {
