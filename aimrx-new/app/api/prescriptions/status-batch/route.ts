@@ -63,7 +63,7 @@ async function fetchPrescriptions(
 async function processPrescription(
   supabase: ReturnType<typeof createAdminClient>,
   prescription: PrescriptionRow,
-  backendMap: Map<string, ResolvedPharmacyBackend>,
+  unifiedBackendMap: Map<string, ResolvedPharmacyBackend>,
   digitalBackendMap: Map<string, ResolvedBackend>,
 ) {
   const TRACKING_CHECK_INTERVAL_MS = 30 * 60 * 1000;
@@ -78,33 +78,52 @@ async function processPrescription(
     estimated_delivery: prescription.estimated_delivery,
   };
 
-  if (!prescription.queue_id) {
+  if (!prescription.queue_id || !prescription.pharmacy_id) {
     return dbResult;
   }
 
-  const unifiedBackend =
-    (prescription.pharmacy_id
-      ? backendMap.get(prescription.pharmacy_id)
-      : null) || backendMap.get("__default__");
+  const unifiedBackend = unifiedBackendMap.get(prescription.pharmacy_id);
+
+  if (!unifiedBackend) {
+    return dbResult;
+  }
 
   let newStatus = prescription.status;
   let trackingNumber = prescription.tracking_number;
 
-  if (unifiedBackend) {
-    try {
-      if (unifiedBackend.systemType === "PioneerRx") {
-        const prxBackend: PioneerRxBackend = {
-          apiKey: unifiedBackend.apiKey,
-          sharedSecret: unifiedBackend.sharedSecret,
-          baseUrl: unifiedBackend.baseUrl,
-          storeId: unifiedBackend.storeId,
-          locationId: unifiedBackend.locationId,
-        };
+  try {
+    if (unifiedBackend.systemType === "PioneerRx") {
+      const prxBackend: PioneerRxBackend = {
+        apiKey: unifiedBackend.apiKey,
+        sharedSecret: unifiedBackend.sharedSecret,
+        baseUrl: unifiedBackend.baseUrl,
+        storeId: unifiedBackend.storeId,
+        locationId: unifiedBackend.locationId,
+      };
 
-        const apiResult = await fetchPioneerRxStatus(prxBackend, prescription.queue_id);
+      const apiResult = await fetchPioneerRxStatus(prxBackend, prescription.queue_id);
+
+      if (apiResult.success) {
+        const mapped = mapPioneerRxStatus(apiResult.data, prescription.status);
+        newStatus = mapped.newStatus;
+        trackingNumber = mapped.trackingNumber || trackingNumber;
+
+        const updates: { status?: string; tracking_number?: string } = {};
+        if (newStatus !== prescription.status) updates.status = newStatus;
+        if (mapped.trackingNumber) updates.tracking_number = mapped.trackingNumber;
+
+        if (Object.keys(updates).length > 0) {
+          await supabase.from("prescriptions").update(updates).eq("id", prescription.id);
+        }
+      }
+    } else {
+      const digitalBackend = digitalBackendMap.get(prescription.pharmacy_id);
+
+      if (digitalBackend) {
+        const apiResult = await fetchDigitalRxStatus(digitalBackend, prescription.queue_id);
 
         if (apiResult.success) {
-          const mapped = mapPioneerRxStatus(apiResult.data, prescription.status);
+          const mapped = mapDigitalRxStatus(apiResult.data, prescription.status);
           newStatus = mapped.newStatus;
           trackingNumber = mapped.trackingNumber || trackingNumber;
 
@@ -116,33 +135,10 @@ async function processPrescription(
             await supabase.from("prescriptions").update(updates).eq("id", prescription.id);
           }
         }
-      } else {
-        const digitalBackend =
-          (prescription.pharmacy_id
-            ? digitalBackendMap.get(prescription.pharmacy_id)
-            : null) || digitalBackendMap.get("__default__");
-
-        if (digitalBackend) {
-          const apiResult = await fetchDigitalRxStatus(digitalBackend, prescription.queue_id);
-
-          if (apiResult.success) {
-            const mapped = mapDigitalRxStatus(apiResult.data, prescription.status);
-            newStatus = mapped.newStatus;
-            trackingNumber = mapped.trackingNumber || trackingNumber;
-
-            const updates: { status?: string; tracking_number?: string } = {};
-            if (newStatus !== prescription.status) updates.status = newStatus;
-            if (mapped.trackingNumber) updates.tracking_number = mapped.trackingNumber;
-
-            if (Object.keys(updates).length > 0) {
-              await supabase.from("prescriptions").update(updates).eq("id", prescription.id);
-            }
-          }
-        }
       }
-    } catch {
-      // Pharmacy API failed — continue with DB data
     }
+  } catch {
+    // Pharmacy API failed — continue with DB data
   }
 
   let fedexStatus = prescription.fedex_status;
@@ -240,14 +236,14 @@ export async function POST(request: NextRequest) {
       .map((p) => p.pharmacy_id)
       .filter((id): id is string => id !== null);
 
-    const [backendMap, digitalBackendMap] = await Promise.all([
+    const [unifiedBackendMap, digitalBackendMap] = await Promise.all([
       resolvePharmacyBackendsBatchAll(supabase, pharmacyIds),
       resolvePharmacyBackendsBatch(supabase, pharmacyIds),
     ]);
 
     const statuses = await Promise.all(
       prescriptions.map((prescription) =>
-        processPrescription(supabase, prescription, backendMap, digitalBackendMap),
+        processPrescription(supabase, prescription, unifiedBackendMap, digitalBackendMap),
       ),
     );
 

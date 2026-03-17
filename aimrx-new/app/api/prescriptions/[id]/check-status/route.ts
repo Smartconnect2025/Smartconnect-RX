@@ -7,6 +7,7 @@ import {
   mapDigitalRxStatus,
 } from "../../_shared/digitalrx-helpers";
 import {
+  resolvePioneerRxBackend,
   fetchPioneerRxStatus,
   mapPioneerRxStatus,
 } from "../../_shared/pioneerrx-helpers";
@@ -54,10 +55,17 @@ export async function POST(
       );
     }
 
+    if (!prescription.pharmacy_id) {
+      return NextResponse.json(
+        { success: false, error: "No pharmacy assigned to this prescription" },
+        { status: 400 },
+      );
+    }
+
     const backend = await resolvePharmacyBackendAny(supabaseAdmin, prescription.pharmacy_id);
 
     if (!backend) {
-      console.error("No pharmacy backend found for prescription");
+      console.error("No pharmacy backend found for pharmacy_id:", prescription.pharmacy_id);
       return NextResponse.json(
         {
           success: false,
@@ -108,7 +116,7 @@ export async function POST(
 
       if (!digitalBackend) {
         return NextResponse.json(
-          { success: false, error: "Pharmacy backend configuration not found." },
+          { success: false, error: "DigitalRx backend configuration not found for this pharmacy." },
           { status: 404 },
         );
       }

@@ -67,6 +67,7 @@ export async function resolvePharmacyBackendByPharmacy(
     .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, is_active")
     .eq("pharmacy_id", pharmacyId)
     .eq("is_active", true)
+    .order("created_at", { ascending: false })
     .limit(1)
     .single();
 
@@ -95,20 +96,12 @@ export async function resolvePharmacyBackendAny(
   supabase: SupabaseClient,
   pharmacyId: string | null,
 ): Promise<ResolvedPharmacyBackend | null> {
-  if (pharmacyId) {
-    const result = await resolvePharmacyBackendByPharmacy(supabase, pharmacyId);
-    if (result) return result;
+  if (!pharmacyId) {
+    console.warn("[pharmacy-dispatcher] No pharmacy_id provided, cannot resolve backend");
+    return null;
   }
 
-  const { data: fallback } = await supabase
-    .from("pharmacy_backends")
-    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, is_active")
-    .eq("is_active", true)
-    .limit(1)
-    .single();
-
-  if (!fallback) return null;
-  return resolveRow(fallback as PharmacyBackendInfo);
+  return resolvePharmacyBackendByPharmacy(supabase, pharmacyId);
 }
 
 export async function resolvePharmacyBackendsBatchAll(
@@ -118,29 +111,21 @@ export async function resolvePharmacyBackendsBatchAll(
   const backendMap = new Map<string, ResolvedPharmacyBackend>();
   const uniqueIds = [...new Set(pharmacyIds.filter(Boolean))];
 
-  if (uniqueIds.length > 0) {
-    const { data: backends } = await supabase
-      .from("pharmacy_backends")
-      .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, is_active")
-      .in("pharmacy_id", uniqueIds)
-      .eq("is_active", true);
+  if (uniqueIds.length === 0) return backendMap;
 
-    if (backends) {
-      for (const b of backends) {
+  const { data: backends } = await supabase
+    .from("pharmacy_backends")
+    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, is_active")
+    .in("pharmacy_id", uniqueIds)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false });
+
+  if (backends) {
+    for (const b of backends) {
+      if (!backendMap.has(b.pharmacy_id)) {
         backendMap.set(b.pharmacy_id, resolveRow(b as PharmacyBackendInfo));
       }
     }
-  }
-
-  const { data: defaultBackend } = await supabase
-    .from("pharmacy_backends")
-    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, is_active")
-    .eq("is_active", true)
-    .limit(1)
-    .single();
-
-  if (defaultBackend) {
-    backendMap.set("__default__", resolveRow(defaultBackend as PharmacyBackendInfo));
   }
 
   return backendMap;
