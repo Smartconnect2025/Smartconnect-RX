@@ -1,0 +1,339 @@
+Complete MFA Implementation
+How It Works — The Full Picture
+There are two separate MFA flows (one for Admins, one for Providers) but they follow the exact same pattern. The system uses TOTP (Time-Based One-Time Password, the same standard as Google Authenticator).
+
+The 3 Phases
+Phase 1 — SETUP:       Scan QR code → verify one code → get recovery codes
+Phase 2 — LOGIN:       Enter password → enter 6-digit code → get session
+Phase 3 — DISABLE:     Enter password → MFA cleared from database
+Phase 1: Setting Up MFA (QR Code Flow)
+Step 1 — Generate the Secret (Backend)
+File: server/routes.ts — endpoint POST /api/mfa/setup
+
+import { NobleCryptoPlugin, generateSecret as otplibGenerateSecret, generateURI, verifySync as otplibVerifySync } from "otplib";
+import QRCode from "qrcode";
+app.post("/api/mfa/setup", requireAdmin, async (req, res) => {
+  const admin = await storage.getAdmin(adminId);
+  if (admin.mfaEnabled) {
+    return res.status(400).json({ message: "MFA is already enabled" });
+  }
+  // 1. Generate a random base32 secret (e.g., "JBSWY3DPEHPK3PXP")
+  const secret = otplibGenerateSecret();
+  // 2. Build the otpauth:// URI that authenticator apps understand
+  const issuer = "Greenwich RX";
+  const label  = admin.username;
+  const otpauth = generateURI({ secret, issuer, label, strategy: "totp" });
+  // Result: otpauth://totp/Greenwich%20RX:adminUser?secret=JBSWY3D...&issuer=Greenwich%20RX
+  // 3. Turn that URI into a QR code image (PNG, base64 data URL)
+  const qrCodeDataUrl = await QRCode.toDataURL(otpauth);
+  // 4. Encrypt the secret before saving to database
+  const encryptedSecret = encryptMfaSecret(secret);
+  await storage.updateAdmin(admin.id, { mfaSecret: encryptedSecret });
+  // 5. Return BOTH the raw secret (for manual entry) AND the QR code image
+  res.json({ secret, qrCode: qrCodeDataUrl, otpauth });
+});
+Step 2 — Encrypting the Secret at Rest
+File: server/mfa-crypto.ts
+
+import { createCipheriv, createHash, randomBytes } from "crypto";
+function getEncryptionKey(): Buffer {
+  // Derives a 256-bit key from your SESSION_SECRET environment variable
+  return createHash("sha256").update(process.env.SESSION_SECRET!).digest();
+}
+export function encryptMfaSecret(plaintext: string): string {
+  const key = getEncryptionKey();
+  const iv  = randomBytes(12);                    // 96-bit random IV (AES-GCM standard)
+  const cipher = createCipheriv("aes-256-gcm", key, iv);
+  const encrypted = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
+  const tag = cipher.getAuthTag();                // 128-bit authentication tag
+  // Stored in database as: "iv_hex:tag_hex:ciphertext_hex"
+  return iv.toString("hex") + ":" + tag.toString("hex") + ":" + encrypted.toString("hex");
+}
+export function decryptMfaSecret(ciphertext: string): string {
+  const key = getEncryptionKey();
+  const [ivHex, tagHex, encHex] = ciphertext.split(":");
+  const decipher = createDecipheriv("aes-256-gcm", key, Buffer.from(ivHex, "hex"));
+  decipher.setAuthTag(Buffer.from(tagHex, "hex"));
+  return decipher.update(Buffer.from(encHex, "hex")) + decipher.final("utf8");
+}
+The secret never sits in the database in plain text. It's AES-256-GCM encrypted using a key derived from SESSION_SECRET.
+
+Step 3 — Showing the QR Code (Frontend)
+File: client/src/pages/settings.tsx (admin) and client/src/pages/login.tsx (first-time setup during login)
+
+// State
+const [mfaSetupData, setMfaSetupData] = useState<{ secret: string; qrCode: string } | null>(null);
+const [mfaVerifyCode, setMfaVerifyCode] = useState("");
+const [mfaRecoveryCodes, setMfaRecoveryCodes] = useState<string[] | null>(null);
+// Mutation — calls POST /api/mfa/setup
+const mfaSetupMutation = useMutation({
+  mutationFn: async () => {
+    const res = await apiRequest("POST", "/api/mfa/setup");
+    return res.json();
+  },
+  onSuccess: (data: { secret: string; qrCode: string }) => {
+    setMfaSetupData(data);   // stores the QR data URL + raw secret
+  },
+});
+// UI — what the user sees
+{mfaSetupData && (
+  <div>
+    <p>Scan with Google Authenticator, Authy, etc. then enter the 6-digit code.</p>
+    {/* QR Code image — the qrCode field IS a full base64 PNG data URL */}
+    <img
+      src={mfaSetupData.qrCode}   // "data:image/png;base64,iVBOR..."
+      alt="MFA QR Code"
+      data-testid="img-mfa-qr"
+    />
+    {/* Manual entry fallback — shows the raw base32 secret */}
+    <code data-testid="text-mfa-secret">{mfaSetupData.secret}</code>
+    {/* 6-digit code input */}
+    <input
+      type="text"
+      inputMode="numeric"
+      maxLength={6}
+      placeholder="000000"
+      value={mfaVerifyCode}
+      onChange={(e) => setMfaVerifyCode(e.target.value.replace(/\D/g, ""))}
+      data-testid="input-mfa-setup-code"
+    />
+    <button
+      onClick={() => mfaVerifySetupMutation.mutate({ code: mfaVerifyCode })}
+      disabled={mfaVerifyCode.length < 6}
+    >
+      Verify & Enable
+    </button>
+  </div>
+)}
+Step 4 — Verifying the First Code & Generating Recovery Codes (Backend)
+File: server/routes.ts — endpoint POST /api/mfa/verify-setup
+
+const TOTP_WINDOW = 1; // allows +/- 1 time step (30s tolerance for clock drift)
+app.post("/api/mfa/verify-setup", requireAdmin, async (req, res) => {
+  const { code } = req.body;
+  const admin = await storage.getAdmin(adminId);
+  // 1. Decrypt the stored secret
+  const decryptedSecret = decryptMfaSecret(admin.mfaSecret);
+  // 2. Verify the 6-digit code against the secret
+  const cleanCode   = code.replace(/\s/g, "");
+  const verifyResult = otplibVerifySync({
+    token: cleanCode,
+    secret: decryptedSecret,
+    crypto: otplibCryptoPlugin,
+    window: TOTP_WINDOW,     // ±30 seconds tolerance
+  });
+  if (!verifyResult.valid) {
+    return res.status(400).json({ message: "Invalid code. Try again with a fresh code." });
+  }
+  // 3. Generate 8 random recovery codes (8-character uppercase strings)
+  const recoveryCodes: string[] = [];
+  for (let i = 0; i < 8; i++) {
+    recoveryCodes.push(randomUUID().substring(0, 8).toUpperCase());
+  }
+  // e.g.: ["A3F8B21C", "9XK2M5LP", "R7VQ4NTZ", ...]
+  // 4. Hash recovery codes before storing (SHA-256, single-use)
+  await storage.updateAdmin(admin.id, {
+    mfaEnabled:       true,
+    mfaRecoveryCodes: hashRecoveryCodes(recoveryCodes),  // SHA-256 hashed array
+    mfaVerifiedAt:    new Date(),
+  });
+  // 5. Return PLAIN recovery codes (only time they're ever shown)
+  res.json({ success: true, recoveryCodes });
+});
+Recovery code hashing:
+
+export function hashRecoveryCode(code: string): string {
+  return createHash("sha256").update(code.toUpperCase()).digest("hex");
+}
+Step 5 — Displaying Recovery Codes (Frontend)
+{mfaRecoveryCodes && (
+  <div className="bg-amber-50 border border-amber-200 rounded p-4">
+    <p className="font-semibold text-amber-800">Save Your Recovery Codes</p>
+    <p>Each code can only be used once. Store them somewhere safe.</p>
+    <div className="grid grid-cols-2 gap-2 mt-3">
+      {mfaRecoveryCodes.map((code, i) => (
+        <code key={i} data-testid={`text-recovery-code-${i}`}>
+          {code}
+        </code>
+      ))}
+    </div>
+    <button
+      onClick={() => navigator.clipboard.writeText(mfaRecoveryCodes.join("\n"))}
+      data-testid="button-copy-recovery-codes"
+    >
+      Copy All
+    </button>
+  </div>
+)}
+Phase 2: Logging In With MFA
+Login → MFA Challenge (Backend)
+File: server/routes.ts — POST /api/auth/login
+
+// After password is validated...
+if (admin.mfaEnabled && admin.mfaSecret) {
+  // Don't grant full session yet
+  // Store a "pending" flag in session so only /api/auth/mfa-verify can complete it
+  req.session.mfaPending      = true;
+  req.session.mfaAdminId      = admin.id;
+  req.session.mfaAdminUsername = admin.username;
+  req.session.save(() => {
+    res.json({ success: true, mfaRequired: true }); // ← tells frontend to show code input
+  });
+  return;
+}
+// If MFA is NOT enabled — grant session and flag for setup
+req.session.authenticated  = true;
+req.session.mfaSetupPending = true;   // ← will trigger setup flow on next load
+res.json({ success: true, mfaSetupRequired: true });
+MFA Verify During Login (Backend)
+File: server/routes.ts — POST /api/auth/mfa-verify
+
+app.post("/api/auth/mfa-verify", loginLimiter, async (req, res) => {
+  if (!req.session.mfaPending) {
+    return res.status(400).json({ message: "No MFA challenge pending" });
+  }
+  const { code } = req.body;
+  const adminId  = req.session.mfaAdminId;
+  const admin    = await storage.getAdmin(adminId);
+  const decryptedSecret = decryptMfaSecret(admin.mfaSecret);
+  const cleanCode       = code.replace(/\s/g, "");
+  // 1. Try the 6-digit TOTP code
+  let isValid = otplibVerifySync({
+    token: cleanCode, secret: decryptedSecret,
+    crypto: otplibCryptoPlugin, window: TOTP_WINDOW,
+  }).valid;
+  // 2. If TOTP fails, try recovery codes
+  if (!isValid && admin.mfaRecoveryCodes) {
+    const recoveryIndex = verifyRecoveryCode(cleanCode, admin.mfaRecoveryCodes);
+    if (recoveryIndex !== -1) {
+      // Remove the used recovery code (single-use)
+      const updatedCodes = [...admin.mfaRecoveryCodes];
+      updatedCodes.splice(recoveryIndex, 1);
+      await storage.updateAdmin(admin.id, { mfaRecoveryCodes: updatedCodes });
+      isValid = true;
+    }
+  }
+  if (!isValid) {
+    return res.status(401).json({ message: "Invalid MFA code" });
+  }
+  // 3. Clear the pending flag and grant full session
+  delete req.session.mfaPending;
+  delete req.session.mfaAdminId;
+  req.session.authenticated = true;
+  req.session.adminId       = admin.id;
+  req.session.role          = "admin";
+  res.json({ success: true });
+});
+Recovery code verification:
+
+export function verifyRecoveryCode(inputCode: string, hashedCodes: string[]): number {
+  const inputHash = hashRecoveryCode(inputCode); // SHA-256 the input
+  return hashedCodes.indexOf(inputHash);          // find it in stored hashes
+  // returns -1 if not found, or the index if found (for splice removal)
+}
+Login MFA UI (Frontend)
+File: client/src/pages/login.tsx
+
+// Step machine: "credentials" → "mfa" (or "mfa-setup" for first login)
+type AdminStep = "credentials" | "mfa" | "mfa-setup" | "mfa-recovery";
+// After login succeeds with mfaRequired: true
+onSuccess: (data) => {
+  if (data.mfaRequired) {
+    setAdminStep("mfa");   // show the code input screen
+  }
+  if (data.mfaSetupRequired) {
+    adminMfaSetupMutation.mutate(); // auto-trigger setup for new admins
+  }
+}
+// The MFA code entry screen
+{adminStep === "mfa" && (
+  <form onSubmit={(e) => { e.preventDefault(); mfaVerifyMutation.mutate({ code: mfaCode }); }}>
+    <input
+      id="mfa-code"
+      type="text"
+      inputMode="numeric"
+      placeholder="Enter 6-digit code"
+      maxLength={6}
+      autoComplete="one-time-code"
+      value={mfaCode}
+      onChange={(e) => setMfaCode(e.target.value)}
+      data-testid="input-mfa-code"
+    />
+    <button type="submit" disabled={!mfaCode} data-testid="button-mfa-verify">
+      Verify
+    </button>
+  </form>
+)}
+Phase 3: Disabling MFA
+// Admin: requires password confirmation
+app.post("/api/mfa/disable", requireAdmin, async (req, res) => {
+  const { password } = req.body;
+  const passwordValid = await bcrypt.compare(password, admin.passwordHash);
+  if (!passwordValid) return res.status(401).json({ message: "Invalid password" });
+  await storage.updateAdmin(admin.id, {
+    mfaEnabled: false, mfaSecret: null,
+    mfaRecoveryCodes: null, mfaVerifiedAt: null,
+  });
+});
+// Provider: requires access token confirmation (they have no password)
+app.post("/api/provider/mfa/disable", requireProvider, async (req, res) => {
+  const { accessToken } = req.body;
+  // verifies the token, then clears MFA fields
+});
+Complete Data Flow Diagram
+USER                     FRONTEND                   BACKEND                    DATABASE
+─────────────────────────────────────────────────────────────────────────────────────────
+── SETUP ──────────────────────────────────────────────────────────────────────────────
+Click "Enable MFA"  →  POST /api/mfa/setup      →  generateSecret()           Save encrypted
+                                                    generateURI()              secret to DB
+                                                    QRCode.toDataURL()         ←──────────────
+                    ←  { secret, qrCode }
+                       Show QR image
+                       Show manual key
+Scan QR with app
+App shows "123456"
+Type "123456"       →  POST /api/mfa/verify-setup
+                                                →  decryptMfaSecret()
+                                                   otplibVerifySync()  ✓
+                                                   generate 8 recovery codes
+                                                   hashRecoveryCodes()        Save mfaEnabled=true
+                                                                              Save hashed codes
+                    ←  { recoveryCodes }
+                       Show 8 codes
+User saves codes
+── LOGIN ───────────────────────────────────────────────────────────────────────────────
+Enter password      →  POST /api/auth/login
+                                                →  bcrypt.compare() ✓
+                                                   mfaEnabled = true?
+                                                   Set session.mfaPending=true
+                    ←  { mfaRequired: true }
+                       Show code input
+Open app → "789012" →  POST /api/auth/mfa-verify
+                                                →  decryptMfaSecret()
+                                                   otplibVerifySync() ✓
+                                                   (or verifyRecoveryCode)
+                                                   Clear mfaPending
+                                                   Set session.authenticated=true
+                    ←  { success: true }
+                       Redirect to dashboard
+Dependencies Used
+// package.json
+"otplib": "^12.x",   // TOTP secret generation + verification (RFC 6238)
+"qrcode": "^1.5.x",  // Converts otpauth:// URI → PNG QR code data URL
+"bcryptjs": "^2.4.x" // Password hashing for disable confirmation
+// server/routes.ts imports
+import {
+  NobleCryptoPlugin,
+  generateSecret as otplibGenerateSecret,  // generates base32 secret
+  generateURI,                              // builds otpauth:// URI
+  verifySync as otplibVerifySync,           // checks code against secret
+} from "otplib";
+import QRCode from "qrcode"; // turns URI into QR code image
+Key Design Decisions
+Decision	Reason
+AES-256-GCM encryption for secret	HIPAA: secrets never stored plain text
+SHA-256 for recovery codes	Single-use codes, safely stored as hashes
+window: 1 (±30s tolerance)	Handles slight clock drift on user devices
+mfaPending session flag	Security: partial sessions can't access the app
+Recovery codes use splice to remove	Single-use: used code removed from array
+Separate admin/provider MFA endpoints	Different auth requirements (password vs access token to disable)
