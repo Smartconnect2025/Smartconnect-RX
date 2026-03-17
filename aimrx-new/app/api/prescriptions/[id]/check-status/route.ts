@@ -110,7 +110,7 @@ export async function POST(
       );
       newStatus = mapped.newStatus;
       trackingNumber = mapped.trackingNumber;
-      lastUpdated = apiResult.data.lastUpdated || new Date().toISOString();
+      lastUpdated = apiResult.data.lastUpdated || apiResult.data.LastUpdated || new Date().toISOString();
     } else if (backend.systemType === "DigitalRx") {
       const digitalBackend = await resolvePharmacyBackend(supabaseAdmin, prescription.pharmacy_id);
 

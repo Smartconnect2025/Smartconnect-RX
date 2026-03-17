@@ -69,22 +69,27 @@ Pioneer RX uses a signature-based authentication system. Here's how it works:
 ### 1. Prescription Submission (EScript)
 
 When a provider submits a prescription for a Pioneer RX pharmacy, the system:
-- Builds a structured EScript payload with patient demographics, prescriber info, medication details, and optionally a PDF attachment
+- Sends to: `POST /api/v1/Prescription/Process/NewEScript`
+- Builds a structured payload with an `rx` array containing prescription details (rxID as GUID, directionsLiteral, prescribedQuantity, daysSupply, startDate, NDC)
+- Includes patient demographics, prescriber info (NPI, DEA), and optionally a PDF attachment
 - Includes `storeID` and `locationID` when configured (targets specific store/location)
-- Sends to Pioneer RX's EScript submission endpoint
-- Stores the returned `rxTransactionID` as the prescription's `queue_id`
+- Parses the response for `TransactionID` (GUID) and `RxNumber` (internal pharmacy reference)
+- Stores the `TransactionID` as the prescription's `queue_id`
 
 ### 2. Status Checking
 
 Both single and batch status checks:
-- Query Pioneer RX's status endpoint using the `rxTransactionID`
-- Map Pioneer RX's status values to our internal status system:
-  - `Received/Entered/InProcess` → `submitted`
-  - `ReadyForPickup/ReadyForDelivery` → `packed`
-  - `Verified/Completed` → `approved`
-  - `Shipped/OutForDelivery` → `picked_up`
-  - `Delivered` → `delivered`
-  - `Cancelled/Rejected/OnHold` → mapped accordingly
+- Query: `GET /api/v1/Claim/RxTransaction?rxTransactionID={id}`
+- Secondary check available: `GET /api/v1/Prescription/RxPostEdit/Active?rxTransactionID={id}` (for pending edits/blocks)
+- Map Pioneer RX's `RxStatusTypeID` values to our internal status system:
+  - `1 (Active/Received)` → `submitted`
+  - `2 (Filled)` → `packed`
+  - `3 (Voided)` → `cancelled`
+  - `4 (Discontinue)` → `cancelled`
+  - `5 (Verified/Approved)` → `approved`
+  - `6 (Shipped)` → `picked_up`
+  - `7 (Delivered)` → `delivered`
+- Also supports text-based status matching as fallback (e.g., "in process", "ready for pickup", etc.)
 
 ### 3. Webhook (Inbound Status Updates)
 
@@ -193,6 +198,27 @@ The `pharmacy_backends` table stores the configuration:
 | `store_id` | VARCHAR | Store identifier |
 | `location_id` | VARCHAR | Location identifier (Pioneer RX) |
 | `is_active` | BOOLEAN | Whether this backend is active |
+
+---
+
+## Pioneer RX API Endpoints Reference
+
+| Purpose | Method | Endpoint |
+|---------|--------|----------|
+| Health Check (unauthenticated) | GET | `/api/v1/Test/IsAvailable` |
+| Health Check (authenticated) | GET | `/api/v1/Test/IsAvailableWithAuth` |
+| New EScript (submit prescription) | POST | `/api/v1/Prescription/Process/NewEScript` |
+| Check Status (claim/transaction) | GET | `/api/v1/Claim/RxTransaction?rxTransactionID={id}` |
+| Check Pending Edits | GET | `/api/v1/Prescription/RxPostEdit/Active?rxTransactionID={id}` |
+| Price Check | GET/POST | `/api/v1/Item/Pricing/PriceCheck` |
+| Edit Prescription | POST | `/api/v1/Prescription/Edit/RxTransaction` |
+
+**Important Notes from Manual:**
+- The API uses **polling** (GET status checks) rather than push notifications by default
+- Timestamps must be within a ~5-minute window or the signature will be rejected (replay attack protection)
+- The `RxNumber` returned is Pioneer RX's internal pharmacy reference number
+- Setting `readjudicate: true` on prescription edits triggers a new insurance claim
+- Some edits can trigger a "block" requiring an explicit API call to unblock
 
 ---
 

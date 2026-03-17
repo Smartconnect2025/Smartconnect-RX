@@ -19,15 +19,31 @@ export interface PioneerRxBackend {
 }
 
 export interface PioneerRxStatusData {
+  TransactionID?: string;
+  RxTransactionID?: string;
   rxTransactionID?: string;
+  RxNumber?: number;
+  rxNumber?: number;
+  RxStatusTypeID?: number;
+  rxStatusTypeID?: number;
+  primaryClaimResponse?: Record<string, unknown>;
   status?: string;
   trackingNumber?: string;
+  TrackingNumber?: string;
   fillDate?: string;
+  FillDate?: string;
   dispensedDate?: string;
+  DispensedDate?: string;
   deliveredDate?: string;
+  DeliveredDate?: string;
   cancelledDate?: string;
+  CancelledDate?: string;
   lastUpdated?: string;
+  LastUpdated?: string;
   error?: string;
+  Error?: string;
+  message?: string;
+  Message?: string;
   [key: string]: unknown;
 }
 
@@ -60,33 +76,46 @@ export function mapPioneerRxStatus(
 ): MappedStatus {
   let newStatus = currentStatus;
 
-  if (statusData.status) {
+  const statusTypeId = statusData.RxStatusTypeID || statusData.rxStatusTypeID;
+  if (statusTypeId !== undefined) {
+    switch (statusTypeId) {
+      case 1: newStatus = "submitted"; break;
+      case 2: newStatus = "packed"; break;
+      case 3: newStatus = "cancelled"; break;
+      case 4: newStatus = "cancelled"; break;
+      case 5: newStatus = "approved"; break;
+      case 6: newStatus = "picked_up"; break;
+      case 7: newStatus = "delivered"; break;
+      default:
+        console.warn(`[pioneerrx] Unknown RxStatusTypeID: ${statusTypeId}, keeping current status`);
+    }
+  } else if (statusData.status) {
     const prxStatus = statusData.status.toLowerCase().trim();
     if (prxStatus === "delivered" || prxStatus === "complete" || prxStatus === "completed") {
       newStatus = "delivered";
-    } else if (prxStatus === "shipped" || prxStatus === "in transit" || prxStatus === "picked up") {
+    } else if (prxStatus === "shipped" || prxStatus === "in transit" || prxStatus === "picked up" || prxStatus === "out for delivery") {
       newStatus = "picked_up";
-    } else if (prxStatus === "verified" || prxStatus === "approved") {
+    } else if (prxStatus === "verified" || prxStatus === "approved" || prxStatus === "ready for pickup" || prxStatus === "ready for delivery") {
       newStatus = "approved";
-    } else if (prxStatus === "filled" || prxStatus === "dispensed" || prxStatus === "packed") {
+    } else if (prxStatus === "filled" || prxStatus === "dispensed" || prxStatus === "packed" || prxStatus === "in process") {
       newStatus = "packed";
-    } else if (prxStatus === "received" || prxStatus === "queued" || prxStatus === "submitted" || prxStatus === "pending") {
+    } else if (prxStatus === "received" || prxStatus === "queued" || prxStatus === "submitted" || prxStatus === "pending" || prxStatus === "entered") {
       newStatus = "submitted";
-    } else if (prxStatus === "cancelled" || prxStatus === "canceled" || prxStatus === "rejected") {
+    } else if (prxStatus === "cancelled" || prxStatus === "canceled" || prxStatus === "rejected" || prxStatus === "discontinue" || prxStatus === "voided" || prxStatus === "on hold") {
       newStatus = "cancelled";
     }
-  } else if (statusData.deliveredDate) {
+  } else if (statusData.deliveredDate || statusData.DeliveredDate) {
     newStatus = "delivered";
-  } else if (statusData.dispensedDate) {
+  } else if (statusData.dispensedDate || statusData.DispensedDate) {
     newStatus = "packed";
-  } else if (statusData.fillDate) {
+  } else if (statusData.fillDate || statusData.FillDate) {
     newStatus = "packed";
-  } else if (statusData.cancelledDate) {
+  } else if (statusData.cancelledDate || statusData.CancelledDate) {
     newStatus = "cancelled";
   }
 
   const trackingNumber =
-    statusData.trackingNumber || existingTracking || null;
+    statusData.trackingNumber || statusData.TrackingNumber || existingTracking || null;
 
   return { newStatus, trackingNumber };
 }
@@ -243,9 +272,25 @@ export async function submitPioneerRxEScript(
   | { success: false; error: string; errorText?: string; rawResponse?: string }
 > {
   const headers = generatePioneerRxHeaders(backend.apiKey, backend.sharedSecret);
-  const eScriptUrl = `${backend.baseUrl}/api/v1/EScript/New`;
+  const eScriptUrl = `${backend.baseUrl}/api/v1/Prescription/Process/NewEScript`;
+
+  const rxID = crypto.randomUUID();
+  const startDate = new Date().toISOString();
 
   const eScriptPayload: Record<string, unknown> = {
+    rx: [{
+      rxID,
+      directionsLiteral: payload.medication.sig,
+      prescribedQuantity: parseFloat(payload.medication.quantity) || 30,
+      prescribedQuantityUnit: "EA",
+      refillsAuthorized: parseInt(payload.medication.refills) || 0,
+      daysSupply: payload.medication.daysSupply || 30,
+      startDate,
+      dispenseAsWritten: payload.medication.dispenseAsWritten,
+      drugName: payload.medication.drugName,
+      ndc: payload.medication.ndc || "",
+      notes: payload.medication.notes || "",
+    }],
     patient: {
       firstName: payload.patient.firstName,
       lastName: payload.patient.lastName,
@@ -273,16 +318,6 @@ export async function submitPioneerRxEScript(
       },
       phone: payload.prescriber.phone || "",
     },
-    medication: {
-      drugName: payload.medication.drugName,
-      ndc: payload.medication.ndc || "",
-      quantity: payload.medication.quantity,
-      daysSupply: payload.medication.daysSupply || 30,
-      refills: payload.medication.refills,
-      sig: payload.medication.sig,
-      dispenseAsWritten: payload.medication.dispenseAsWritten,
-      notes: payload.medication.notes || "",
-    },
     rxNumber: payload.rxNumber,
     pdfDocument: payload.pdfBase64 || null,
     prescriberSignature: payload.signatureUrl || null,
@@ -296,6 +331,7 @@ export async function submitPioneerRxEScript(
   }
 
   try {
+    console.log(`[pioneerrx] Submitting NewEScript to ${eScriptUrl} with rxID: ${rxID}`);
     const response = await fetch(eScriptUrl, {
       method: "POST",
       headers,
@@ -324,20 +360,35 @@ export async function submitPioneerRxEScript(
       };
     }
 
-    if (data.error || data.Error) {
-      return { success: false, error: data.error || data.Error };
+    if (data.error || data.Error || data.message) {
+      const errMsg = data.error || data.Error || data.message || data.Message;
+      if (errMsg) {
+        return { success: false, error: errMsg };
+      }
     }
 
-    const rxTransactionID = data.rxTransactionID || data.RxTransactionID || data.id || data.ID;
+    const rxTransactionID = data.TransactionID || data.transactionID
+      || data.RxTransactionID || data.rxTransactionID
+      || data.id || data.ID;
+    const rxNumberReturned = data.RxNumber || data.rxNumber;
+
     if (!rxTransactionID) {
       return {
         success: false,
-        error: "PioneerRx did not return an rxTransactionID",
-        rawResponse: JSON.stringify(data).substring(0, 200),
+        error: "PioneerRx did not return a TransactionID",
+        rawResponse: JSON.stringify(data).substring(0, 500),
       };
     }
 
-    return { success: true, data: { ...data, rxTransactionID } };
+    return {
+      success: true,
+      data: {
+        ...data,
+        rxTransactionID,
+        rxNumber: rxNumberReturned,
+        primaryClaimResponse: data.primaryClaimResponse || null,
+      },
+    };
   } catch (error) {
     return {
       success: false,
@@ -355,7 +406,7 @@ export async function fetchPioneerRxStatus(
 > {
   const headers = generatePioneerRxHeaders(backend.apiKey, backend.sharedSecret);
   const cleanId = rxTransactionID.replace(/^RX-/i, "");
-  const statusUrl = `${backend.baseUrl}/api/v1/Claims/RxTransaction/${cleanId}`;
+  const statusUrl = `${backend.baseUrl}/api/v1/Claim/RxTransaction?rxTransactionID=${encodeURIComponent(cleanId)}`;
 
   try {
     const response = await fetch(statusUrl, {
@@ -385,8 +436,8 @@ export async function fetchPioneerRxStatus(
       };
     }
 
-    if (statusData.error) {
-      return { success: false, error: statusData.error };
+    if (statusData.error || statusData.Error) {
+      return { success: false, error: statusData.error || statusData.Error || "Unknown error" };
     }
 
     return { success: true, data: statusData };
@@ -412,7 +463,7 @@ export async function fetchPioneerRxPriceCheck(
 > {
   const headers = generatePioneerRxHeaders(backend.apiKey, backend.sharedSecret);
   const cleanNdc = ndc.replace(/-/g, "");
-  const priceCheckUrl = `${backend.baseUrl}/api/v1/Item/Pricing/PriceCheck/Rx/${cleanNdc}`;
+  const priceCheckUrl = `${backend.baseUrl}/api/v1/Item/Pricing/PriceCheck?ndc=${encodeURIComponent(cleanNdc)}`;
 
   const body = {
     calculatePriceUsingTypeID: options?.calculatePriceUsingTypeID ?? 2,
