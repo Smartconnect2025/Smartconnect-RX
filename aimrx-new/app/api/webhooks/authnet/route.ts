@@ -286,7 +286,7 @@ async function handlePaymentSuccess(
 
   if (paymentTransaction.patient_email) {
     try {
-      const internalApiKey = process.env.INTERNAL_API_KEY || "webhook-auto-email";
+      const internalApiKey = process.env.INTERNAL_API_KEY || "";
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
       let pharmacyLogoUrl: string | undefined;

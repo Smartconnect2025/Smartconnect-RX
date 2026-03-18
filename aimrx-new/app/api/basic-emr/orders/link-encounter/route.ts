@@ -273,33 +273,45 @@ export async function GET(request: NextRequest) {
         .select("user_id")
         .eq("id", orderId)
         .single();
-      if (orderData) {
-        const { data: providerData } = await supabase
-          .from("providers")
-          .select("id")
-          .eq("user_id", user.id)
-          .single();
-        if (providerData) {
-          const { data: orderPatient } = await supabase
-            .from("patients")
-            .select("id")
-            .eq("user_id", orderData.user_id)
-            .single();
-          if (orderPatient) {
-            const { data: mapping } = await supabase
-              .from("provider_patient_mappings")
-              .select("id")
-              .eq("provider_id", providerData.id)
-              .eq("patient_id", orderPatient.id)
-              .single();
-            if (!mapping) {
-              return NextResponse.json(
-                { error: "You do not have access to this patient's orders" },
-                { status: 403 },
-              );
-            }
-          }
-        }
+      if (!orderData) {
+        return NextResponse.json(
+          { error: "Order not found" },
+          { status: 404 },
+        );
+      }
+      const { data: providerData } = await supabase
+        .from("providers")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      if (!providerData) {
+        return NextResponse.json(
+          { error: "Provider record not found" },
+          { status: 403 },
+        );
+      }
+      const { data: orderPatient } = await supabase
+        .from("patients")
+        .select("id")
+        .eq("user_id", orderData.user_id)
+        .single();
+      if (!orderPatient) {
+        return NextResponse.json(
+          { error: "Patient not found for this order" },
+          { status: 404 },
+        );
+      }
+      const { data: mapping } = await supabase
+        .from("provider_patient_mappings")
+        .select("id")
+        .eq("provider_id", providerData.id)
+        .eq("patient_id", orderPatient.id)
+        .single();
+      if (!mapping) {
+        return NextResponse.json(
+          { error: "You do not have access to this patient's orders" },
+          { status: 403 },
+        );
       }
     }
 

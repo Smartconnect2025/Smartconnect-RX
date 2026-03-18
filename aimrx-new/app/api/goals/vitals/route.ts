@@ -175,7 +175,6 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const targetUserId = searchParams.get("user_id") || user.id;
 
-    // If requesting another user's goals, verify permission
     if (targetUserId !== user.id) {
       const { data: userRole } = await supabase
         .from("user_roles")
@@ -183,11 +182,48 @@ export async function GET(request: NextRequest) {
         .eq("user_id", user.id)
         .single();
 
-      if (!userRole || userRole.role !== "provider") {
+      if (!userRole || (userRole.role !== "provider" && userRole.role !== "admin" && userRole.role !== "super_admin")) {
         return NextResponse.json(
           { error: "Unauthorized to view other users' goals" },
           { status: 403 },
         );
+      }
+
+      if (userRole.role === "provider") {
+        const { data: providerData } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", user.id)
+          .single();
+        if (!providerData) {
+          return NextResponse.json(
+            { error: "Provider record not found" },
+            { status: 403 },
+          );
+        }
+        const { data: targetPatient } = await supabase
+          .from("patients")
+          .select("id")
+          .eq("user_id", targetUserId)
+          .single();
+        if (!targetPatient) {
+          return NextResponse.json(
+            { error: "Patient not found" },
+            { status: 404 },
+          );
+        }
+        const { data: mapping } = await supabase
+          .from("provider_patient_mappings")
+          .select("id")
+          .eq("provider_id", providerData.id)
+          .eq("patient_id", targetPatient.id)
+          .single();
+        if (!mapping) {
+          return NextResponse.json(
+            { error: "You do not have access to this patient's goals" },
+            { status: 403 },
+          );
+        }
       }
     }
 

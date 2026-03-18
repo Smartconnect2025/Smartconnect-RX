@@ -146,25 +146,35 @@ export async function GET(request: NextRequest) {
         .select("patient_id")
         .eq("id", appointmentId)
         .single();
-      if (apptData?.patient_id) {
+      if (!apptData) {
+        return NextResponse.json(
+          { error: "Appointment not found" },
+          { status: 404 },
+        );
+      }
+      if (apptData.patient_id) {
         const { data: providerData } = await supabase
           .from("providers")
           .select("id")
           .eq("user_id", user.id)
           .single();
-        if (providerData) {
-          const { data: mapping } = await supabase
-            .from("provider_patient_mappings")
-            .select("id")
-            .eq("provider_id", providerData.id)
-            .eq("patient_id", apptData.patient_id)
-            .single();
-          if (!mapping) {
-            return NextResponse.json(
-              { error: "You do not have access to this patient's appointments" },
-              { status: 403 },
-            );
-          }
+        if (!providerData) {
+          return NextResponse.json(
+            { error: "Provider record not found" },
+            { status: 403 },
+          );
+        }
+        const { data: mapping } = await supabase
+          .from("provider_patient_mappings")
+          .select("id")
+          .eq("provider_id", providerData.id)
+          .eq("patient_id", apptData.patient_id)
+          .single();
+        if (!mapping) {
+          return NextResponse.json(
+            { error: "You do not have access to this patient's appointments" },
+            { status: 403 },
+          );
         }
       }
     }
