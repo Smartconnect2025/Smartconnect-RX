@@ -1,9 +1,15 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { categoriesData } from "@/core/database/seeds/data/categories";
+import { getUser } from "@/core/auth/get-user";
 
 export async function POST() {
   try {
+    const { user, userRole } = await getUser();
+    if (!user || !userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
     const supabase = createAdminClient();
 
     const results = [];

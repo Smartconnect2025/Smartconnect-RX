@@ -1,13 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/core/auth/get-user";
 import { createServerClient } from "@/core/supabase/server";
+import { createAdminClient } from "@core/database/client";
 import { appointmentOrderLinkingService } from "@/features/basic-emr/services/appointmentOrderLinkingService";
 
 export async function POST(request: NextRequest) {
   try {
-    const { user } = await getUser();
+    const { user, userRole } = await getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    if (!userRole || (userRole !== "provider" && userRole !== "admin")) {
+      return NextResponse.json(
+        { error: "Only providers and admins can link appointments to orders" },
+        { status: 403 },
+      );
     }
 
     const { appointmentId, orderId, orderType } = await request.json();
@@ -70,6 +78,42 @@ export async function POST(request: NextRequest) {
         { error: "Patient record not found for appointment" },
         { status: 404 },
       );
+    }
+
+    if (userRole === "provider") {
+      const adminClient = createAdminClient();
+      const { data: providerData } = await adminClient
+        .from("providers")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      if (!providerData) {
+        return NextResponse.json(
+          { error: "Provider record not found" },
+          { status: 403 },
+        );
+      }
+      const targetPatientId = appointment.patient_id;
+      const { data: orderUserPatientCheck } = await adminClient
+        .from("patients")
+        .select("id")
+        .eq("user_id", order.user_id)
+        .single();
+      const checkPatientId = orderUserPatientCheck?.id || targetPatientId;
+      if (checkPatientId) {
+        const { data: mapping } = await adminClient
+          .from("provider_patient_mappings")
+          .select("id")
+          .eq("provider_id", providerData.id)
+          .eq("patient_id", checkPatientId)
+          .single();
+        if (!mapping) {
+          return NextResponse.json(
+            { error: "You do not have access to this patient" },
+            { status: 403 },
+          );
+        }
+      }
     }
 
     if (patientRecord.user_id !== order.user_id) {
@@ -158,9 +202,6 @@ export async function POST(request: NextRequest) {
         appointment.patient_id = orderUserPatient.id;
       }
     }
-
-    // At this point, we've ensured the appointment has the correct patient_id
-    // that matches the order's user_id
 
     // Link appointment to order using the linking service
 

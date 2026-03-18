@@ -28,8 +28,36 @@ export async function GET() {
       );
     }
 
-    // Get orders that need review (pending status)
-    const { data: orders, error } = await supabase
+    let scopedUserIds: string[] | null = null;
+    if (userRole.role === "provider") {
+      const { data: providerData } = await supabase
+        .from("providers")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      if (providerData) {
+        const { data: mappings } = await supabase
+          .from("provider_patient_mappings")
+          .select("patient_id")
+          .eq("provider_id", providerData.id);
+        const patientIds = (mappings || []).map((m: { patient_id: string }) => m.patient_id);
+        if (patientIds.length === 0) {
+          return NextResponse.json({ success: true, data: [] });
+        }
+        const { data: patientUserIds } = await supabase
+          .from("patients")
+          .select("user_id")
+          .in("id", patientIds);
+        scopedUserIds = (patientUserIds || []).map((p: { user_id: string }) => p.user_id);
+        if (scopedUserIds.length === 0) {
+          return NextResponse.json({ success: true, data: [] });
+        }
+      } else {
+        return NextResponse.json({ success: true, data: [] });
+      }
+    }
+
+    let ordersQuery = supabase
       .from("orders")
       .select(
         `
@@ -53,6 +81,12 @@ export async function GET() {
       )
       .eq("status", "pending")
       .order("created_at", { ascending: false });
+
+    if (scopedUserIds !== null) {
+      ordersQuery = ordersQuery.in("user_id", scopedUserIds);
+    }
+
+    const { data: orders, error } = await ordersQuery;
 
     if (error) {
       console.error("Error fetching orders for review:", error);

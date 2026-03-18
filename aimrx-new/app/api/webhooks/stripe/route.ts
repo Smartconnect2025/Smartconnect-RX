@@ -235,7 +235,7 @@ async function handleCheckoutCompleted(
 
     try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-      const internalSecret = process.env.INTERNAL_API_SECRET || "webhook-auto-submit";
+      const internalSecret = process.env.INTERNAL_API_SECRET || "";
 
       console.log(`[STRIPE-WEBHOOK] Auto-submitting prescription ${paymentTransaction.prescription_id} to pharmacy...`);
       const submitResponse = await fetch(

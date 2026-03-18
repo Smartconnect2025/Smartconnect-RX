@@ -53,6 +53,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (userRole.role === "provider") {
+      const { data: providerData } = await supabase
+        .from("providers")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      if (!providerData) {
+        return NextResponse.json(
+          { error: "Provider record not found" },
+          { status: 403 },
+        );
+      }
+      if (appointment.patient_id) {
+        const { data: mapping } = await supabase
+          .from("provider_patient_mappings")
+          .select("id")
+          .eq("provider_id", providerData.id)
+          .eq("patient_id", appointment.patient_id)
+          .single();
+        if (!mapping) {
+          return NextResponse.json(
+            { error: "You do not have access to this patient's appointments" },
+            { status: 403 },
+          );
+        }
+      }
+    }
+
     // Create encounter from appointment
     const appointmentData = {
       id: appointment.id,
@@ -90,9 +118,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { user } = await getUser();
+    const { user, userRole } = await getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!userRole || !["provider", "admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Only providers and admins can check appointment encounters" },
+        { status: 403 },
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -103,6 +137,36 @@ export async function GET(request: NextRequest) {
         { error: "Appointment ID is required" },
         { status: 400 },
       );
+    }
+
+    if (userRole === "provider") {
+      const supabase = createClient();
+      const { data: apptData } = await supabase
+        .from("appointments")
+        .select("patient_id")
+        .eq("id", appointmentId)
+        .single();
+      if (apptData?.patient_id) {
+        const { data: providerData } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", user.id)
+          .single();
+        if (providerData) {
+          const { data: mapping } = await supabase
+            .from("provider_patient_mappings")
+            .select("id")
+            .eq("provider_id", providerData.id)
+            .eq("patient_id", apptData.patient_id)
+            .single();
+          if (!mapping) {
+            return NextResponse.json(
+              { error: "You do not have access to this patient's appointments" },
+              { status: 403 },
+            );
+          }
+        }
+      }
     }
 
     const encounter =

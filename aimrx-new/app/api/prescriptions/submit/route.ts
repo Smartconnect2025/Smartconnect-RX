@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     const demoCheck = await requireNonDemo();
     if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
 
-    if (!userRole || !["provider", "admin", "super_admin", "pharmacy_admin"].includes(userRole)) {
+    if (!userRole || !["provider", "admin", "super_admin"].includes(userRole)) {
       return NextResponse.json(
         { success: false, error: "You do not have permission to submit prescriptions" },
         { status: 403 },
@@ -115,15 +115,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (userRole === "provider" && body.prescriber_id !== user.id) {
+    if (userRole === "provider") {
+      body.prescriber_id = user.id;
+    }
+
+    const supabaseAdmin = createAdminClient();
+
+    const { data: patientRecord } = await supabaseAdmin
+      .from("patients")
+      .select("id")
+      .eq("id", body.patient_id)
+      .single();
+
+    if (!patientRecord) {
       return NextResponse.json(
-        { success: false, error: "Providers can only submit prescriptions under their own account" },
-        { status: 403 },
+        { success: false, error: "Patient not found" },
+        { status: 404 },
       );
     }
 
-    // Check if provider exists (optional - just for logging/tracking)
-    const supabaseAdmin = createAdminClient();
     const { data: provider, error: providerError } = await supabaseAdmin
       .from("providers")
       .select(
@@ -132,10 +142,30 @@ export async function POST(request: NextRequest) {
       .eq("user_id", body.prescriber_id)
       .single();
 
-    // Log if provider not found but don't block prescription submission
     if (providerError || !provider) {
-      // Provider profile not found - continuing anyway
-    } else {
+      return NextResponse.json(
+        { success: false, error: "Provider record not found" },
+        { status: 403 },
+      );
+    }
+
+    if (userRole === "provider") {
+      const { data: mapping } = await supabaseAdmin
+        .from("provider_patient_mappings")
+        .select("id")
+        .eq("provider_id", provider.id)
+        .eq("patient_id", patientRecord.id)
+        .single();
+
+      if (!mapping) {
+        return NextResponse.json(
+          { success: false, error: "You do not have access to this patient" },
+          { status: 403 },
+        );
+      }
+    }
+
+    {
       // Check if profile is complete (just log warnings, don't block)
       const hasPaymentDetails =
         provider.payment_details &&
@@ -207,13 +237,13 @@ export async function POST(request: NextRequest) {
     const rxNumber = `RX${Date.now()}`;
     const dateWritten = new Date().toISOString().split("T")[0];
 
-    const { data: patientRecord } = await supabaseAdmin
+    const { data: patientDetails } = await supabaseAdmin
       .from("patients")
       .select("data, phone, email, physical_address")
       .eq("id", body.patient_id)
       .single();
 
-    const patientGender = patientRecord?.data?.gender?.toLowerCase();
+    const patientGender = patientDetails?.data?.gender?.toLowerCase();
     const patientSex = patientGender === "male" ? "M" : patientGender === "female" ? "F" : "U";
 
     const customAddr = body.custom_address as { street?: string; city?: string; state?: string; zipCode?: string; zip?: string } | null;
@@ -225,7 +255,7 @@ export async function POST(request: NextRequest) {
       && (customAddr.zipCode || customAddr.zip);
     const patientAddress = hasValidCustomAddress
       ? customAddr
-      : patientRecord?.physical_address as { street?: string; city?: string; state?: string; zipCode?: string; zip?: string } | null;
+      : patientDetails?.physical_address as { street?: string; city?: string; state?: string; zipCode?: string; zip?: string } | null;
 
     let pharmacyMedication: { ndc?: string; dosage_instructions?: string; notes?: string } | null = null;
     if (body.medication_id) {
@@ -250,8 +280,8 @@ export async function POST(request: NextRequest) {
         PatientCity: patientAddress?.city,
         PatientState: patientAddress?.state,
         PatientZip: patientAddress?.zipCode || patientAddress?.zip,
-        PatientPhone: patientRecord?.phone || body.patient.phone,
-        Email: patientRecord?.email || body.patient.email,
+        PatientPhone: patientDetails?.phone || body.patient.phone,
+        Email: patientDetails?.email || body.patient.email,
       },
       Doctor: {
         DoctorFirstName: provider?.first_name || body.prescriber.first_name,

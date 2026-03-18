@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Verify the target user exists as a patient
       const { data: patient } = await supabase
         .from("patients")
         .select("id")
@@ -61,6 +60,30 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { error: "Patient not found" },
           { status: 404 },
+        );
+      }
+
+      const { data: providerData } = await supabase
+        .from("providers")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+      if (!providerData) {
+        return NextResponse.json(
+          { error: "Provider record not found" },
+          { status: 403 },
+        );
+      }
+      const { data: mapping } = await supabase
+        .from("provider_patient_mappings")
+        .select("id")
+        .eq("provider_id", providerData.id)
+        .eq("patient_id", patient.id)
+        .single();
+      if (!mapping) {
+        return NextResponse.json(
+          { error: "You do not have access to this patient" },
+          { status: 403 },
         );
       }
     }

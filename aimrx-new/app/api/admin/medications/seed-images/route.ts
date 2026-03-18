@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
+import { getUser } from "@/core/auth/get-user";
 
 const MEDICATION_IMAGES: Record<string, string> = {
   "5-Amino capsule 50mg": "/catalog/med-5-amino-capsule.png",
@@ -65,6 +66,11 @@ const MEDICATION_IMAGES: Record<string, string> = {
 
 export async function POST() {
   try {
+    const { user, userRole } = await getUser();
+    if (!user || !userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
+    }
+
     const supabase = createAdminClient();
 
     const { data: allMeds, error: fetchError } = await supabase

@@ -34,7 +34,6 @@ export async function POST(request: NextRequest) {
     }
 
     if (orderId) {
-      // If orderId is provided, get existing order from main orders table
       const { data: existingOrder, error: orderError } = await supabase
         .from("orders")
         .select(
@@ -48,6 +47,43 @@ export async function POST(request: NextRequest) {
 
       if (orderError || !existingOrder) {
         return NextResponse.json({ error: "Order not found" }, { status: 404 });
+      }
+
+      if (userRole.role === "provider") {
+        const { data: providerData } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", user.id)
+          .single();
+        if (!providerData) {
+          return NextResponse.json(
+            { error: "Provider record not found" },
+            { status: 403 },
+          );
+        }
+        const { data: orderPatient } = await supabase
+          .from("patients")
+          .select("id")
+          .eq("user_id", existingOrder.user_id)
+          .single();
+        if (!orderPatient) {
+          return NextResponse.json(
+            { error: "Patient not found for this order" },
+            { status: 404 },
+          );
+        }
+        const { data: mapping } = await supabase
+          .from("provider_patient_mappings")
+          .select("id")
+          .eq("provider_id", providerData.id)
+          .eq("patient_id", orderPatient.id)
+          .single();
+        if (!mapping) {
+          return NextResponse.json(
+            { error: "You do not have access to this patient's orders" },
+            { status: 403 },
+          );
+        }
       }
 
       // Check if encounter already exists for this order
@@ -114,6 +150,21 @@ export async function POST(request: NextRequest) {
           { error: "Provider information not found" },
           { status: 404 },
         );
+      }
+
+      if (userRole.role === "provider" && orderData.patientId) {
+        const { data: mapping } = await supabase
+          .from("provider_patient_mappings")
+          .select("id")
+          .eq("provider_id", providerData.id)
+          .eq("patient_id", orderData.patientId)
+          .single();
+        if (!mapping) {
+          return NextResponse.json(
+            { error: "You do not have access to this patient" },
+            { status: 403 },
+          );
+        }
       }
 
       // Create encounter first
@@ -194,9 +245,15 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const { user } = await getUser();
+    const { user, userRole } = await getUser();
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!userRole || !["provider", "admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Only providers and admins can check order encounters" },
+        { status: 403 },
+      );
     }
 
     const { searchParams } = new URL(request.url);
@@ -209,7 +266,43 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if encounter already exists for this order
+    if (userRole === "provider") {
+      const supabase = createClient();
+      const { data: orderData } = await supabase
+        .from("orders")
+        .select("user_id")
+        .eq("id", orderId)
+        .single();
+      if (orderData) {
+        const { data: providerData } = await supabase
+          .from("providers")
+          .select("id")
+          .eq("user_id", user.id)
+          .single();
+        if (providerData) {
+          const { data: orderPatient } = await supabase
+            .from("patients")
+            .select("id")
+            .eq("user_id", orderData.user_id)
+            .single();
+          if (orderPatient) {
+            const { data: mapping } = await supabase
+              .from("provider_patient_mappings")
+              .select("id")
+              .eq("provider_id", providerData.id)
+              .eq("patient_id", orderPatient.id)
+              .single();
+            if (!mapping) {
+              return NextResponse.json(
+                { error: "You do not have access to this patient's orders" },
+                { status: 403 },
+              );
+            }
+          }
+        }
+      }
+    }
+
     const existingEncounter =
       await orderEncounterService.getEncounterByOrderId(orderId);
 
