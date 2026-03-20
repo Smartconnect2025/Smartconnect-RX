@@ -28,7 +28,6 @@ export function ProviderHeader() {
   const pathname = usePathname();
   const supabase = createClient();
 
-  // Load provider name and company name
   useEffect(() => {
     const loadProviderName = async () => {
       if (!user?.id) return;
@@ -59,7 +58,6 @@ export function ProviderHeader() {
     window.location.href = "/auth/login";
   };
 
-  // Provider-specific navigation links
   const mainNavLinks = [
     { href: "/provider/dashboard", label: "Dashboard" },
     { href: "/provider/catalog", label: "Catalog" },
@@ -70,6 +68,9 @@ export function ProviderHeader() {
   ];
 
   const pharmacyColor = pharmacy?.primary_color || "#1E3A8A";
+  const pharmacyAccent = pharmacy?.primary_color || "#1E3A8A";
+  const pharmacyLogo = pharmacy?.logo_url || null;
+  const pharmacyName = pharmacy?.name || null;
 
   return (
     <>
@@ -81,23 +82,37 @@ export function ProviderHeader() {
       >
         <div className="container max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between py-3">
-            {/* Left: Logo and Company Name */}
             <div className="flex items-center gap-3">
               <Link href="/prescriptions/new/step1" className="flex items-center gap-3">
-                <img
-                  src="/logo-header.png"
-                  alt="AIM Logo"
-                  className="h-14 w-auto"
-                />
+                {pharmacyLogo ? (
+                  <img
+                    src={pharmacyLogo}
+                    alt={pharmacyName || "Pharmacy"}
+                    className="h-14 w-auto max-w-[180px] object-contain"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/logo-header.png";
+                    }}
+                  />
+                ) : (
+                  <img
+                    src="/logo-header.png"
+                    alt="SmartConnect RX"
+                    className="h-14 w-auto"
+                  />
+                )}
               </Link>
-              {companyName && (
+              {(pharmacyName || companyName) && (
                 <div className="hidden md:block border-l border-gray-300 pl-3">
-                  <p className="text-lg font-semibold text-gray-900">{companyName}</p>
+                  {pharmacyName && (
+                    <p className="text-lg font-semibold text-gray-900">{pharmacyName}</p>
+                  )}
+                  {companyName && companyName !== pharmacyName && (
+                    <p className="text-xs text-gray-500">{companyName}</p>
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Center: Navigation Links - Hidden on Mobile */}
             {user && (
               <nav className="hidden lg:flex items-center gap-1 relative">
                 {mainNavLinks.map((link) => {
@@ -106,18 +121,14 @@ export function ProviderHeader() {
                   if (link.href === "/provider/dashboard") {
                     isActive = pathname === "/provider/dashboard";
                   } else if (link.href === "/prescriptions") {
-                    // Prescriptions tab active when on /prescriptions exactly (not /prescriptions/new)
                     isActive = pathname === "/prescriptions";
                   } else if (link.href === "/refills") {
                     isActive = pathname === "/refills";
                   } else if (link.href === "/prescriptions/new/step1") {
-                    // Prescribe tab active when on /prescriptions/new/...
                     isActive = pathname.startsWith("/prescriptions/new");
                   } else if (link.href === "/basic-emr") {
-                    // Patients tab active when on /basic-emr or /patients
                     isActive = pathname.startsWith("/basic-emr") || pathname.startsWith("/patients");
                   } else {
-                    // Default behavior for other tabs
                     isActive = pathname === link.href || pathname.startsWith(link.href);
                   }
 
@@ -135,11 +146,12 @@ export function ProviderHeader() {
                       {link.label}
                       <span
                         className={cn(
-                          "absolute bottom-0 left-0 right-0 h-0.5 bg-[#1E3A8A] rounded-full transition-all duration-300",
+                          "absolute bottom-0 left-0 right-0 h-0.5 rounded-full transition-all duration-300",
                           isActive
                             ? "opacity-100"
                             : "opacity-0 group-hover:opacity-100"
                         )}
+                        style={{ backgroundColor: pharmacyColor }}
                       />
                     </Link>
                   );
@@ -147,11 +159,9 @@ export function ProviderHeader() {
               </nav>
             )}
 
-            {/* Right: Icons */}
             <div className="flex items-center gap-3">
               {user && <NotificationsPanel />}
 
-              {/* Desktop Profile Menu */}
               {user ? (
                 <div className="hidden lg:block">
                   <DropdownMenu>
@@ -175,6 +185,11 @@ export function ProviderHeader() {
                             ? `${user.email.substring(0, 24)}...`
                             : user.email}
                         </p>
+                        {pharmacyName && (
+                          <p className="text-xs mt-1 font-medium" style={{ color: pharmacyColor }}>
+                            {pharmacyName}
+                          </p>
+                        )}
                       </div>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem asChild>
@@ -191,7 +206,6 @@ export function ProviderHeader() {
                 <Button onClick={handleLoginRedirect}>Sign In</Button>
               )}
 
-              {/* Mobile Menu Button */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -209,7 +223,6 @@ export function ProviderHeader() {
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
@@ -217,7 +230,6 @@ export function ProviderHeader() {
         />
       )}
 
-      {/* Mobile Menu Drawer */}
       <div
         className={cn(
           "fixed top-24 right-0 h-[calc(100vh-6rem)] w-full max-w-sm bg-white z-40 transform transition-transform duration-300 ease-in-out lg:hidden shadow-xl",
@@ -227,16 +239,30 @@ export function ProviderHeader() {
         <div className="h-full overflow-y-auto">
           {user && (
             <div className="p-4">
-              {/* User Info Section */}
               <div className="pb-4 mb-4 border-b border-border">
-                {companyName && (
+                {pharmacyName && (
+                  <div className="mb-3 flex items-center gap-2">
+                    {pharmacyLogo && (
+                      <img
+                        src={pharmacyLogo}
+                        alt={pharmacyName || "Pharmacy"}
+                        className="h-8 w-auto max-w-[120px] object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/logo-header.png";
+                        }}
+                      />
+                    )}
+                    <p className="text-base font-semibold text-gray-900">{pharmacyName}</p>
+                  </div>
+                )}
+                {!pharmacyName && companyName && (
                   <div className="mb-3">
                     <p className="text-base font-semibold text-gray-900">{companyName}</p>
                   </div>
                 )}
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                    <User className="h-6 w-6 text-muted-foreground" />
+                  <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ backgroundColor: `${pharmacyAccent}20` }}>
+                    <User className="h-6 w-6" style={{ color: pharmacyColor }} />
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-foreground">
@@ -251,7 +277,6 @@ export function ProviderHeader() {
                 </div>
               </div>
 
-              {/* Main Navigation */}
               <div className="mb-6">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Main Menu
@@ -264,16 +289,12 @@ export function ProviderHeader() {
                       if (link.href === "/provider/dashboard") {
                         isActive = pathname === "/provider/dashboard";
                       } else if (link.href === "/prescriptions") {
-                        // Prescriptions tab active when on /prescriptions exactly (not /prescriptions/new)
                         isActive = pathname === "/prescriptions";
                       } else if (link.href === "/prescriptions/new/step1") {
-                        // Prescribe tab active when on /prescriptions/new/...
                         isActive = pathname.startsWith("/prescriptions/new");
                       } else if (link.href === "/basic-emr") {
-                        // Patients tab active when on /basic-emr or /patients
                         isActive = pathname.startsWith("/basic-emr") || pathname.startsWith("/patients");
                       } else {
-                        // Default behavior for other tabs
                         isActive = pathname === link.href || pathname.startsWith(link.href);
                       }
 
@@ -282,14 +303,20 @@ export function ProviderHeader() {
                           <Link
                             href={link.href}
                             className={cn(
-                              "text-sm font-medium transition-all duration-200 px-3 py-2 rounded-md relative",
+                              "text-sm font-medium transition-all duration-200 px-3 py-2 rounded-md relative block",
                               isActive
-                                ? "text-foreground after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-[calc(100%-1.5rem)] after:h-0.5 after:bg-primary after:rounded-full"
-                                : "text-foreground/80 hover:text-foreground hover:bg-gray-200",
+                                ? "text-foreground bg-gray-100"
+                                : "text-foreground/80 hover:text-foreground hover:bg-gray-50",
                             )}
                             onClick={() => setMobileMenuOpen(false)}
                           >
                             {link.label}
+                            {isActive && (
+                              <span
+                                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] h-0.5 rounded-full"
+                                style={{ backgroundColor: pharmacyColor }}
+                              />
+                            )}
                           </Link>
                         </li>
                       );
@@ -298,7 +325,6 @@ export function ProviderHeader() {
                 </nav>
               </div>
 
-              {/* Profile Navigation */}
               <div>
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
                   Account
@@ -311,22 +337,28 @@ export function ProviderHeader() {
                         className={cn(
                           "block px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 relative",
                           pathname === "/provider/profile"
-                            ? "text-foreground after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-[calc(100%-1.5rem)] after:h-0.5 after:bg-primary after:rounded-full"
-                            : "text-foreground/80 hover:text-foreground hover:bg-gray-200",
+                            ? "text-foreground bg-gray-100"
+                            : "text-foreground/80 hover:text-foreground hover:bg-gray-50",
                         )}
                         onClick={() => setMobileMenuOpen(false)}
                       >
                         Profile
+                        {pathname === "/provider/profile" && (
+                          <span
+                            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] h-0.5 rounded-full"
+                            style={{ backgroundColor: pharmacyColor }}
+                          />
+                        )}
                       </Link>
                     </li>
                   </ul>
                 </nav>
               </div>
 
-              {/* Sign Out */}
               <div className="pt-4">
                 <button
                   className="block px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 cursor-pointer"
+                  style={{ color: pharmacyColor }}
                   onClick={handleLogout}
                 >
                   Sign out

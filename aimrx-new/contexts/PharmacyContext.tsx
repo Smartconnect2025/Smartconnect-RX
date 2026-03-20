@@ -9,6 +9,9 @@ interface Pharmacy {
   slug: string;
   primary_color: string | null;
   tagline: string | null;
+  logo_url: string | null;
+  phone: string | null;
+  address: string | null;
 }
 
 interface PharmacyContextType {

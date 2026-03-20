@@ -18,15 +18,23 @@ import { NotificationsPanel } from "@/features/notifications/components/Notifica
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/tailwind-utils";
 
+interface PharmacyBranding {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  primary_color: string | null;
+  tagline: string | null;
+}
+
 export function AdminHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
+  const [pharmacyBranding, setPharmacyBranding] = useState<PharmacyBranding | null>(null);
   const { user, userRole } = useUser();
   const router = useRouter();
   const pathname = usePathname();
   const supabase = createClient();
 
-  // Check if user is a pharmacy admin
   useEffect(() => {
     const checkPharmacyAdmin = async () => {
       if (!user?.id) return;
@@ -38,6 +46,18 @@ export function AdminHeader() {
         .maybeSingle();
 
       setIsPharmacyAdmin(!!data);
+
+      if (data?.pharmacy_id) {
+        const { data: pharmacyData } = await supabase
+          .from("pharmacies")
+          .select("id, name, logo_url, primary_color, tagline")
+          .eq("id", data.pharmacy_id)
+          .single();
+
+        if (pharmacyData) {
+          setPharmacyBranding(pharmacyData);
+        }
+      }
     };
 
     checkPharmacyAdmin();
@@ -73,6 +93,8 @@ export function AdminHeader() {
         { href: "/admin/settings", label: "Integration Settings" },
       ];
 
+  const brandColor = pharmacyBranding?.primary_color || "#1E3A8A";
+
   return (
     <>
       <header
@@ -83,16 +105,33 @@ export function AdminHeader() {
       >
         <div className="container max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between py-3">
-            {/* Left: Logo */}
             <Link href="/admin" className="flex items-center gap-3">
-              <img
-                src="/logo-header.png"
-                alt="AIM Logo"
-                className="h-14 w-auto"
-              />
+              {isPharmacyAdmin && pharmacyBranding?.logo_url ? (
+                <img
+                  src={pharmacyBranding.logo_url}
+                  alt={pharmacyBranding.name}
+                  className="h-14 w-auto max-w-[180px] object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = "/logo-header.png";
+                  }}
+                />
+              ) : (
+                <img
+                  src="/logo-header.png"
+                  alt="SmartConnect RX"
+                  className="h-14 w-auto"
+                />
+              )}
+              {isPharmacyAdmin && pharmacyBranding?.name && (
+                <div className="hidden md:block border-l border-gray-300 pl-3">
+                  <p className="text-lg font-semibold text-gray-900">{pharmacyBranding.name}</p>
+                  {pharmacyBranding.tagline && (
+                    <p className="text-xs text-gray-500">{pharmacyBranding.tagline}</p>
+                  )}
+                </div>
+              )}
             </Link>
 
-            {/* Center: Navigation Links - Hidden on Mobile */}
             {user && (
               <nav className="hidden lg:flex items-center gap-1 relative">
                 {mainNavLinks.map((link) => {
@@ -114,8 +153,9 @@ export function AdminHeader() {
                       {link.label}
                       {isActive && (
                         <span
-                          className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#1E3A8A] rounded-full"
+                          className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
                           style={{
+                            backgroundColor: isPharmacyAdmin ? brandColor : "#1E3A8A",
                             animation: "slideIn 0.3s ease-out"
                           }}
                         />
@@ -126,12 +166,9 @@ export function AdminHeader() {
               </nav>
             )}
 
-            {/* Right: Icons */}
             <div className="flex items-center gap-3">
-              {/* Notifications */}
             {/*   <NotificationsPanel /> */}
 
-              {/* Desktop Profile Menu */}
               {user ? (
                 <div className="hidden lg:block">
                   <DropdownMenu>
@@ -139,7 +176,7 @@ export function AdminHeader() {
                       <div
                         className="relative h-10 w-10 p-0 flex items-center justify-center cursor-pointer hover:bg-gray-100 rounded-full"
                       >
-                        <User className="h-6 w-6" />
+                        <User className="h-6 w-6" style={{ color: isPharmacyAdmin ? brandColor : undefined }} />
                       </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -155,6 +192,11 @@ export function AdminHeader() {
                             ? `${user.email.substring(0, 24)}...`
                             : user.email}
                         </p>
+                        {isPharmacyAdmin && pharmacyBranding?.name && (
+                          <p className="text-xs mt-1 font-medium" style={{ color: brandColor }}>
+                            {pharmacyBranding.name}
+                          </p>
+                        )}
                       </div>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onSelect={handleLogout}>
@@ -167,7 +209,6 @@ export function AdminHeader() {
                 <Button onClick={handleLoginRedirect}>Sign In</Button>
               )}
 
-              {/* Mobile Menu Button */}
               <Button
                 variant="ghost"
                 size="icon"
@@ -175,9 +216,9 @@ export function AdminHeader() {
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               >
                 {mobileMenuOpen ? (
-                  <X className="h-6 w-6" />
+                  <X className="h-6 w-6" style={{ color: isPharmacyAdmin ? brandColor : undefined }} />
                 ) : (
-                  <Menu className="h-6 w-6" />
+                  <Menu className="h-6 w-6" style={{ color: isPharmacyAdmin ? brandColor : undefined }} />
                 )}
               </Button>
             </div>
@@ -185,7 +226,6 @@ export function AdminHeader() {
         </div>
       </header>
 
-      {/* Mobile Menu Overlay */}
       {mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
@@ -193,22 +233,37 @@ export function AdminHeader() {
         />
       )}
 
-      {/* Mobile Menu Drawer */}
       <div
         className={cn(
-          "fixed top-24 right-0 h-[calc(100vh-6rem)] w-full max-w-sm bg-[#1E3A8A]/95 backdrop-blur-md z-40 transform transition-transform duration-300 ease-in-out lg:hidden shadow-2xl border-l-4 border-[#00AEEF]",
+          "fixed top-24 right-0 h-[calc(100vh-6rem)] w-full max-w-sm backdrop-blur-md z-40 transform transition-transform duration-300 ease-in-out lg:hidden shadow-2xl",
           mobileMenuOpen ? "translate-x-0" : "translate-x-full",
         )}
+        style={{
+          backgroundColor: isPharmacyAdmin ? `${brandColor}F2` : "rgba(30, 58, 138, 0.95)",
+          borderLeft: `4px solid ${brandColor}`,
+        }}
       >
         <div className="h-full overflow-y-auto">
           {user && (
             <div className="p-4">
-              {/* User Info Section */}
               <div className="pb-4 mb-4 border-b border-white/20">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-full bg-[#00AEEF] flex items-center justify-center">
-                    <User className="h-6 w-6 text-white" />
-                  </div>
+                  {isPharmacyAdmin && pharmacyBranding?.logo_url ? (
+                    <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
+                      <img
+                        src={pharmacyBranding.logo_url}
+                        alt={pharmacyBranding.name}
+                        className="h-10 w-10 object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = "/logo-header.png";
+                        }}
+                      />
+                    </div>
+                  ) : (
+                    <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ backgroundColor: brandColor }}>
+                      <User className="h-6 w-6 text-white" />
+                    </div>
+                  )}
                   <div className="flex-1">
                     <p className="text-sm font-medium text-white">
                       {user.email && user.email.length > 25
@@ -216,15 +271,14 @@ export function AdminHeader() {
                         : user.email}
                     </p>
                     {(userRole === "admin" || isPharmacyAdmin) && (
-                      <Badge className="mt-1 bg-[#00AEEF] text-white hover:bg-[#00AEEF]">
-                        {isPharmacyAdmin ? "Pharmacy Admin" : "Admin"}
+                      <Badge className="mt-1 text-white hover:opacity-90" style={{ backgroundColor: brandColor }}>
+                        {isPharmacyAdmin ? (pharmacyBranding?.name || "Pharmacy Admin") : "Admin"}
                       </Badge>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* Main Navigation */}
               <div className="mb-6">
                 <h3 className="text-xs font-semibold text-white/60 uppercase tracking-wider mb-2">
                   Main Menu
@@ -243,19 +297,34 @@ export function AdminHeader() {
                             className={cn(
                               "block px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 relative",
                               isActive
-                                ? "text-white bg-white/10 after:content-[''] after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:w-[calc(100%-1.5rem)] after:h-0.5 after:bg-[#00AEEF] after:rounded-full"
+                                ? "text-white bg-white/10"
                                 : "text-white/80 hover:text-white hover:bg-white/5",
                             )}
                             onClick={() => setMobileMenuOpen(false)}
                           >
                             {link.label}
+                            {isActive && (
+                              <span
+                                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] h-0.5 rounded-full"
+                                style={{ backgroundColor: brandColor }}
+                              />
+                            )}
                           </Link>
                         </li>
                       );
                     })}
                     <li className="pt-2 mt-2 border-t border-white/20">
                       <button
-                        className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 text-[#00AEEF] hover:text-white hover:bg-[#00AEEF] cursor-pointer"
+                        className="w-full text-left flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 cursor-pointer hover:text-white"
+                        style={{ color: brandColor }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.backgroundColor = brandColor;
+                          e.currentTarget.style.color = "#FFFFFF";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.backgroundColor = "transparent";
+                          e.currentTarget.style.color = brandColor;
+                        }}
                         onClick={handleLogout}
                       >
                         <User className="h-4 w-4" />
