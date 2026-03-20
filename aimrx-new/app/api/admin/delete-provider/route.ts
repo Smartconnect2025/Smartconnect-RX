@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 /**
- * Delete a provider by email (admin access)
+ * Delete a provider by email (platform admin only)
  * DELETE /api/admin/delete-provider?email=provider@example.com
  */
 export async function DELETE(request: Request) {
@@ -20,6 +21,14 @@ export async function DELETE(request: Request) {
     if (!userRole || !["admin", "super_admin"].includes(userRole)) {
       return NextResponse.json(
         { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "This action is restricted to platform administrators" },
         { status: 403 }
       );
     }

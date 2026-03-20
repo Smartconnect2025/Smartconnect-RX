@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { createAdminClient } from "@core/database/client";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 /**
- * Delete a user by email (platform owner only)
+ * Delete a user by email (platform admin only)
  * DELETE /api/admin/delete-user?email=user@example.com
  */
 export async function DELETE(request: Request) {
@@ -11,7 +12,6 @@ export async function DELETE(request: Request) {
   const supabaseAdmin = await createAdminClient();
 
   try {
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -33,6 +33,14 @@ export async function DELETE(request: Request) {
     if (roleError || !userRole || !["admin", "super_admin"].includes(userRole.role)) {
       return NextResponse.json(
         { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "This action is restricted to platform administrators" },
         { status: 403 }
       );
     }

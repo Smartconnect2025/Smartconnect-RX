@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { isEncrypted, decryptApiKey } from "@core/security/encryption";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 /**
  * POST /api/admin/pharmacy-backends/decrypt
- * Decrypts an API key for testing/verification purposes (admin only)
+ * Decrypts an API key for testing/verification purposes (platform admin only)
  */
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient();
 
   try {
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -23,7 +23,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if user is admin or platform owner
     const { data: userRole } = await supabase
       .from("user_roles")
       .select("role")
@@ -33,6 +32,14 @@ export async function POST(request: NextRequest) {
     if (userRole?.role !== "admin") {
       return NextResponse.json(
         { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "This action is restricted to platform administrators" },
         { status: 403 }
       );
     }

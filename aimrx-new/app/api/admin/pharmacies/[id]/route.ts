@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { ensureEncrypted, decryptApiKey } from "@/core/security/encryption";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 /**
  * Update a pharmacy
@@ -13,7 +14,6 @@ export async function PUT(
   const supabase = await createServerClient();
 
   try {
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -23,6 +23,27 @@ export async function PUT(
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "This action is restricted to platform administrators" },
+        { status: 403 }
       );
     }
 
@@ -211,7 +232,6 @@ export async function DELETE(
   const supabase = await createServerClient();
 
   try {
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -221,6 +241,27 @@ export async function DELETE(
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "This action is restricted to platform administrators" },
+        { status: 403 }
       );
     }
 

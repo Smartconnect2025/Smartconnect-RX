@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 /**
- * Reset a provider's password (admin access)
+ * Reset a provider's password (platform admin only)
  * POST /api/admin/reset-provider-password
  * Body: { email: string, newPassword: string }
  */
@@ -23,6 +24,14 @@ export async function POST(request: Request) {
     if (!userRole || !["admin", "super_admin"].includes(userRole)) {
       return NextResponse.json(
         { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "This action is restricted to platform administrators" },
         { status: 403 }
       );
     }

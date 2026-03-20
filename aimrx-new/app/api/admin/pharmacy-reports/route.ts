@@ -30,6 +30,13 @@ export async function GET(request: NextRequest) {
 
     const scope = await getPharmacyAdminScope(user.id);
 
+    if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+      return NextResponse.json(
+        { error: "Unable to determine pharmacy scope" },
+        { status: 403 },
+      );
+    }
+
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");

@@ -111,8 +111,8 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 **Pharmacy admin nav** (AdminHeader.tsx): Prescriptions, Orders, Medications, Catalog, Providers, Reports, Payment Settings
 **Platform admin nav**: Dashboard, Incoming Queue, Reporting & Analytics, Manage Tiers, Refill Engine, API & Logs, Integration Settings
 
-**Platform-only routes** (403 for pharmacy admins): pharmacies POST, pharmacy-admins, pharmacy-backends, users, platform-managers, super-admins, groups, system-logs
-**Pharmacy-scoped routes**: providers (filtered by pharmacy links), invite-doctor (auto-links to pharmacy), pharmacy-reports (forced pharmacyId), pharmacy-payment-config (forced pharmacyId)
+**Platform-only routes** (403 for pharmacy admins): pharmacies POST/PUT/DELETE, pharmacy-admins, pharmacy-backends (including decrypt), users, platform-managers (including [id] PATCH/DELETE), super-admins (including PATCH), groups (including [id] PATCH/DELETE), system-logs, delete-user, delete-provider, reset-provider-password, trigger-cron, link-pharmacy-admin, all seed routes
+**Pharmacy-scoped routes** (fail-closed: 403 if pharmacyId is null): providers (filtered by pharmacy links), invite-doctor (auto-links to pharmacy), pharmacy-reports (forced pharmacyId), pharmacy-payment-config (forced pharmacyId)
 
 ### Critical Files (DO NOT modify without understanding the auth system)
 - `core/supabase/middleware.ts` — session management

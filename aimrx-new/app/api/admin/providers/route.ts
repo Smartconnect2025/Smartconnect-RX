@@ -31,6 +31,13 @@ export async function GET() {
     const scope = await getPharmacyAdminScope(user.id);
     const supabase = createAdminClient();
 
+    if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+      return NextResponse.json(
+        { error: "Unable to determine pharmacy scope" },
+        { status: 403 },
+      );
+    }
+
     if (scope.isPharmacyAdmin && scope.pharmacyId) {
       const { data: linkedProviders, error: linkError } = await supabase
         .from("provider_pharmacy_links")

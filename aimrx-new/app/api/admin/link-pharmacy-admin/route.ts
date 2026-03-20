@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 /**
- * Link a pharmacy admin user to their pharmacy
+ * Link a pharmacy admin user to their pharmacy (platform admin only)
  * POST /api/admin/link-pharmacy-admin
  */
 export async function POST(request: Request) {
   const supabase = await createServerClient();
 
   try {
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -19,6 +19,27 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "This action is restricted to platform administrators" },
+        { status: 403 }
       );
     }
 

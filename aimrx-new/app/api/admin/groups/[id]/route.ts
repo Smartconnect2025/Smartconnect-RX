@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
-import { requireNonDemo, createGuardErrorResponse } from "@core/auth/api-guards";
+import { requireNonDemo, createGuardErrorResponse, getPharmacyAdminScope } from "@core/auth/api-guards";
 
 export async function PATCH(
   request: NextRequest,
@@ -27,6 +27,14 @@ export async function PATCH(
     if (!userRole || !["admin", "super_admin"].includes(userRole)) {
       return NextResponse.json(
         { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { error: "This action is restricted to platform administrators" },
         { status: 403 },
       );
     }
@@ -98,6 +106,14 @@ export async function DELETE(
     if (!userRole || !["admin", "super_admin"].includes(userRole)) {
       return NextResponse.json(
         { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { error: "This action is restricted to platform administrators" },
         { status: 403 },
       );
     }

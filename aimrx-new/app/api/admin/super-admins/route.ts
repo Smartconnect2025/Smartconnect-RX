@@ -251,6 +251,10 @@ export async function PATCH(request: Request) {
   if (!userRole || !["admin", "super_admin"].includes(userRole)) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
   }
+  const scope = await getPharmacyAdminScope(user.id);
+  if (scope.isPharmacyAdmin) {
+    return NextResponse.json({ error: "This action is restricted to platform administrators" }, { status: 403 });
+  }
 
   try {
     const body = await request.json();

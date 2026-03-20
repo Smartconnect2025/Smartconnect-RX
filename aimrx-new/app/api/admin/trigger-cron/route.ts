@@ -17,11 +17,20 @@ export async function POST(request: NextRequest) {
   const isInternalCall = !!(INTERNAL_API_KEY && internalKey && internalKey === INTERNAL_API_KEY);
 
   if (!isInternalCall) {
+    const { getPharmacyAdminScope } = await import("@/core/auth/api-guards");
     const { user, userRole } = await getUser();
 
     if (!user || (userRole !== "admin" && userRole !== "super_admin")) {
       return NextResponse.json(
         { error: "Unauthorized: Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { error: "This action is restricted to platform administrators" },
         { status: 403 },
       );
     }
