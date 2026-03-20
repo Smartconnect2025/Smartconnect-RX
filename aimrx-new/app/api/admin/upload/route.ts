@@ -112,9 +112,26 @@ export async function POST(request: NextRequest) {
     } else if (type === "category") {
       bucket = "category-images";
       filePath = `categories/${safeName}-${timestamp}-${randomId}.${ext}`;
+    } else if (type === "pharmacy-logo") {
+      if (!entityId) {
+        return NextResponse.json(
+          { success: false, error: "entityId (pharmacy ID) is required for pharmacy-logo uploads" },
+          { status: 400 }
+        );
+      }
+      if (isPharmacyAdmin && !isAdmin) {
+        if (entityId !== scope.pharmacyId) {
+          return NextResponse.json(
+            { success: false, error: "You can only upload a logo for your own pharmacy" },
+            { status: 403 }
+          );
+        }
+      }
+      bucket = "pharmacy-logos";
+      filePath = `logos/${safeName}-${timestamp}-${randomId}.${ext}`;
     } else {
       return NextResponse.json(
-        { success: false, error: "Invalid upload type. Use 'medication' or 'category'" },
+        { success: false, error: "Invalid upload type. Use 'medication', 'category', or 'pharmacy-logo'" },
         { status: 400 }
       );
     }
@@ -187,6 +204,29 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           { success: false, error: "Failed to save image. Please try again." },
           { status: 500 }
+        );
+      }
+    } else if (type === "pharmacy-logo" && entityId) {
+      const { data: updatedRows, error: updateError } = await adminClient
+        .from("pharmacies")
+        .update({ logo_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq("id", entityId)
+        .select("id");
+
+      if (updateError) {
+        console.error("DB update error, cleaning up uploaded file:", updateError);
+        await adminClient.storage.from(bucket).remove([filePath]);
+        return NextResponse.json(
+          { success: false, error: "Failed to save logo. Please try again." },
+          { status: 500 }
+        );
+      }
+
+      if (!updatedRows || updatedRows.length === 0) {
+        await adminClient.storage.from(bucket).remove([filePath]);
+        return NextResponse.json(
+          { success: false, error: "Pharmacy not found" },
+          { status: 404 }
         );
       }
     }

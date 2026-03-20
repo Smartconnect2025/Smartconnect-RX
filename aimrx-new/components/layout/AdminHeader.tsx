@@ -61,6 +61,7 @@ export function AdminHeader() {
         { href: "/admin/providers", label: "Providers" },
         { href: "/admin/pharmacy-reports", label: "Reports" },
         { href: "/admin/pharmacy-payment-settings", label: "Payment Settings" },
+        { href: "/admin/pharmacy-branding", label: "Branding" },
       ]
     : [
         { href: "/admin", label: "Dashboard" },

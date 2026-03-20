@@ -1,0 +1,50 @@
+Here's the architect's recommended plan, organized into 5 clear phases — ordered by highest impact first:
+
+Pharmacy Branding & Profile — Implementation Plan
+Phase 1: Pharmacy Branding Settings Page (Highest Impact)
+What it achieves: Pharmacy admins get a dedicated page to customize their pharmacy's identity — logo, brand color, tagline, phone, and address — with a live preview of how it will look in patient emails.
+
+Steps:
+
+Build a new Pharmacy Branding page with:
+Logo upload with preview
+Color picker with preset pharmacy-friendly color palettes + custom hex input
+Tagline, phone, and address fields
+A live email preview card showing how branding looks to patients
+Add primary_color to the PATCH endpoint's allowed fields (currently only allows phone, address, logo_url, tagline)
+Add server-side validation: hex color format, URL validation for logo, length limits on tagline/phone
+Add "Pharmacy Branding" link to the pharmacy admin navigation
+Phase 2: Logo Upload System
+What it achieves: Pharmacy admins can upload their actual logo file instead of pasting a URL — much more user-friendly.
+
+Steps:
+
+Extend the existing upload API to support a pharmacy-logo type
+Store logos in Supabase Storage with pharmacy-specific paths
+Keep external URL input as a fallback option
+Enforce pharmacy scope (admins can only upload to their own pharmacy)
+Phase 3: Admin & Provider Dashboard Branding
+What it achieves: When a pharmacy admin or their linked providers log in, they see the pharmacy's logo and brand color in the header/navigation — it truly feels like "their" system.
+
+Steps:
+
+Extend the pharmacy context to include logo, color, tagline
+Update the admin header to show the pharmacy's logo and name
+Apply the pharmacy's brand color as an accent in the navigation
+Update the provider header similarly for providers linked to that pharmacy
+Phase 4: Patient Payment Page Branding
+What it achieves: When patients open the payment link, they see the pharmacy's branding — not generic SmartConnect branding. This completes the end-to-end branded experience.
+
+Steps:
+
+Enrich the payment details API to include pharmacy branding fields
+Update the payment page, success page, and tracking page to use the pharmacy's logo, color, and name dynamically
+Update contact/footer sections to show the pharmacy's phone number
+Phase 5: Admin Wizard Defaults
+What it achieves: When the platform admin creates a new pharmacy, sensible defaults are set, with a clear message that the pharmacy owner can personalize everything in their Branding page after they log in.
+
+Steps:
+
+Keep the creation wizard focused on operational setup (name, system, API keys)
+Set default color and placeholder tagline
+Add a note in the wizard: "The pharmacy admin can customize branding after logging in"

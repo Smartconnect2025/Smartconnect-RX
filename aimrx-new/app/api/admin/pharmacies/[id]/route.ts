@@ -275,7 +275,7 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const allowedFields = ["phone", "address", "logo_url", "tagline"];
+    const allowedFields = ["phone", "address", "logo_url", "tagline", "primary_color"];
     const updateData: Record<string, unknown> = {};
     for (const field of allowedFields) {
       if (field in body) {
@@ -288,6 +288,63 @@ export async function PATCH(
         { success: false, error: "No valid fields to update" },
         { status: 400 }
       );
+    }
+
+    if ("primary_color" in updateData && updateData.primary_color !== null) {
+      const color = String(updateData.primary_color);
+      if (!/^#[0-9A-Fa-f]{3,8}$/.test(color)) {
+        return NextResponse.json(
+          { success: false, error: "Invalid color format. Use hex format like #00AEEF" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if ("logo_url" in updateData && updateData.logo_url !== null) {
+      const url = String(updateData.logo_url);
+      if (url.length > 0) {
+        try {
+          const parsed = new URL(url);
+          if (!["http:", "https:"].includes(parsed.protocol)) {
+            return NextResponse.json(
+              { success: false, error: "Logo URL must use http or https" },
+              { status: 400 }
+            );
+          }
+        } catch {
+          return NextResponse.json(
+            { success: false, error: "Invalid logo URL format" },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
+    if ("tagline" in updateData && updateData.tagline !== null) {
+      if (String(updateData.tagline).length > 100) {
+        return NextResponse.json(
+          { success: false, error: "Tagline must be 100 characters or less" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if ("phone" in updateData && updateData.phone !== null) {
+      if (String(updateData.phone).length > 20) {
+        return NextResponse.json(
+          { success: false, error: "Phone must be 20 characters or less" },
+          { status: 400 }
+        );
+      }
+    }
+
+    if ("address" in updateData && updateData.address !== null) {
+      if (String(updateData.address).length > 200) {
+        return NextResponse.json(
+          { success: false, error: "Address must be 200 characters or less" },
+          { status: 400 }
+        );
+      }
     }
 
     updateData.updated_at = new Date().toISOString();
