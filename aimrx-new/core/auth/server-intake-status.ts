@@ -8,6 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export interface IntakeStatus {
   hasCompletedIntake: boolean;
+  patientExists?: boolean;
   patientId?: string;
   currentStep?: string;
   nextStepUrl?: string;
@@ -32,6 +33,7 @@ export async function checkIntakeStatusServer(
     if (userRole === "provider" || userRole === "admin") {
       return {
         hasCompletedIntake: true,
+        patientExists: true,
         patientId: undefined,
         currentStep: undefined,
         nextStepUrl: undefined,
@@ -49,6 +51,7 @@ export async function checkIntakeStatusServer(
     if (error || !patient) {
       return {
         hasCompletedIntake: false,
+        patientExists: false,
         nextStepUrl: "/intake/patient-information",
       };
     }
@@ -68,14 +71,14 @@ export async function checkIntakeStatusServer(
 
     return {
       hasCompletedIntake,
+      patientExists: true,
       patientId: patient.id,
       currentStep: intakeStep,
       nextStepUrl,
     };
   } catch (error) {
     console.error("🔍 SERVER: Error checking intake status:", error);
-    // Default to not completed on error for security
-    return { hasCompletedIntake: false };
+    return { hasCompletedIntake: false, patientExists: false };
   }
 }
 

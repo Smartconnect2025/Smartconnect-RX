@@ -37,21 +37,19 @@ async function checkAndRedirectIntake(
     const intakeStatus = await checkIntakeStatusServer(userId, role, supabase);
 
     if (!intakeStatus.hasCompletedIntake) {
-      // Incomplete - redirect without caching
+      if (!intakeStatus.patientExists) {
+        return NextResponse.redirect(new URL(redirectPaths.login, request.url));
+      }
       const nextStepUrl =
         intakeStatus.nextStepUrl || "/intake/patient-information";
       return NextResponse.redirect(new URL(nextStepUrl, request.url));
     }
 
-    // Complete - cache it to avoid future DB queries
-    // Note: Can't set cookie on null response, so we don't cache here
-    // Cookie will be set in middleware after first successful check
     return null;
   } catch (error) {
     console.error("Error checking intake status:", error);
-    // On error, redirect to start of intake to be safe
     return NextResponse.redirect(
-      new URL("/intake/patient-information", request.url),
+      new URL(redirectPaths.login, request.url),
     );
   }
 }
