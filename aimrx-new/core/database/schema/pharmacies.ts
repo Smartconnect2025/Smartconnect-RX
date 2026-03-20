@@ -6,6 +6,7 @@ import {
   timestamp,
   text,
   boolean,
+  integer,
 } from "drizzle-orm/pg-core";
 import { authenticatedRole } from "drizzle-orm/supabase";
 
@@ -27,6 +28,7 @@ export const pharmacies = pgTable(
     dea_number: text("dea_number"),
     ncpdp_number: text("ncpdp_number"),
     phone: text("phone"),
+    default_shipping_rate_cents: integer("default_shipping_rate_cents").default(0),
     is_active: boolean("is_active").default(true),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),

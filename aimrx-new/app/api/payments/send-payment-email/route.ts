@@ -5,21 +5,14 @@ const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "noreply@smartconnectrx.com";
 const FROM_NAME = process.env.SENDGRID_FROM_NAME || "SmartConnect RX";
 
-// Internal API key for server-to-server calls (prevents external abuse)
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
 
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
 }
 
-/**
- * POST /api/payments/send-payment-email
- * Send payment link email to patient
- * PROTECTED: Requires internal API key (server-to-server only)
- */
 export async function POST(request: NextRequest) {
   try {
-    // Verify internal API key to prevent external abuse
     const authHeader = request.headers.get("x-internal-api-key");
     if (!INTERNAL_API_KEY || authHeader !== INTERNAL_API_KEY) {
       return NextResponse.json(
@@ -36,6 +29,9 @@ export async function POST(request: NextRequest) {
       medication,
       totalAmount,
       paymentUrl,
+      pharmacyName,
+      pharmacyLogoUrl,
+      pharmacyColor,
     } = body;
 
     if (!patientEmail || !paymentUrl) {
@@ -45,7 +41,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // If no API key is configured, run in demo mode
     if (!SENDGRID_API_KEY) {
       return NextResponse.json({
         success: true,
@@ -54,20 +49,28 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Send email using SendGrid
+    const brandColor = pharmacyColor || "#00AEEF";
+    const brandName = pharmacyName || "SmartConnect RX";
+    const fromName = pharmacyName ? `${pharmacyName} via SmartConnect RX` : FROM_NAME;
+
+    const logoHtml = pharmacyLogoUrl
+      ? `<img src="${pharmacyLogoUrl}" alt="${brandName}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />`
+      : "";
+
     const msg = {
       to: patientEmail,
       from: {
         email: FROM_EMAIL,
-        name: FROM_NAME,
+        name: fromName,
       },
-      subject: `Payment Required: ${medication} Prescription`,
+      subject: `Payment Required: ${medication} Prescription${pharmacyName ? ` - ${pharmacyName}` : ""}`,
       text: `
 Hi ${patientName},
 
 Your prescription for ${medication} is ready for payment.
 
 Prescribed by: ${providerName}
+${pharmacyName ? `Pharmacy: ${pharmacyName}` : ""}
 Medication: ${medication}
 Total Amount Due: $${totalAmount}
 
@@ -78,7 +81,7 @@ This link expires in 7 days.
 
 Questions? Contact your provider or reply to this email.
 
-© ${new Date().getFullYear()} SmartConnect RX
+\u00a9 ${new Date().getFullYear()} ${brandName}. All rights reserved.
       `,
       html: `
 <!DOCTYPE html>
@@ -95,8 +98,10 @@ Questions? Contact your provider or reply to this email.
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #1E3A8A 0%, #00AEEF 100%); border-radius: 8px 8px 0 0;">
+            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, ${brandColor} 0%, #1E3A8A 100%); border-radius: 8px 8px 0 0;">
+              ${logoHtml}
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Payment Request</h1>
+              ${pharmacyName ? `<p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">from ${pharmacyName}</p>` : ""}
             </td>
           </tr>
 
@@ -112,17 +117,22 @@ Questions? Contact your provider or reply to this email.
               </p>
 
               <!-- Payment Details -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0; background-color: #f8f9fa; border-radius: 6px; border-left: 4px solid #00AEEF;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0; background-color: #f8f9fa; border-radius: 6px; border-left: 4px solid ${brandColor};">
                 <tr>
                   <td style="padding: 20px;">
                     <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Prescribed by:</p>
                     <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #1E3A8A;">${providerName}</p>
 
+                    ${pharmacyName ? `
+                    <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Pharmacy:</p>
+                    <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #333333;">${pharmacyName}</p>
+                    ` : ""}
+
                     <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Medication:</p>
                     <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #333333;">${medication}</p>
 
                     <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Total Amount Due:</p>
-                    <p style="margin: 0; font-size: 24px; font-weight: 700; color: #00AEEF;">$${totalAmount}</p>
+                    <p style="margin: 0; font-size: 24px; font-weight: 700; color: ${brandColor};">$${totalAmount}</p>
                   </td>
                 </tr>
               </table>
@@ -131,7 +141,7 @@ Questions? Contact your provider or reply to this email.
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
                 <tr>
                   <td align="center">
-                    <a href="${paymentUrl}" style="display: inline-block; padding: 16px 48px; background: linear-gradient(135deg, #1E3A8A 0%, #00AEEF 100%); color: #ffffff; text-decoration: none; font-size: 18px; font-weight: 600; border-radius: 6px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                    <a href="${paymentUrl}" style="display: inline-block; padding: 16px 48px; background: linear-gradient(135deg, ${brandColor} 0%, #1E3A8A 100%); color: #ffffff; text-decoration: none; font-size: 18px; font-weight: 600; border-radius: 6px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
                       Pay Now
                     </a>
                   </td>
@@ -140,13 +150,13 @@ Questions? Contact your provider or reply to this email.
 
               <p style="margin: 20px 0 0; font-size: 14px; line-height: 20px; color: #666666; text-align: center;">
                 If the button doesn't work, copy and paste this link into your browser:<br>
-                <a href="${paymentUrl}" style="color: #00AEEF; word-break: break-all;">${paymentUrl}</a>
+                <a href="${paymentUrl}" style="color: ${brandColor}; word-break: break-all;">${paymentUrl}</a>
               </p>
 
               <!-- Security Note -->
               <div style="margin-top: 30px; padding: 15px; background-color: #f0f7ff; border-radius: 6px; border-left: 4px solid #1E3A8A;">
                 <p style="margin: 0; font-size: 13px; line-height: 18px; color: #1E3A8A;">
-                  <strong>🔒 Secure Payment:</strong> This link directs you to our secure payment processor. Your payment information is encrypted and protected.
+                  <strong>\ud83d\udd12 Secure Payment:</strong> This link directs you to our secure payment processor. Your payment information is encrypted and protected.
                 </p>
               </div>
             </td>
@@ -167,7 +177,7 @@ Questions? Contact your provider or reply to this email.
 
         <!-- Unsubscribe -->
         <p style="margin: 20px 0 0; font-size: 11px; line-height: 16px; color: #999999; text-align: center;">
-          © ${new Date().getFullYear()} SmartConnect RX. All rights reserved.
+          \u00a9 ${new Date().getFullYear()} ${brandName}. All rights reserved.
         </p>
       </td>
     </tr>

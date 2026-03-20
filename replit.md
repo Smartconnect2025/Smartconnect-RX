@@ -97,7 +97,9 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **DB columns**: `payment_gateway`, `payment_config_id`, `authnet_ref_id`, `authnet_transaction_id`, `stripe_payment_intent_id`, `stripe_session_id`
 - **Env vars (system fallback)**: `AUTHNET_API_LOGIN_ID`, `AUTHNET_TRANSACTION_KEY`, `AUTHNET_SIGNATURE_KEY`, `AUTHNET_ENVIRONMENT`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`
 - **Encryption**: All pharmacy credentials encrypted at rest using AES-256-GCM (`core/security/encryption.ts`), requires `ENCRYPTION_KEY` env var
-- **Post-payment flow**: Both webhooks auto-update prescription status → auto-submit to pharmacy → send branded confirmation email with pharmacy name/logo
+- **Post-payment flow**: Both webhooks auto-update prescription status → auto-submit to pharmacy → send branded confirmation email with pharmacy name/logo/color
+- **Pharmacy-branded emails**: Payment request and confirmation emails use pharmacy's `name`, `logo_url`, and `primary_color` for header gradient, accent colors, "from" name, and footer branding. Falls back to SmartConnect RX branding if no pharmacy data.
+- **Default shipping rate**: `pharmacies.default_shipping_rate_cents` (integer, default 0). Pharmacy admins set it via Payment Settings page. PATCH `/api/admin/pharmacies/[id]` with server-side validation (0-100000 cents).
 
 ### Role Hierarchy (3-Tier)
 - **Platform Admin**: Full access to all features, pharmacies, users. Can create pharmacies, manage platform managers/super admins, view system logs, manage groups.

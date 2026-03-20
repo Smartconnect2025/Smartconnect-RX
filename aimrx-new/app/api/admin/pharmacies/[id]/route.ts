@@ -222,6 +222,104 @@ export async function PUT(
 }
 
 /**
+ * Partial update a pharmacy (for pharmacy admins to update their own pharmacy settings)
+ * PATCH /api/admin/pharmacies/[id]
+ */
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const supabase = await createServerClient();
+
+  try {
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Not authenticated" },
+        { status: 401 }
+      );
+    }
+
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
+    const pharmacyId = (await params).id;
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin && scope.pharmacyId !== pharmacyId) {
+      return NextResponse.json(
+        { success: false, error: "You can only update your own pharmacy" },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+
+    const allowedFields = ["default_shipping_rate_cents", "phone", "address", "logo_url", "tagline"];
+    const updateData: Record<string, unknown> = {};
+    for (const field of allowedFields) {
+      if (field in body) {
+        updateData[field] = body[field];
+      }
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { success: false, error: "No valid fields to update" },
+        { status: 400 }
+      );
+    }
+
+    if ("default_shipping_rate_cents" in updateData) {
+      const rate = updateData.default_shipping_rate_cents;
+      if (typeof rate !== "number" || !Number.isInteger(rate) || rate < 0 || rate > 100000) {
+        return NextResponse.json(
+          { success: false, error: "Shipping rate must be a whole number between 0 and 100000 cents ($0-$1000)" },
+          { status: 400 }
+        );
+      }
+    }
+
+    updateData.updated_at = new Date().toISOString();
+
+    const { error: updateError } = await supabase
+      .from("pharmacies")
+      .update(updateData)
+      .eq("id", pharmacyId);
+
+    if (updateError) {
+      console.error("Error updating pharmacy:", updateError);
+      return NextResponse.json(
+        { success: false, error: "Failed to update pharmacy", details: updateError.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, message: "Pharmacy updated successfully" });
+  } catch (error) {
+    console.error("Error in patch pharmacy:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to update pharmacy", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * Delete a pharmacy
  * DELETE /api/admin/pharmacies/[id]
  */

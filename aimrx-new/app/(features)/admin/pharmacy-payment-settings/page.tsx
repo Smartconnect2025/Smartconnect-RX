@@ -31,6 +31,7 @@ import {
   EyeOff,
   TestTube,
   Shield,
+  Truck,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -92,6 +93,10 @@ export default function PharmacyPaymentSettingsPage() {
   const [showSecrets, setShowSecrets] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  const [shippingRateDollars, setShippingRateDollars] = useState("");
+  const [shippingRateLoading, setShippingRateLoading] = useState(false);
+  const [savingShipping, setSavingShipping] = useState(false);
+
   const fetchConfigs = useCallback(async () => {
     if (!pharmacyId) return;
     try {
@@ -111,9 +116,58 @@ export default function PharmacyPaymentSettingsPage() {
     }
   }, [pharmacyId]);
 
+  const fetchShippingRate = useCallback(async () => {
+    if (!pharmacyId) return;
+    try {
+      setShippingRateLoading(true);
+      const { data } = await supabase
+        .from("pharmacies")
+        .select("default_shipping_rate_cents")
+        .eq("id", pharmacyId)
+        .single();
+      if (data) {
+        const cents = data.default_shipping_rate_cents || 0;
+        setShippingRateDollars((cents / 100).toFixed(2));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setShippingRateLoading(false);
+    }
+  }, [pharmacyId, supabase]);
+
   useEffect(() => {
     fetchConfigs();
-  }, [fetchConfigs]);
+    fetchShippingRate();
+  }, [fetchConfigs, fetchShippingRate]);
+
+  const handleSaveShippingRate = async () => {
+    if (!pharmacyId) return;
+    const cents = Math.round(parseFloat(shippingRateDollars || "0") * 100);
+    if (isNaN(cents) || cents < 0) {
+      toast.error("Please enter a valid shipping rate");
+      return;
+    }
+    try {
+      setSavingShipping(true);
+      const response = await fetch(`/api/admin/pharmacies/${pharmacyId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ default_shipping_rate_cents: cents }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        toast.success("Shipping rate saved");
+      } else {
+        toast.error(data.error || "Failed to save shipping rate");
+      }
+    } catch {
+      toast.error("Failed to save shipping rate");
+    } finally {
+      setSavingShipping(false);
+    }
+  };
 
   const activeConfig = configs.find((c) => c.isActive);
 
@@ -488,6 +542,60 @@ export default function PharmacyPaymentSettingsPage() {
                   </div>
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Truck className="h-5 w-5" />
+                <CardTitle>Default Shipping Rate</CardTitle>
+              </div>
+              <CardDescription>
+                Set the default shipping fee applied when patients choose shipping as their delivery method.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {shippingRateLoading ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="shippingRate">Shipping Rate ($)</Label>
+                    <div className="flex items-center gap-3">
+                      <div className="relative max-w-[200px]">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <Input
+                          id="shippingRate"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={shippingRateDollars}
+                          onChange={(e) => setShippingRateDollars(e.target.value)}
+                          className="pl-7"
+                        />
+                      </div>
+                      <Button
+                        onClick={handleSaveShippingRate}
+                        disabled={savingShipping}
+                        className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+                      >
+                        {savingShipping ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : null}
+                        Save
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      This rate will be pre-filled when providers bill patients who select shipping.
+                      Set to $0.00 for free shipping.
+                    </p>
+                  </div>
+                </>
+              )}
             </CardContent>
           </Card>
         </>

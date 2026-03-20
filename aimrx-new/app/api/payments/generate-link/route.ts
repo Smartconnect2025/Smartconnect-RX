@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
         quantity,
         payment_status,
         patient:patients(id, first_name, last_name, email, phone),
-        pharmacy:pharmacies(id, name)
+        pharmacy:pharmacies(id, name, logo_url, primary_color)
       `,
       )
       .eq("id", prescriptionId)
@@ -129,6 +129,9 @@ export async function POST(request: NextRequest) {
         const patient = Array.isArray(prescription.patient)
           ? prescription.patient[0]
           : prescription.patient;
+        const existingPharmacy = Array.isArray(prescription.pharmacy)
+          ? prescription.pharmacy[0]
+          : prescription.pharmacy;
 
         const { data: provider } = await supabase
           .from("providers")
@@ -171,6 +174,9 @@ export async function POST(request: NextRequest) {
                   ).toFixed(2),
                   paymentUrl: existingPayment.payment_link_url,
                   paymentToken: existingPayment.payment_token,
+                  pharmacyName: existingPharmacy?.name,
+                  pharmacyLogoUrl: existingPharmacy?.logo_url,
+                  pharmacyColor: existingPharmacy?.primary_color,
                 }),
                 signal: emailController.signal,
               },
@@ -348,6 +354,9 @@ export async function POST(request: NextRequest) {
               totalAmount: totalAmountDollars,
               paymentUrl: fullPaymentUrl,
               paymentToken,
+              pharmacyName: pharmacy?.name,
+              pharmacyLogoUrl: pharmacy?.logo_url,
+              pharmacyColor: pharmacy?.primary_color,
             }),
             signal: emailController.signal,
           },

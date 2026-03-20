@@ -270,13 +270,15 @@ async function handleCheckoutCompleted(
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
       let pharmacyLogoUrl: string | undefined;
+      let pharmacyColor: string | undefined;
       if (paymentTransaction.pharmacy_id) {
         const { data: pharmacy } = await supabase
           .from("pharmacies")
-          .select("logo_url")
+          .select("logo_url, primary_color")
           .eq("id", paymentTransaction.pharmacy_id)
           .single();
         pharmacyLogoUrl = pharmacy?.logo_url || undefined;
+        pharmacyColor = pharmacy?.primary_color || undefined;
       }
 
       const emailResponse = await fetch(`${siteUrl}/api/payments/send-confirmation-email`, {
@@ -295,6 +297,7 @@ async function handleCheckoutCompleted(
           pharmacyName: paymentTransaction.pharmacy_name,
           deliveryMethod: paymentTransaction.delivery_method,
           pharmacyLogoUrl,
+          pharmacyColor,
         }),
       });
 

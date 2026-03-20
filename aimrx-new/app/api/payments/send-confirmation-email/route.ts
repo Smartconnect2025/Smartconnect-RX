@@ -5,21 +5,14 @@ const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "noreply@smartconnectrx.com";
 const FROM_NAME = process.env.SENDGRID_FROM_NAME || "SmartConnect RX";
 
-// Internal API key for server-to-server calls (prevents external abuse)
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
 
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
 }
 
-/**
- * POST /api/payments/send-confirmation-email
- * Send payment confirmation email to patient after successful payment
- * PROTECTED: Requires internal API key (server-to-server only)
- */
 export async function POST(request: NextRequest) {
   try {
-    // Verify internal API key to prevent external abuse
     const authHeader = request.headers.get("x-internal-api-key");
     if (!INTERNAL_API_KEY || authHeader !== INTERNAL_API_KEY) {
       return NextResponse.json(
@@ -39,6 +32,7 @@ export async function POST(request: NextRequest) {
       deliveryMethod,
       pharmacyName,
       pharmacyLogoUrl,
+      pharmacyColor,
     } = body;
 
     if (!patientEmail || !transactionId) {
@@ -48,7 +42,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Determine delivery method display text
     const deliveryTexts = {
       pickup: "Pharmacy Pickup",
       delivery: "Local Delivery",
@@ -64,7 +57,6 @@ export async function POST(request: NextRequest) {
     const deliveryDisplayText = deliveryTexts[deliveryMethod as keyof typeof deliveryTexts] || "Pharmacy Pickup";
     const nextStepsText = nextStepsTexts[deliveryMethod as keyof typeof nextStepsTexts] || "Your provider will approve the order, and the pharmacy will prepare your medication.";
 
-    // If no API key is configured, run in demo mode
     if (!SENDGRID_API_KEY) {
       return NextResponse.json({
         success: true,
@@ -73,14 +65,22 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Send email using SendGrid
+    const brandColor = pharmacyColor || "#10B981";
+    const accentColor = pharmacyColor || "#10B981";
+    const brandName = pharmacyName || "SmartConnect RX";
+    const fromName = pharmacyName ? `${pharmacyName} via SmartConnect RX` : FROM_NAME;
+
+    const logoHtml = pharmacyLogoUrl
+      ? `<img src="${pharmacyLogoUrl}" alt="${brandName}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />`
+      : "";
+
     const msg = {
       to: patientEmail,
       from: {
         email: FROM_EMAIL,
-        name: FROM_NAME,
+        name: fromName,
       },
-      subject: `Payment Confirmed: ${medication} Prescription`,
+      subject: `Payment Confirmed: ${medication} Prescription${pharmacyName ? ` - ${pharmacyName}` : ""}`,
       text: `
 Hi ${patientName},
 
@@ -100,10 +100,10 @@ What's Next?
 ${nextStepsText}
 
 Order Progress:
-✓ Payment Received
-○ Provider Approval
-○ Pharmacy Processing
-○ ${deliveryMethod === 'pickup' ? 'Ready for Pickup' : deliveryMethod === 'delivery' ? 'Out for Delivery' : 'Shipped'}
+\u2713 Payment Received
+\u25cb Provider Approval
+\u25cb Pharmacy Processing
+\u25cb ${deliveryMethod === 'pickup' ? 'Ready for Pickup' : deliveryMethod === 'delivery' ? 'Out for Delivery' : 'Shipped'}
 
 We'll send you updates as your order progresses through each stage.
 
@@ -111,7 +111,7 @@ Questions? Contact your provider or reply to this email.
 
 Keep this email for your records.
 
-© ${new Date().getFullYear()} SmartConnect RX
+\u00a9 ${new Date().getFullYear()} ${brandName}
       `,
       html: `
 <!DOCTYPE html>
@@ -128,10 +128,10 @@ Keep this email for your records.
         <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
           <!-- Header -->
           <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, #10B981 0%, #059669 100%); border-radius: 8px 8px 0 0;">
-              ${pharmacyLogoUrl ? `<img src="${pharmacyLogoUrl}" alt="${pharmacyName || 'Pharmacy'}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px;" />` : ''}
+            <td style="padding: 40px 40px 20px; text-align: center; background: linear-gradient(135deg, ${brandColor} 0%, #059669 100%); border-radius: 8px 8px 0 0;">
+              ${logoHtml}
               <div style="width: 64px; height: 64px; margin: 0 auto 16px; background-color: #ffffff; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                <span style="font-size: 36px;">✓</span>
+                <span style="font-size: 36px;">\u2713</span>
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Payment Confirmed!</h1>
               ${pharmacyName ? `<p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">via ${pharmacyName}</p>` : ''}
@@ -150,7 +150,7 @@ Keep this email for your records.
               </p>
 
               <!-- Payment Details -->
-              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0; background-color: #f8f9fa; border-radius: 6px; border-left: 4px solid #10B981;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0; background-color: #f8f9fa; border-radius: 6px; border-left: 4px solid ${accentColor};">
                 <tr>
                   <td style="padding: 20px;">
                     <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Transaction ID:</p>
@@ -171,7 +171,7 @@ Keep this email for your records.
                     <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #333333;">${deliveryDisplayText}</p>
 
                     <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Amount Paid:</p>
-                    <p style="margin: 0; font-size: 24px; font-weight: 700; color: #10B981;">$${totalAmount}</p>
+                    <p style="margin: 0; font-size: 24px; font-weight: 700; color: ${accentColor};">$${totalAmount}</p>
                   </td>
                 </tr>
               </table>
@@ -188,17 +188,17 @@ Keep this email for your records.
               <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
                 <tr>
                   <td>
-                    <div style="padding: 15px; border-left: 3px solid #10B981; background-color: #f0fdf4; margin-bottom: 10px; border-radius: 4px;">
-                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: #10B981;">✓ Payment Received</p>
+                    <div style="padding: 15px; border-left: 3px solid ${accentColor}; background-color: #f0fdf4; margin-bottom: 10px; border-radius: 4px;">
+                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: ${accentColor};">\u2713 Payment Received</p>
                     </div>
                     <div style="padding: 15px; border-left: 3px solid #E5E7EB; background-color: #f9fafb; margin-bottom: 10px; border-radius: 4px;">
-                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: #6B7280;">○ Provider Approval</p>
+                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: #6B7280;">\u25cb Provider Approval</p>
                     </div>
                     <div style="padding: 15px; border-left: 3px solid #E5E7EB; background-color: #f9fafb; margin-bottom: 10px; border-radius: 4px;">
-                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: #6B7280;">○ Pharmacy Processing</p>
+                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: #6B7280;">\u25cb Pharmacy Processing</p>
                     </div>
                     <div style="padding: 15px; border-left: 3px solid #E5E7EB; background-color: #f9fafb; border-radius: 4px;">
-                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: #6B7280;">○ ${deliveryMethod === 'pickup' ? 'Ready for Pickup' : deliveryMethod === 'delivery' ? 'Out for Delivery' : 'Shipped'}</p>
+                      <p style="margin: 0; font-size: 14px; font-weight: 600; color: #6B7280;">\u25cb ${deliveryMethod === 'pickup' ? 'Ready for Pickup' : deliveryMethod === 'delivery' ? 'Out for Delivery' : 'Shipped'}</p>
                     </div>
                   </td>
                 </tr>
@@ -225,7 +225,7 @@ Keep this email for your records.
 
         <!-- Footer Text -->
         <p style="margin: 20px 0 0; font-size: 11px; line-height: 16px; color: #999999; text-align: center;">
-          © ${new Date().getFullYear()} SmartConnect RX. All rights reserved.
+          \u00a9 ${new Date().getFullYear()} ${brandName}. All rights reserved.
         </p>
       </td>
     </tr>
