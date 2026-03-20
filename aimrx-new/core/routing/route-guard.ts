@@ -104,17 +104,17 @@ export async function handleRouteAccess(
       );
     }
 
-    // For authenticated patients (role="user" or null), check intake completion
+    // For authenticated users with "user" or null role, check intake completion
     if ((role === "user" || role === null) && auth.userId) {
-      return await checkAndRedirectIntake(
+      const intakeResult = await checkAndRedirectIntake(
         auth.userId,
         role ?? null,
         supabase,
         request,
       );
+      return intakeResult;
     }
 
-    // Fallback: allow access (shouldn't happen but prevents errors)
     return null;
   }
 
@@ -127,6 +127,12 @@ export async function handleRouteAccess(
     case "auth":
       // Redirect authenticated users away from auth pages
       if (isAuthenticated) {
+        if (role === "admin" || role === "pharmacy_admin") {
+          return NextResponse.redirect(new URL(redirectPaths.adminDashboard, request.url));
+        }
+        if (role === "provider") {
+          return NextResponse.redirect(new URL(redirectPaths.providerDashboard, request.url));
+        }
         return NextResponse.redirect(dashboardUrl);
       }
       return null;
