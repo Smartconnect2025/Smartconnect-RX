@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
 
     const { data: transaction, error: transactionError } = await supabase
       .from("payment_transactions")
-      .select("*")
+      .select("*, pharmacy:pharmacies(name)")
       .eq("payment_token", paymentToken)
       .single();
 
@@ -140,7 +140,10 @@ export async function POST(request: NextRequest) {
               settingName: "hostedPaymentOrderOptions",
               settingValue: JSON.stringify({
                 show: true,
-                merchantName: "SmartConnect RX",
+                merchantName: (() => {
+                  const pharm = Array.isArray(transaction.pharmacy) ? transaction.pharmacy[0] : transaction.pharmacy;
+                  return pharm?.name || transaction.pharmacy_name || "SmartConnect RX";
+                })(),
               }),
             },
             {

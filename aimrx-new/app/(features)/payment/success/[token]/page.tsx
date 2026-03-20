@@ -339,28 +339,38 @@ export default function PaymentSuccessPage() {
   if (!isPaymentConfirmed && pollCount >= MAX_POLLS) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-center">Payment Processing</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 mb-4">
-              <Clock className="w-8 h-8 text-yellow-600" />
-            </div>
-            <p className="text-gray-700">
-              Your payment is being processed. This may take a few minutes.
-            </p>
-            <p className="text-sm text-muted-foreground">
-              You will receive an email confirmation once the payment is
-              complete. If you don&apos;t receive confirmation within 10
-              minutes, please contact support.
-            </p>
-            <div className="pt-4">
-              <p className="text-sm text-gray-600">{paymentDetails?.pharmacyPhone || "(512) 377-9898"}</p>
-              <p className="text-sm text-gray-600">Mon–Fri 9AM–6PM CST</p>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="w-full max-w-md">
+          <div className="text-center mb-6">
+            <img
+              src={paymentDetails?.pharmacyLogoUrl || "https://i.imgur.com/r65O4DB.png"}
+              alt={paymentDetails?.pharmacyName || "SmartConnect RX"}
+              className="h-16 mx-auto mb-4"
+              onError={(e) => { (e.target as HTMLImageElement).src = "https://i.imgur.com/r65O4DB.png"; }}
+            />
+          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-center">Payment Processing</CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 mb-4">
+                <Clock className="w-8 h-8 text-yellow-600" />
+              </div>
+              <p className="text-gray-700">
+                Your payment is being processed. This may take a few minutes.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                You will receive an email confirmation once the payment is
+                complete. If you don&apos;t receive confirmation within 10
+                minutes, please contact support.
+              </p>
+              <div className="pt-4">
+                <p className="text-sm font-medium text-gray-900">{paymentDetails?.pharmacyName || "SmartConnect RX"}</p>
+                <p className="text-sm text-gray-600">{paymentDetails?.pharmacyPhone || "(512) 377-9898"} · Mon–Fri 9AM–6PM CST</p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
