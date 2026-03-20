@@ -132,7 +132,7 @@ export default function LoginPage() {
               <div className="bg-white/95 rounded-lg px-3 py-1.5 shadow-md">
                 <img
                   src="/logo-header.png"
-                  alt="AIM Logo"
+                  alt="SmartConnect RX"
                   className="h-8 w-auto object-contain"
                 />
               </div>
@@ -161,12 +161,12 @@ export default function LoginPage() {
             <div className="bg-white rounded-2xl shadow-xl px-8 py-4 inline-flex items-center justify-center">
               <img
                 src="/logo-header.png"
-                alt="AIM Logo"
+                alt="SmartConnect RX"
                 className="h-20 w-auto object-contain"
               />
             </div>
-            <p className="text-lg text-white/90 font-semibold">The Amazon of Regenerative Medicine</p>
-            <p className="text-base text-white/95 italic max-w-2xl mt-1 font-medium">&quot;Elevating Patient Care with AI-Driven Clinical Innovations&quot;</p>
+            <p className="text-lg text-white/90 font-semibold">The Smartest Way to Connect Pharmacies, Providers &amp; Patients</p>
+            <p className="text-base text-white/95 italic max-w-2xl mt-1 font-medium">&quot;Streamlining Prescriptions, Payments &amp; Fulfillment — All in One Platform&quot;</p>
           </div>
         </div>
 
@@ -307,7 +307,7 @@ export default function LoginPage() {
                     <p className="text-xs text-gray-600">Grow your business</p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-700 mb-3">Join AIM&apos;s regenerative network and receive orders from providers nationwide.</p>
+                <p className="text-sm text-gray-700 mb-3">Join SmartConnect RX&apos;s pharmacy network and receive orders from providers nationwide.</p>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-[#1E3A8A] font-semibold group-hover:translate-x-2 transition-transform">Apply to Join Network →</span>
                 </div>

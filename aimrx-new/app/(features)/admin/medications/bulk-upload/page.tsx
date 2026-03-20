@@ -270,7 +270,7 @@ export default function BulkUploadMedicationsPage() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Medications");
 
-    XLSX.writeFile(wb, "aimrx-medication-upload-template.xlsx");
+    XLSX.writeFile(wb, "smartconnect-rx-medication-upload-template.xlsx");
   };
 
   return (

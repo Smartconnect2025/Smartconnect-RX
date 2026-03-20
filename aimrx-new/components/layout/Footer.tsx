@@ -175,8 +175,8 @@ export function Footer() {
                 medical advice.
               </p>
               <p className="text-sm text-primary-foreground/90">
-                &copy; 2026 SmartConnect RX – Elevating patient care
-                with AI-driven clinical innovations
+                &copy; 2026 SmartConnect RX – The smartest way to connect
+                pharmacies, providers &amp; patients
               </p>
               <div className="flex flex-wrap gap-4 sm:gap-6 justify-center">
                 {legalLinks.map((link) => (

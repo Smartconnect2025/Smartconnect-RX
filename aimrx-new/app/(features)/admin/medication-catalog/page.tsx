@@ -797,7 +797,7 @@ export default function MedicationCatalogPage() {
                                     )}
                                     <p className="text-gray-700">
                                       <span className="font-semibold">
-                                        Pricing to AIMRx:
+                                        Pharmacy Cost:
                                       </span>{" "}
                                       $
                                       {(med.retail_price_cents / 100).toFixed(
@@ -807,7 +807,7 @@ export default function MedicationCatalogPage() {
                                     {med.aimrx_site_pricing_cents && (
                                       <p className="text-gray-700">
                                         <span className="font-semibold">
-                                          AIMRx Site Pricing:
+                                          Patient Price:
                                         </span>{" "}
                                         $
                                         {(med.aimrx_site_pricing_cents / 100).toFixed(2)}
@@ -1110,7 +1110,7 @@ export default function MedicationCatalogPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>Pricing to AIMRx ($)</Label>
+                  <Label>Pharmacy Cost ($)</Label>
                   <Input
                     type="number"
                     value={editPrices.retailPrice}
@@ -1123,7 +1123,7 @@ export default function MedicationCatalogPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>AIMRx Site Pricing ($)</Label>
+                  <Label>Patient Price ($)</Label>
                   <Input
                     type="number"
                     value={editPrices.aimrxSitePrice}

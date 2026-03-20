@@ -151,7 +151,7 @@ export default function QuickStartGuidePage() {
           <p className="text-gray-600 mb-6 text-center">Two pharmacies are ready in the platform</p>
 
           <div className="space-y-4">
-            {/* AIM Medical Technologies */}
+            {/* SmartConnect RX */}
             <div className="p-6 rounded-lg" style={{ backgroundColor: "#E1F5FE", border: "3px solid #00AEEF" }}>
               <div className="flex items-center gap-3 mb-2">
                 <div className="w-8 h-8 rounded-full" style={{ backgroundColor: "#00AEEF" }}></div>

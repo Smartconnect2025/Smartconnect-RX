@@ -27,8 +27,8 @@ export const pharmacy_medications = pgTable(
     form: text("form"),
     ndc: text("ndc"),
     vial_size: text("vial_size"), // Vial size / Quantity (e.g., "5mL", "30 tablets")
-    retail_price_cents: integer("retail_price_cents").notNull(), // Pricing to AIMRx (from pharmacy)
-    aimrx_site_pricing_cents: integer("aimrx_site_pricing_cents"), // AIMRx site pricing (what AIMRx charges)
+    retail_price_cents: integer("retail_price_cents").notNull(), // Pharmacy cost (acquisition price)
+    aimrx_site_pricing_cents: integer("aimrx_site_pricing_cents"), // Patient-facing price (what SmartConnect RX charges)
 
     category: text("category").default("Standard Formulations"), // Weight Loss (GLP-1), Peptides, Sexual Health, etc.
     dosage_instructions: text("dosage_instructions"), // How to take the medication

@@ -44,7 +44,7 @@ async function sendConfirmationEmailToApplicant(
 
         <p style="font-size: 16px; line-height: 1.6; margin-top: 30px;">
           Best regards,<br>
-          <strong>AIM RX Portal Team</strong>
+          <strong>SmartConnect RX Team</strong>
         </p>
       </div>
 
@@ -58,7 +58,7 @@ async function sendConfirmationEmailToApplicant(
     to: email,
     from: {
       email: process.env.SENDGRID_FROM_EMAIL || "noreply@smartconnectrx.com",
-      name: process.env.SENDGRID_FROM_NAME || "AIM RX Portal",
+      name: process.env.SENDGRID_FROM_NAME || "SmartConnect RX",
     },
     subject: confirmationSubject,
     html: confirmationHtml,
@@ -215,10 +215,10 @@ export async function POST(request: NextRequest) {
     // Send notification email to admin
     try {
       const adminMsg = {
-        to: "support@aimrx.com",
+        to: "support@smartconnectrx.com",
         from: {
           email: process.env.SENDGRID_FROM_EMAIL || "noreply@smartconnectrx.com",
-          name: process.env.SENDGRID_FROM_NAME || "AIM RX Portal"
+          name: process.env.SENDGRID_FROM_NAME || "SmartConnect RX"
         },
         subject: emailSubject,
         html: emailContent,

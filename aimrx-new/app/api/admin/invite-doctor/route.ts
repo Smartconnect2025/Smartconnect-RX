@@ -167,14 +167,14 @@ export async function POST(request: NextRequest) {
       if (sendGridApiKey) {
         sgMail.setApiKey(sendGridApiKey);
 
-        const appUrl = "https://app.aimrx.com/auth/login";
+        const appUrl = "https://app.smartconnectrx.com/auth/login";
 
-        const emailSubject = "Welcome to AIM RX Portal - Your Provider Account";
+        const emailSubject = "Welcome to SmartConnect RX - Your Provider Account";
         const emailHtml = `
           <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
             <div style="background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #00AEEF 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
               <img src="https://i.imgur.com/r65O4DB.png" alt="SmartConnect RX" style="height: 80px; margin-bottom: 15px;" />
-              <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to AIM RX Portal</h1>
+              <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to SmartConnect RX</h1>
             </div>
 
             <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
@@ -219,12 +219,12 @@ export async function POST(request: NextRequest) {
               </div>
 
               <p style="font-size: 14px; line-height: 1.6; color: #6b7280; margin-top: 30px;">
-                If you have any questions or need assistance, please contact our support team at <a href="mailto:support@aimrx.com" style="color: #00AEEF;">support@aimrx.com</a>.
+                If you have any questions or need assistance, please contact our support team at <a href="mailto:support@smartconnectrx.com" style="color: #00AEEF;">support@smartconnectrx.com</a>.
               </p>
 
               <p style="font-size: 16px; line-height: 1.6; margin-top: 20px;">
                 Best regards,<br>
-                <strong>AIM RX Portal Team</strong>
+                <strong>SmartConnect RX Team</strong>
               </p>
             </div>
 
@@ -238,7 +238,7 @@ export async function POST(request: NextRequest) {
           to: email,
           from: {
             email: process.env.SENDGRID_FROM_EMAIL || "noreply@smartconnectrx.com",
-            name: process.env.SENDGRID_FROM_NAME || "AIM RX Portal"
+            name: process.env.SENDGRID_FROM_NAME || "SmartConnect RX"
           },
           subject: emailSubject,
           html: emailHtml,

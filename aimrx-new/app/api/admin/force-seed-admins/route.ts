@@ -27,7 +27,7 @@ export async function POST() {
         const { data: newAim, error: aimError } = await supabase
           .from("pharmacies")
           .insert({
-            name: "AIM Medical Technologies",
+            name: "SmartConnect RX",
             slug: "aim",
             primary_color: "#00AEEF",
             tagline: "Advanced Integrated Medicine",
@@ -138,13 +138,13 @@ export async function POST() {
 
 
       results.push({
-        pharmacy: "AIM Medical Technologies",
+        pharmacy: "SmartConnect RX",
         email: "aim_admin@aimmedtech.com",
         status: "success",
       });
     } catch (error) {
       results.push({
-        pharmacy: "AIM Medical Technologies",
+        pharmacy: "SmartConnect RX",
         email: "aim_admin@aimmedtech.com",
         status: "failed",
         error: error instanceof Error ? error.message : String(error),

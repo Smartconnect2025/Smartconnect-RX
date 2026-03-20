@@ -162,7 +162,7 @@ export default function RequestDoctorAccessPage() {
             alt="SmartConnect RX"
             className="h-[120px] mb-2"
           />
-          <h1 className="text-3xl font-bold text-white drop-shadow-2xl">AIM Marketplace</h1>
+          <h1 className="text-3xl font-bold text-white drop-shadow-2xl">SmartConnect RX</h1>
           <p className="text-lg text-white/90 font-semibold">Provider Access Request</p>
         </div>
       </div>

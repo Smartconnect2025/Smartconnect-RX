@@ -30,11 +30,11 @@ async function seedAIMPharmacy() {
     const { data: pharmacy, error: pharmacyError } = await supabase
       .from("pharmacies")
       .insert({
-        name: "AIM Medical Technologies",
+        name: "SmartConnect RX",
         slug: "aim",
         logo_url: null,
         primary_color: "#00AEEF",
-        tagline: "Elevating Patient Care with AI-Driven Clinical Innovations",
+        tagline: "The Smartest Way to Connect Pharmacies, Providers & Patients",
         address: "123 Innovation Drive, Austin, TX 78701",
         npi: null,
         phone: "(512) 555-2461",

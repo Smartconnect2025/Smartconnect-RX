@@ -104,7 +104,7 @@ const printReceipt = () => {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>AIM Receipt</title>
+      <title>SmartConnect RX Receipt</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; padding: 12px; color: #333; font-size: 0.86rem; }
@@ -228,8 +228,8 @@ export function PrescriptionModals({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto print:max-w-full">
           {selectedPrescription && (
-            <div className="space-y-6 print-container" id="aim-receipt">
-              {/* AIM Logo */}
+            <div className="space-y-6 print-container" id="rx-receipt">
+              {/* SmartConnect Logo */}
               <div className="text-center pt-4">
                 <img
                   src="https://i.imgur.com/r65O4DB.png"
@@ -528,7 +528,7 @@ export function PrescriptionModals({
               {/* Notes from Pharmacy - Always show */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 print-section print-notes">
                 <p className="font-semibold text-sm text-gray-700 mb-2 print-text">
-                  📋 Important Notes from AIM Pharmacy:
+                  📋 Important Notes from Pharmacy:
                 </p>
                 <div className="text-sm text-gray-900 space-y-1">
                   {(

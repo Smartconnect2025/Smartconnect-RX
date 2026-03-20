@@ -2,8 +2,8 @@ import { createAdminClient } from "@core/database/client";
 import sgMail from "@sendgrid/mail";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
-const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "noreply@aimrx.com";
-const FROM_NAME = process.env.SENDGRID_FROM_NAME || "AIM Medical";
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "noreply@smartconnectrx.com";
+const FROM_NAME = process.env.SENDGRID_FROM_NAME || "SmartConnect RX";
 
 const MFA_CODE_EXPIRY_MINUTES = 10;
 const MFA_MAX_ATTEMPTS = 5;

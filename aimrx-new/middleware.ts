@@ -3,9 +3,8 @@ import { updateSession } from "@core/supabase";
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = [
-  "https://app.aimrx.com",
-  "https://aimrx-dev.onrender.com",
-  "https://aimrx.onrender.com",
+  "https://app.smartconnectrx.com",
+  "https://smartconnectrx.com",
 ];
 
 // In development, also allow localhost
