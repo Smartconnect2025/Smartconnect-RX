@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { firstName, lastName, email, phone, password, tierLevel, groupId, npiNumber, medicalLicense, licenseState, companyName, physicalAddress, billingAddress } = body;
+    const { firstName, lastName, email, phone, password, tierLevel, groupId, npiNumber, medicalLicense, licenseState, companyName, physicalAddress, billingAddress, referringPharmacyId } = body;
 
     // Validate required fields
     if (!firstName || !lastName || !email || !password) {
@@ -126,13 +126,32 @@ export async function POST(request: NextRequest) {
     }
 
     if (providerData) {
-      const inviterScope = await getPharmacyAdminScope(user.id);
-      if (inviterScope.isPharmacyAdmin && inviterScope.pharmacyId) {
+      let pharmacyIdToLink: string | null = null;
+
+      if (referringPharmacyId) {
+        const { data: refPharmacy } = await supabaseAdmin
+          .from("pharmacies")
+          .select("id")
+          .eq("id", referringPharmacyId)
+          .eq("is_active", true)
+          .single();
+        if (refPharmacy) {
+          pharmacyIdToLink = refPharmacy.id;
+        }
+      }
+      if (!pharmacyIdToLink) {
+        const inviterScope = await getPharmacyAdminScope(user.id);
+        if (inviterScope.isPharmacyAdmin && inviterScope.pharmacyId) {
+          pharmacyIdToLink = inviterScope.pharmacyId;
+        }
+      }
+
+      if (pharmacyIdToLink) {
         const { error: linkError } = await supabaseAdmin
           .from("provider_pharmacy_links")
           .upsert({
             provider_id: authUser.user.id,
-            pharmacy_id: inviterScope.pharmacyId,
+            pharmacy_id: pharmacyIdToLink,
           }, { onConflict: "provider_id,pharmacy_id" });
 
         if (linkError) {

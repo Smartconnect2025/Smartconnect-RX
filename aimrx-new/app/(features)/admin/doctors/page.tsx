@@ -120,6 +120,9 @@ interface AccessRequestFormData {
   hearAboutUs?: string;
   additionalInfo?: string;
   companyName?: string;
+  referringPharmacyId?: string;
+  referringPharmacySlug?: string;
+  referringPharmacyName?: string;
 }
 
 interface AccessRequest {
@@ -170,6 +173,9 @@ export default function ManageDoctorsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [approvingRequestId, setApprovingRequestId] = useState<string | null>(
+    null,
+  );
+  const [approvingReferringPharmacyId, setApprovingReferringPharmacyId] = useState<string | null>(
     null,
   );
   const [approvedRequestIds, setApprovedRequestIds] = useState<Set<string>>(
@@ -288,6 +294,7 @@ export default function ManageDoctorsPage() {
     });
     setShowPassword(false);
     setApprovingRequestId(null);
+    setApprovingReferringPharmacyId(null);
   };
 
   // Delete Dialog
@@ -471,6 +478,7 @@ export default function ManageDoctorsPage() {
             zipCode: inviteFormData.zipCode || null,
             country: "USA",
           },
+          referringPharmacyId: approvingReferringPharmacyId || null,
         }),
       });
 
@@ -920,8 +928,8 @@ export default function ManageDoctorsPage() {
       return newSet;
     });
 
-    // Store the request ID so we can approve it after successful invitation
     setApprovingRequestId(request.id);
+    setApprovingReferringPharmacyId(request.form_data?.referringPharmacyId || null);
 
     // Generate a secure password automatically
     const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -1418,6 +1426,9 @@ export default function ManageDoctorsPage() {
                           NPI Number
                         </TableHead>
                         <TableHead className="font-semibold">
+                          Referred By
+                        </TableHead>
+                        <TableHead className="font-semibold">
                           Submitted
                         </TableHead>
                         <TableHead className="font-semibold">Actions</TableHead>
@@ -1443,6 +1454,15 @@ export default function ManageDoctorsPage() {
                             <TableCell>{request.phone || "N/A"}</TableCell>
                             <TableCell className="font-mono">
                               {request.form_data?.npiNumber || "N/A"}
+                            </TableCell>
+                            <TableCell>
+                              {request.form_data?.referringPharmacyName ? (
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                                  {request.form_data.referringPharmacyName}
+                                </Badge>
+                              ) : (
+                                <span className="text-gray-400 text-sm">Direct</span>
+                              )}
                             </TableCell>
                             <TableCell>
                               {new Date(request.created_at).toLocaleDateString(
@@ -1520,6 +1540,13 @@ export default function ManageDoctorsPage() {
               </DialogDescription>
             </DialogHeader>
 
+            {approvingReferringPharmacyId && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 -mt-2 mb-2">
+                <p className="text-sm text-blue-800">
+                  This provider will be automatically linked to the referring pharmacy upon approval.
+                </p>
+              </div>
+            )}
             {approvingRequestId && (
               <div className="bg-green-50 border border-green-200 rounded-lg p-3 -mt-2">
                 <p className="text-sm text-green-800">

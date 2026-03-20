@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,9 +25,17 @@ const US_STATES = [
   "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"
 ];
 
+interface ReferringPharmacy {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export default function RequestDoctorAccessPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [referringPharmacy, setReferringPharmacy] = useState<ReferringPharmacy | null>(null);
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -50,11 +58,28 @@ export default function RequestDoctorAccessPage() {
     additionalInfo: "",
   });
 
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      fetch(`/api/pharmacies/lookup?slug=${encodeURIComponent(ref)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && data.pharmacy) {
+            setReferringPharmacy({
+              id: data.pharmacy.id,
+              name: data.pharmacy.name,
+              slug: data.pharmacy.slug,
+            });
+          }
+        })
+        .catch(() => {});
+    }
+  }, [searchParams]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     let value = e.target.value;
     const name = e.target.name;
 
-    // Phone number formatting: only allow digits, format as (XXX) XXX-XXXX
     if (name === "phone") {
       const digits = value.replace(/\D/g, "");
       if (digits.length <= 10) {
@@ -66,17 +91,16 @@ export default function RequestDoctorAccessPage() {
           value = digits;
         }
       } else {
-        return; // Don't allow more than 10 digits
+        return;
       }
     }
 
-    // Zip code: only allow 5 digits
     if (name === "zipCode") {
       const digits = value.replace(/\D/g, "");
       if (digits.length <= 5) {
         value = digits;
       } else {
-        return; // Don't allow more than 5 digits
+        return;
       }
     }
 
@@ -98,6 +122,13 @@ export default function RequestDoctorAccessPage() {
     setIsSubmitting(true);
 
     try {
+      const submitData: Record<string, unknown> = { ...formData };
+      if (referringPharmacy) {
+        submitData.referringPharmacyId = referringPharmacy.id;
+        submitData.referringPharmacySlug = referringPharmacy.slug;
+        submitData.referringPharmacyName = referringPharmacy.name;
+      }
+
       const response = await fetch("/api/access-requests", {
         method: "POST",
         headers: {
@@ -105,7 +136,7 @@ export default function RequestDoctorAccessPage() {
         },
         body: JSON.stringify({
           type: "doctor",
-          formData,
+          formData: submitData,
         }),
       });
 
@@ -117,7 +148,6 @@ export default function RequestDoctorAccessPage() {
 
       toast.success("Request submitted successfully! We'll contact you within 24-48 hours.");
 
-      // Redirect to login after 2 seconds
       setTimeout(() => {
         router.push("/auth/login");
       }, 2000);
@@ -130,16 +160,13 @@ export default function RequestDoctorAccessPage() {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-[#1E3A8A] via-[#2563EB] to-[#00AEEF] overflow-hidden flex flex-col relative py-8">
-      {/* Subtle animated helix/DNA background */}
       <div className="absolute inset-0 opacity-10 pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-teal-300 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "1s" }}></div>
         <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-300 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "2s" }}></div>
       </div>
 
-      {/* Header */}
       <div className="text-center mb-6 z-10">
-        {/* HIPAA Trust Badge - Top Center on mobile, Top Right on desktop */}
         <div className="flex justify-center md:justify-end mb-4 px-4">
           <div className="bg-white/95 backdrop-blur-sm rounded-lg px-4 py-2 shadow-2xl border-2 border-green-500/50">
             <div className="flex items-center gap-2">
@@ -164,18 +191,30 @@ export default function RequestDoctorAccessPage() {
           />
           <h1 className="text-3xl font-bold text-white drop-shadow-2xl">SmartConnect RX</h1>
           <p className="text-lg text-white/90 font-semibold">Provider Access Request</p>
+          {referringPharmacy && (
+            <div className="mt-2 inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-5 py-2">
+              <span className="text-sm text-white/90">Referred by</span>
+              <span className="text-sm font-bold text-white">{referringPharmacy.name}</span>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Form Container */}
       <div className="flex-1 flex items-center justify-center px-4 z-10">
         <div className="w-full max-w-3xl">
           <div className="bg-white rounded-2xl shadow-2xl p-8">
-            {/* Back to Login */}
             <Link href="/auth/login" className="inline-flex items-center gap-2 text-[#00AEEF] hover:text-[#0098D4] mb-6 transition-colors">
               <ArrowLeft className="h-4 w-4" />
               Back to Sign In
             </Link>
+
+            {referringPharmacy && (
+              <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  You&apos;re applying through <strong>{referringPharmacy.name}</strong>. Once approved, you&apos;ll be automatically connected to their pharmacy.
+                </p>
+              </div>
+            )}
 
             <div className="mb-6">
               <h2 className="text-2xl font-bold text-gray-900 mb-2">Request Provider Access</h2>
@@ -183,7 +222,6 @@ export default function RequestDoctorAccessPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Personal Information */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b pb-2">Personal Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -254,7 +292,6 @@ export default function RequestDoctorAccessPage() {
                 </div>
               </div>
 
-              {/* Medical Credentials */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b pb-2">Medical Credentials</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -328,7 +365,6 @@ export default function RequestDoctorAccessPage() {
                 </div>
               </div>
 
-              {/* Practice Information */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b pb-2">Practice Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -408,7 +444,6 @@ export default function RequestDoctorAccessPage() {
                 </div>
               </div>
 
-              {/* Additional Information */}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b pb-2">Additional Information</h3>
                 <div className="space-y-4">
@@ -462,7 +497,6 @@ export default function RequestDoctorAccessPage() {
                 </div>
               </div>
 
-              {/* Submit Button */}
               <Button
                 type="submit"
                 className="w-full h-12 text-lg font-bold bg-[#00AEEF] hover:bg-[#00AEEF] text-white shadow-2xl transition-all duration-300 hover:shadow-[0_0_30px_rgba(0,174,239,0.6)]"
@@ -482,7 +516,6 @@ export default function RequestDoctorAccessPage() {
                 By submitting this form, you agree to our Terms of Service and Privacy Policy. We will review your application and contact you within 24-48 hours.
               </p>
 
-              {/* Contact Information */}
               <div className="mt-6 p-4 bg-teal-50 rounded-lg border border-teal-200">
                 <p className="text-sm text-center text-gray-700 font-medium mb-2">
                   Need help or have questions?
@@ -499,7 +532,6 @@ export default function RequestDoctorAccessPage() {
         </div>
       </div>
 
-      {/* Footer */}
       <div className="text-center py-4 text-white/70 text-xs z-10">
         By invitation only • Built exclusively for SmartConnect RX
       </div>

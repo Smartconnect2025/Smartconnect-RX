@@ -123,9 +123,20 @@ export async function POST(request: NextRequest) {
     let emailContent = "";
 
     if (type === "doctor") {
-      emailSubject = `New Provider Access Request - ${formData.firstName} ${formData.lastName}`;
+      const pharmacyRef = formData.referringPharmacyName
+        ? ` (via ${formData.referringPharmacyName})`
+        : "";
+      emailSubject = `New Provider Access Request - ${formData.firstName} ${formData.lastName}${pharmacyRef}`;
       emailContent = `
         <h2>New Provider Access Request</h2>
+
+        ${formData.referringPharmacyName ? `
+        <div style="background: #DBEAFE; border-left: 4px solid #2563EB; padding: 12px 16px; margin: 0 0 20px 0; border-radius: 4px;">
+          <strong style="color: #1E3A8A;">Referred by Pharmacy:</strong>
+          <span style="color: #1E3A8A; margin-left: 8px;">${formData.referringPharmacyName}</span>
+          <br/><small style="color: #3B82F6;">This provider should be linked to this pharmacy upon approval.</small>
+        </div>
+        ` : ""}
 
         <h3>Personal Information</h3>
         <ul>
