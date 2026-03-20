@@ -40,6 +40,26 @@ export async function checkIntakeStatusServer(
       };
     }
 
+    // Check if user is a pharmacy admin (linked via pharmacy_admins table)
+    // even if they have no role in user_roles
+    if (!userRole || userRole === "user") {
+      const { data: pharmAdmin } = await supabase
+        .from("pharmacy_admins")
+        .select("pharmacy_id")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (pharmAdmin) {
+        return {
+          hasCompletedIntake: true,
+          patientExists: true,
+          patientId: undefined,
+          currentStep: undefined,
+          nextStepUrl: undefined,
+        };
+      }
+    }
+
     // Query the patients table to check if user has completed intake
     const { data: patient, error } = await supabase
       .from("patients")

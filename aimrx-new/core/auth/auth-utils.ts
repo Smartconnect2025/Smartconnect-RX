@@ -45,11 +45,21 @@ export async function fetchUserRoleFromDatabase(
       .eq("user_id", userId)
       .single();
 
-    if (error) {
-      return { role: "user", isDemo: false };
+    if (!error && data?.role) {
+      return { role: data.role, isDemo: data.is_demo || false };
     }
 
-    return { role: data?.role || "user", isDemo: data?.is_demo || false };
+    const { data: pharmAdmin } = await supabase
+      .from("pharmacy_admins")
+      .select("pharmacy_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (pharmAdmin) {
+      return { role: "admin", isDemo: false };
+    }
+
+    return { role: "user", isDemo: false };
   } catch {
     return { role: "user", isDemo: false };
   }
