@@ -42,7 +42,7 @@ modules = ["nodejs-24", "postgresql-16"]
 
   [agent]
   stack = "PNPM_WORKSPACE"
-  expertMode = true
+expertMode = true
   integrations = ["github:1.0.0"]
 
   [postMerge]

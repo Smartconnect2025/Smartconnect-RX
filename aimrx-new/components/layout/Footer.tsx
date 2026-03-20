@@ -91,7 +91,7 @@ export function Footer() {
                 <img
                   src="/logo-header.png"
                   alt="SmartConnect RX Logo"
-                  className="h-12 w-auto brightness-0 invert"
+                  className="h-12 w-auto bg-white rounded px-2 py-1"
                 />
               </Link>
 
