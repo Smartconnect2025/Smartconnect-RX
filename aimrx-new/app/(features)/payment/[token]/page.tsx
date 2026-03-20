@@ -219,7 +219,7 @@ export default function PaymentPage() {
 
   const brandColor = paymentDetails.pharmacyColor || "#1E3A8A";
   const brandName = paymentDetails.pharmacyName || "SmartConnect RX";
-  const logoSrc = paymentDetails.pharmacyLogoUrl || "https://i.imgur.com/r65O4DB.png";
+  const logoSrc = paymentDetails.pharmacyLogoUrl || "/logo-header.png";
   const contactPhone = paymentDetails.pharmacyPhone || "(512) 377-9898";
 
   return (
@@ -241,7 +241,7 @@ export default function PaymentPage() {
             src={logoSrc}
             alt={brandName}
             className="h-24 mx-auto mb-4"
-            onError={(e) => { (e.target as HTMLImageElement).src = "https://i.imgur.com/r65O4DB.png"; }}
+            onError={(e) => { (e.target as HTMLImageElement).src = "/logo-header.png"; }}
           />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Secure Payment</h1>
           <p className="text-muted-foreground">

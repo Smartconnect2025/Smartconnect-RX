@@ -87,10 +87,10 @@ export default function PaymentCancelledPage() {
             </Button>
           </div>
           <img
-            src={paymentDetails?.pharmacyLogoUrl || "https://i.imgur.com/r65O4DB.png"}
+            src={paymentDetails?.pharmacyLogoUrl || "/logo-header.png"}
             alt={paymentDetails?.pharmacyName || "SmartConnect RX"}
             className="h-24 mx-auto mb-4"
-            onError={(e) => { (e.target as HTMLImageElement).src = "https://i.imgur.com/r65O4DB.png"; }}
+            onError={(e) => { (e.target as HTMLImageElement).src = "/logo-header.png"; }}
           />
         </div>
 

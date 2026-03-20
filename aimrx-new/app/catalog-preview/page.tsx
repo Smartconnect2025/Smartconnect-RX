@@ -445,8 +445,8 @@ export default function CatalogPreviewPage() {
                 </h1>
               </div>
               <p className="text-blue-100 text-base sm:text-lg mt-1 leading-relaxed">
-                AIM leads the industry in precision and innovation. By partnering with the most advanced manufacturers,
-                AIM delivers peptides of unparalleled quality and effectiveness — rigorously tested, ensuring consistent
+                SmartConnect RX leads the industry in precision and innovation. By partnering with the most advanced manufacturers,
+                we deliver peptides of unparalleled quality and effectiveness — rigorously tested, ensuring consistent
                 results and compliance with the highest standards.
               </p>
               <div className="flex items-center gap-4 mt-4">

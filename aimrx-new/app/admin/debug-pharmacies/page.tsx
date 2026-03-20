@@ -221,7 +221,7 @@ export default function DebugPharmaciesPage() {
                     {medicationsCount >= 10 ? (
                       <div className="flex items-center gap-2 text-green-700">
                         <span className="font-bold">✓</span>
-                        <span>Prompt 1/6 – 10 medications seeded (5 AIM + 5 Greenwich)</span>
+                        <span>Prompt 1/6 – 10 medications seeded (5 SmartConnect RX + 5 Greenwich)</span>
                       </div>
                     ) : (
                       <div className="flex items-center gap-2 text-gray-600">

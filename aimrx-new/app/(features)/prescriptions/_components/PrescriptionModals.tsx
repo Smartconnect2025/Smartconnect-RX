@@ -224,7 +224,7 @@ export function PrescriptionModals({
 
   return (
     <>
-      {/* AIM Official Receipt Modal */}
+      {/* Official Receipt Modal */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto print:max-w-full">
           {selectedPrescription && (
@@ -232,7 +232,7 @@ export function PrescriptionModals({
               {/* SmartConnect Logo */}
               <div className="text-center pt-4">
                 <img
-                  src="https://i.imgur.com/r65O4DB.png"
+                  src="/logo-header.png"
                   alt="SmartConnect RX"
                   className="h-[80px] mx-auto print-logo"
                 />

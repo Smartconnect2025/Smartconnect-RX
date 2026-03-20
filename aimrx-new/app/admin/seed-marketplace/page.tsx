@@ -39,7 +39,7 @@ export default function SeedMarketplacePage() {
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
         <h1 className="text-3xl font-bold mb-4">💰 Seed Amazon-Style Marketplace</h1>
         <p className="text-gray-600 mb-6">
-          This will DELETE all old test medications and seed 40 real medications (20 AIM peptides/GLP-1 + 20 Greenwich traditional Rx) with
+          This will DELETE all old test medications and seed 40 real medications (20 SmartConnect RX peptides/GLP-1 + 20 Greenwich traditional Rx) with
           categories.
         </p>
 
@@ -69,7 +69,7 @@ export default function SeedMarketplacePage() {
                 Go to <a href="/prescriptions/new/step1" className="underline font-semibold">New Prescription</a>
               </li>
               <li>See the beautiful Amazon-style marketplace with categories!</li>
-              <li>Click &quot;Weight Loss (GLP-1)&quot; to see AIM high-profit peptides</li>
+              <li>Click &quot;Weight Loss (GLP-1)&quot; to see SmartConnect RX high-profit peptides</li>
               <li>Click &quot;Traditional Rx&quot; to see Greenwich medications</li>
               <li>Sort by &quot;Highest Profit&quot; to see Retatrutide (+$360 profit) at the top</li>
             </ol>

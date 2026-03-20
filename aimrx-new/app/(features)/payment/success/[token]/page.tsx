@@ -342,10 +342,10 @@ export default function PaymentSuccessPage() {
         <div className="w-full max-w-md">
           <div className="text-center mb-6">
             <img
-              src={paymentDetails?.pharmacyLogoUrl || "https://i.imgur.com/r65O4DB.png"}
+              src={paymentDetails?.pharmacyLogoUrl || "/logo-header.png"}
               alt={paymentDetails?.pharmacyName || "SmartConnect RX"}
               className="h-16 mx-auto mb-4"
-              onError={(e) => { (e.target as HTMLImageElement).src = "https://i.imgur.com/r65O4DB.png"; }}
+              onError={(e) => { (e.target as HTMLImageElement).src = "/logo-header.png"; }}
             />
           </div>
           <Card>
@@ -404,10 +404,10 @@ export default function PaymentSuccessPage() {
               </Button>
             </div>
             <img
-              src={paymentDetails?.pharmacyLogoUrl || "https://i.imgur.com/r65O4DB.png"}
+              src={paymentDetails?.pharmacyLogoUrl || "/logo-header.png"}
               alt={paymentDetails?.pharmacyName || "SmartConnect RX"}
               className="h-[80px] mx-auto mb-4 print-logo"
-              onError={(e) => { (e.target as HTMLImageElement).src = "https://i.imgur.com/r65O4DB.png"; }}
+              onError={(e) => { (e.target as HTMLImageElement).src = "/logo-header.png"; }}
             />
           </div>
 

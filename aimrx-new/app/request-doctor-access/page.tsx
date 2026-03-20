@@ -158,9 +158,9 @@ export default function RequestDoctorAccessPage() {
 
         <div className="flex flex-col items-center gap-2">
           <img
-            src="https://i.imgur.com/r65O4DB.png"
+            src="/logo-header.png"
             alt="SmartConnect RX"
-            className="h-[120px] mb-2"
+            className="h-[100px] mb-2 bg-white rounded-xl px-4 py-2"
           />
           <h1 className="text-3xl font-bold text-white drop-shadow-2xl">SmartConnect RX</h1>
           <p className="text-lg text-white/90 font-semibold">Provider Access Request</p>
@@ -437,7 +437,7 @@ export default function RequestDoctorAccessPage() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="hearAboutUs" className="text-sm font-medium">How did you hear about AIM?</Label>
+                    <Label htmlFor="hearAboutUs" className="text-sm font-medium">How did you hear about SmartConnect RX?</Label>
                     <Input
                       id="hearAboutUs"
                       name="hearAboutUs"
@@ -488,7 +488,7 @@ export default function RequestDoctorAccessPage() {
                   Need help or have questions?
                 </p>
                 <p className="text-sm text-center text-gray-600">
-                  Call us at <a href="tel:+1-800-AIM-MEDS" className="font-bold text-[#00AEEF] hover:text-[#0098D4]">1-800-AIM-MEDS</a>
+                  Call us at <a href="tel:+15123779898" className="font-bold text-[#00AEEF] hover:text-[#0098D4]">(512) 377-9898</a>
                 </p>
                 <p className="text-xs text-center text-gray-500 mt-1">
                   (Monday - Friday, 9 AM - 6 PM EST)

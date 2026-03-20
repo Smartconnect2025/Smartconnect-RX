@@ -161,9 +161,9 @@ export default function RequestPharmacyAccessPage() {
 
         <div className="flex flex-col items-center gap-2">
           <img
-            src="https://i.imgur.com/r65O4DB.png"
+            src="/logo-header.png"
             alt="SmartConnect RX"
-            className="h-[120px] mb-2"
+            className="h-[100px] mb-2 bg-white rounded-xl px-4 py-2"
           />
           <h1 className="text-3xl font-bold text-white drop-shadow-2xl">SmartConnect RX</h1>
           <p className="text-lg text-white/90 font-semibold">Pharmacy Network Application</p>
@@ -498,7 +498,7 @@ export default function RequestPharmacyAccessPage() {
                 <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b pb-2">Additional Information</h3>
                 <div className="space-y-4">
                   <div className="space-y-1">
-                    <Label htmlFor="hearAboutUs" className="text-sm font-medium">How did you hear about AIM?</Label>
+                    <Label htmlFor="hearAboutUs" className="text-sm font-medium">How did you hear about SmartConnect RX?</Label>
                     <Input
                       id="hearAboutUs"
                       name="hearAboutUs"
@@ -514,7 +514,7 @@ export default function RequestPharmacyAccessPage() {
                       id="additionalInfo"
                       name="additionalInfo"
                       rows={4}
-                      placeholder="Tell us more about your pharmacy and why you'd like to join the AIM network"
+                      placeholder="Tell us more about your pharmacy and why you'd like to join the SmartConnect RX network"
                       value={formData.additionalInfo}
                       onChange={handleChange}
                       disabled={isSubmitting}
@@ -550,7 +550,7 @@ export default function RequestPharmacyAccessPage() {
                   Need help or have questions?
                 </p>
                 <p className="text-sm text-center text-gray-600">
-                  Call us at <a href="tel:+1-800-AIM-MEDS" className="font-bold text-[#1E3A8A] hover:text-[#2563EB]">1-800-AIM-MEDS</a>
+                  Call us at <a href="tel:+15123779898" className="font-bold text-[#1E3A8A] hover:text-[#2563EB]">(512) 377-9898</a>
                 </p>
                 <p className="text-xs text-center text-gray-500 mt-1">
                   (Monday - Friday, 9 AM - 6 PM EST)

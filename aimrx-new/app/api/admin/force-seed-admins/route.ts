@@ -30,7 +30,7 @@ export async function POST() {
             name: "SmartConnect RX",
             slug: "aim",
             primary_color: "#00AEEF",
-            tagline: "Advanced Integrated Medicine",
+            tagline: "The Amazon of Regenerative Medicine",
             is_active: true,
           })
           .select()

@@ -162,10 +162,10 @@ export default function OrderTrackingPage() {
             </Button>
           </div>
           <img
-            src={orderStatus.pharmacyLogoUrl || "https://i.imgur.com/r65O4DB.png"}
+            src={orderStatus.pharmacyLogoUrl || "/logo-header.png"}
             alt={orderStatus.pharmacyName || "SmartConnect RX"}
             className="h-24 mx-auto mb-4"
-            onError={(e) => { (e.target as HTMLImageElement).src = "https://i.imgur.com/r65O4DB.png"; }}
+            onError={(e) => { (e.target as HTMLImageElement).src = "/logo-header.png"; }}
           />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Track Your Order</h1>
           <p className="text-muted-foreground">Real-time updates on your prescription</p>

@@ -78,7 +78,7 @@ export default function QuickStartGuidePage() {
         <div className="bg-white border-2 border-gray-300 rounded-lg p-6 mb-6">
           <h2 className="text-2xl font-bold mb-6 text-center">👥 Pharmacy Admin Login Credentials</h2>
 
-          {/* AIM Admin */}
+          {/* SmartConnect RX Admin */}
           <div className="mb-6 p-6 rounded-lg" style={{ backgroundColor: "#E1F5FE", border: "2px solid #00AEEF" }}>
             <div className="flex items-center gap-2 mb-3">
               <div className="w-6 h-6 rounded-full" style={{ backgroundColor: "#00AEEF" }}></div>
@@ -159,7 +159,7 @@ export default function QuickStartGuidePage() {
                 <span className="text-sm text-gray-600">(slug: aim)</span>
               </div>
               <div className="text-sm text-gray-700">
-                <p><strong>Tagline:</strong> Advanced Integrated Medicine</p>
+                <p><strong>Tagline:</strong> The Amazon of Regenerative Medicine</p>
                 <p><strong>Color:</strong> Teal/Blue (#00AEEF)</p>
                 <p><strong>Status:</strong> ✓ Active</p>
               </div>

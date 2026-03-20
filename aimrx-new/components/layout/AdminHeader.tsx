@@ -226,6 +226,16 @@ export function AdminHeader() {
         </div>
       </header>
 
+      {isPharmacyAdmin && (
+        <div className="w-full bg-gray-50 border-b border-gray-200 py-1">
+          <div className="container max-w-7xl mx-auto px-4 flex justify-end">
+            <span className="text-[10px] text-gray-400 tracking-wide">
+              Powered by <span className="font-semibold text-gray-500">SmartConnect</span>
+            </span>
+          </div>
+        </div>
+      )}
+
       {mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"

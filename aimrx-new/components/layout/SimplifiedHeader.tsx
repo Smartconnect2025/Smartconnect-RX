@@ -60,7 +60,7 @@ export function SimplifiedHeader({
 
           <div className="cursor-pointer">
             <img
-              src="https://i.imgur.com/r65O4DB.png"
+              src="/logo-header.png"
               alt="Logo"
               className="h-7 w-auto"
             />
