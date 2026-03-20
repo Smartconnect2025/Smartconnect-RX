@@ -30,6 +30,7 @@ export function AdminHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
   const [pharmacyBranding, setPharmacyBranding] = useState<PharmacyBranding | null>(null);
+  const [logoLoadError, setLogoLoadError] = useState(false);
   const { user, userRole } = useUser();
   const router = useRouter();
   const pathname = usePathname();
@@ -56,12 +57,14 @@ export function AdminHeader() {
 
         if (pharmacyData) {
           setPharmacyBranding(pharmacyData);
+          setLogoLoadError(false);
         }
       }
     };
 
     checkPharmacyAdmin();
-  }, [user?.id, supabase]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const handleLoginRedirect = () => {
     router.push("/auth");
@@ -108,31 +111,29 @@ export function AdminHeader() {
             <Link href="/admin" className="flex items-center gap-3">
               {isPharmacyAdmin ? (
                 <>
-                  {pharmacyBranding?.logo_url ? (
+                  {pharmacyBranding?.logo_url && !logoLoadError ? (
                     <img
                       src={pharmacyBranding.logo_url}
                       alt={pharmacyBranding?.name || "Pharmacy"}
                       className="h-14 w-auto max-w-[180px] object-contain"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = "none";
-                      }}
+                      onError={() => setLogoLoadError(true)}
                     />
                   ) : (
                     <div
-                      className="h-12 w-12 rounded-lg flex items-center justify-center text-white text-xl font-bold"
+                      className="h-12 w-12 rounded-lg flex items-center justify-center text-white text-xl font-bold shrink-0"
                       style={{ backgroundColor: pharmacyBranding?.primary_color || "#1D4E89" }}
                     >
                       {pharmacyBranding?.name?.charAt(0) || "P"}
                     </div>
                   )}
-                  {pharmacyBranding?.name && (
-                    <div>
-                      <p className="text-lg font-semibold text-gray-900">{pharmacyBranding.name}</p>
-                      {pharmacyBranding.tagline && (
-                        <p className="text-xs text-gray-500">{pharmacyBranding.tagline}</p>
-                      )}
-                    </div>
-                  )}
+                  <div>
+                    <p className="text-lg font-semibold text-gray-900">
+                      {pharmacyBranding?.name || "Pharmacy"}
+                    </p>
+                    {pharmacyBranding?.tagline && (
+                      <p className="text-xs text-gray-500">{pharmacyBranding.tagline}</p>
+                    )}
+                  </div>
                 </>
               ) : (
                 <img
@@ -269,16 +270,18 @@ export function AdminHeader() {
             <div className="p-4">
               <div className="pb-4 mb-4 border-b border-white/20">
                 <div className="flex items-center gap-3">
-                  {isPharmacyAdmin && pharmacyBranding?.logo_url ? (
+                  {isPharmacyAdmin && pharmacyBranding?.logo_url && !logoLoadError ? (
                     <div className="h-12 w-12 rounded-full bg-white/20 flex items-center justify-center overflow-hidden">
                       <img
                         src={pharmacyBranding.logo_url}
                         alt={pharmacyBranding.name}
                         className="h-10 w-10 object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/logo-header.png";
-                        }}
+                        onError={() => setLogoLoadError(true)}
                       />
+                    </div>
+                  ) : isPharmacyAdmin ? (
+                    <div className="h-12 w-12 rounded-full flex items-center justify-center text-white text-lg font-bold" style={{ backgroundColor: brandColor }}>
+                      {pharmacyBranding?.name?.charAt(0) || "P"}
                     </div>
                   ) : (
                     <div className="h-12 w-12 rounded-full flex items-center justify-center" style={{ backgroundColor: brandColor }}>
