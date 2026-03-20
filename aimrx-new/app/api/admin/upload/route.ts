@@ -119,13 +119,11 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
-      if (isPharmacyAdmin && !isAdmin) {
-        if (entityId !== scope.pharmacyId) {
-          return NextResponse.json(
-            { success: false, error: "You can only upload a logo for your own pharmacy" },
-            { status: 403 }
-          );
-        }
+      if (isPharmacyAdmin && entityId !== scope.pharmacyId) {
+        return NextResponse.json(
+          { success: false, error: "You can only upload a logo for your own pharmacy" },
+          { status: 403 }
+        );
       }
       bucket = "pharmacy-logos";
       filePath = `logos/${safeName}-${timestamp}-${randomId}.${ext}`;
@@ -215,7 +213,8 @@ export async function POST(request: NextRequest) {
 
       if (updateError) {
         console.error("DB update error, cleaning up uploaded file:", updateError);
-        await adminClient.storage.from(bucket).remove([filePath]);
+        const { error: removeErr } = await adminClient.storage.from(bucket).remove([filePath]);
+        if (removeErr) console.error("Failed to clean up orphaned logo file:", filePath, removeErr);
         return NextResponse.json(
           { success: false, error: "Failed to save logo. Please try again." },
           { status: 500 }
@@ -223,7 +222,8 @@ export async function POST(request: NextRequest) {
       }
 
       if (!updatedRows || updatedRows.length === 0) {
-        await adminClient.storage.from(bucket).remove([filePath]);
+        const { error: removeErr } = await adminClient.storage.from(bucket).remove([filePath]);
+        if (removeErr) console.error("Failed to clean up orphaned logo file:", filePath, removeErr);
         return NextResponse.json(
           { success: false, error: "Pharmacy not found" },
           { status: 404 }
