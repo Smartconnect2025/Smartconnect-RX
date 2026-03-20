@@ -83,9 +83,22 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id)
       .maybeSingle();
 
+    let resolvedRole = roleData?.role || "user";
+
+    if (resolvedRole === "user") {
+      const { data: pharmAdmin } = await admin
+        .from("pharmacy_admins")
+        .select("pharmacy_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (pharmAdmin) {
+        resolvedRole = "admin";
+      }
+    }
+
     const response = NextResponse.json({
       success: true,
-      role: roleData?.role || "user",
+      role: resolvedRole,
     });
 
     response.cookies.set("totp_verified", "true", {

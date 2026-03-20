@@ -250,7 +250,10 @@ export async function PATCH(
       .eq("user_id", user.id)
       .single();
 
-    if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
+    const scope = await getPharmacyAdminScope(user.id);
+    const isAdmin = userRole && ["admin", "super_admin"].includes(userRole.role);
+
+    if (!isAdmin && !scope.isPharmacyAdmin) {
       return NextResponse.json(
         { success: false, error: "Unauthorized. Admin access required." },
         { status: 403 }
@@ -259,7 +262,6 @@ export async function PATCH(
 
     const pharmacyId = (await params).id;
 
-    const scope = await getPharmacyAdminScope(user.id);
     if (scope.isPharmacyAdmin && !scope.pharmacyId) {
       return NextResponse.json(
         { success: false, error: "Pharmacy admin scope could not be determined" },

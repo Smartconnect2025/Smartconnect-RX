@@ -21,16 +21,15 @@ export async function GET() {
 
     if (roleError) {
       console.error("Error fetching user role:", roleError);
-      return NextResponse.json({ error: "Failed to verify permissions" }, { status: 500 });
     }
 
     const userRole = roleRow?.role || null;
+    const scope = await getPharmacyAdminScope(user.id);
+    const isAdmin = userRole && ["admin", "super_admin"].includes(userRole);
 
-    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+    if (!isAdmin && !scope.isPharmacyAdmin) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
-
-    const scope = await getPharmacyAdminScope(user.id);
 
     if (scope.isPharmacyAdmin && !scope.pharmacyId) {
       return NextResponse.json({ error: "Unable to determine pharmacy scope" }, { status: 403 });

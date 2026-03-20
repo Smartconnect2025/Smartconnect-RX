@@ -167,18 +167,20 @@ export async function GET() {
       .eq("user_id", user.id)
       .single();
 
-    if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized. Admin access required." },
-        { status: 403 }
-      );
-    }
-
     const { data: adminLink } = await supabase
       .from("pharmacy_admins")
       .select("pharmacy_id")
       .eq("user_id", user.id)
       .single();
+
+    const isAdmin = userRole && ["admin", "super_admin"].includes(userRole.role);
+
+    if (!isAdmin && !adminLink) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
 
     let pharmacies;
     let error;

@@ -33,7 +33,10 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id)
       .single();
 
-    if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
+    const scope = await getPharmacyAdminScope(user.id);
+    const isAdmin = userRole && ["admin", "super_admin"].includes(userRole.role);
+
+    if (!isAdmin && !scope.isPharmacyAdmin) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 403 }
@@ -56,7 +59,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const scope = await getPharmacyAdminScope(user.id);
     if (scope.isPharmacyAdmin && scope.pharmacyId !== pharmacyId) {
       return NextResponse.json(
         { success: false, error: "You can only view your own pharmacy" },
@@ -116,7 +118,10 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id)
       .single();
 
-    if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
+    const scope = await getPharmacyAdminScope(user.id);
+    const isAdmin = userRole && ["admin", "super_admin"].includes(userRole.role);
+
+    if (!isAdmin && !scope.isPharmacyAdmin) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
         { status: 403 }
@@ -149,7 +154,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const scope = await getPharmacyAdminScope(user.id);
     if (scope.isPharmacyAdmin && !scope.pharmacyId) {
       return NextResponse.json(
         { success: false, error: "Pharmacy admin scope could not be determined" },
