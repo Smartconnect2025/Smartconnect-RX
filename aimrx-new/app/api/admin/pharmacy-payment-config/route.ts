@@ -6,6 +6,7 @@ import {
   deactivateAllGatewaysForPharmacy,
   maskCredential,
 } from "@/core/services/pharmacyPaymentConfigService";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 import Stripe from "stripe";
 
 export async function GET(request: NextRequest) {
@@ -25,7 +26,12 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id)
       .single();
 
-    const pharmacyId = request.nextUrl.searchParams.get("pharmacyId");
+    const scope = await getPharmacyAdminScope(user.id);
+    let pharmacyId = request.nextUrl.searchParams.get("pharmacyId");
+
+    if (scope.isPharmacyAdmin) {
+      pharmacyId = scope.pharmacyId;
+    }
 
     if (!pharmacyId) {
       return NextResponse.json(
@@ -34,17 +40,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (userRole?.role !== "admin") {
-      const { data: pharmacyAdmin } = await supabase
-        .from("pharmacy_admins")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("pharmacy_id", pharmacyId)
-        .single();
-
-      if (!pharmacyAdmin) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
+    if (userRole?.role !== "admin" && !scope.isPharmacyAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const configs = await getPaymentConfigsForPharmacy(pharmacyId);
@@ -88,7 +85,13 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { pharmacyId, gateway, environment, label, deactivate } = body;
+    const { gateway, environment, label, deactivate } = body;
+    const scope = await getPharmacyAdminScope(user.id);
+    let pharmacyId = body.pharmacyId;
+
+    if (scope.isPharmacyAdmin) {
+      pharmacyId = scope.pharmacyId;
+    }
 
     if (!pharmacyId) {
       return NextResponse.json(
@@ -103,17 +106,8 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id)
       .single();
 
-    if (userRole?.role !== "admin") {
-      const { data: pharmacyAdmin } = await supabase
-        .from("pharmacy_admins")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("pharmacy_id", pharmacyId)
-        .single();
-
-      if (!pharmacyAdmin) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
+    if (userRole?.role !== "admin" && !scope.isPharmacyAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     if (deactivate) {
@@ -199,7 +193,13 @@ export async function PUT(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { pharmacyId, gateway, action } = body;
+    const { gateway, action } = body;
+    const scope = await getPharmacyAdminScope(user.id);
+    let pharmacyId = body.pharmacyId;
+
+    if (scope.isPharmacyAdmin) {
+      pharmacyId = scope.pharmacyId;
+    }
 
     if (!pharmacyId) {
       return NextResponse.json({ error: "pharmacyId is required" }, { status: 400 });
@@ -211,17 +211,8 @@ export async function PUT(request: NextRequest) {
       .eq("user_id", user.id)
       .single();
 
-    if (userRole?.role !== "admin") {
-      const { data: pharmacyAdmin } = await supabase
-        .from("pharmacy_admins")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("pharmacy_id", pharmacyId)
-        .single();
-
-      if (!pharmacyAdmin) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-      }
+    if (userRole?.role !== "admin" && !scope.isPharmacyAdmin) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     if (action === "test") {

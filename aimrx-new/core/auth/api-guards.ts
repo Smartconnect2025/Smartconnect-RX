@@ -122,6 +122,57 @@ export function createGuardErrorResponse(result: ApiGuardResult): Response {
   );
 }
 
+export interface PharmacyAdminScope {
+  isPharmacyAdmin: boolean;
+  pharmacyId: string | null;
+}
+
+export async function getPharmacyAdminScope(userId: string): Promise<PharmacyAdminScope> {
+  try {
+    const supabase = await createServerClient();
+    const { data: adminLink } = await supabase
+      .from("pharmacy_admins")
+      .select("pharmacy_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    return {
+      isPharmacyAdmin: !!adminLink,
+      pharmacyId: adminLink?.pharmacy_id || null,
+    };
+  } catch (err) {
+    console.error("getPharmacyAdminScope lookup failed – failing closed:", err);
+    return { isPharmacyAdmin: true, pharmacyId: null };
+  }
+}
+
+export async function requirePlatformAdmin(): Promise<ApiGuardResult> {
+  const authResult = await requireAuthentication();
+  if (!authResult.success) return authResult;
+
+  const { authInfo } = authResult;
+  if (!authInfo?.userRole || !["admin", "super_admin"].includes(authInfo.userRole)) {
+    return {
+      success: false,
+      error: "Platform admin access required",
+      status: 403,
+      authInfo,
+    };
+  }
+
+  const scope = await getPharmacyAdminScope(authInfo.user!.id);
+  if (scope.isPharmacyAdmin) {
+    return {
+      success: false,
+      error: "This action is restricted to platform administrators",
+      status: 403,
+      authInfo,
+    };
+  }
+
+  return authResult;
+}
+
 export async function requireNonDemo(): Promise<ApiGuardResult> {
   const authResult = await requireAuthentication();
 

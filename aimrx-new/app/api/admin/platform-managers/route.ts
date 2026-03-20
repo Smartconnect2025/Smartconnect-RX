@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createServerClient } from "@core/supabase/server";
-import { requireNonDemo, createGuardErrorResponse } from "@core/auth/api-guards";
+import { requireNonDemo, createGuardErrorResponse, getPharmacyAdminScope } from "@core/auth/api-guards";
 
 export async function GET() {
   try {
@@ -24,6 +24,14 @@ export async function GET() {
     if (!userRole || !["admin", "super_admin"].includes(userRole)) {
       return NextResponse.json(
         { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { error: "This action is restricted to platform administrators" },
         { status: 403 },
       );
     }
@@ -69,6 +77,14 @@ export async function POST(request: NextRequest) {
     if (!userRole || !["admin", "super_admin"].includes(userRole)) {
       return NextResponse.json(
         { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const postScope = await getPharmacyAdminScope(user.id);
+    if (postScope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { error: "This action is restricted to platform administrators" },
         { status: 403 },
       );
     }

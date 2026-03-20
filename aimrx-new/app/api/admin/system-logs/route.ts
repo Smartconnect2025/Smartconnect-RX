@@ -1,15 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
-/**
- * Get system logs with filtering
- * GET /api/admin/system-logs?action=&status=&limit=&offset=
- */
 export async function GET(request: Request) {
   const supabase = await createServerClient();
 
   try {
-    // Check if user is platform owner
     const {
       data: { user },
       error: userError,
@@ -22,7 +18,6 @@ export async function GET(request: Request) {
       );
     }
 
-    // Check if user has admin role
     const { data: userRole } = await supabase
       .from("user_roles")
       .select("role")
@@ -32,6 +27,14 @@ export async function GET(request: Request) {
     if (userRole?.role !== "admin") {
       return NextResponse.json(
         { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "This action is restricted to platform administrators" },
         { status: 403 }
       );
     }
@@ -124,6 +127,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "This action is restricted to platform administrators" },
+        { status: 403 }
       );
     }
 

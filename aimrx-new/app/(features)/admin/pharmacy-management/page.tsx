@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@core/supabase";
+import { useUser } from "@core/auth";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -135,6 +137,24 @@ interface AccessRequest {
 
 export default function PharmacyManagementPage() {
   const router = useRouter();
+  const { user } = useUser();
+  const supabaseClient = createClient();
+
+  useEffect(() => {
+    const guardAccess = async () => {
+      if (!user?.id) return;
+      const { data } = await supabaseClient
+        .from("pharmacy_admins")
+        .select("pharmacy_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data?.pharmacy_id) {
+        router.replace("/admin/prescriptions");
+      }
+    };
+    guardAccess();
+  }, [user?.id, supabaseClient, router]);
+
   const [activeTab, setActiveTab] = useState<
     "pharmacies" | "administrators" | "integrations" | "pending"
   >("pharmacies");

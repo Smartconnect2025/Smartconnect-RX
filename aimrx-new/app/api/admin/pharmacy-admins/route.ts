@@ -2,17 +2,13 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { createAdminClient } from "@core/database/client";
 import sgMail from "@sendgrid/mail";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
-/**
- * Create a new pharmacy admin
- * POST /api/admin/pharmacy-admins
- */
 export async function POST(request: Request) {
   const supabase = await createServerClient();
   const supabaseAdmin = await createAdminClient();
 
   try {
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -22,6 +18,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "Only platform administrators can manage pharmacy admin assignments" },
+        { status: 403 }
       );
     }
 
@@ -227,7 +231,6 @@ export async function DELETE(request: Request) {
   const supabaseAdmin = await createAdminClient();
 
   try {
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -237,6 +240,14 @@ export async function DELETE(request: Request) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+
+    const deleteScope = await getPharmacyAdminScope(user.id);
+    if (deleteScope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "Only platform administrators can manage pharmacy admin assignments" },
+        { status: 403 }
       );
     }
 
@@ -317,6 +328,19 @@ export async function GET() {
   const supabaseAdmin = await createAdminClient();
 
   try {
+    const {
+      data: { user: getUser },
+    } = await supabase.auth.getUser();
+    if (getUser) {
+      const getScope = await getPharmacyAdminScope(getUser.id);
+      if (getScope.isPharmacyAdmin) {
+        return NextResponse.json(
+          { success: false, error: "Only platform administrators can view pharmacy admin assignments" },
+          { status: 403 }
+        );
+      }
+    }
+
     const { data: adminLinks, error } = await supabaseAdmin
       .from("pharmacy_admins")
       .select(`

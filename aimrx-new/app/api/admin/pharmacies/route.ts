@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { encryptApiKey } from "@/core/security/encryption";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
-/**
- * Create a new pharmacy
- * POST /api/admin/pharmacies
- */
 export async function POST(request: Request) {
   const supabase = await createServerClient();
 
   try {
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -20,6 +16,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin) {
+      return NextResponse.json(
+        { success: false, error: "Pharmacy admins cannot create new pharmacies" },
+        { status: 403 }
       );
     }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
 import sgMail from "@sendgrid/mail";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 export async function GET() {
   const { user, userRole } = await getUser();
@@ -10,6 +11,10 @@ export async function GET() {
   }
   if (!userRole || !["admin", "super_admin"].includes(userRole)) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+  const scope = await getPharmacyAdminScope(user.id);
+  if (scope.isPharmacyAdmin) {
+    return NextResponse.json({ error: "This action is restricted to platform administrators" }, { status: 403 });
   }
 
   try {
@@ -73,6 +78,10 @@ export async function POST(request: Request) {
   }
   if (!userRole || !["admin", "super_admin"].includes(userRole)) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+  const postScope = await getPharmacyAdminScope(user.id);
+  if (postScope.isPharmacyAdmin) {
+    return NextResponse.json({ error: "This action is restricted to platform administrators" }, { status: 403 });
   }
 
   try {
@@ -316,6 +325,10 @@ export async function DELETE(request: Request) {
   }
   if (!userRole || !["admin", "super_admin"].includes(userRole)) {
     return NextResponse.json({ error: "Admin access required" }, { status: 403 });
+  }
+  const deleteScope = await getPharmacyAdminScope(user.id);
+  if (deleteScope.isPharmacyAdmin) {
+    return NextResponse.json({ error: "This action is restricted to platform administrators" }, { status: 403 });
   }
 
   try {

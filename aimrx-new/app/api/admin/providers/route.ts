@@ -8,10 +8,10 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 export async function GET() {
   try {
-    // Check if the current user is an admin
     const { user, userRole } = await getUser();
 
     if (!user) {
@@ -28,7 +28,51 @@ export async function GET() {
       );
     }
 
+    const scope = await getPharmacyAdminScope(user.id);
     const supabase = createAdminClient();
+
+    if (scope.isPharmacyAdmin && scope.pharmacyId) {
+      const { data: linkedProviders, error: linkError } = await supabase
+        .from("provider_pharmacy_links")
+        .select("provider_id")
+        .eq("pharmacy_id", scope.pharmacyId);
+
+      if (linkError) {
+        return NextResponse.json({ error: "Failed to fetch providers" }, { status: 500 });
+      }
+
+      const linkedProviderIds = (linkedProviders || []).map((l: { provider_id: string }) => l.provider_id);
+      if (linkedProviderIds.length === 0) {
+        return NextResponse.json({ providers: [] });
+      }
+
+      const { data: providers, error } = await supabase
+        .from("providers")
+        .select("*")
+        .in("id", linkedProviderIds);
+
+      if (error) {
+        return NextResponse.json({ error: "Failed to fetch providers" }, { status: 500 });
+      }
+
+      const providerData = await Promise.all(
+        (providers || []).map(async (provider) => {
+          const { data: userData } = await supabase.auth.admin.getUserById(provider.user_id);
+          const { data: roleData } = await supabase
+            .from("user_roles")
+            .select("is_demo")
+            .eq("user_id", provider.user_id)
+            .single();
+          return {
+            ...provider,
+            email: userData?.user?.email || "Unknown",
+            is_demo: roleData?.is_demo || false,
+          };
+        })
+      );
+
+      return NextResponse.json({ providers: providerData });
+    }
 
     const { data: providerUsers, error: roleError } = await supabase
       .from("user_roles")

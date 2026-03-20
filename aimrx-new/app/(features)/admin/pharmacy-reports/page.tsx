@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import { createClient } from "@core/supabase";
+import { useUser } from "@core/auth";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -184,6 +186,10 @@ const KPI_CONFIGS = [
 ];
 
 export default function PharmacyReportsPage() {
+  const { user } = useUser();
+  const supabase = createClient();
+  const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
+
   const [reports, setReports] = useState<PharmacyReport[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([]);
   const [providers, setProviders] = useState<ProviderOption[]>([]);
@@ -199,6 +205,22 @@ export default function PharmacyReportsPage() {
   const [selectedProvider, setSelectedProvider] = useState<string>("all");
   const [selectedGroup, setSelectedGroup] = useState<string>("all");
   const [selectedPlatformManager, setSelectedPlatformManager] = useState<string>("all");
+
+  useEffect(() => {
+    const checkScope = async () => {
+      if (!user?.id) return;
+      const { data } = await supabase
+        .from("pharmacy_admins")
+        .select("pharmacy_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data?.pharmacy_id) {
+        setIsPharmacyAdmin(true);
+        setSelectedPharmacy(data.pharmacy_id);
+      }
+    };
+    checkScope();
+  }, [user?.id, supabase]);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -597,6 +619,7 @@ export default function PharmacyReportsPage() {
           <Card className="border border-gray-200/80 shadow-sm bg-white/80 backdrop-blur-sm" data-testid="card-filters">
             <CardContent className="pt-5 pb-5">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {!isPharmacyAdmin && (
                 <div className="space-y-1.5">
                   <Label htmlFor="pharmacy" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
                   <Select value={selectedPharmacy} onValueChange={setSelectedPharmacy}>
@@ -613,6 +636,7 @@ export default function PharmacyReportsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                )}
 
                 {viewMode === "by-provider" && (
                   <div className="space-y-1.5">

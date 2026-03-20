@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
+import { createClient } from "@core/supabase";
+import { useUser } from "@core/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -50,13 +52,31 @@ interface PaymentConfig {
 }
 
 export default function PharmacyPaymentSettingsPage() {
+  const { user } = useUser();
+  const supabase = createClient();
   const searchParams = useSearchParams();
-  const pharmacyId = searchParams.get("pharmacyId");
+  const queryPharmacyId = searchParams.get("pharmacyId");
+  const [pharmacyId, setPharmacyId] = useState<string | null>(queryPharmacyId);
 
   const [configs, setConfigs] = useState<PaymentConfig[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [testing, setTesting] = useState(false);
+
+  useEffect(() => {
+    const autoScope = async () => {
+      if (pharmacyId || !user?.id) return;
+      const { data } = await supabase
+        .from("pharmacy_admins")
+        .select("pharmacy_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      if (data?.pharmacy_id) {
+        setPharmacyId(data.pharmacy_id);
+      }
+    };
+    autoScope();
+  }, [user?.id, pharmacyId, supabase]);
 
   const [gateway, setGateway] = useState<"stripe" | "authorizenet">("stripe");
   const [environment, setEnvironment] = useState<"sandbox" | "production">("sandbox");

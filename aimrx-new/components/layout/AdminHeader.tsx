@@ -52,18 +52,20 @@ export function AdminHeader() {
     window.location.href = "/auth/login";
   };
 
-  // Navigation based on user type
   const mainNavLinks = isPharmacyAdmin
     ? [
         { href: "/admin/prescriptions", label: "Incoming Prescriptions" },
-        { href: "/admin/medications", label: "Manage Medications" },
-        { href: "/admin/medication-catalog", label: "Medication Catalog" },
+        { href: "/admin/pharmacy-orders", label: "Orders" },
+        { href: "/admin/medications", label: "Medications" },
+        { href: "/admin/medication-catalog", label: "Catalog" },
+        { href: "/admin/providers", label: "Providers" },
+        { href: "/admin/pharmacy-reports", label: "Reports" },
+        { href: "/admin/pharmacy-payment-settings", label: "Payment Settings" },
       ]
     : [
         { href: "/admin", label: "Dashboard" },
         { href: "/admin/prescriptions", label: "Incoming Queue" },
         { href: "/admin/pharmacy-reports", label: "Reporting & Analytics" },
-       // { href: "/admin/payment-settings", label: "Payment Settings" },
         { href: "/admin/tiers", label: "Manage Tiers" },
         { href: "/admin/refill-engine", label: "Refill Engine" },
         { href: "/admin/api-logs", label: "API & Logs" },

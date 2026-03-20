@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
 import sgMail from "@sendgrid/mail";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 export async function POST(request: NextRequest) {
   const { user, userRole } = await getUser();
@@ -124,7 +125,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Update tier_level in providers table if tier was specified
+    if (providerData) {
+      const inviterScope = await getPharmacyAdminScope(user.id);
+      if (inviterScope.isPharmacyAdmin && inviterScope.pharmacyId) {
+        await supabaseAdmin
+          .from("provider_pharmacy_links")
+          .upsert({
+            provider_id: providerData.id,
+            pharmacy_id: inviterScope.pharmacyId,
+          }, { onConflict: "provider_id,pharmacy_id" });
+      }
+    }
+
     if (tierLevel && providerData) {
       const { error: tierError } = await supabaseAdmin
         .from("providers")

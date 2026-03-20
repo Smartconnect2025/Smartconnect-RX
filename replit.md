@@ -99,6 +99,21 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Encryption**: All pharmacy credentials encrypted at rest using AES-256-GCM (`core/security/encryption.ts`), requires `ENCRYPTION_KEY` env var
 - **Post-payment flow**: Both webhooks auto-update prescription status → auto-submit to pharmacy → send branded confirmation email with pharmacy name/logo
 
+### Role Hierarchy (3-Tier)
+- **Platform Admin**: Full access to all features, pharmacies, users. Can create pharmacies, manage platform managers/super admins, view system logs, manage groups.
+- **Pharmacy Admin**: Same admin features but scoped to their own pharmacy only. Cannot create pharmacies, manage platform staff, view system logs, or manage groups. Stored in `pharmacy_admins` table (user_id + pharmacy_id).
+- **Provider**: Belongs to a pharmacy via `provider_pharmacy_links` table, manages patients/prescriptions.
+
+**Key guard functions** (`core/auth/api-guards.ts`):
+- `getPharmacyAdminScope(userId)` — returns `{isPharmacyAdmin, pharmacyId}`. Fails closed on errors.
+- `requirePlatformAdmin()` — blocks pharmacy admins from platform-only routes (returns 403).
+
+**Pharmacy admin nav** (AdminHeader.tsx): Prescriptions, Orders, Medications, Catalog, Providers, Reports, Payment Settings
+**Platform admin nav**: Dashboard, Incoming Queue, Reporting & Analytics, Manage Tiers, Refill Engine, API & Logs, Integration Settings
+
+**Platform-only routes** (403 for pharmacy admins): pharmacies POST, pharmacy-admins, pharmacy-backends, users, platform-managers, super-admins, groups, system-logs
+**Pharmacy-scoped routes**: providers (filtered by pharmacy links), invite-doctor (auto-links to pharmacy), pharmacy-reports (forced pharmacyId), pharmacy-payment-config (forced pharmacyId)
+
 ### Critical Files (DO NOT modify without understanding the auth system)
 - `core/supabase/middleware.ts` — session management
 - `core/routing/routes-config.ts` — route access rules

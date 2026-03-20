@@ -8,10 +8,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createServerClient } from "@core/supabase/server";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 export async function GET(request: NextRequest) {
   try {
-    // Check if the current user is an admin
     const { user, userRole } = await getUser();
 
     if (!user) {
@@ -28,10 +28,12 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const scope = await getPharmacyAdminScope(user.id);
+
     const searchParams = request.nextUrl.searchParams;
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
-    const pharmacyId = searchParams.get("pharmacyId");
+    const pharmacyId = scope.isPharmacyAdmin ? scope.pharmacyId : searchParams.get("pharmacyId");
 
     const supabase = await createServerClient();
 
