@@ -159,7 +159,7 @@ export default function QuickStartGuidePage() {
                 <span className="text-sm text-gray-600">(slug: aim)</span>
               </div>
               <div className="text-sm text-gray-700">
-                <p><strong>Tagline:</strong> The Amazon of Regenerative Medicine</p>
+                <p><strong>Tagline:</strong> Prescriptions Made Simple</p>
                 <p><strong>Color:</strong> Teal/Blue (#00AEEF)</p>
                 <p><strong>Status:</strong> ✓ Active</p>
               </div>

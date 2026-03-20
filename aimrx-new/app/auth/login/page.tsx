@@ -165,8 +165,8 @@ export default function LoginPage() {
                 className="h-20 w-auto object-contain"
               />
             </div>
-            <p className="text-lg text-white/90 font-semibold">The Amazon of Regenerative Medicine</p>
-            <p className="text-base text-white/95 italic max-w-2xl mt-1 font-medium">&quot;From Prescription to Doorstep — One Platform, Zero Friction&quot;</p>
+            <p className="text-lg text-white/90 font-semibold">Prescriptions Made Simple</p>
+            <p className="text-base text-white/70 max-w-2xl mt-1">Connect. Prescribe. Ship.</p>
           </div>
         </div>
 
