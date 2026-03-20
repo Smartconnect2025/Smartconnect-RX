@@ -89,7 +89,7 @@ export function Footer() {
                 className="block flex justify-center md:justify-start items-center gap-3"
               >
                 <img
-                  src="https://i.imgur.com/JjQDNtL.png"
+                  src="/logo-header.png"
                   alt="SmartConnect RX Logo"
                   width={48}
                   height={48}

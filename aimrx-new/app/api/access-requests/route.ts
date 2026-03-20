@@ -12,7 +12,7 @@ async function sendConfirmationEmailToApplicant(
   const confirmationHtml = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
       <div style="background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #00AEEF 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-        <img src="https://i.imgur.com/r65O4DB.png" alt="SmartConnect RX" style="height: 80px; margin-bottom: 15px;" />
+        <img src="https://smartconnectrx.com/logo-header.png" alt="SmartConnect RX" style="height: 80px; margin-bottom: 15px;" />
         <h1 style="color: white; margin: 0; font-size: 24px;">Request Received</h1>
       </div>
 
