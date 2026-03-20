@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
         await supabaseAdmin
           .from("provider_pharmacy_links")
           .upsert({
-            provider_id: providerData.id,
+            provider_id: authUser.user.id,
             pharmacy_id: inviterScope.pharmacyId,
           }, { onConflict: "provider_id,pharmacy_id" });
       }
