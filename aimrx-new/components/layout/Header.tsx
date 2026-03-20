@@ -63,7 +63,7 @@ export function FullHeader() {
             <Link href="/" className="flex items-center gap-3">
               <img
                 src="/logo-header.png"
-                alt="AIM Logo"
+                alt="SmartConnect RX"
                 className="h-14 w-auto"
               />
             </Link>

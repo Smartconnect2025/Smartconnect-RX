@@ -18,8 +18,8 @@ const inter = Inter({
 
 // Cache-bust: v9.0.0 - Unified gradient design across entire app with MFA implementation
 export const metadata: Metadata = {
-  title: "AIM | Athletic Integrative Medicine",
-  description: "",
+  title: "SmartConnect RX | Pharmacy Management Platform",
+  description: "SmartConnect RX connects patients, providers, and pharmacies with a secure, HIPAA-compliant platform.",
   icons: {
     icon: "/favicon.png",
   },
