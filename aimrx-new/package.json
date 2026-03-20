@@ -123,6 +123,7 @@
     "@tailwindcss/postcss": "^4.0.14",
     "@types/node": "^20.19.27",
     "@types/node-cron": "^3.0.11",
+    "@types/pg": "^8.18.0",
     "@types/react": "^19.2.7",
     "@types/react-dom": "^19.2.3",
     "drizzle-kit": "^0.31.4",

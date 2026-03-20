@@ -120,12 +120,11 @@ export default function PharmacyPaymentSettingsPage() {
     if (!pharmacyId) return;
     try {
       setShippingRateLoading(true);
-      const { data } = await supabase
-        .from("pharmacies")
-        .select("default_shipping_rate_cents")
-        .eq("id", pharmacyId)
-        .single();
-      if (data) {
+      const response = await fetch(`/api/admin/pharmacies/shipping-rate?pharmacyId=${pharmacyId}`, {
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (data.success) {
         const cents = data.default_shipping_rate_cents || 0;
         setShippingRateDollars((cents / 100).toFixed(2));
       }
@@ -134,7 +133,7 @@ export default function PharmacyPaymentSettingsPage() {
     } finally {
       setShippingRateLoading(false);
     }
-  }, [pharmacyId, supabase]);
+  }, [pharmacyId]);
 
   useEffect(() => {
     fetchConfigs();
@@ -150,11 +149,11 @@ export default function PharmacyPaymentSettingsPage() {
     }
     try {
       setSavingShipping(true);
-      const response = await fetch(`/api/admin/pharmacies/${pharmacyId}`, {
-        method: "PATCH",
+      const response = await fetch(`/api/admin/pharmacies/shipping-rate`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ default_shipping_rate_cents: cents }),
+        body: JSON.stringify({ pharmacyId, default_shipping_rate_cents: cents }),
       });
       const data = await response.json();
       if (data.success) {

@@ -275,7 +275,7 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const allowedFields = ["default_shipping_rate_cents", "phone", "address", "logo_url", "tagline"];
+    const allowedFields = ["phone", "address", "logo_url", "tagline"];
     const updateData: Record<string, unknown> = {};
     for (const field of allowedFields) {
       if (field in body) {
@@ -288,16 +288,6 @@ export async function PATCH(
         { success: false, error: "No valid fields to update" },
         { status: 400 }
       );
-    }
-
-    if ("default_shipping_rate_cents" in updateData) {
-      const rate = updateData.default_shipping_rate_cents;
-      if (typeof rate !== "number" || !Number.isInteger(rate) || rate < 0 || rate > 100000) {
-        return NextResponse.json(
-          { success: false, error: "Shipping rate must be a whole number between 0 and 100000 cents ($0-$1000)" },
-          { status: 400 }
-        );
-      }
     }
 
     updateData.updated_at = new Date().toISOString();
