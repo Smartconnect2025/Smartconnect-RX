@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { createAdminClient } from "@core/database/client";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 /**
  * Test provider login credentials (admin access)
@@ -8,6 +9,9 @@ import { createAdminClient } from "@core/database/client";
  * Body: { email: string, password: string }
  */
 export async function POST(request: Request) {
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+
   const supabase = await createServerClient();
   const supabaseAdmin = await createAdminClient();
 

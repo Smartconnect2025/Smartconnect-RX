@@ -8,25 +8,12 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import postgres from "postgres";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function POST() {
   try {
-    // Check if the current user is an admin
-    const { user, userRole } = await getUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 },
-      );
-    }
-
-    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
-      return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 },
-      );
-    }
+    const platformCheck = await requirePlatformAdmin();
+    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
 
     const databaseUrl = process.env.DATABASE_URL;
     if (!databaseUrl) {

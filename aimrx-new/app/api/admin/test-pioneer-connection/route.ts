@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { decryptApiKey, isEncrypted } from "@/core/security/encryption";
 import crypto from "crypto";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function POST(request: NextRequest) {
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+
   const supabase = await createServerClient();
 
   try {

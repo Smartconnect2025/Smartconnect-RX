@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
-import { requireNonDemo, createGuardErrorResponse } from "@core/auth/api-guards";
+import { requireNonDemo, createGuardErrorResponse, getPharmacyAdminScope } from "@core/auth/api-guards";
+import { getUser } from "@core/auth";
 
-/**
- * Update a medication
- * PATCH /api/admin/medications/[id]
- */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -14,42 +11,39 @@ export async function PATCH(
   const supabase = await createServerClient();
 
   try {
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    const { user, userRole } = await getUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: admin access required" },
+        { status: 403 }
       );
     }
 
     const demoCheck = await requireNonDemo();
     if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
 
-    // Get pharmacy admin's pharmacy (if applicable)
-    const { data: adminLink } = await supabase
-      .from("pharmacy_admins")
-      .select("pharmacy_id")
-      .eq("user_id", user.id)
-      .single();
-
+    const scope = await getPharmacyAdminScope(user.id);
     const medicationId = id;
 
-    // If user is pharmacy admin, verify medication belongs to their pharmacy
-    // If not pharmacy admin (platform admin), allow editing any medication
-    if (adminLink) {
-      const pharmacyId = adminLink.pharmacy_id;
+    if (scope.isPharmacyAdmin) {
+      if (!scope.pharmacyId) {
+        return NextResponse.json(
+          { success: false, error: "Pharmacy admin has no linked pharmacy" },
+          { status: 403 }
+        );
+      }
 
-      // Verify medication belongs to this pharmacy
       const { data: existingMed } = await supabase
         .from("pharmacy_medications")
         .select("id")
         .eq("id", medicationId)
-        .eq("pharmacy_id", pharmacyId)
+        .eq("pharmacy_id", scope.pharmacyId)
         .single();
 
       if (!existingMed) {
@@ -59,19 +53,6 @@ export async function PATCH(
         );
       }
     } else {
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
-        return NextResponse.json(
-          { success: false, error: "Forbidden: admin access required" },
-          { status: 403 }
-        );
-      }
-
       const { data: existingMed } = await supabase
         .from("pharmacy_medications")
         .select("id")
@@ -86,7 +67,6 @@ export async function PATCH(
       }
     }
 
-    // Parse request body
     const body = await request.json();
     const {
       name,
@@ -106,7 +86,6 @@ export async function PATCH(
       notes,
     } = body;
 
-    // Build update object
     const updateData: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
@@ -134,21 +113,18 @@ export async function PATCH(
     }
     if (notes !== undefined) updateData.notes = notes;
 
-    // Update medication
     let medication, updateError;
-    if (adminLink) {
-      // Pharmacy admin - update only their pharmacy's medications
+    if (scope.isPharmacyAdmin) {
       const result = await supabase
         .from("pharmacy_medications")
         .update(updateData)
         .eq("id", medicationId)
-        .eq("pharmacy_id", adminLink.pharmacy_id)
+        .eq("pharmacy_id", scope.pharmacyId!)
         .select()
         .single();
       medication = result.data;
       updateError = result.error;
     } else {
-      // Platform admin - can update any medication
       const result = await supabase
         .from("pharmacy_medications")
         .update(updateData)
@@ -189,10 +165,6 @@ export async function PATCH(
   }
 }
 
-/**
- * Delete a medication
- * DELETE /api/admin/medications/[id]
- */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -201,54 +173,44 @@ export async function DELETE(
   const supabase = await createServerClient();
 
   try {
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    const { user, userRole } = await getUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
+      );
+    }
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: admin access required" },
+        { status: 403 }
       );
     }
 
     const demoCheck2 = await requireNonDemo();
     if (!demoCheck2.success) return createGuardErrorResponse(demoCheck2);
 
-    // Check if user is a pharmacy admin
-    const { data: adminLink } = await supabase
-      .from("pharmacy_admins")
-      .select("pharmacy_id")
-      .eq("user_id", user.id)
-      .single();
-
+    const scope = await getPharmacyAdminScope(user.id);
     const medicationId = id;
 
+    if (scope.isPharmacyAdmin) {
+      if (!scope.pharmacyId) {
+        return NextResponse.json(
+          { success: false, error: "Pharmacy admin has no linked pharmacy" },
+          { status: 403 }
+        );
+      }
+    }
+
     let deleteError;
-    if (adminLink) {
-      const pharmacyId = adminLink.pharmacy_id;
+    if (scope.isPharmacyAdmin) {
       const result = await supabase
         .from("pharmacy_medications")
         .delete()
         .eq("id", medicationId)
-        .eq("pharmacy_id", pharmacyId);
+        .eq("pharmacy_id", scope.pharmacyId!);
       deleteError = result.error;
     } else {
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-
-      if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
-        return NextResponse.json(
-          { success: false, error: "Forbidden: admin access required" },
-          { status: 403 }
-        );
-      }
-
       const result = await supabase
         .from("pharmacy_medications")
         .delete()

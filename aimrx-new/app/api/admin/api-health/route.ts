@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 /**
  * Check health status of all internal and external APIs
  * GET /api/admin/api-health
  */
 export async function GET() {
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+
   const supabase = await createServerClient();
 
   try {

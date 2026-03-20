@@ -8,8 +8,12 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function POST() {
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+
   try {
     // Check if the current user is an admin
     const { user, userRole } = await getUser();

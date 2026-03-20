@@ -19,6 +19,19 @@ export async function POST(request: Request) {
       );
     }
 
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
     const scope = await getPharmacyAdminScope(user.id);
     if (scope.isPharmacyAdmin) {
       return NextResponse.json(
@@ -136,7 +149,6 @@ export async function GET() {
   const supabase = await createServerClient();
 
   try {
-    // Get current user
     const {
       data: { user },
       error: userError,
@@ -149,7 +161,19 @@ export async function GET() {
       );
     }
 
-    // Check if user is a pharmacy admin
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
     const { data: adminLink } = await supabase
       .from("pharmacy_admins")
       .select("pharmacy_id")

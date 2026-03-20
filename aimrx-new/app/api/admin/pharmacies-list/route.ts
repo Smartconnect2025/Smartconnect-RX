@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
+import { getPharmacyAdminScope, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function GET() {
   const { user, userRole } = await getUser();
@@ -13,11 +14,21 @@ export async function GET() {
 
   try {
     const supabaseAdmin = createAdminClient();
+    const scope = await getPharmacyAdminScope(user.id);
 
-    const { data: pharmacies, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("pharmacies")
       .select("id, name, slug")
       .order("name");
+
+    if (scope.isPharmacyAdmin) {
+      if (!scope.pharmacyId) {
+        return NextResponse.json({ error: "Pharmacy admin has no linked pharmacy" }, { status: 403 });
+      }
+      query = query.eq("id", scope.pharmacyId);
+    }
+
+    const { data: pharmacies, error } = await query;
 
     if (error) {
       return NextResponse.json({ error: "Failed to fetch pharmacies" }, { status: 500 });

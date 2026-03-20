@@ -1,19 +1,15 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 /**
- * Seed AIM Admin User
+ * Seed AIM Admin User (platform admin only)
  * POST /api/admin/seed-aim-admin
  */
 export async function POST() {
-  const { user, userRole } = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
-  }
-  if (!userRole || !["admin", "super_admin"].includes(userRole)) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
 
   const supabase = createAdminClient();
 

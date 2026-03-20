@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { createServerClient } from "@core/supabase/server";
+import { getPharmacyAdminScope } from "@core/auth/api-guards";
 
 export async function POST(request: NextRequest) {
   try {
@@ -25,18 +26,20 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id)
       .single();
 
-    const { data: pharmacyAdmin } = await adminClient
-      .from("pharmacy_admins")
-      .select("pharmacy_id")
-      .eq("user_id", user.id)
-      .single();
-
+    const scope = await getPharmacyAdminScope(user.id);
     const isAdmin = userRole?.role === "admin" || userRole?.role === "super_admin";
-    const isPharmacyAdmin = !!pharmacyAdmin;
+    const isPharmacyAdmin = scope.isPharmacyAdmin;
 
     if (!isAdmin && !isPharmacyAdmin) {
       return NextResponse.json(
         { success: false, error: "Admin access required" },
+        { status: 403 }
+      );
+    }
+
+    if (isPharmacyAdmin && !scope.pharmacyId) {
+      return NextResponse.json(
+        { success: false, error: "Pharmacy admin has no linked pharmacy" },
         { status: 403 }
       );
     }
@@ -84,7 +87,7 @@ export async function POST(request: NextRequest) {
         .eq("id", entityId)
         .single();
 
-      if (!med || med.pharmacy_id !== pharmacyAdmin.pharmacy_id) {
+      if (!med || med.pharmacy_id !== scope.pharmacyId) {
         return NextResponse.json(
           { success: false, error: "You can only upload images for your pharmacy's medications" },
           { status: 403 }

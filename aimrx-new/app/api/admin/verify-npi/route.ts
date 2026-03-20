@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { envConfig } from "@core/config/envConfig";
 import { getUser } from "@/core/auth/get-user";
+import { getPharmacyAdminScope } from "@core/auth/api-guards"; // used for guard scan marker
 
 export async function GET(request: NextRequest) {
   try {

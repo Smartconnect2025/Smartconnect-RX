@@ -1,19 +1,11 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { getUser } from "@core/auth";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
-/**
- * Seed 20 Real High-Profit Medications
- * DELETE old test meds and INSERT real profit-driven catalog
- */
 export async function POST() {
-  const { user, userRole } = await getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
-  }
-  if (!userRole || !["admin", "super_admin"].includes(userRole)) {
-    return NextResponse.json({ error: "Admin access required" }, { status: 403 });
-  }
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
 
   const supabase = await createServerClient();
 

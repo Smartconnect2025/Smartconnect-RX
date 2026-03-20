@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 /**
  * Get all orders/prescriptions for the pharmacy admin's pharmacy
@@ -26,15 +27,17 @@ export async function GET() {
       );
     }
 
+    const scope = await getPharmacyAdminScope(user.id);
+
+    if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+      return NextResponse.json(
+        { success: false, error: "Unable to determine pharmacy scope" },
+        { status: 403 }
+      );
+    }
+
     const supabase = createAdminClient();
-
-    const { data: adminLink } = await supabase
-      .from("pharmacy_admins")
-      .select("pharmacy_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    const pharmacyId = adminLink?.pharmacy_id || null;
+    const pharmacyId = scope.isPharmacyAdmin ? scope.pharmacyId : null;
 
     let query = supabase
       .from("prescriptions")

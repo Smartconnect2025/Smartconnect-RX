@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@/core/auth/api-guards";
 
 export async function POST(request: NextRequest) {
   try {
+    const guardResult = await requirePlatformAdmin();
+    if (!guardResult.success) {
+      return createGuardErrorResponse(guardResult);
+    }
+
     const { email, adminKey } = await request.json();
 
     if (adminKey !== process.env.SESSION_SECRET) {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/core/auth/get-user";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 /**
  * POST /api/admin/payment-credentials/test
@@ -7,6 +8,9 @@ import { getUser } from "@/core/auth/get-user";
  * This does NOT save the credentials - just validates them
  */
 export async function POST(request: NextRequest) {
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+
   try {
     const { user, userRole } = await getUser();
 

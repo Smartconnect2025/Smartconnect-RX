@@ -5,8 +5,12 @@ import {
   testPioneerRxConnection,
   resolvePioneerRxBackend,
 } from "@/app/api/prescriptions/_shared/pioneerrx-helpers";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function POST(request: NextRequest) {
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+
   try {
     const { user, userRole } = await getUser();
     if (!user || !userRole || !["admin", "super_admin"].includes(userRole)) {

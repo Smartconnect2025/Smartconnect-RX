@@ -1,70 +1,47 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { DEFAULT_PHARMACY_SLUG } from "@core/constants";
-import { requireNonDemo, createGuardErrorResponse } from "@core/auth/api-guards";
+import { requireNonDemo, createGuardErrorResponse, getPharmacyAdminScope } from "@core/auth/api-guards";
+import { getUser } from "@core/auth";
 
-/**
- * Create a new medication for the pharmacy admin's pharmacy
- * POST /api/admin/medications
- */
 export async function POST(request: Request) {
   const supabase = await createServerClient();
 
   try {
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    const { user, userRole } = await getUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 },
+      );
+    }
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: admin access required" },
+        { status: 403 },
       );
     }
 
     const demoCheck = await requireNonDemo();
     if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
 
-    // Parse request body first
     const body = await request.json();
-
-    // Check if user is a pharmacy admin
-    const { data: adminLink } = await supabase
-      .from("pharmacy_admins")
-      .select("pharmacy_id")
-      .eq("user_id", user.id)
-      .single();
+    const scope = await getPharmacyAdminScope(user.id);
 
     let pharmacyId: string;
 
-    if (adminLink) {
-      // User is pharmacy admin - use their pharmacy
-      pharmacyId = adminLink.pharmacy_id;
-    } else {
-      // Verify user actually has an admin role before granting platform admin access
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-
-      if (
-        !userRole ||
-        !["admin", "super_admin"].includes(userRole.role)
-      ) {
+    if (scope.isPharmacyAdmin) {
+      if (!scope.pharmacyId) {
         return NextResponse.json(
-          { success: false, error: "Forbidden: admin access required" },
+          { success: false, error: "Pharmacy admin has no linked pharmacy" },
           { status: 403 },
         );
       }
-
-      // User is platform admin - get the pharmacy_id from request body or default to Greenwich
+      pharmacyId = scope.pharmacyId;
+    } else {
       if (body.pharmacy_id) {
         pharmacyId = body.pharmacy_id;
       } else {
-        // Default to Greenwich pharmacy for platform admins
         const { data: defaultPharmacy } = await supabase
           .from("pharmacies")
           .select("id")
@@ -102,7 +79,6 @@ export async function POST(request: Request) {
       notes,
     } = body;
 
-    // Validate required fields
     if (!name || !retail_price_cents) {
       return NextResponse.json(
         {
@@ -113,7 +89,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create medication
     const { data: medication, error: insertError } = await supabase
       .from("pharmacy_medications")
       .insert({
@@ -167,84 +142,46 @@ export async function POST(request: Request) {
   }
 }
 
-/**
- * Get all medications for the pharmacy admin's pharmacy or all medications for platform admin
- * GET /api/admin/medications
- */
 export async function GET() {
   const supabase = await createServerClient();
 
   try {
-    // Get current user
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
-
-    if (userError || !user) {
+    const { user, userRole } = await getUser();
+    if (!user) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 },
       );
     }
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { success: false, error: "Forbidden: admin access required" },
+        { status: 403 },
+      );
+    }
 
-    // Check if user is a pharmacy admin
-    const { data: adminLink } = await supabase
-      .from("pharmacy_admins")
-      .select("pharmacy_id")
-      .eq("user_id", user.id)
-      .single();
-
+    const scope = await getPharmacyAdminScope(user.id);
 
     let medications;
     let error;
 
-    if (adminLink) {
-      // User is a pharmacy admin - get medications for their pharmacy only
-      const pharmacyId = adminLink.pharmacy_id;
-
-      const result = await supabase
-        .from("pharmacy_medications")
-        .select("*")
-        .eq("pharmacy_id", pharmacyId)
-        .order("created_at", { ascending: false });
-
-      medications = result.data;
-      error = result.error;
-
-      // Fetch pharmacy names separately
-      if (medications && medications.length > 0) {
-        const pharmacyIds = [...new Set(medications.map((m) => m.pharmacy_id))];
-        const { data: pharmacyData } = await supabase
-          .from("pharmacies")
-          .select("id, name")
-          .in("id", pharmacyIds);
-
-        const pharmacyMap = new Map(pharmacyData?.map((p) => [p.id, p]) || []);
-        medications = medications.map((med) => ({
-          ...med,
-          pharmacies: pharmacyMap.get(med.pharmacy_id),
-        }));
-      }
-    } else {
-      // Verify user actually has an admin role before granting platform admin access
-      const { data: userRole } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .single();
-
-      if (
-        !userRole ||
-        !["admin", "super_admin"].includes(userRole.role)
-      ) {
+    if (scope.isPharmacyAdmin) {
+      if (!scope.pharmacyId) {
         return NextResponse.json(
-          { success: false, error: "Forbidden: admin access required" },
+          { success: false, error: "Pharmacy admin has no linked pharmacy" },
           { status: 403 },
         );
       }
 
-      // User is platform admin - get all medications from all pharmacies
+      const result = await supabase
+        .from("pharmacy_medications")
+        .select("*")
+        .eq("pharmacy_id", scope.pharmacyId)
+        .order("created_at", { ascending: false });
+
+      medications = result.data;
+      error = result.error;
+    } else {
       const result = await supabase
         .from("pharmacy_medications")
         .select("*")
@@ -252,21 +189,20 @@ export async function GET() {
 
       medications = result.data;
       error = result.error;
+    }
 
-      // Fetch pharmacy names separately
-      if (medications && medications.length > 0) {
-        const pharmacyIds = [...new Set(medications.map((m) => m.pharmacy_id))];
-        const { data: pharmacyData } = await supabase
-          .from("pharmacies")
-          .select("id, name")
-          .in("id", pharmacyIds);
+    if (medications && medications.length > 0) {
+      const pharmacyIds = [...new Set(medications.map((m) => m.pharmacy_id))];
+      const { data: pharmacyData } = await supabase
+        .from("pharmacies")
+        .select("id, name")
+        .in("id", pharmacyIds);
 
-        const pharmacyMap = new Map(pharmacyData?.map((p) => [p.id, p]) || []);
-        medications = medications.map((med) => ({
-          ...med,
-          pharmacies: pharmacyMap.get(med.pharmacy_id),
-        }));
-      }
+      const pharmacyMap = new Map(pharmacyData?.map((p) => [p.id, p]) || []);
+      medications = medications.map((med) => ({
+        ...med,
+        pharmacies: pharmacyMap.get(med.pharmacy_id),
+      }));
     }
 
     if (error) {
@@ -275,10 +211,6 @@ export async function GET() {
         { success: false, error: "Failed to fetch medications" },
         { status: 500 },
       );
-    }
-
-    // Log the first medication to debug the pharmacy join
-    if (medications && medications.length > 0) {
     }
 
     return NextResponse.json({

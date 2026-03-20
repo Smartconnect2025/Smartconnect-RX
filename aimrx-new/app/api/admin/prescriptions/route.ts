@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 export async function GET() {
   try {
@@ -29,16 +30,13 @@ export async function GET() {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    let pharmacyId: string | null = null;
-    const { data: adminLink } = await supabase
-      .from("pharmacy_admins")
-      .select("pharmacy_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const scope = await getPharmacyAdminScope(user.id);
 
-    if (adminLink?.pharmacy_id) {
-      pharmacyId = adminLink.pharmacy_id;
+    if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+      return NextResponse.json({ error: "Unable to determine pharmacy scope" }, { status: 403 });
     }
+
+    const pharmacyId = scope.isPharmacyAdmin ? scope.pharmacyId : null;
 
     let query = supabase
       .from("prescriptions")

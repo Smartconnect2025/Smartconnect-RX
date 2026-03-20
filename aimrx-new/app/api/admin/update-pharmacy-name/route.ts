@@ -1,12 +1,16 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 /**
  * Update Greenwich Pharmacy name in database
  * POST /api/admin/update-pharmacy-name
  */
 export async function POST() {
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+
   const { user, userRole } = await getUser();
   if (!user) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });

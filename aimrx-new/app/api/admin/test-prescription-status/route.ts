@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 const STATUS_PROGRESSION = {
   submitted: "billing",
@@ -22,6 +23,9 @@ const generateTrackingNumber = () => {
 };
 
 export async function POST(request: NextRequest) {
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+
   try {
     const { user, userRole } = await getUser();
     if (!user) {
@@ -115,6 +119,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+
   try {
     const { user, userRole } = await getUser();
     if (!user) {

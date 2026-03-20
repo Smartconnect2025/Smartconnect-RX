@@ -1,8 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@/core/auth/get-user";
 import Stripe from "stripe";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function POST(request: NextRequest) {
+  const platformCheck = await requirePlatformAdmin();
+  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+
   try {
     const { user, userRole } = await getUser();
 

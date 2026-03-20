@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { categoriesData } from "@/core/database/seeds/data/categories";
 import { getUser } from "@/core/auth/get-user";
+import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function POST() {
   try {
-    const { user, userRole } = await getUser();
-    if (!user || !userRole || !["admin", "super_admin"].includes(userRole)) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    const platformCheck = await requirePlatformAdmin();
+    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
 
     const supabase = createAdminClient();
 

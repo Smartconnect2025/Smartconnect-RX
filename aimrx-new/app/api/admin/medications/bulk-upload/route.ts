@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { createServerClient } from "@core/supabase/server";
+import { getPharmacyAdminScope } from "@core/auth/api-guards";
 import * as XLSX from "xlsx";
 
 interface RawRow {
@@ -160,7 +161,10 @@ export async function POST(request: NextRequest) {
       .eq("user_id", user.id)
       .single();
 
-    if (userRole?.role !== "admin") {
+    const scope = await getPharmacyAdminScope(user.id);
+    const isPlatformAdmin = userRole?.role === "admin" || userRole?.role === "super_admin";
+
+    if (!isPlatformAdmin && !scope.isPharmacyAdmin) {
       return NextResponse.json(
         { error: "Admin access required" },
         { status: 403 }
@@ -171,7 +175,17 @@ export async function POST(request: NextRequest) {
 
     const formData = await request.formData();
     const file = formData.get("file") as File;
-    const pharmacyId = formData.get("pharmacy_id") as string;
+    let pharmacyId = formData.get("pharmacy_id") as string;
+
+    if (scope.isPharmacyAdmin) {
+      if (!scope.pharmacyId) {
+        return NextResponse.json(
+          { success: false, message: "Pharmacy admin has no linked pharmacy", imported: 0, failed: 0 },
+          { status: 403 }
+        );
+      }
+      pharmacyId = scope.pharmacyId;
+    }
 
     if (!file) {
       return NextResponse.json(
