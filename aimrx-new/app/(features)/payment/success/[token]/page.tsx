@@ -239,6 +239,9 @@ interface PaymentDetails {
   paymentStatus: string;
   deliveryMethod?: string;
   pharmacyName?: string;
+  pharmacyLogoUrl?: string | null;
+  pharmacyColor?: string | null;
+  pharmacyPhone?: string | null;
 }
 
 export default function PaymentSuccessPage() {
@@ -353,7 +356,7 @@ export default function PaymentSuccessPage() {
               minutes, please contact support.
             </p>
             <div className="pt-4">
-              <p className="text-sm text-gray-600">(512) 377-9898</p>
+              <p className="text-sm text-gray-600">{paymentDetails?.pharmacyPhone || "(512) 377-9898"}</p>
               <p className="text-sm text-gray-600">Mon–Fri 9AM–6PM CST</p>
             </div>
           </CardContent>
@@ -391,9 +394,10 @@ export default function PaymentSuccessPage() {
               </Button>
             </div>
             <img
-              src="https://i.imgur.com/r65O4DB.png"
-              alt="SmartConnect RX"
+              src={paymentDetails?.pharmacyLogoUrl || "https://i.imgur.com/r65O4DB.png"}
+              alt={paymentDetails?.pharmacyName || "SmartConnect RX"}
               className="h-[80px] mx-auto mb-4 print-logo"
+              onError={(e) => { (e.target as HTMLImageElement).src = "https://i.imgur.com/r65O4DB.png"; }}
             />
           </div>
 
@@ -530,13 +534,10 @@ export default function PaymentSuccessPage() {
                   Questions about your order?
                 </p>
                 <p className="text-sm font-medium text-gray-900">
-                  Contact SmartConnect RX
+                  Contact {paymentDetails?.pharmacyName || "SmartConnect RX"}
                 </p>
                 <p className="text-sm text-gray-600">
-                  (512) 377-9898 · Mon–Fri 9AM–6PM CST
-                </p>
-                <p className="text-sm text-gray-600">
-                  106 E 6th St, Suite 900 · Austin, TX 78701
+                  {paymentDetails?.pharmacyPhone || "(512) 377-9898"} · Mon–Fri 9AM–6PM CST
                 </p>
               </div>
 

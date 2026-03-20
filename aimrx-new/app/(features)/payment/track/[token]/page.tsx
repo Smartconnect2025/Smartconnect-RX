@@ -20,6 +20,9 @@ interface OrderStatus {
   trackingUrl: string | null;
   providerName: string;
   pharmacyName: string | null;
+  pharmacyLogoUrl?: string | null;
+  pharmacyColor?: string | null;
+  pharmacyPhone?: string | null;
 }
 
 // Progress stages with descriptions
@@ -159,9 +162,10 @@ export default function OrderTrackingPage() {
             </Button>
           </div>
           <img
-            src="https://i.imgur.com/r65O4DB.png"
-            alt="SmartConnect RX"
+            src={orderStatus.pharmacyLogoUrl || "https://i.imgur.com/r65O4DB.png"}
+            alt={orderStatus.pharmacyName || "SmartConnect RX"}
             className="h-24 mx-auto mb-4"
+            onError={(e) => { (e.target as HTMLImageElement).src = "https://i.imgur.com/r65O4DB.png"; }}
           />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Track Your Order</h1>
           <p className="text-muted-foreground">Real-time updates on your prescription</p>
@@ -362,8 +366,8 @@ export default function OrderTrackingPage() {
 
             <div className="mt-6 pt-6 border-t">
               <p className="text-sm text-gray-600 mb-2">Questions about your order?</p>
-              <p className="text-sm font-medium text-gray-900">SmartConnect RX</p>
-              <p className="text-sm text-gray-600">(512) 377-9898 · Mon–Fri 9AM–6PM CST</p>
+              <p className="text-sm font-medium text-gray-900">{orderStatus.pharmacyName || "SmartConnect RX"}</p>
+              <p className="text-sm text-gray-600">{orderStatus.pharmacyPhone || "(512) 377-9898"} · Mon–Fri 9AM–6PM CST</p>
             </div>
           </CardContent>
         </Card>

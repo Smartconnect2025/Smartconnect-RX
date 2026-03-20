@@ -8,10 +8,10 @@ import { createAdminClient } from "@core/database/client";
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { token: string } }
+  { params }: { params: Promise<{ token: string }> }
 ) {
   try {
-    const { token } = params;
+    const { token } = await params;
 
     if (!token) {
       return NextResponse.json({ error: "Payment token is required" }, { status: 400 });
@@ -19,10 +19,9 @@ export async function GET(
 
     const supabase = createAdminClient();
 
-    // Get payment transaction with order progress
     const { data: order, error } = await supabase
       .from("payment_transactions")
-      .select("*")
+      .select("*, pharmacy:pharmacies(logo_url, primary_color, phone)")
       .eq("payment_token", token)
       .single();
 
@@ -36,7 +35,10 @@ export async function GET(
       );
     }
 
-    // Return order status (without sensitive payment details)
+    const pharmacy = Array.isArray(order.pharmacy)
+      ? order.pharmacy[0]
+      : order.pharmacy;
+
     return NextResponse.json({
       success: true,
       order: {
@@ -51,6 +53,9 @@ export async function GET(
         trackingUrl: order.tracking_url,
         providerName: order.provider_name,
         pharmacyName: order.pharmacy_name,
+        pharmacyLogoUrl: pharmacy?.logo_url || null,
+        pharmacyColor: pharmacy?.primary_color || null,
+        pharmacyPhone: pharmacy?.phone || null,
       },
     });
   } catch (error) {

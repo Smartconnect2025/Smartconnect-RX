@@ -18,12 +18,15 @@ interface PaymentDetails {
   patientName: string;
   patientEmail: string;
   providerName: string;
+  pharmacyName?: string;
   description: string;
   paymentLinkUrl: string;
   paymentStatus: string;
   paymentGateway: string;
   expiresAt: string;
-  prescriptionMedication?: string;
+  pharmacyLogoUrl?: string | null;
+  pharmacyColor?: string | null;
+  pharmacyPhone?: string | null;
 }
 
 export default function PaymentPage() {
@@ -214,6 +217,11 @@ export default function PaymentPage() {
   const medicationCost = (paymentDetails.medicationCostCents / 100).toFixed(2);
   const shippingFee = ((paymentDetails.shippingFeeCents || 0) / 100).toFixed(2);
 
+  const brandColor = paymentDetails.pharmacyColor || "#1E3A8A";
+  const brandName = paymentDetails.pharmacyName || "SmartConnect RX";
+  const logoSrc = paymentDetails.pharmacyLogoUrl || "https://i.imgur.com/r65O4DB.png";
+  const contactPhone = paymentDetails.pharmacyPhone || "(512) 377-9898";
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="container max-w-3xl mx-auto">
@@ -230,9 +238,10 @@ export default function PaymentPage() {
             </Button>
           </div>
           <img
-            src="https://i.imgur.com/r65O4DB.png"
-            alt="SmartConnect RX"
+            src={logoSrc}
+            alt={brandName}
             className="h-24 mx-auto mb-4"
+            onError={(e) => { (e.target as HTMLImageElement).src = "https://i.imgur.com/r65O4DB.png"; }}
           />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Secure Payment</h1>
           <p className="text-muted-foreground">
@@ -298,7 +307,7 @@ export default function PaymentPage() {
                 )}
                 <div className="flex justify-between items-center py-3 bg-gray-50 rounded-lg px-4">
                   <span className="text-lg font-bold text-gray-900">Total Amount</span>
-                  <span className="text-2xl font-bold text-blue-600">${totalAmount}</span>
+                  <span className="text-2xl font-bold" style={{ color: brandColor }}>${totalAmount}</span>
                 </div>
               </div>
             </div>
@@ -344,7 +353,8 @@ export default function PaymentPage() {
         {/* Payment Button */}
         <Button
           onClick={handleProceedToPayment}
-          className="w-full text-lg py-6 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+          className="w-full text-lg py-6"
+          style={{ backgroundColor: brandColor }}
           size="lg"
           disabled={processing}
         >
@@ -366,6 +376,10 @@ export default function PaymentPage() {
           By clicking &quot;Proceed to Secure Payment&quot;, you will be redirected to
           {paymentDetails?.paymentGateway === "stripe" ? " Stripe's" : " Authorize.Net's"} secure payment page to complete your transaction.
         </p>
+        <div className="text-center mt-4">
+          <p className="text-sm text-gray-600">Questions? Contact {brandName}</p>
+          <p className="text-sm text-gray-600">{contactPhone}</p>
+        </div>
       </div>
     </div>
   );

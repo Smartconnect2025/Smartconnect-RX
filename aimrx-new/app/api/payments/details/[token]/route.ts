@@ -19,10 +19,9 @@ export async function GET(
 
     const supabase = createAdminClient();
 
-    // Get payment transaction by token
     const { data: payment, error } = await supabase
       .from("payment_transactions")
-      .select("*")
+      .select("*, pharmacy:pharmacies(logo_url, primary_color, phone)")
       .eq("payment_token", token)
       .single();
 
@@ -52,7 +51,10 @@ export async function GET(
       );
     }
 
-    // Return payment details (without sensitive info)
+    const pharmacy = Array.isArray(payment.pharmacy)
+      ? payment.pharmacy[0]
+      : payment.pharmacy;
+
     return NextResponse.json({
       success: true,
       payment: {
@@ -72,6 +74,9 @@ export async function GET(
         deliveryMethod: payment.delivery_method || "pickup",
         paymentGateway: payment.payment_gateway || "authorizenet",
         expiresAt: payment.payment_link_expires_at,
+        pharmacyLogoUrl: pharmacy?.logo_url || null,
+        pharmacyColor: pharmacy?.primary_color || null,
+        pharmacyPhone: pharmacy?.phone || null,
       },
     });
   } catch {

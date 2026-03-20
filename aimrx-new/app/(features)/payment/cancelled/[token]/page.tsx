@@ -11,6 +11,10 @@ interface PaymentDetails {
   providerName: string;
   totalAmountCents: number;
   paymentLinkUrl: string;
+  pharmacyName?: string;
+  pharmacyLogoUrl?: string | null;
+  pharmacyColor?: string | null;
+  pharmacyPhone?: string | null;
 }
 
 export default function PaymentCancelledPage() {
@@ -83,9 +87,10 @@ export default function PaymentCancelledPage() {
             </Button>
           </div>
           <img
-            src="https://i.imgur.com/r65O4DB.png"
-            alt="SmartConnect RX"
+            src={paymentDetails?.pharmacyLogoUrl || "https://i.imgur.com/r65O4DB.png"}
+            alt={paymentDetails?.pharmacyName || "SmartConnect RX"}
             className="h-24 mx-auto mb-4"
+            onError={(e) => { (e.target as HTMLImageElement).src = "https://i.imgur.com/r65O4DB.png"; }}
           />
         </div>
 
@@ -133,7 +138,8 @@ export default function PaymentCancelledPage() {
             <div className="space-y-3">
               <Button
                 onClick={handleRetryPayment}
-                className="w-full text-lg py-6 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+                className="w-full text-lg py-6"
+                style={{ backgroundColor: paymentDetails?.pharmacyColor || "#1E3A8A" }}
               >
                 Try Payment Again
               </Button>
@@ -157,9 +163,9 @@ export default function PaymentCancelledPage() {
                   If you&apos;re experiencing issues with payment, please contact us:
                 </p>
                 <p className="text-sm font-medium text-gray-900">
-                  SmartConnect RX
+                  {paymentDetails?.pharmacyName || "SmartConnect RX"}
                 </p>
-                <p className="text-sm text-gray-600">(512) 377-9898 · Mon–Fri 9AM–6PM CST</p>
+                <p className="text-sm text-gray-600">{paymentDetails?.pharmacyPhone || "(512) 377-9898"} · Mon–Fri 9AM–6PM CST</p>
               </div>
             </div>
 
