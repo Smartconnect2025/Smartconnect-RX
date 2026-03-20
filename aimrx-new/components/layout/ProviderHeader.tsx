@@ -242,16 +242,14 @@ export function ProviderHeader() {
               <div className="pb-4 mb-4 border-b border-border">
                 {pharmacyName && (
                   <div className="mb-3 flex items-center gap-2">
-                    {pharmacyLogo && (
-                      <img
-                        src={pharmacyLogo}
-                        alt={pharmacyName || "Pharmacy"}
-                        className="h-8 w-auto max-w-[120px] object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).src = "/logo-header.png";
-                        }}
-                      />
-                    )}
+                    <img
+                      src={pharmacyLogo || "/logo-header.png"}
+                      alt={pharmacyName || "Pharmacy"}
+                      className="h-8 w-auto max-w-[120px] object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "/logo-header.png";
+                      }}
+                    />
                     <p className="text-base font-semibold text-gray-900">{pharmacyName}</p>
                   </div>
                 )}
