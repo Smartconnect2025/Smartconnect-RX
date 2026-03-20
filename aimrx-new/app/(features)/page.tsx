@@ -57,7 +57,7 @@ export default function Home() {
                 </Button>
               </Link>
               <Link href="/request-pharmacy-access">
-                <Button size="lg" variant="outline" className="text-base px-8 py-5 border-white/30 text-white hover:bg-white/10 font-semibold rounded-lg">
+                <Button size="lg" className="text-base px-8 py-5 bg-transparent border-2 border-white text-white hover:bg-white/10 font-semibold rounded-lg">
                   Join Our Network
                 </Button>
               </Link>
