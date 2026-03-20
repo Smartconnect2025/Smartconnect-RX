@@ -51,15 +51,17 @@ export default function Home() {
               Connect with pharmacies, prescribe, collect payment, and ship — all from one place.
             </p>
             <div className="mt-12 flex flex-col sm:flex-row justify-center gap-4">
-              <Link href="/auth/login">
-                <Button size="lg" className="text-base px-8 py-5 bg-white text-primary hover:bg-gray-100 font-semibold rounded-lg">
-                  Sign In
-                </Button>
+              <Link
+                href="/auth/login"
+                className="inline-flex items-center justify-center text-base px-8 py-4 bg-white text-[#1D4E89] hover:bg-gray-100 font-semibold rounded transition-colors"
+              >
+                Sign In
               </Link>
-              <Link href="/request-pharmacy-access">
-                <Button variant="outline" size="lg" className="text-base px-8 py-5 bg-transparent border-2 border-white text-white hover:bg-white/10 hover:text-white font-semibold rounded-lg">
-                  Join Our Network
-                </Button>
+              <Link
+                href="/request-pharmacy-access"
+                className="inline-flex items-center justify-center text-base px-8 py-4 bg-transparent border-2 border-white text-white hover:bg-white/20 font-semibold rounded transition-colors"
+              >
+                Join Our Network
               </Link>
             </div>
           </div>

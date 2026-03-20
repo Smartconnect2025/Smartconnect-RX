@@ -3,7 +3,7 @@
 
 :root {
   /* IM Athletic Branding Colors */
-  --primary-navy: #1E3A8A;
+  --primary-navy: #1D4E89;
   --secondary-orange: #F97316;
   --white: #FFFFFF;
   --light-gray: #F8FAFC;
@@ -17,7 +17,7 @@
   --card-foreground: #374151;
   --popover: #FFFFFF;
   --popover-foreground: #374151;
-  --primary: #1E3A8A;
+  --primary: #1D4E89;
   --primary-foreground: #FFFFFF;
   --secondary: #F97316;
   --secondary-foreground: #FFFFFF;
@@ -29,8 +29,8 @@
   --destructive-foreground: #FFFFFF;
   --border: #E2E8F0;
   --input: #E2E8F0;
-  --ring: #1E3A8A;
-  --chart-1: #1E3A8A;
+  --ring: #1D4E89;
+  --chart-1: #1D4E89;
   --chart-2: #F97316;
   --chart-3: #3B82F6;
   --chart-4: #EAB308;
@@ -38,12 +38,12 @@
   --radius: 4px;
   --sidebar: #FFFFFF;
   --sidebar-foreground: #374151;
-  --sidebar-primary: #1E3A8A;
+  --sidebar-primary: #1D4E89;
   --sidebar-primary-foreground: #FFFFFF;
   --sidebar-accent: #F97316;
   --sidebar-accent-foreground: #FFFFFF;
   --sidebar-border: #E2E8F0;
-  --sidebar-ring: #1E3A8A;
+  --sidebar-ring: #1D4E89;
 }
 
 @theme inline {
