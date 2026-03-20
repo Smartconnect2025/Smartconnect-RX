@@ -59,6 +59,9 @@ export function AdminHeader() {
           setPharmacyBranding(pharmacyData);
           setLogoLoadError(false);
         }
+      } else {
+        setPharmacyBranding(null);
+        setLogoLoadError(false);
       }
     };
 
@@ -204,9 +207,9 @@ export function AdminHeader() {
                             ? `${user.email.substring(0, 24)}...`
                             : user.email}
                         </p>
-                        {isPharmacyAdmin && pharmacyBranding?.name && (
+                        {isPharmacyAdmin && (
                           <p className="text-xs mt-1 font-medium" style={{ color: brandColor }}>
-                            {pharmacyBranding.name}
+                            {pharmacyBranding?.name || "Pharmacy"}
                           </p>
                         )}
                       </div>
