@@ -106,29 +106,40 @@ export function AdminHeader() {
         <div className="container max-w-7xl mx-auto px-4">
           <div className="flex items-center justify-between py-3">
             <Link href="/admin" className="flex items-center gap-3">
-              {isPharmacyAdmin && pharmacyBranding?.logo_url ? (
-                <img
-                  src={pharmacyBranding.logo_url}
-                  alt={pharmacyBranding.name}
-                  className="h-14 w-auto max-w-[180px] object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = "/logo-header.png";
-                  }}
-                />
+              {isPharmacyAdmin ? (
+                <>
+                  {pharmacyBranding?.logo_url ? (
+                    <img
+                      src={pharmacyBranding.logo_url}
+                      alt={pharmacyBranding?.name || "Pharmacy"}
+                      className="h-14 w-auto max-w-[180px] object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                  ) : (
+                    <div
+                      className="h-12 w-12 rounded-lg flex items-center justify-center text-white text-xl font-bold"
+                      style={{ backgroundColor: pharmacyBranding?.primary_color || "#1D4E89" }}
+                    >
+                      {pharmacyBranding?.name?.charAt(0) || "P"}
+                    </div>
+                  )}
+                  {pharmacyBranding?.name && (
+                    <div>
+                      <p className="text-lg font-semibold text-gray-900">{pharmacyBranding.name}</p>
+                      {pharmacyBranding.tagline && (
+                        <p className="text-xs text-gray-500">{pharmacyBranding.tagline}</p>
+                      )}
+                    </div>
+                  )}
+                </>
               ) : (
                 <img
                   src="/logo-header.png"
                   alt="SmartConnect RX"
                   className="h-14 w-auto"
                 />
-              )}
-              {isPharmacyAdmin && pharmacyBranding?.name && (
-                <div className="hidden md:block border-l border-gray-300 pl-3">
-                  <p className="text-lg font-semibold text-gray-900">{pharmacyBranding.name}</p>
-                  {pharmacyBranding.tagline && (
-                    <p className="text-xs text-gray-500">{pharmacyBranding.tagline}</p>
-                  )}
-                </div>
               )}
             </Link>
 
