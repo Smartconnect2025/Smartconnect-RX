@@ -128,12 +128,23 @@ export async function POST(request: NextRequest) {
     if (providerData) {
       const inviterScope = await getPharmacyAdminScope(user.id);
       if (inviterScope.isPharmacyAdmin && inviterScope.pharmacyId) {
-        await supabaseAdmin
+        const { error: linkError } = await supabaseAdmin
           .from("provider_pharmacy_links")
           .upsert({
             provider_id: authUser.user.id,
             pharmacy_id: inviterScope.pharmacyId,
           }, { onConflict: "provider_id,pharmacy_id" });
+
+        if (linkError) {
+          console.error("Failed to link provider to pharmacy:", linkError);
+          await supabaseAdmin.from("providers").delete().eq("id", providerData.id);
+          await supabaseAdmin.from("user_roles").delete().eq("user_id", authUser.user.id);
+          await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+          return NextResponse.json(
+            { error: "Failed to link provider to pharmacy. Provider was not created." },
+            { status: 500 }
+          );
+        }
       }
     }
 
