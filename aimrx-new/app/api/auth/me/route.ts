@@ -21,12 +21,25 @@ export async function GET() {
     .eq("user_id", user.id)
     .single();
 
+  let resolvedRole = userRole?.role || null;
+
+  if (!resolvedRole || resolvedRole === "user") {
+    const { data: pharmAdmin } = await supabase
+      .from("pharmacy_admins")
+      .select("pharmacy_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (pharmAdmin) {
+      resolvedRole = "admin";
+    }
+  }
+
   return NextResponse.json({
     user: {
       id: user.id,
       email: user.email,
     },
-    role: userRole?.role || null,
+    role: resolvedRole,
     isDemo: userRole?.is_demo || false,
   });
 }

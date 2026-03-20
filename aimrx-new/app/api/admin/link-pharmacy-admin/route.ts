@@ -84,6 +84,25 @@ export async function POST(request: Request) {
       });
     }
 
+    // Ensure user has admin role in user_roles
+    const { data: existingRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", admin_user_id)
+      .single();
+
+    if (!existingRole) {
+      await supabase.from("user_roles").insert({
+        user_id: admin_user_id,
+        role: "admin",
+      });
+    } else if (existingRole.role === "user") {
+      await supabase
+        .from("user_roles")
+        .update({ role: "admin" })
+        .eq("user_id", admin_user_id);
+    }
+
     // Create the link
     const { data: link, error: linkError } = await supabase
       .from("pharmacy_admins")

@@ -45,10 +45,6 @@ export async function fetchUserRoleFromDatabase(
       .eq("user_id", userId)
       .single();
 
-    if (!error && data?.role) {
-      return { role: data.role, isDemo: data.is_demo || false };
-    }
-
     const { data: pharmAdmin } = await supabase
       .from("pharmacy_admins")
       .select("pharmacy_id")
@@ -57,6 +53,10 @@ export async function fetchUserRoleFromDatabase(
 
     if (pharmAdmin) {
       return { role: "admin", isDemo: false };
+    }
+
+    if (!error && data?.role) {
+      return { role: data.role, isDemo: data.is_demo || false };
     }
 
     return { role: "user", isDemo: false };

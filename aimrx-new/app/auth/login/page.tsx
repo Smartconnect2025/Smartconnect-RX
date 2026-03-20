@@ -96,7 +96,19 @@ export default function LoginPage() {
         .eq("user_id", data.user.id)
         .single();
 
-      const role = roleData?.role;
+      let role = roleData?.role;
+
+      if (!role || role === "user") {
+        const { data: pharmAdmin } = await supabase
+          .from("pharmacy_admins")
+          .select("pharmacy_id")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+        if (pharmAdmin) {
+          role = "admin";
+        }
+      }
+
       let targetUrl = redirectUrl || "/";
       if (role === "admin" || role === "super_admin" || role === "pharmacy_admin") {
         targetUrl = "/admin";

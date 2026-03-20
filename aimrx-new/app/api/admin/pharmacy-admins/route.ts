@@ -87,8 +87,11 @@ export async function POST(request: Request) {
       });
 
     if (roleError) {
-      console.error("Error creating user role:", roleError);
-      // Continue anyway - pharmacy_admins table is enough
+      console.error("Error creating user role (attempting upsert):", roleError);
+      await supabaseAdmin
+        .from("user_roles")
+        .update({ role: "admin" })
+        .eq("user_id", userId);
     }
 
     const { error: linkError } = await supabaseAdmin
