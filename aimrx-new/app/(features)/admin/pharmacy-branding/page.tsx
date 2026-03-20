@@ -447,7 +447,7 @@ export default function PharmacyBrandingPage() {
 
           <Button
             onClick={handleSave}
-            disabled={saving}
+            disabled={saving || uploading}
             className="w-full h-12 text-base font-medium"
             style={{ backgroundColor: primaryColor || "#00AEEF" }}
           >
@@ -455,6 +455,11 @@ export default function PharmacyBrandingPage() {
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Saving...
+              </>
+            ) : uploading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Upload in progress...
               </>
             ) : (
               "Save Branding"

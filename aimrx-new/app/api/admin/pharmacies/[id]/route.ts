@@ -302,6 +302,12 @@ export async function PATCH(
 
     if ("logo_url" in updateData && updateData.logo_url !== null) {
       const url = String(updateData.logo_url);
+      if (url.length > 2000) {
+        return NextResponse.json(
+          { success: false, error: "Logo URL must be 2000 characters or less" },
+          { status: 400 }
+        );
+      }
       if (url.length > 0) {
         try {
           const parsed = new URL(url);
