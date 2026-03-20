@@ -109,6 +109,7 @@ export default function PrescriptionStep2Page() {
   const [showMedicationDropdown, setShowMedicationDropdown] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
+  const [hasPharmacyLinks, setHasPharmacyLinks] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [expandedMedicationInfo, setExpandedMedicationInfo] = useState<
@@ -209,9 +210,9 @@ export default function PrescriptionStep2Page() {
         const data = await response.json();
 
         if (data.success) {
-          // Store medications and admin status
           setPharmacyMedications(data.medications || []);
           setIsPharmacyAdmin(data.isPharmacyAdmin || false);
+          setHasPharmacyLinks(data.hasPharmacyLinks !== false);
         } else {
           console.error("Failed to load medications:", data.error);
         }
@@ -477,7 +478,17 @@ export default function PrescriptionStep2Page() {
               Medication Information
             </h2>
 
-            {/* Pharmacy Selector - Only show for non-pharmacy-admins */}
+            {/* No pharmacy links warning */}
+            {!isLoading && !isPharmacyAdmin && !hasPharmacyLinks && (
+              <div className="bg-amber-50 border border-amber-200 rounded-md p-4">
+                <p className="text-amber-800 font-medium">No Pharmacy Access</p>
+                <p className="text-amber-700 text-sm mt-1">
+                  Your account is not linked to any pharmacy yet. Please contact your administrator to get access to a pharmacy&apos;s medication catalog.
+                </p>
+              </div>
+            )}
+
+            {/* Pharmacy Selector - Only show for non-pharmacy-admins with links */}
             {!isPharmacyAdmin && allPharmacies.length > 0 && (
               <div className="space-y-2">
                 <Label htmlFor="pharmacy-filter">Select Pharmacy First</Label>

@@ -96,7 +96,8 @@ export async function GET() {
 
     // Check user role to determine medication filtering
     // Pharmacy admins: Show ONLY their pharmacy's medications
-    // Regular doctors/providers: Show ALL medications from ALL pharmacies (global profit catalog)
+    // Providers: Show ONLY medications from pharmacies they're linked to
+    // Platform admins: Show ALL medications
 
     // Check if user is in pharmacy_admins table
     const { data: pharmacyAdminLink } = await supabase
@@ -106,8 +107,15 @@ export async function GET() {
       .single();
 
     // User is a pharmacy admin ONLY if they have an entry in pharmacy_admins table
-    // Note: Super admins (role="admin" in user_roles) are NOT pharmacy admins
     const isPharmacyAdmin = !!pharmacyAdminLink;
+
+    // Check user role for platform admin detection
+    const { data: userRoleData } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+    const isPlatformAdmin = userRoleData?.role === "admin" || userRoleData?.role === "super_admin";
 
     // Fetch provider's tier discount (only for non-pharmacy-admins)
     let discountPercentage = 0;
@@ -116,8 +124,17 @@ export async function GET() {
       discountPercentage = tierInfo.discountPercentage;
     }
 
-    // If pharmacy admin: show ONLY their pharmacy's medications
-    // If regular doctor: show ALL medications from ALL pharmacies (global profit catalog)
+    // Get provider's linked pharmacy IDs (for providers only)
+    let linkedPharmacyIds: string[] = [];
+    if (!isPharmacyAdmin && !isPlatformAdmin) {
+      const { data: providerLinks } = await supabase
+        .from("provider_pharmacy_links")
+        .select("pharmacy_id")
+        .eq("provider_id", user.id);
+
+      linkedPharmacyIds = (providerLinks || []).map((l) => l.pharmacy_id);
+    }
+
     let medicationsQuery = supabase
       .from("pharmacy_medications")
       .select(
@@ -135,9 +152,17 @@ export async function GET() {
       .eq("is_active", true)
       .eq("pharmacy.is_active", true);
 
-    // Filter by pharmacy for admins only (if they have a pharmacy link)
-    if (isPharmacyAdmin && pharmacyId) {
+    if (isPlatformAdmin) {
+      // Platform admins: no filter, see all medications (takes precedence over pharmacy admin)
+    } else if (isPharmacyAdmin && pharmacyId) {
+      // Pharmacy admins: show ONLY their pharmacy's medications
       medicationsQuery = medicationsQuery.eq("pharmacy_id", pharmacyId);
+    } else if (linkedPharmacyIds.length > 0) {
+      // Providers: show ONLY medications from linked pharmacies
+      medicationsQuery = medicationsQuery.in("pharmacy_id", linkedPharmacyIds);
+    } else {
+      // Provider with no pharmacy links: return empty set
+      medicationsQuery = medicationsQuery.eq("pharmacy_id", "00000000-0000-0000-0000-000000000000");
     }
 
     const { data: allMedications, error: medsError } =
@@ -178,10 +203,11 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      pharmacy, // User's primary pharmacy (for context/header)
+      pharmacy,
       medications: medicationsTransformed,
-      isPharmacyAdmin, // Pass role info to frontend
-      tierDiscount: discountPercentage, // Provider's tier discount percentage
+      isPharmacyAdmin,
+      tierDiscount: discountPercentage,
+      hasPharmacyLinks: isPharmacyAdmin || isPlatformAdmin || linkedPharmacyIds.length > 0,
     });
   } catch (error) {
     console.error("Error fetching provider pharmacy:", error);

@@ -194,6 +194,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify provider is linked to this pharmacy
+    if (userRole === "provider") {
+      const { data: pharmacyLink } = await supabaseAdmin
+        .from("provider_pharmacy_links")
+        .select("provider_id")
+        .eq("provider_id", user.id)
+        .eq("pharmacy_id", body.pharmacy_id)
+        .single();
+
+      if (!pharmacyLink) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "You are not authorized to prescribe from this pharmacy. Please contact your administrator to link your account.",
+          },
+          { status: 403 },
+        );
+      }
+    }
+
     // Get pharmacy backend credentials (supports DigitalRx and PioneerRx)
     const resolvedBackend = await resolvePharmacyBackendAny(supabaseAdmin, body.pharmacy_id);
 
