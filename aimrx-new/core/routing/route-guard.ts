@@ -38,7 +38,7 @@ async function checkAndRedirectIntake(
 
     if (!intakeStatus.hasCompletedIntake) {
       if (!intakeStatus.patientExists) {
-        return NextResponse.redirect(new URL(redirectPaths.login, request.url));
+        return null;
       }
       const nextStepUrl =
         intakeStatus.nextStepUrl || "/intake/patient-information";
@@ -48,9 +48,7 @@ async function checkAndRedirectIntake(
     return null;
   } catch (error) {
     console.error("Error checking intake status:", error);
-    return NextResponse.redirect(
-      new URL(redirectPaths.login, request.url),
-    );
+    return null;
   }
 }
 
