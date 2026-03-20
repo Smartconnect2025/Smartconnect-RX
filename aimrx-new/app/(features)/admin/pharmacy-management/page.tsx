@@ -40,7 +40,6 @@ import {
   Trash2,
   RefreshCw,
   CreditCard,
-  ImageIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminNavigationTabs } from "@/components/layout/AdminNavigationTabs";
@@ -201,7 +200,7 @@ export default function PharmacyManagementPage() {
     shared_secret: "",
     location_id: "",
     primary_color: "#00AEEF",
-    tagline: "",
+    tagline: "Your Trusted Pharmacy",
   });
 
   // Data states
@@ -230,7 +229,7 @@ export default function PharmacyManagementPage() {
     name: "",
     slug: "",
     primary_color: "#00AEEF",
-    tagline: "",
+    tagline: "Your Trusted Pharmacy",
     logo_url: "",
     phone: "",
     npi: "",
@@ -485,7 +484,7 @@ export default function PharmacyManagementPage() {
       name: "",
       slug: "",
       primary_color: "#00AEEF",
-      tagline: "",
+      tagline: "Your Trusted Pharmacy",
       logo_url: "",
       phone: "",
       npi: "",
@@ -844,7 +843,7 @@ export default function PharmacyManagementPage() {
       shared_secret: "",
       location_id: "",
       primary_color: "#00AEEF",
-      tagline: "",
+      tagline: "Your Trusted Pharmacy",
     });
 
     setIsApproveModalOpen(true);
@@ -1717,39 +1716,14 @@ export default function PharmacyManagementPage() {
                     />
                   </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="pharmacy-logo-url" className="flex items-center gap-2">
-                      <ImageIcon className="h-4 w-4" />
-                      Pharmacy Logo URL
-                    </Label>
-                    <Input
-                      id="pharmacy-logo-url"
-                      value={pharmacyForm.logo_url}
-                      onChange={(e) =>
-                        setPharmacyForm({
-                          ...pharmacyForm,
-                          logo_url: e.target.value,
-                        })
-                      }
-                      placeholder="e.g., https://example.com/logo.png"
-                    />
-                    <p className="text-xs text-gray-500">
-                      Logo will appear on patient-facing payment pages and confirmation emails
-                    </p>
-                    {pharmacyForm.logo_url && (
-                      <div className="mt-2 p-2 border rounded-md bg-gray-50 flex items-center gap-3">
-                        <img
-                          src={pharmacyForm.logo_url}
-                          alt="Logo preview"
-                          className="h-10 w-auto max-w-[120px] object-contain"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                        <span className="text-xs text-gray-500">Preview</span>
-                      </div>
-                    )}
-                  </div>
+                  {!editingPharmacy && (
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                      <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                      <p className="text-sm text-blue-800">
+                        The pharmacy admin can customize branding (logo, colors, tagline) after logging in via the Branding Settings page.
+                      </p>
+                    </div>
+                  )}
 
                   <div className="flex justify-end gap-2 pt-4">
                     <Button
@@ -2558,6 +2532,13 @@ export default function PharmacyManagementPage() {
                   }
                   placeholder="123 Main St, City, ST 12345"
                 />
+              </div>
+
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 flex items-start gap-2">
+                <Info className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                <p className="text-sm text-blue-800">
+                  The pharmacy admin can customize branding (logo, colors, tagline) after logging in via the Branding Settings page.
+                </p>
               </div>
 
               {/* System Integration */}

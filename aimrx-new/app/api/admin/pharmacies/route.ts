@@ -68,7 +68,7 @@ export async function POST(request: Request) {
         slug: slug.toLowerCase().trim(),
         logo_url: logo_url || null,
         primary_color: primary_color || "#00AEEF",
-        tagline: tagline || null,
+        tagline: tagline || "Your Trusted Pharmacy",
         address: address || null,
         npi: npi || null,
         dea_number: dea_number || null,
