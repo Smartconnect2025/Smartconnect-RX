@@ -40,7 +40,7 @@ export default function Home() {
   // Default landing page for non-authenticated users
   return (
     <DefaultLayout>
-      <div className="min-h-[80vh] flex flex-col">
+      <div className="flex flex-col flex-1">
 
         <div className="bg-[#1B3A5C] text-white">
           <div className="container mx-auto px-6 max-w-4xl py-24 md:py-32 text-center">
@@ -106,16 +106,6 @@ export default function Home() {
                 Get Started
               </Button>
             </Link>
-          </div>
-        </div>
-
-        <div className="bg-[#1B3A5C] py-8">
-          <div className="container mx-auto px-6 max-w-3xl text-center">
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-white/70 text-sm">
-              <a href="tel:+15123779898" className="hover:text-white transition-colors">(512) 377-9898</a>
-              <span className="hidden sm:inline text-white/30">|</span>
-              <a href="mailto:sales@smartconnectrx.com" className="hover:text-white transition-colors">sales@smartconnectrx.com</a>
-            </div>
           </div>
         </div>
 

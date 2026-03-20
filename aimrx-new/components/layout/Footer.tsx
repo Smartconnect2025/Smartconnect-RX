@@ -91,12 +91,8 @@ export function Footer() {
                 <img
                   src="/logo-header.png"
                   alt="SmartConnect RX Logo"
-                  width={48}
-                  height={48}
+                  className="h-12 w-auto brightness-0 invert"
                 />
-                <span className="text-2xl font-bold text-white">
-                  SmartConnect RX
-                </span>
               </Link>
 
               <div className="space-y-2">
