@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
                 showReceipt: false,
                 url: `${siteUrl}/payment/success/${paymentToken}?from=${from || "patient-link"}`,
                 urlText: "Return to site",
-                cancelUrl: siteUrl,
+                cancelUrl: `${siteUrl}/payment/cancelled/${paymentToken}`,
                 cancelUrlText: "Cancel Payment",
               }),
             },

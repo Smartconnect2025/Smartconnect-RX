@@ -126,7 +126,7 @@ export async function POST(request: NextRequest) {
         );
       }
       bucket = "pharmacy-logos";
-      filePath = `logos/${safeName}-${timestamp}-${randomId}.${ext}`;
+      filePath = `pharmacies/${entityId}/${safeName}-${timestamp}-${randomId}.${ext}`;
     } else {
       return NextResponse.json(
         { success: false, error: "Invalid upload type. Use 'medication', 'category', or 'pharmacy-logo'" },
