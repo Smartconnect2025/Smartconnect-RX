@@ -116,7 +116,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[#1E3A8A] via-[#2563EB] to-[#00AEEF] overflow-hidden flex flex-col relative">
+    <div className="min-h-screen w-full bg-gradient-to-br from-[#1D4E89] via-[#2563EB] to-[#00AEEF] overflow-hidden flex flex-col relative">
         {/* Subtle animated helix/DNA background */}
         <div className="absolute inset-0 opacity-10 pointer-events-none">
           <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-white rounded-full blur-3xl animate-pulse"></div>
@@ -269,50 +269,9 @@ export default function LoginPage() {
                   Invitation Only
                 </span>
               </p>
-              <p className="text-xs text-gray-400 mt-1">Access by invitation or request below</p>
+              <p className="text-xs text-gray-400 mt-1">Access by invitation only</p>
             </div>
             </div>
-          </div>
-
-          {/* Elegant Access Request Cards - COMPACT */}
-          <div className="mt-4 flex flex-col md:flex-row gap-4 w-full max-w-4xl">
-            {/* Doctor Card */}
-            <Link href="/request-doctor-access" className="block group flex-1">
-              <div className="bg-white/95 backdrop-blur-sm rounded-xl p-5 shadow-xl border-2 border-[#00AEEF]/20 hover:border-[#00AEEF] transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:shadow-[0_0_25px_rgba(0,174,239,0.4)]">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#00AEEF] to-[#0098D4] flex items-center justify-center text-white text-lg font-bold group-hover:scale-110 transition-transform duration-300">
-                    Dr
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#00AEEF] transition-colors">For Doctors</h3>
-                    <p className="text-xs text-gray-600">Join the network</p>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-700 mb-3">Empower your practice with regenerative medicine. Access peptides, PRP, and more.</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[#00AEEF] font-semibold group-hover:translate-x-2 transition-transform">Request Provider Access →</span>
-                </div>
-              </div>
-            </Link>
-
-            {/* Pharmacy Card */}
-            <Link href="/request-pharmacy-access" className="block group flex-1">
-              <div className="bg-white/95 backdrop-blur-sm rounded-xl p-5 shadow-xl border-2 border-[#1E3A8A]/20 hover:border-[#1E3A8A] transition-all duration-300 hover:shadow-2xl hover:scale-105 hover:shadow-[0_0_25px_rgba(30,58,138,0.4)]">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#1E3A8A] to-[#2563EB] flex items-center justify-center text-white text-lg font-bold group-hover:scale-110 transition-transform duration-300">
-                    Rx
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-[#1E3A8A] transition-colors">For Pharmacies</h3>
-                    <p className="text-xs text-gray-600">Grow your business</p>
-                  </div>
-                </div>
-                <p className="text-sm text-gray-700 mb-3">Join SmartConnect RX&apos;s pharmacy network and receive orders from providers nationwide.</p>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-[#1E3A8A] font-semibold group-hover:translate-x-2 transition-transform">Apply to Join Network →</span>
-                </div>
-              </div>
-            </Link>
           </div>
         </div>
 
