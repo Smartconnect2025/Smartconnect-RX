@@ -62,6 +62,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const parsedConsultation = Number(consultationFeeCents);
+    const parsedMedication = Number(medicationCostCents);
+    const parsedShipping = shippingFeeCents !== undefined ? Number(shippingFeeCents) : 0;
+    if (
+      !Number.isFinite(parsedConsultation) || parsedConsultation < 0 ||
+      !Number.isFinite(parsedMedication) || parsedMedication < 0 ||
+      !Number.isFinite(parsedShipping) || parsedShipping < 0
+    ) {
+      return NextResponse.json(
+        { error: "Fee amounts must be non-negative numbers" },
+        { status: 400 },
+      );
+    }
+
     const supabase = createAdminClient();
 
     // Get prescription details
@@ -251,7 +265,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const totalAmountCents = consultationFeeCents + medicationCostCents + (shippingFeeCents || 0);
+    const totalAmountCents = parsedConsultation + parsedMedication + parsedShipping;
     const totalAmountDollars = (totalAmountCents / 100).toFixed(2);
 
     const paymentToken = crypto.randomBytes(32).toString("hex");
@@ -273,9 +287,9 @@ export async function POST(request: NextRequest) {
       .insert({
         prescription_id: prescriptionId,
         total_amount_cents: totalAmountCents,
-        consultation_fee_cents: consultationFeeCents,
-        medication_cost_cents: medicationCostCents,
-        shipping_fee_cents: shippingFeeCents || 0,
+        consultation_fee_cents: parsedConsultation,
+        medication_cost_cents: parsedMedication,
+        shipping_fee_cents: parsedShipping,
         patient_id: prescription.patient_id,
         patient_email: patient?.email,
         patient_phone: patient?.phone,

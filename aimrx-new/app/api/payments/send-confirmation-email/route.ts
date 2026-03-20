@@ -7,6 +7,26 @@ const FROM_NAME = process.env.SENDGRID_FROM_NAME || "SmartConnect RX";
 
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
 
+function escHtml(str: string | undefined | null): string {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function sanitizeColor(color: string | undefined | null): string {
+  if (!color) return "#10B981";
+  return /^#[0-9A-Fa-f]{3,8}$/.test(color) ? color : "#10B981";
+}
+
+function sanitizeUrl(url: string | undefined | null): string {
+  if (!url) return "";
+  try {
+    const parsed = new URL(url);
+    return ["http:", "https:"].includes(parsed.protocol) ? url : "";
+  } catch {
+    return "";
+  }
+}
+
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
 }
@@ -65,13 +85,20 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const brandColor = pharmacyColor || "#10B981";
-    const accentColor = pharmacyColor || "#10B981";
-    const brandName = pharmacyName || "SmartConnect RX";
+    const brandColor = sanitizeColor(pharmacyColor);
+    const accentColor = brandColor;
+    const brandName = escHtml(pharmacyName) || "SmartConnect RX";
+    const safeName = escHtml(pharmacyName);
     const fromName = pharmacyName ? `${pharmacyName} via SmartConnect RX` : FROM_NAME;
+    const safeLogoUrl = sanitizeUrl(pharmacyLogoUrl);
+    const safePatientName = escHtml(patientName);
+    const safeProviderName = escHtml(providerName);
+    const safeMedication = escHtml(medication);
+    const safeTotalAmount = escHtml(totalAmount);
+    const safeTransactionId = escHtml(transactionId);
 
-    const logoHtml = pharmacyLogoUrl
-      ? `<img src="${pharmacyLogoUrl}" alt="${brandName}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />`
+    const logoHtml = safeLogoUrl
+      ? `<img src="${safeLogoUrl}" alt="${brandName}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />`
       : "";
 
     const msg = {
@@ -134,7 +161,7 @@ Keep this email for your records.
                 <span style="font-size: 36px;">\u2713</span>
               </div>
               <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Payment Confirmed!</h1>
-              ${pharmacyName ? `<p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">via ${pharmacyName}</p>` : ''}
+              ${safeName ? `<p style="margin: 8px 0 0; color: rgba(255,255,255,0.9); font-size: 14px;">via ${safeName}</p>` : ''}
             </td>
           </tr>
 
@@ -142,11 +169,11 @@ Keep this email for your records.
           <tr>
             <td style="padding: 40px;">
               <p style="margin: 0 0 20px; font-size: 16px; line-height: 24px; color: #333333;">
-                Hi ${patientName},
+                Hi ${safePatientName},
               </p>
 
               <p style="margin: 0 0 20px; font-size: 16px; line-height: 24px; color: #333333;">
-                Your payment has been successfully processed. Thank you for completing your payment for <strong>${medication}</strong>.
+                Your payment has been successfully processed. Thank you for completing your payment for <strong>${safeMedication}</strong>.
               </p>
 
               <!-- Payment Details -->
@@ -154,24 +181,24 @@ Keep this email for your records.
                 <tr>
                   <td style="padding: 20px;">
                     <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Transaction ID:</p>
-                    <p style="margin: 0 0 15px; font-size: 14px; font-family: monospace; color: #333333;">${transactionId}</p>
+                    <p style="margin: 0 0 15px; font-size: 14px; font-family: monospace; color: #333333;">${safeTransactionId}</p>
 
                     <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Prescribed by:</p>
-                    <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #1E3A8A;">${providerName}</p>
+                    <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #1E3A8A;">${safeProviderName}</p>
 
                     <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Medication:</p>
-                    <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #333333;">${medication}</p>
+                    <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #333333;">${safeMedication}</p>
 
-                    ${pharmacyName ? `
+                    ${safeName ? `
                     <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Pharmacy:</p>
-                    <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #333333;">${pharmacyName}</p>
+                    <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #333333;">${safeName}</p>
                     ` : ''}
 
                     <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Fulfillment Method:</p>
                     <p style="margin: 0 0 15px; font-size: 16px; font-weight: 600; color: #333333;">${deliveryDisplayText}</p>
 
                     <p style="margin: 0 0 10px; font-size: 14px; color: #666666;">Amount Paid:</p>
-                    <p style="margin: 0; font-size: 24px; font-weight: 700; color: ${accentColor};">$${totalAmount}</p>
+                    <p style="margin: 0; font-size: 24px; font-weight: 700; color: ${accentColor};">$${safeTotalAmount}</p>
                   </td>
                 </tr>
               </table>
@@ -217,7 +244,7 @@ Keep this email for your records.
                 Questions? Contact your provider or reply to this email.
               </p>
               <p style="margin: 0; font-size: 12px; line-height: 16px; color: #999999; text-align: center;">
-                Keep this email for your records. Transaction ID: ${transactionId}
+                Keep this email for your records. Transaction ID: ${safeTransactionId}
               </p>
             </td>
           </tr>

@@ -260,6 +260,12 @@ export async function PATCH(
     const pharmacyId = (await params).id;
 
     const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+      return NextResponse.json(
+        { success: false, error: "Pharmacy admin scope could not be determined" },
+        { status: 403 }
+      );
+    }
     if (scope.isPharmacyAdmin && scope.pharmacyId !== pharmacyId) {
       return NextResponse.json(
         { success: false, error: "You can only update your own pharmacy" },
@@ -296,16 +302,24 @@ export async function PATCH(
 
     updateData.updated_at = new Date().toISOString();
 
-    const { error: updateError } = await supabase
+    const { data: updated, error: updateError } = await supabase
       .from("pharmacies")
       .update(updateData)
-      .eq("id", pharmacyId);
+      .eq("id", pharmacyId)
+      .select("id");
 
     if (updateError) {
       console.error("Error updating pharmacy:", updateError);
       return NextResponse.json(
         { success: false, error: "Failed to update pharmacy", details: updateError.message },
         { status: 500 }
+      );
+    }
+
+    if (!updated || updated.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Pharmacy not found" },
+        { status: 404 }
       );
     }
 
