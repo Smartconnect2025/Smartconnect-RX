@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, CheckCircle2, Package, Clock, LogIn } from "lucide-react";
@@ -239,17 +239,18 @@ interface PaymentDetails {
   paymentStatus: string;
   deliveryMethod?: string;
   pharmacyName?: string;
-  pharmacyLogoUrl?: string | null;
-  pharmacyColor?: string | null;
-  pharmacyPhone?: string | null;
 }
 
 export default function PaymentSuccessPage() {
   const params = useParams();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const token = params.token as string;
-  const from = searchParams.get("from") || "";
+
+  const [from, setFrom] = useState("patient-link");
+  useEffect(() => {
+    const sp = new URLSearchParams(window.location.search);
+    setFrom(sp.get("from") || "patient-link");
+  }, []);
 
   const [loading, setLoading] = useState(true);
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>(
@@ -257,45 +258,89 @@ export default function PaymentSuccessPage() {
   );
   const [isPaymentConfirmed, setIsPaymentConfirmed] = useState(false);
   const [pollCount, setPollCount] = useState(0);
-  const MAX_POLLS = 30; // Poll for up to 30 seconds
+  const MAX_POLLS = 30;
+  const VERIFY_INTERVAL = 5;
 
   useEffect(() => {
     if (!token) return;
-    loadPaymentStatus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
 
-  // Poll for payment confirmation if webhook hasn't processed yet
-  useEffect(() => {
-    if (isPaymentConfirmed || pollCount >= MAX_POLLS || !paymentDetails) return;
+    let cancelled = false;
 
-    const timer = setTimeout(() => {
-      loadPaymentStatus();
-      setPollCount((prev) => prev + 1);
-    }, 1000);
+    const fetchStatus = async (): Promise<boolean> => {
+      try {
+        const response = await fetch(`/api/payments/details/${token}`);
+        const data = await response.json();
+        if (cancelled) return false;
+        if (response.ok && data.success) {
+          setPaymentDetails(data.payment);
+          if (data.payment.paymentStatus === "completed") {
+            if (!data.payment.queueId) {
+              console.log("[SUCCESS] Payment completed but no queue ID yet — triggering verify retry...");
+              try {
+                await fetch("/api/payments/verify-and-complete", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ paymentToken: token }),
+                });
+              } catch { /* retry is best-effort */ }
+            }
+            setIsPaymentConfirmed(true);
+            setLoading(false);
+            return true;
+          }
+        }
+        setLoading(false);
+      } catch {
+        if (!cancelled) setLoading(false);
+      }
+      return false;
+    };
 
-    return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [paymentDetails, isPaymentConfirmed, pollCount]);
+    const callVerify = async (): Promise<boolean> => {
+      try {
+        const verifyResponse = await fetch("/api/payments/verify-and-complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentToken: token }),
+        });
+        const verifyData = await verifyResponse.json();
+        if (!cancelled && verifyData.success) {
+          return await fetchStatus();
+        }
+      } catch {
+        // verification failed, continue polling
+      }
+      return false;
+    };
 
-  const loadPaymentStatus = async () => {
-    try {
-      const response = await fetch(`/api/payments/details/${token}`);
-      const data = await response.json();
+    const run = async () => {
+      const alreadyDone = await fetchStatus();
+      if (cancelled || alreadyDone) return;
 
-      if (response.ok && data.success) {
-        setPaymentDetails(data.payment);
-        // Check if payment is actually completed (webhook processed)
-        if (data.payment.paymentStatus === "completed") {
-          setIsPaymentConfirmed(true);
+      const done = await callVerify();
+      if (cancelled || done) return;
+
+      for (let i = 0; i < MAX_POLLS; i++) {
+        if (cancelled) return;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+        if (cancelled) return;
+
+        if (!cancelled) setPollCount(i + 1);
+
+        if (i > 0 && i % VERIFY_INTERVAL === 0) {
+          const verifyDone = await callVerify();
+          if (verifyDone || cancelled) return;
+        } else {
+          const pollDone = await fetchStatus();
+          if (pollDone || cancelled) return;
         }
       }
-    } catch {
-      // Silently handle fetch errors during polling
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    run();
+
+    return () => { cancelled = true; };
+  }, [token]);
 
   if (loading) {
     return (
@@ -339,38 +384,28 @@ export default function PaymentSuccessPage() {
   if (!isPaymentConfirmed && pollCount >= MAX_POLLS) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="text-center mb-6">
-            <img
-              src={paymentDetails?.pharmacyLogoUrl || "/logo-header.png"}
-              alt={paymentDetails?.pharmacyName || "SmartConnect RX"}
-              className="h-16 mx-auto mb-4"
-              onError={(e) => { (e.target as HTMLImageElement).src = "/logo-header.png"; }}
-            />
-          </div>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-center">Payment Processing</CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 mb-4">
-                <Clock className="w-8 h-8 text-yellow-600" />
-              </div>
-              <p className="text-gray-700">
-                Your payment is being processed. This may take a few minutes.
-              </p>
-              <p className="text-sm text-muted-foreground">
-                You will receive an email confirmation once the payment is
-                complete. If you don&apos;t receive confirmation within 10
-                minutes, please contact support.
-              </p>
-              <div className="pt-4">
-                <p className="text-sm font-medium text-gray-900">{paymentDetails?.pharmacyName || "SmartConnect RX"}</p>
-                <p className="text-sm text-gray-600">{paymentDetails?.pharmacyPhone || "(512) 377-9898"} · Mon–Fri 9AM–6PM CST</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle className="text-center">Payment Processing</CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-yellow-100 mb-4">
+              <Clock className="w-8 h-8 text-yellow-600" />
+            </div>
+            <p className="text-gray-700">
+              Your payment is being processed. This may take a few minutes.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              You will receive an email confirmation once the payment is
+              complete. If you don&apos;t receive confirmation within 10
+              minutes, please contact support.
+            </p>
+            <div className="pt-4">
+              <p className="text-sm text-gray-600">(512) 377-9898</p>
+              <p className="text-sm text-gray-600">Mon–Fri 9AM–6PM CST</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -404,10 +439,9 @@ export default function PaymentSuccessPage() {
               </Button>
             </div>
             <img
-              src={paymentDetails?.pharmacyLogoUrl || "/logo-header.png"}
-              alt={paymentDetails?.pharmacyName || "SmartConnect RX"}
+              src="https://i.imgur.com/r65O4DB.png"
+              alt="AIM Medical Technologies"
               className="h-[80px] mx-auto mb-4 print-logo"
-              onError={(e) => { (e.target as HTMLImageElement).src = "/logo-header.png"; }}
             />
           </div>
 
@@ -544,10 +578,13 @@ export default function PaymentSuccessPage() {
                   Questions about your order?
                 </p>
                 <p className="text-sm font-medium text-gray-900">
-                  Contact {paymentDetails?.pharmacyName || "SmartConnect RX"}
+                  Contact AIM Medical Technologies
                 </p>
                 <p className="text-sm text-gray-600">
-                  {paymentDetails?.pharmacyPhone || "(512) 377-9898"} · Mon–Fri 9AM–6PM CST
+                  (512) 377-9898 · Mon–Fri 9AM–6PM CST
+                </p>
+                <p className="text-sm text-gray-600">
+                  106 E 6th St, Suite 900 · Austin, TX 78701
                 </p>
               </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DefaultLayout from "@/components/layout/DefaultLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -73,6 +73,13 @@ interface PatientData {
   physicalAddress?: AddressData;
 }
 
+function safeString(value: unknown): string {
+  if (value === null || value === undefined) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  return JSON.stringify(value);
+}
+
 export default function PrescriptionStep3Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -84,6 +91,7 @@ export default function PrescriptionStep3Page() {
     null,
   );
   const [loadingPatient, setLoadingPatient] = useState(true);
+  const [patientLoadError, setPatientLoadError] = useState(false);
   const [pdfInfo, setPdfInfo] = useState<{
     name: string;
     dataUrl: string;
@@ -102,8 +110,9 @@ export default function PrescriptionStep3Page() {
   });
   const [pharmacyMedData, setPharmacyMedData] =
     useState<PharmacyMedicationData | null>(null);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const { user } = useUser();
+  const { isDemo: isDemoAccount, guardAction: demoGuard } = useDemoGuard();
 
   // Fetch patient directly from database to avoid race conditions
   useEffect(() => {
@@ -123,6 +132,7 @@ export default function PrescriptionStep3Page() {
         if (error) {
           console.error("Error fetching patient:", error);
           toast.error("Failed to load patient information");
+          setPatientLoadError(true);
         } else {
           const addr = patient.physical_address as AddressData | null;
           setSelectedPatient({
@@ -139,6 +149,7 @@ export default function PrescriptionStep3Page() {
       } catch (error) {
         console.error("Error fetching patient:", error);
         toast.error("Failed to load patient information");
+        setPatientLoadError(true);
       } finally {
         setLoadingPatient(false);
       }
@@ -170,7 +181,20 @@ export default function PrescriptionStep3Page() {
       return;
     }
 
-    const loadedData = JSON.parse(data);
+    let loadedData;
+    try {
+      loadedData = JSON.parse(data);
+    } catch {
+      sessionStorage.removeItem("prescriptionFormData");
+      router.push("/prescriptions/new/step1?error=session_expired");
+      return;
+    }
+
+    if (!loadedData || typeof loadedData !== "object" || Array.isArray(loadedData) || typeof loadedData.medication !== "string") {
+      sessionStorage.removeItem("prescriptionFormData");
+      router.push("/prescriptions/new/step1?error=session_expired");
+      return;
+    }
 
     setPrescriptionData(loadedData);
 
@@ -226,6 +250,26 @@ export default function PrescriptionStep3Page() {
     );
   }
 
+  if (patientLoadError) {
+    return (
+      <DefaultLayout>
+        <div className="container mx-auto max-w-5xl py-8 px-4">
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+              Failed to load patient information
+            </h2>
+            <p className="text-muted-foreground mb-4">
+              Please go back and try again.
+            </p>
+            <Button onClick={() => router.push(`/prescriptions/new/step2?patientId=${patientId}`)}>
+              Go Back to Step 2
+            </Button>
+          </div>
+        </div>
+      </DefaultLayout>
+    );
+  }
+
   if (loadingPatient || !selectedPatient) {
     return (
       <DefaultLayout>
@@ -266,8 +310,6 @@ export default function PrescriptionStep3Page() {
     router.push(`/prescriptions/new/step2?patientId=${patientId}`);
   };
 
-  const { isDemo: isDemoAccount, guardAction: demoGuard } = useDemoGuard();
-
   const handleSubmit = async () => {
     if (isDemoAccount) {
       demoGuard(() => {});
@@ -304,7 +346,7 @@ export default function PrescriptionStep3Page() {
       const providerAddress = fetchedProvider?.physical_address as AddressData | null;
 
       // Calculate total oversight fees in cents
-      const totalOversightFeesCents = prescriptionData.oversightFees
+      const totalOversightFeesCents = Array.isArray(prescriptionData.oversightFees)
         ? prescriptionData.oversightFees.reduce((sum, item) => {
             const feeValue = parseFloat(item.fee) || 0;
             return sum + feeValue * 100; // Convert dollars to cents
@@ -312,9 +354,9 @@ export default function PrescriptionStep3Page() {
         : 0;
 
       // Extract the consultation reason from the first fee with a reason
-      const consultationReason = prescriptionData.oversightFees
-        ?.find((item) => item.reason)
-        ?.reason || null;
+      const consultationReason = Array.isArray(prescriptionData.oversightFees)
+        ? (prescriptionData.oversightFees.find((item) => item.reason)?.reason || null)
+        : null;
 
       // Prepare payload for real DigitalRx API
       const submissionPayload = {
@@ -604,7 +646,7 @@ export default function PrescriptionStep3Page() {
                   <p className="text-sm text-muted-foreground">Name</p>
                   <p className="font-medium">
                     {selectedPatient
-                      ? `${selectedPatient.firstName} ${selectedPatient.lastName}`
+                      ? `${safeString(selectedPatient.firstName)} ${safeString(selectedPatient.lastName)}`
                       : "Loading..."}
                   </p>
                 </div>
@@ -621,13 +663,13 @@ export default function PrescriptionStep3Page() {
                 <div>
                   <p className="text-sm text-muted-foreground">Email</p>
                   <p className="font-medium">
-                    {selectedPatient?.email || "N/A"}
+                    {safeString(selectedPatient?.email) || "N/A"}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Phone</p>
                   <p className="font-medium">
-                    {selectedPatient?.phone || "N/A"}
+                    {safeString(selectedPatient?.phone) || "N/A"}
                   </p>
                 </div>
                 <div className="col-span-2">
@@ -845,7 +887,7 @@ export default function PrescriptionStep3Page() {
                   <File className="h-6 w-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-900">{pdfInfo.name}</p>
+                  <p className="font-medium text-gray-900">{safeString(pdfInfo.name)}</p>
                   <p className="text-sm text-gray-500">PDF document attached</p>
                 </div>
               </div>
@@ -862,34 +904,34 @@ export default function PrescriptionStep3Page() {
                 <div>
                   <p className="text-sm text-muted-foreground">Medication</p>
                   <p className="font-semibold text-lg">
-                    {prescriptionData.medication}
+                    {safeString(prescriptionData.medication)}
                   </p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">
                     Strength/Dosage
                   </p>
-                  <p className="font-medium">{prescriptionData.strength}</p>
+                  <p className="font-medium">{safeString(prescriptionData.strength)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Form</p>
                   <p className="font-medium">
-                    {prescriptionData.form || "N/A"}
+                    {safeString(prescriptionData.form) || "N/A"}
                   </p>
                 </div>
                 {prescriptionData.vialSize && (
                   <div>
                     <p className="text-sm text-muted-foreground">Vial Size</p>
-                    <p className="font-medium">{prescriptionData.vialSize}</p>
+                    <p className="font-medium">{safeString(prescriptionData.vialSize)}</p>
                   </div>
                 )}
                 <div>
                   <p className="text-sm text-muted-foreground">Quantity</p>
-                  <p className="font-medium">{prescriptionData.quantity}</p>
+                  <p className="font-medium">{safeString(prescriptionData.quantity)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Refills</p>
-                  <p className="font-medium">{prescriptionData.refills}</p>
+                  <p className="font-medium">{safeString(prescriptionData.refills)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">
@@ -909,7 +951,7 @@ export default function PrescriptionStep3Page() {
                           prescriptionData.selectedPharmacyColor || "#1E3A8A",
                       }}
                     >
-                      {prescriptionData.selectedPharmacyName}
+                      {safeString(prescriptionData.selectedPharmacyName)}
                     </p>
                   </div>
                 )}
@@ -923,7 +965,7 @@ export default function PrescriptionStep3Page() {
               Directions for Patient (SIG)
             </h3>
             <div className="bg-gray-50 rounded-lg p-4">
-              <p className="text-gray-900">{prescriptionData.sig}</p>
+              <p className="text-gray-900">{safeString(prescriptionData.sig)}</p>
             </div>
           </div>
 
@@ -935,7 +977,7 @@ export default function PrescriptionStep3Page() {
               </h3>
               <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
                 <p className="text-gray-900 whitespace-pre-wrap">
-                  {prescriptionData.pharmacyNotes}
+                  {safeString(prescriptionData.pharmacyNotes)}
                 </p>
               </div>
             </div>
@@ -949,12 +991,12 @@ export default function PrescriptionStep3Page() {
               </h3>
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <p className="text-2xl font-bold text-gray-900">
-                  ${parseFloat(prescriptionData.patientPrice).toFixed(2)}
+                  ${(parseFloat(prescriptionData.patientPrice || "0") || 0).toFixed(2)}
                 </p>
                 {tierDiscount && tierDiscount.discountPercentage > 0 && (
                   <p className="text-xs text-gray-500 mt-1">
-                    {tierDiscount.discountPercentage}% discount applied (
-                    {tierDiscount.tierName} )
+                    {safeString(tierDiscount.discountPercentage)}% discount applied (
+                    {safeString(tierDiscount.tierName)} )
                   </p>
                 )}
               </div>
@@ -982,7 +1024,7 @@ export default function PrescriptionStep3Page() {
             )}
 
           {/* Oversight Fees */}
-          {prescriptionData.oversightFees &&
+          {Array.isArray(prescriptionData.oversightFees) &&
             prescriptionData.oversightFees.length > 0 && (
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold text-gray-900">
@@ -1009,7 +1051,7 @@ export default function PrescriptionStep3Page() {
                               Medication Adherence & Doctor Oversight
                             </p>
                             <p className="font-medium text-gray-900">
-                              {reasonLabels[item.reason] || item.reason}
+                              {reasonLabels[item.reason] || safeString(item.reason)}
                             </p>
                           </div>
                           <div className="text-right">
@@ -1030,7 +1072,7 @@ export default function PrescriptionStep3Page() {
 
           {/* Totals */}
           {(prescriptionData.patientPrice ||
-            (prescriptionData.oversightFees &&
+            (Array.isArray(prescriptionData.oversightFees) &&
               prescriptionData.oversightFees.length > 0) ||
             (prescriptionData.shippingFee &&
               parseFloat(prescriptionData.shippingFee) > 0)) && (
@@ -1038,7 +1080,7 @@ export default function PrescriptionStep3Page() {
               <div className="border-t border-dashed border-gray-300" />
 
               {/* Total Service & Delivery Fees */}
-              {((prescriptionData.oversightFees &&
+              {((Array.isArray(prescriptionData.oversightFees) &&
                 prescriptionData.oversightFees.length > 0) ||
                 (prescriptionData.shippingFee &&
                   parseFloat(prescriptionData.shippingFee) > 0)) && (
@@ -1050,10 +1092,12 @@ export default function PrescriptionStep3Page() {
                     <p className="text-xl font-bold text-green-700">
                       $
                       {(
-                        (prescriptionData.oversightFees?.reduce(
-                          (sum, item) => sum + parseFloat(item.fee || "0"),
-                          0,
-                        ) || 0) +
+                        (Array.isArray(prescriptionData.oversightFees)
+                          ? prescriptionData.oversightFees.reduce(
+                              (sum, item) => sum + parseFloat(item.fee || "0"),
+                              0,
+                            )
+                          : 0) +
                         parseFloat(prescriptionData.shippingFee || "0")
                       ).toFixed(2)}
                     </p>
@@ -1071,10 +1115,12 @@ export default function PrescriptionStep3Page() {
                     $
                     {(
                       parseFloat(prescriptionData.patientPrice || "0") +
-                      (prescriptionData.oversightFees?.reduce(
-                        (sum, item) => sum + parseFloat(item.fee || "0"),
-                        0,
-                      ) || 0) +
+                      (Array.isArray(prescriptionData.oversightFees)
+                        ? prescriptionData.oversightFees.reduce(
+                            (sum, item) => sum + parseFloat(item.fee || "0"),
+                            0,
+                          )
+                        : 0) +
                       parseFloat(prescriptionData.shippingFee || "0")
                     ).toFixed(2)}
                   </p>

@@ -249,10 +249,22 @@ export async function POST(
     const configuredSecret = process.env.INTERNAL_API_SECRET;
     let isInternalCall = false;
 
-    if (configuredSecret && internalSecret && internalSecret === configuredSecret) {
-      isInternalCall = true;
-    } else if (!configuredSecret && internalSecret) {
-      console.error("⚠️ [submit-to-pharmacy] INTERNAL_API_SECRET not configured — rejecting internal call. Set INTERNAL_API_SECRET env var.");
+    if (configuredSecret && configuredSecret.length > 0) {
+      if (internalSecret === configuredSecret) {
+        isInternalCall = true;
+      } else if (internalSecret) {
+        return NextResponse.json(
+          { success: false, error: "Invalid internal secret" },
+          { status: 403 },
+        );
+      }
+    } else if (internalSecret !== undefined && internalSecret !== null) {
+      if (process.env.NODE_ENV === "production") {
+        console.error("⚠️ [submit-to-pharmacy] INTERNAL_API_SECRET not configured in production — rejecting internal call. Set INTERNAL_API_SECRET.");
+      } else {
+        console.warn("⚠️ [submit-to-pharmacy] INTERNAL_API_SECRET not configured — accepting internal call in dev mode.");
+        isInternalCall = true;
+      }
     }
 
     let authenticatedUserId: string | null = null;

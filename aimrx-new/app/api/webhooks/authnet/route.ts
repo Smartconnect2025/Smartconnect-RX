@@ -1,39 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { envConfig } from "@/core/config/envConfig";
-import { getPaymentConfigById } from "@/core/services/pharmacyPaymentConfigService";
 import { notifyPrescriptionStatusChange } from "@/features/notifications/services/serverNotificationService";
 import crypto from "crypto";
-
-async function collectSignatureKeys(): Promise<string[]> {
-  const keys: string[] = [];
-
-  try {
-    const supabase = createAdminClient();
-    const { data: configs } = await supabase
-      .from("pharmacy_payment_configs")
-      .select("id")
-      .eq("gateway", "authorizenet")
-      .eq("is_active", true);
-
-    if (configs) {
-      for (const cfg of configs) {
-        try {
-          const fullConfig = await getPaymentConfigById(cfg.id);
-          if (fullConfig?.authnetSignatureKey) {
-            keys.push(fullConfig.authnetSignatureKey);
-          }
-        } catch { /* skip */ }
-      }
-    }
-  } catch { /* skip */ }
-
-  if (envConfig.AUTHNET_SIGNATURE_KEY) {
-    keys.push(envConfig.AUTHNET_SIGNATURE_KEY);
-  }
-
-  return keys;
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -41,27 +10,20 @@ export async function POST(request: NextRequest) {
     const body = JSON.parse(rawBody);
     const { eventType, payload } = body;
 
+    const signatureKey = envConfig.AUTHNET_SIGNATURE_KEY;
     const signature = request.headers.get("x-anet-signature");
+
+    if (!signatureKey) {
+      console.error("[WEBHOOK] AUTHNET_SIGNATURE_KEY not configured — rejecting all webhook requests");
+      return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
+    }
 
     if (!signature) {
       console.error(`[WEBHOOK] Missing x-anet-signature header for event ${eventType} — rejecting`);
       return NextResponse.json({ error: "Missing signature" }, { status: 401 });
     }
 
-    const signatureKeys = await collectSignatureKeys();
-    if (signatureKeys.length === 0) {
-      console.error("[WEBHOOK] No AuthNet signature keys configured — rejecting");
-      return NextResponse.json({ error: "Webhook not configured" }, { status: 503 });
-    }
-
-    let isValid = false;
-    for (const key of signatureKeys) {
-      if (validateWebhookSignature(rawBody, signature, key)) {
-        isValid = true;
-        break;
-      }
-    }
-
+    const isValid = validateWebhookSignature(rawBody, signature, signatureKey);
     if (!isValid) {
       console.error(`[WEBHOOK] Invalid signature for event ${eventType} — rejecting`);
       return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
@@ -182,7 +144,44 @@ async function handlePaymentSuccess(
   }
 
   if (paymentTransaction.payment_status === "completed") {
-    console.log(`[WEBHOOK] Payment transaction ${paymentTransaction.id} already completed — skipping`);
+    if (paymentTransaction.prescription_id) {
+      const { data: rxCheck } = await supabase
+        .from("prescriptions")
+        .select("queue_id")
+        .eq("id", paymentTransaction.prescription_id)
+        .single();
+
+      if (!rxCheck?.queue_id) {
+        console.log(`[WEBHOOK] Payment completed but NO queue_id — retrying pharmacy submission for prescription ${paymentTransaction.prescription_id}...`);
+        try {
+          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+          const internalSecret = process.env.INTERNAL_API_SECRET || "";
+          const submitResponse = await fetch(
+            `${siteUrl}/api/prescriptions/${paymentTransaction.prescription_id}/submit-to-pharmacy`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-internal-secret": internalSecret,
+              },
+            },
+          );
+          if (submitResponse.ok) {
+            console.log(`[WEBHOOK] Retry pharmacy submission succeeded for ${paymentTransaction.prescription_id}`);
+            await supabase
+              .from("payment_transactions")
+              .update({ order_progress: "pharmacy_processing" })
+              .eq("id", paymentTransaction.id);
+          } else {
+            const errorBody = await submitResponse.text().catch(() => "unable to read");
+            console.error(`[WEBHOOK] Retry pharmacy submission failed: HTTP ${submitResponse.status} — ${errorBody}`);
+          }
+        } catch (err) {
+          console.error(`[WEBHOOK] Retry pharmacy submission error:`, err instanceof Error ? err.message : "Unknown");
+        }
+      }
+    }
+    console.log(`[WEBHOOK] Payment transaction ${paymentTransaction.id} already completed — done`);
     return;
   }
 
@@ -190,7 +189,7 @@ async function handlePaymentSuccess(
     const expectedAmountDollars = paymentTransaction.total_amount_cents / 100;
     const amountDifference = Math.abs(authAmount - expectedAmountDollars);
 
-    if (amountDifference > 1) {
+    if (amountDifference > 0.01) {
       console.error(`[WEBHOOK] Amount mismatch for transaction ${paymentTransaction.id}: expected $${expectedAmountDollars}, got $${authAmount} — rejecting`);
       return;
     }
@@ -286,43 +285,29 @@ async function handlePaymentSuccess(
 
   if (paymentTransaction.patient_email) {
     try {
-      const internalApiKey = process.env.INTERNAL_API_KEY || "";
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      const internalApiKey = process.env.INTERNAL_API_KEY || "webhook-auto-email";
+      {
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+        const emailResponse = await fetch(`${siteUrl}/api/payments/send-confirmation-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-internal-api-key": internalApiKey,
+          },
+          body: JSON.stringify({
+            patientEmail: paymentTransaction.patient_email,
+            patientName: paymentTransaction.patient_name,
+            providerName: paymentTransaction.provider_name,
+            medication: paymentTransaction.description,
+            totalAmount: (paymentTransaction.total_amount_cents / 100).toFixed(2),
+            transactionId: authnetTransactionId,
+            pharmacyName: paymentTransaction.pharmacy_name,
+          }),
+        });
 
-      let pharmacyLogoUrl: string | undefined;
-      let pharmacyColor: string | undefined;
-      if (paymentTransaction.pharmacy_id) {
-        const { data: pharmacy } = await supabase
-          .from("pharmacies")
-          .select("logo_url, primary_color")
-          .eq("id", paymentTransaction.pharmacy_id)
-          .single();
-        pharmacyLogoUrl = pharmacy?.logo_url || undefined;
-        pharmacyColor = pharmacy?.primary_color || undefined;
-      }
-
-      const emailResponse = await fetch(`${siteUrl}/api/payments/send-confirmation-email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-internal-api-key": internalApiKey,
-        },
-        body: JSON.stringify({
-          patientEmail: paymentTransaction.patient_email,
-          patientName: paymentTransaction.patient_name,
-          providerName: paymentTransaction.provider_name,
-          medication: paymentTransaction.description,
-          totalAmount: (paymentTransaction.total_amount_cents / 100).toFixed(2),
-          transactionId: authnetTransactionId,
-          pharmacyName: paymentTransaction.pharmacy_name,
-          deliveryMethod: paymentTransaction.delivery_method,
-          pharmacyLogoUrl,
-          pharmacyColor,
-        }),
-      });
-
-      if (!emailResponse.ok) {
-        console.error(`[WEBHOOK] Confirmation email failed for ${paymentTransaction.patient_email}: HTTP ${emailResponse.status}`);
+        if (!emailResponse.ok) {
+          console.error(`[WEBHOOK] Confirmation email failed for ${paymentTransaction.patient_email}: HTTP ${emailResponse.status}`);
+        }
       }
     } catch (err) {
       console.error(`[WEBHOOK] Email sending error for ${paymentTransaction.patient_email}:`, err instanceof Error ? err.message : "Unknown");

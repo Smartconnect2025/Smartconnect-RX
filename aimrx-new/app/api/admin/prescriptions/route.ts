@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
-import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 export async function GET() {
   try {
@@ -21,21 +20,25 @@ export async function GET() {
 
     if (roleError) {
       console.error("Error fetching user role:", roleError);
+      return NextResponse.json({ error: "Failed to verify permissions" }, { status: 500 });
     }
 
     const userRole = roleRow?.role || null;
-    const scope = await getPharmacyAdminScope(user.id);
-    const isAdmin = userRole && ["admin", "super_admin"].includes(userRole);
 
-    if (!isAdmin && !scope.isPharmacyAdmin) {
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
       return NextResponse.json({ error: "Admin access required" }, { status: 403 });
     }
 
-    if (scope.isPharmacyAdmin && !scope.pharmacyId) {
-      return NextResponse.json({ error: "Unable to determine pharmacy scope" }, { status: 403 });
-    }
+    let pharmacyId: string | null = null;
+    const { data: adminLink } = await supabase
+      .from("pharmacy_admins")
+      .select("pharmacy_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-    const pharmacyId = scope.isPharmacyAdmin ? scope.pharmacyId : null;
+    if (adminLink?.pharmacy_id) {
+      pharmacyId = adminLink.pharmacy_id;
+    }
 
     let query = supabase
       .from("prescriptions")
@@ -49,6 +52,7 @@ export async function GET() {
         refills,
         sig,
         status,
+        payment_status,
         tracking_number,
         prescriber_id,
         pharmacy_id,
@@ -106,6 +110,7 @@ export async function GET() {
         refills: rx.refills,
         sig: rx.sig,
         status: rx.status || "submitted",
+        paymentStatus: rx.payment_status,
         trackingNumber: rx.tracking_number,
         pharmacyName: (pharmacy as { name?: string })?.name,
         pharmacyColor: (pharmacy as { primary_color?: string })?.primary_color,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import DefaultLayout from "@/components/layout/DefaultLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -34,7 +34,7 @@ export default function PrescriptionStep1Page() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useUser();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const patients = useEmrStore((state) => state.patients);
   const loading = useEmrStore((state) => state.loading);
   const error = useEmrStore((state) => state.error);

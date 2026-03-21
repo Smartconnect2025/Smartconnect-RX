@@ -28,25 +28,29 @@ export default function PrescriptionSuccessPage() {
     if (encounter) setEncounterId(encounter);
 
     // Load selected pharmacy from sessionStorage
-    const savedData = sessionStorage.getItem("prescriptionData");
+    const savedData = sessionStorage.getItem("prescriptionData") || sessionStorage.getItem("prescriptionFormData");
     if (savedData) {
-      const data = JSON.parse(savedData);
-      if (data.selectedPharmacyName && data.selectedPharmacyColor) {
-        setSelectedPharmacy({
-          name: data.selectedPharmacyName,
-          color: data.selectedPharmacyColor,
-        });
-      }
+      try {
+        const data = JSON.parse(savedData);
+        if (data.selectedPharmacyName && data.selectedPharmacyColor) {
+          setSelectedPharmacy({
+            name: String(data.selectedPharmacyName),
+            color: String(data.selectedPharmacyColor),
+          });
+        }
 
-      // Extract payment data
-      if (data.patientPrice) {
-        const price = parseFloat(data.patientPrice);
+        // Extract payment data
+        if (data.patientPrice) {
+          const price = parseFloat(data.patientPrice) || 0;
 
-        setPaymentData({
-          patientCharged: price.toFixed(2),
-          pharmacyReceived: price.toFixed(2),
-          doctorProfit: "0.00",
-        });
+          setPaymentData({
+            patientCharged: price.toFixed(2),
+            pharmacyReceived: price.toFixed(2),
+            doctorProfit: "0.00",
+          });
+        }
+      } catch {
+        // Corrupt session data - ignore gracefully
       }
     }
   }, [searchParams]);

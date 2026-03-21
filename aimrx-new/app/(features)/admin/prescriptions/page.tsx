@@ -24,7 +24,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, User, Calendar, Pill, Hash, FileText, RefreshCw, AlertCircle } from "lucide-react";
+import { Search, User, Calendar, Pill, Hash, FileText, RefreshCw, AlertCircle, Send } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { PrescriptionProgressTracker } from "@/app/(features)/prescriptions/_components/PrescriptionProgressTracker";
 
 interface AdminPrescription {
@@ -39,6 +40,7 @@ interface AdminPrescription {
   refills: number;
   sig: string;
   status: string;
+  paymentStatus?: string;
   trackingNumber?: string;
   pharmacyName?: string;
   pharmacyColor?: string;
@@ -47,6 +49,13 @@ interface AdminPrescription {
   deliveryDate?: string;
   lotNumber?: string;
 }
+
+const getEffectiveStatus = (rx: AdminPrescription): string => {
+  if (rx.status === "submitted" && (!rx.queueId || rx.queueId === "N/A")) {
+    return rx.paymentStatus === "paid" ? "payment_received" : "pending_payment";
+  }
+  return rx.status;
+};
 
 const STATUS_OPTIONS = [
   "All",
@@ -101,6 +110,30 @@ export default function AdminPrescriptionsPage() {
   const [selectedPrescription, setSelectedPrescription] = useState<AdminPrescription | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isSubmittingToPharmacy, setIsSubmittingToPharmacy] = useState(false);
+  const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleSubmitToPharmacy = async (prescriptionId: string) => {
+    setIsSubmittingToPharmacy(true);
+    setSubmitResult(null);
+    try {
+      const response = await fetch(`/api/prescriptions/${prescriptionId}/submit-to-pharmacy`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setSubmitResult({ success: true, message: `Submitted to pharmacy! Queue ID: ${data.queue_id}` });
+        loadPrescriptions();
+      } else {
+        setSubmitResult({ success: false, message: data.error || "Failed to submit" });
+      }
+    } catch {
+      setSubmitResult({ success: false, message: "Network error — please try again" });
+    } finally {
+      setIsSubmittingToPharmacy(false);
+    }
+  };
 
   const loadPrescriptions = useCallback(async () => {
     try {
@@ -140,15 +173,16 @@ export default function AdminPrescriptionsPage() {
       prescription.medication.toLowerCase().includes(searchQuery.toLowerCase()) ||
       prescription.queueId.toLowerCase().includes(searchQuery.toLowerCase());
 
+    const effectiveStatus = getEffectiveStatus(prescription);
     const matchesStatus =
-      statusFilter === "All" || prescription.status.toLowerCase() === statusFilter.toLowerCase();
+      statusFilter === "All" || effectiveStatus.toLowerCase() === statusFilter.toLowerCase();
 
     return matchesSearch && matchesStatus;
   });
 
   const getStatusCount = (status: string) => {
     if (status === "All") return prescriptions.length;
-    return prescriptions.filter((p) => p.status.toLowerCase() === status.toLowerCase()).length;
+    return prescriptions.filter((p) => getEffectiveStatus(p).toLowerCase() === status.toLowerCase()).length;
   };
 
   return (
@@ -303,9 +337,9 @@ export default function AdminPrescriptionsPage() {
                     <TableCell>
                       <Badge
                         variant="outline"
-                        className={`${getStatusColor(prescription.status)} text-xs px-2 py-1`}
+                        className={`${getStatusColor(getEffectiveStatus(prescription))} text-xs px-2 py-1`}
                       >
-                        {prescription.status.charAt(0).toUpperCase() + prescription.status.slice(1).replace(/_/g, " ")}
+                        {getEffectiveStatus(prescription).charAt(0).toUpperCase() + getEffectiveStatus(prescription).slice(1).replace(/_/g, " ")}
                       </Badge>
                     </TableCell>
                   </TableRow>
@@ -327,9 +361,9 @@ export default function AdminPrescriptionsPage() {
                   </DialogTitle>
                   <Badge
                     variant="outline"
-                    className={`${getStatusColor(selectedPrescription.status)} text-xs px-2.5 py-1`}
+                    className={`${getStatusColor(getEffectiveStatus(selectedPrescription))} text-xs px-2.5 py-1`}
                   >
-                    {selectedPrescription.status.charAt(0).toUpperCase() + selectedPrescription.status.slice(1).replace(/_/g, " ")}
+                    {getEffectiveStatus(selectedPrescription).charAt(0).toUpperCase() + getEffectiveStatus(selectedPrescription).slice(1).replace(/_/g, " ")}
                   </Badge>
                 </div>
               </DialogHeader>
@@ -367,7 +401,7 @@ export default function AdminPrescriptionsPage() {
                 </div>
 
                 <PrescriptionProgressTracker
-                  status={selectedPrescription.status}
+                  status={getEffectiveStatus(selectedPrescription)}
                   trackingNumber={selectedPrescription.trackingNumber}
                   pharmacyName={selectedPrescription.pharmacyName}
                   billingStatus={selectedPrescription.billingStatus}
@@ -407,6 +441,39 @@ export default function AdminPrescriptionsPage() {
                     </div>
                   )}
                 </div>
+
+                {(!selectedPrescription.queueId || selectedPrescription.queueId === "N/A") && (
+                  <div className="pt-2 space-y-2">
+                    {selectedPrescription.paymentStatus !== "paid" && (
+                      <p className="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+                        Payment not yet received — admin override will submit without payment confirmation.
+                      </p>
+                    )}
+                    <Button
+                      onClick={() => handleSubmitToPharmacy(selectedPrescription.id)}
+                      disabled={isSubmittingToPharmacy}
+                      className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white"
+                      data-testid="button-submit-to-pharmacy"
+                    >
+                      {isSubmittingToPharmacy ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Submitting to Pharmacy...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="h-4 w-4 mr-2" />
+                          Submit to Pharmacy
+                        </>
+                      )}
+                    </Button>
+                    {submitResult && (
+                      <p className={`text-sm mt-2 text-center ${submitResult.success ? "text-green-600" : "text-red-600"}`}>
+                        {submitResult.message}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           )}
