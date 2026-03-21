@@ -25,6 +25,7 @@ export async function GET() {
     let query = supabase
       .from("pharmacies")
       .select("id, name, slug, is_active, created_at")
+      .eq("is_active", true)
       .order("name");
 
     if (scope.isPharmacyAdmin) {

@@ -67,23 +67,40 @@ export async function POST(request: NextRequest) {
 
     // Create user_roles record (REQUIRED for login to work)
     // user_roles.id is bigint without auto-increment — must set explicitly
-    const { data: maxIdRow } = await supabaseAdmin
-      .from("user_roles")
-      .select("id")
-      .order("id", { ascending: false })
-      .limit(1)
-      .single();
-    const nextId = (maxIdRow?.id ?? 0) + 1;
+    // Retry loop handles race conditions when concurrent inserts pick the same ID
+    let roleError: { message: string; toString: () => string } | null = null;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data: maxIdRow } = await supabaseAdmin
+        .from("user_roles")
+        .select("id")
+        .order("id", { ascending: false })
+        .limit(1)
+        .single();
+      const rawId = maxIdRow?.id ?? 0;
+      const nextId = Number(rawId) + 1;
 
-    const { error: roleError } = await supabaseAdmin.from("user_roles").insert({
-      id: nextId,
-      user_id: authUser.user.id,
-      role: "provider",
-    });
+      const { error } = await supabaseAdmin.from("user_roles").insert({
+        id: nextId,
+        user_id: authUser.user.id,
+        role: "provider",
+      });
+
+      if (!error) {
+        roleError = null;
+        break;
+      }
+
+      if (error.message?.includes("duplicate") || error.code === "23505") {
+        roleError = error;
+        continue;
+      }
+
+      roleError = error;
+      break;
+    }
 
     if (roleError) {
       console.error("Error creating user role:", roleError);
-      // Clean up auth user if role creation fails
       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
       return NextResponse.json(
         {

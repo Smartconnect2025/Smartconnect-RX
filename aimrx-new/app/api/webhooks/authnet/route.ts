@@ -234,7 +234,7 @@ async function handlePaymentSuccess(
   }
 
   const cardLastFour = accountNumber?.slice(-4);
-  const { error: updateError } = await supabase
+  const { data: updatedRows, error: updateError } = await supabase
     .from("payment_transactions")
     .update({
       payment_status: "completed",
@@ -246,10 +246,17 @@ async function handlePaymentSuccess(
       webhook_received_at: new Date().toISOString(),
       webhook_payload: payload,
     })
-    .eq("id", paymentTransaction.id);
+    .eq("id", paymentTransaction.id)
+    .neq("payment_status", "completed")
+    .select("id");
 
   if (updateError) {
     console.error(`[WEBHOOK] Failed to update payment transaction ${paymentTransaction.id}:`, updateError.message);
+    return;
+  }
+
+  if (!updatedRows || updatedRows.length === 0) {
+    console.log(`[WEBHOOK] Transaction ${paymentTransaction.id} was already completed by a concurrent webhook — skipping side effects`);
     return;
   }
 
