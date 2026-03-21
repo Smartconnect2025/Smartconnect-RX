@@ -3,6 +3,7 @@ import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
 import sgMail from "@sendgrid/mail";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
+import { insertUserRole } from "@core/database/insert-user-role";
 
 export async function GET() {
   const { user, userRole } = await getUser();
@@ -119,11 +120,9 @@ export async function POST(request: Request) {
 
     const userId = authData.user.id;
 
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .insert({ user_id: userId, role: "admin" });
+    const roleResult = await insertUserRole(userId, "admin", supabaseAdmin);
 
-    if (roleError) {
+    if (!roleResult.success) {
       await supabaseAdmin.auth.admin.deleteUser(userId);
       return NextResponse.json({ error: "Failed to assign admin role" }, { status: 500 });
     }

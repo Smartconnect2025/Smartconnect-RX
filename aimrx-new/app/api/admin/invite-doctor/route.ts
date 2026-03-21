@@ -3,6 +3,7 @@ import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
 import sgMail from "@sendgrid/mail";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
+import { insertUserRole } from "@core/database/insert-user-role";
 
 export async function POST(request: NextRequest) {
   const { user, userRole } = await getUser();
@@ -65,47 +66,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create user_roles record (REQUIRED for login to work)
-    // user_roles.id is bigint without auto-increment — must set explicitly
-    // Retry loop handles race conditions when concurrent inserts pick the same ID
-    let roleError: { message: string; toString: () => string } | null = null;
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const { data: maxIdRow } = await supabaseAdmin
-        .from("user_roles")
-        .select("id")
-        .order("id", { ascending: false })
-        .limit(1)
-        .single();
-      const rawId = maxIdRow?.id ?? 0;
-      const nextId = Number(rawId) + 1;
+    const roleResult = await insertUserRole(authUser.user.id, "provider", supabaseAdmin);
 
-      const { error } = await supabaseAdmin.from("user_roles").insert({
-        id: nextId,
-        user_id: authUser.user.id,
-        role: "provider",
-      });
-
-      if (!error) {
-        roleError = null;
-        break;
-      }
-
-      if (error.message?.includes("duplicate") || error.code === "23505") {
-        roleError = error;
-        continue;
-      }
-
-      roleError = error;
-      break;
-    }
-
-    if (roleError) {
-      console.error("Error creating user role:", roleError);
+    if (!roleResult.success) {
+      console.error("Error creating user role:", roleResult.error);
       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
       return NextResponse.json(
         {
           error: "Failed to create user role",
-          details: roleError.message || roleError.toString()
+          details: roleResult.error || "Unknown error"
         },
         { status: 500 }
       );

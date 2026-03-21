@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
 import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { insertUserRole } from "@core/database/insert-user-role";
 
 export async function POST() {
   const platformCheck = await requirePlatformAdmin();
@@ -79,7 +80,8 @@ export async function POST() {
       adminUserId = newUser.user.id;
     }
 
-    // Link admin to pharmacy
+    await insertUserRole(adminUserId, "admin", supabase);
+
     const { data: link, error: linkError } = await supabase
       .from("pharmacy_admins")
       .insert({
@@ -90,7 +92,7 @@ export async function POST() {
       .single();
 
     if (linkError) {
-      console.error("❌ Error linking admin to pharmacy:", linkError);
+      console.error("Error linking admin to pharmacy:", linkError);
       return NextResponse.json(
         {
           success: false,
@@ -100,7 +102,6 @@ export async function POST() {
         { status: 500 }
       );
     }
-
 
     return NextResponse.json({
       success: true,

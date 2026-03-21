@@ -7,6 +7,7 @@
 
 import { createAdminClient } from "@core/database/client";
 import { createClient } from "@core/supabase";
+import { insertUserRole } from "@core/database/insert-user-role";
 export interface CreateAccountParams {
   email: string;
   password: string;
@@ -59,18 +60,13 @@ export async function createUserAccount(
 
     const userId = authData.user.id;
 
-    // Assign the user role
-    const { error: roleError } = await supabase.from("user_roles").insert({
-      user_id: userId,
-      role: params.role,
-    });
+    const roleResult = await insertUserRole(userId, params.role, supabase);
 
-    if (roleError) {
-      // Clean up the auth user if role assignment fails
+    if (!roleResult.success) {
       await supabase.auth.admin.deleteUser(userId);
       return {
         success: false,
-        error: `Failed to assign role: ${roleError.message}`,
+        error: `Failed to assign role: ${roleResult.error}`,
       };
     }
 

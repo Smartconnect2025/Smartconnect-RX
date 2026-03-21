@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
 import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { insertUserRole } from "@core/database/insert-user-role";
 
 export async function POST() {
   const platformCheck = await requirePlatformAdmin();
@@ -123,19 +124,12 @@ export async function POST() {
 
       if (linkError) throw linkError;
 
-      // Set user role to admin in user_roles table
       await supabase
         .from("user_roles")
         .delete()
         .eq("user_id", aimUserId);
 
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: aimUserId,
-          role: "admin",
-        });
-
+      await insertUserRole(aimUserId, "admin", supabase);
 
       results.push({
         pharmacy: "SmartConnect RX",
@@ -198,19 +192,12 @@ export async function POST() {
 
       if (linkError) throw linkError;
 
-      // Set user role to admin in user_roles table
       await supabase
         .from("user_roles")
         .delete()
         .eq("user_id", grinUserId);
 
-      const { error: roleError } = await supabase
-        .from("user_roles")
-        .insert({
-          user_id: grinUserId,
-          role: "admin",
-        });
-
+      await insertUserRole(grinUserId, "admin", supabase);
 
       results.push({
         pharmacy: "Greenwich Pharmacy",

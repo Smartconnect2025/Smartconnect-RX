@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { createAdminClient } from "@core/database/client";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
+import { insertUserRole } from "@core/database/insert-user-role";
 
 /**
  * Link a pharmacy admin user to their pharmacy (platform admin only)
@@ -95,25 +96,9 @@ export async function POST(request: Request) {
     const supabaseAdmin = createAdminClient();
 
     if (!existingRole) {
-      for (let attempt = 0; attempt < 3; attempt++) {
-        const { data: maxIdRow } = await supabaseAdmin
-          .from("user_roles")
-          .select("id")
-          .order("id", { ascending: false })
-          .limit(1)
-          .single();
-        const nextId = Number(maxIdRow?.id ?? 0) + 1;
-
-        const { error } = await supabaseAdmin.from("user_roles").insert({
-          id: nextId,
-          user_id: admin_user_id,
-          role: "admin",
-        });
-
-        if (!error) break;
-        if (error.message?.includes("duplicate") || error.code === "23505") continue;
-        console.error("Error creating user role:", error);
-        break;
+      const roleResult = await insertUserRole(admin_user_id, "admin", supabaseAdmin);
+      if (!roleResult.success) {
+        console.error("Error creating user role:", roleResult.error);
       }
     } else if (existingRole.role === "user") {
       await supabaseAdmin
