@@ -66,7 +66,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Create user_roles record (REQUIRED for login to work)
+    // user_roles.id is bigint without auto-increment — must set explicitly
+    const { data: maxIdRow } = await supabaseAdmin
+      .from("user_roles")
+      .select("id")
+      .order("id", { ascending: false })
+      .limit(1)
+      .single();
+    const nextId = (maxIdRow?.id ?? 0) + 1;
+
     const { error: roleError } = await supabaseAdmin.from("user_roles").insert({
+      id: nextId,
       user_id: authUser.user.id,
       role: "provider",
     });
