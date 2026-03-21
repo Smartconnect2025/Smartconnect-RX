@@ -79,15 +79,41 @@ export async function POST(request: Request) {
 
     const userId = authData.user.id;
 
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .insert({
-        user_id: userId,
-        role: "admin",
-      });
+    // user_roles.id is bigint without auto-increment — must set explicitly
+    // Retry loop handles race conditions when concurrent inserts pick the same ID
+    let roleInserted = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const { data: maxIdRow } = await supabaseAdmin
+        .from("user_roles")
+        .select("id")
+        .order("id", { ascending: false })
+        .limit(1)
+        .single();
+      const nextId = Number(maxIdRow?.id ?? 0) + 1;
 
-    if (roleError) {
-      console.error("Error creating user role (attempting upsert):", roleError);
+      const { error: roleError } = await supabaseAdmin
+        .from("user_roles")
+        .insert({
+          id: nextId,
+          user_id: userId,
+          role: "admin",
+        });
+
+      if (!roleError) {
+        roleInserted = true;
+        break;
+      }
+
+      if (roleError.message?.includes("duplicate") || roleError.code === "23505") {
+        continue;
+      }
+
+      console.error("Error creating user role:", roleError);
+      break;
+    }
+
+    if (!roleInserted) {
+      // Fallback: try updating existing role record
       await supabaseAdmin
         .from("user_roles")
         .update({ role: "admin" })

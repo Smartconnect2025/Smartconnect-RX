@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
+import { createAdminClient } from "@core/database/client";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 /**
@@ -91,13 +92,31 @@ export async function POST(request: Request) {
       .eq("user_id", admin_user_id)
       .single();
 
+    const supabaseAdmin = createAdminClient();
+
     if (!existingRole) {
-      await supabase.from("user_roles").insert({
-        user_id: admin_user_id,
-        role: "admin",
-      });
+      for (let attempt = 0; attempt < 3; attempt++) {
+        const { data: maxIdRow } = await supabaseAdmin
+          .from("user_roles")
+          .select("id")
+          .order("id", { ascending: false })
+          .limit(1)
+          .single();
+        const nextId = Number(maxIdRow?.id ?? 0) + 1;
+
+        const { error } = await supabaseAdmin.from("user_roles").insert({
+          id: nextId,
+          user_id: admin_user_id,
+          role: "admin",
+        });
+
+        if (!error) break;
+        if (error.message?.includes("duplicate") || error.code === "23505") continue;
+        console.error("Error creating user role:", error);
+        break;
+      }
     } else if (existingRole.role === "user") {
-      await supabase
+      await supabaseAdmin
         .from("user_roles")
         .update({ role: "admin" })
         .eq("user_id", admin_user_id);
