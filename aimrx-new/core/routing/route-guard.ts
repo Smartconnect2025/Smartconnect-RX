@@ -144,8 +144,7 @@ export async function handleRouteAccess(
         return NextResponse.redirect(getRedirectUrl(loginUrl, pathname));
       }
 
-      // Redirect admin/provider users to their appropriate dashboards
-      if (role === "admin") {
+      if (role === "admin" || role === "super_admin" || role === "pharmacy_admin") {
         return NextResponse.redirect(
           new URL(redirectPaths.adminDashboard, request.url),
         );

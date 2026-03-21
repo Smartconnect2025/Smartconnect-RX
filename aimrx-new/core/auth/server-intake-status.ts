@@ -29,8 +29,7 @@ export async function checkIntakeStatusServer(
   supabase: SupabaseClient,
 ): Promise<IntakeStatus> {
   try {
-    // Providers and admins don't need intake completion
-    if (userRole === "provider" || userRole === "admin") {
+    if (userRole === "provider" || userRole === "admin" || userRole === "super_admin" || userRole === "pharmacy_admin") {
       return {
         hasCompletedIntake: true,
         patientExists: true,

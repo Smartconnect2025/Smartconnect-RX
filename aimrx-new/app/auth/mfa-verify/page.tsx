@@ -45,14 +45,14 @@ export default function MFAVerifyPage() {
 
       let targetUrl = redirectUrl && redirectUrl !== "/" ? redirectUrl : null;
 
-      if (!targetUrl && data.role) {
+      if (data.role) {
         const role = data.role;
         if (role === "admin" || role === "super_admin" || role === "pharmacy_admin") {
           targetUrl = "/admin";
         } else if (role === "provider") {
-          targetUrl = "/prescriptions";
+          targetUrl = targetUrl || "/prescriptions";
         } else {
-          targetUrl = "/";
+          targetUrl = targetUrl || "/";
         }
       }
 
