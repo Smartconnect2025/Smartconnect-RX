@@ -196,6 +196,10 @@ export default function ManageDoctorsPage() {
       platform_manager: string | null;
     }>
   >([]);
+  const [pharmacies, setPharmacies] = useState<
+    Array<{ id: string; name: string }>
+  >([]);
+  const [selectedPharmacyId, setSelectedPharmacyId] = useState<string>("");
   const [inviteFormData, setInviteFormData] = useState({
     firstName: "",
     lastName: "",
@@ -267,9 +271,26 @@ export default function ManageDoctorsPage() {
       }
     };
 
+    const fetchPharmacies = async () => {
+      try {
+        const response = await fetch("/api/admin/pharmacies/list");
+        if (response.ok) {
+          const data = await response.json();
+          const list = (data.pharmacies || data || []).map((p: { id: string; name: string }) => ({
+            id: p.id,
+            name: p.name,
+          }));
+          setPharmacies(list);
+        }
+      } catch (error) {
+        console.error("Error fetching pharmacies:", error);
+      }
+    };
+
     if (isInviteModalOpen || isEditModalOpen) {
       fetchTiers();
       fetchGroups();
+      fetchPharmacies();
     }
   }, [isInviteModalOpen, isEditModalOpen, inviteFormData.tierLevel]);
 
@@ -295,6 +316,7 @@ export default function ManageDoctorsPage() {
     setShowPassword(false);
     setApprovingRequestId(null);
     setApprovingReferringPharmacyId(null);
+    setSelectedPharmacyId("");
   };
 
   // Delete Dialog
@@ -478,7 +500,7 @@ export default function ManageDoctorsPage() {
             zipCode: inviteFormData.zipCode || null,
             country: "USA",
           },
-          referringPharmacyId: approvingReferringPharmacyId || null,
+          referringPharmacyId: approvingReferringPharmacyId || selectedPharmacyId || null,
         }),
       });
 
@@ -1759,6 +1781,36 @@ export default function ManageDoctorsPage() {
                   Groups are managed in the &quot;Manage Groups&quot; section
                 </p>
               </div>
+
+              {!approvingReferringPharmacyId && (
+                <div>
+                  <Label htmlFor="pharmacyId">Assign to Pharmacy</Label>
+                  <Select
+                    value={selectedPharmacyId}
+                    onValueChange={(value) => setSelectedPharmacyId(value)}
+                  >
+                    <SelectTrigger id="pharmacyId">
+                      <SelectValue placeholder="Select a pharmacy (optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {pharmacies.length === 0 ? (
+                        <SelectItem value="no-pharmacies" disabled>
+                          No pharmacies available
+                        </SelectItem>
+                      ) : (
+                        pharmacies.map((pharmacy) => (
+                          <SelectItem key={pharmacy.id} value={pharmacy.id}>
+                            {pharmacy.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Link this provider to a pharmacy so they can send prescriptions
+                  </p>
+                </div>
+              )}
 
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                 <p className="text-sm text-blue-800">
