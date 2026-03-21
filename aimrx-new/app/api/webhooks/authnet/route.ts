@@ -190,32 +190,51 @@ async function handlePaymentSuccess(
         .single();
 
       if (!rxCheck?.queue_id) {
-        console.log(`[WEBHOOK] Payment completed but NO queue_id — retrying pharmacy submission for prescription ${paymentTransaction.prescription_id}...`);
-        try {
-          const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-          const internalSecret = process.env.INTERNAL_API_SECRET || "";
-          const submitResponse = await fetch(
-            `${siteUrl}/api/prescriptions/${paymentTransaction.prescription_id}/submit-to-pharmacy`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                "x-internal-secret": internalSecret,
+        const { data: claimed } = await supabase
+          .from("payment_transactions")
+          .update({ order_progress: "retry_submitting" })
+          .eq("id", paymentTransaction.id)
+          .eq("order_progress", "payment_received")
+          .select("id");
+
+        if (claimed && claimed.length > 0) {
+          console.log(`[WEBHOOK] Payment completed but NO queue_id — retrying pharmacy submission for prescription ${paymentTransaction.prescription_id}...`);
+          try {
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+            const internalSecret = process.env.INTERNAL_API_SECRET || "";
+            const submitResponse = await fetch(
+              `${siteUrl}/api/prescriptions/${paymentTransaction.prescription_id}/submit-to-pharmacy`,
+              {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  "x-internal-secret": internalSecret,
+                },
               },
-            },
-          );
-          if (submitResponse.ok) {
-            console.log(`[WEBHOOK] Retry pharmacy submission succeeded for ${paymentTransaction.prescription_id}`);
+            );
+            if (submitResponse.ok) {
+              console.log(`[WEBHOOK] Retry pharmacy submission succeeded for ${paymentTransaction.prescription_id}`);
+              await supabase
+                .from("payment_transactions")
+                .update({ order_progress: "pharmacy_processing" })
+                .eq("id", paymentTransaction.id);
+            } else {
+              const errorBody = await submitResponse.text().catch(() => "unable to read");
+              console.error(`[WEBHOOK] Retry pharmacy submission failed: HTTP ${submitResponse.status} — ${errorBody}`);
+              await supabase
+                .from("payment_transactions")
+                .update({ order_progress: "payment_received" })
+                .eq("id", paymentTransaction.id);
+            }
+          } catch (err) {
+            console.error(`[WEBHOOK] Retry pharmacy submission error:`, err instanceof Error ? err.message : "Unknown");
             await supabase
               .from("payment_transactions")
-              .update({ order_progress: "pharmacy_processing" })
+              .update({ order_progress: "payment_received" })
               .eq("id", paymentTransaction.id);
-          } else {
-            const errorBody = await submitResponse.text().catch(() => "unable to read");
-            console.error(`[WEBHOOK] Retry pharmacy submission failed: HTTP ${submitResponse.status} — ${errorBody}`);
           }
-        } catch (err) {
-          console.error(`[WEBHOOK] Retry pharmacy submission error:`, err instanceof Error ? err.message : "Unknown");
+        } else {
+          console.log(`[WEBHOOK] Retry already in progress for ${paymentTransaction.id} — skipping`);
         }
       }
     }
