@@ -1,0 +1,105 @@
+Now I have the full picture. Here's everything you need:
+
+PART 1: Environment Variables to copy to your other app (on Render)
+
+Add these 3 SendGrid variables:
+
+Key	Value
+SENDGRID_API_KEY	Same key you use in AimRX (copy from your AimRX Render dashboard)
+SENDGRID_FROM_EMAIL	noreply@aimrx.com (or change to your new app's email)
+SENDGRID_FROM_NAME	AIM Medical (or change to your new app's name)
+Also make sure you have:
+
+Key	Value
+INTERNAL_API_KEY	Copy from your AimRX Render dashboard (protects email routes from outside abuse)
+PART 2: Instructions to paste into your other app's agent
+
+Copy and paste everything below into your other app:
+
+SENDGRID EMAIL SYSTEM — COMPLETE INSTRUCTIONS
+
+This app uses SendGrid (@sendgrid/mail npm package) for ALL outgoing emails. Here is exactly how emails work and when they are sent. Replicate this behavior exactly.
+
+Environment variables needed:
+
+SENDGRID_API_KEY — SendGrid API key for sending emails
+SENDGRID_FROM_EMAIL — "from" address (default: noreply@aimrx.com)
+SENDGRID_FROM_NAME — "from" display name (default: AIM Medical)
+INTERNAL_API_KEY — secret key for server-to-server email calls (prevents abuse)
+Setup pattern in every file that sends email:
+
+import sgMail from "@sendgrid/mail";
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "noreply@aimrx.com";
+const FROM_NAME = process.env.SENDGRID_FROM_NAME || "AIM Medical";
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+}
+If SENDGRID_API_KEY is not set, run in demo mode (log but don't crash):
+
+if (!SENDGRID_API_KEY) {
+  return NextResponse.json({
+    success: true,
+    message: 'Email logged (demo mode - no actual email sent)',
+    demoMode: true
+  });
+}
+There are 5 types of emails sent by this app:
+
+1. Payment Link Email (/api/payments/send-payment-email)
+
+When: After a provider creates a prescription and billing generates a payment link
+To: Patient email
+Subject: "Payment Required: [Medication] Prescription"
+Contains: Patient name, medication name, provider name, total amount, payment button/link
+Protected by: INTERNAL_API_KEY header (x-internal-api-key) — server-to-server only
+Design: Blue gradient header, payment details card with blue-left border, green "Pay Now" button, security notice, 7-day expiry warning
+2. Payment Confirmation Email (/api/payments/send-confirmation-email)
+
+When: After patient successfully pays (called from verify-and-complete or webhook)
+To: Patient email
+Subject: "Payment Confirmed: [Medication] Prescription"
+Contains: Transaction ID, medication, provider, pharmacy name, amount paid, fulfillment method (pickup/delivery/shipping), order progress tracker (4 steps), next steps explanation
+Protected by: INTERNAL_API_KEY header — server-to-server only
+Design: Green gradient header with checkmark, green-left-border details card, 4-step progress tracker (Payment Received checked, rest pending)
+3. MFA Verification Code Email (core/services/mfa/mfaService.ts)
+
+When: During login when MFA is enabled for a user
+To: User email
+Subject: MFA verification code
+Contains: 6-digit code, 10-minute expiry
+Important: If SENDGRID_API_KEY is not set, MFA returns an error (does NOT run in demo mode — MFA requires real email)
+Settings: Code expires in 10 minutes, max 5 attempts, 15-minute lockout after max attempts
+4. Welcome/Invite Doctor Email (/api/admin/invite-doctor)
+
+When: Admin creates a new provider account
+To: New provider email
+Subject: "Welcome to AIM RX Portal - Your Provider Account"
+Contains: Login URL (https://app.aimrx.com/auth/login), email, temporary password, next steps (complete profile, add payment, change password), security warning about temporary password
+Design: Blue gradient header with logo, login credentials box with blue border, blue "Next Steps" section, yellow security warning
+5. Access Request Confirmation Email (/api/access-requests)
+
+When: Someone submits an access request to join the platform
+To: Applicant email
+Subject: "Thank you for your interest in AIM Medical Marketplace"
+Contains: Confirmation that request was received, 24-48 hour review timeline, next steps
+Design: Blue gradient header with logo, blue info box explaining next steps
+Email design standards:
+
+All emails use inline CSS (no external stylesheets — email clients don't support them)
+Blue gradient header: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #00AEEF 100%)
+Logo: https://i.imgur.com/r65O4DB.png at 80px height
+Max width: 600px centered
+Font: Arial, sans-serif
+All emails include both HTML and plain text versions
+Footer: copyright line with current year
+All emails are wrapped in try/catch — email failure should NEVER crash the main operation
+Critical rules:
+
+Never send emails directly from frontend — always through API routes
+Payment emails use INTERNAL_API_KEY header for server-to-server auth
+Always provide HTML AND plain text versions
+Always include from: { email: FROM_EMAIL, name: FROM_NAME }
+If SendGrid fails, log the error but don't fail the parent operation (except MFA which MUST succeed)
+Install the package: @sendgrid/mail
+That covers everything. Copy the environment variables from AimRX's Render dashboard, and paste those instructions into your other app's agent
