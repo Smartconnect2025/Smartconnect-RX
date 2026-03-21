@@ -239,6 +239,9 @@ interface PaymentDetails {
   paymentStatus: string;
   deliveryMethod?: string;
   pharmacyName?: string;
+  pharmacyLogoUrl?: string | null;
+  pharmacyColor?: string | null;
+  pharmacyPhone?: string | null;
 }
 
 export default function PaymentSuccessPage() {
@@ -274,16 +277,6 @@ export default function PaymentSuccessPage() {
         if (response.ok && data.success) {
           setPaymentDetails(data.payment);
           if (data.payment.paymentStatus === "completed") {
-            if (!data.payment.queueId) {
-              console.log("[SUCCESS] Payment completed but no queue ID yet — triggering verify retry...");
-              try {
-                await fetch("/api/payments/verify-and-complete", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ paymentToken: token }),
-                });
-              } catch { /* retry is best-effort */ }
-            }
             setIsPaymentConfirmed(true);
             setLoading(false);
             return true;
@@ -401,8 +394,8 @@ export default function PaymentSuccessPage() {
               minutes, please contact support.
             </p>
             <div className="pt-4">
-              <p className="text-sm text-gray-600">(512) 377-9898</p>
-              <p className="text-sm text-gray-600">Mon–Fri 9AM–6PM CST</p>
+              <p className="text-sm font-medium text-gray-900">{paymentDetails?.pharmacyName || "SmartConnect RX"}</p>
+              <p className="text-sm text-gray-600">{paymentDetails?.pharmacyPhone || "(512) 377-9898"} · Mon–Fri 9AM–6PM CST</p>
             </div>
           </CardContent>
         </Card>
@@ -439,9 +432,10 @@ export default function PaymentSuccessPage() {
               </Button>
             </div>
             <img
-              src="https://i.imgur.com/r65O4DB.png"
-              alt="AIM Medical Technologies"
+              src={paymentDetails?.pharmacyLogoUrl || "/logo-header.png"}
+              alt={paymentDetails?.pharmacyName || "SmartConnect RX"}
               className="h-[80px] mx-auto mb-4 print-logo"
+              onError={(e) => { (e.target as HTMLImageElement).src = "/logo-header.png"; }}
             />
           </div>
 
@@ -578,10 +572,10 @@ export default function PaymentSuccessPage() {
                   Questions about your order?
                 </p>
                 <p className="text-sm font-medium text-gray-900">
-                  Contact AIM Medical Technologies
+                  Contact {paymentDetails?.pharmacyName || "SmartConnect RX"}
                 </p>
                 <p className="text-sm text-gray-600">
-                  (512) 377-9898 · Mon–Fri 9AM–6PM CST
+                  {paymentDetails?.pharmacyPhone || "(512) 377-9898"} · Mon–Fri 9AM–6PM CST
                 </p>
                 <p className="text-sm text-gray-600">
                   106 E 6th St, Suite 900 · Austin, TX 78701
