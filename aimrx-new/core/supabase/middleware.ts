@@ -140,18 +140,15 @@ export async function updateSession(request: NextRequest) {
   let userRole: string | null = null;
 
   if (user) {
-    // Try to get role from cache first, but only trust it if it's bound to the current user
     const cached = getCachedUserData(request);
     const cachedUserId = request.cookies.get("user_role_uid")?.value;
 
-    if (cached.role && cachedUserId === user.id) {
+    if (cached.role && cachedUserId === user.id && cached.role !== "user") {
       userRole = cached.role;
     }
 
-    // If not cached or cache is for a different user, query database
     if (!userRole) {
       userRole = await getUserRole(user.id, supabase);
-      // Cache the role for future requests, bound to user ID
       if (userRole) {
         supabaseResponse.cookies.set("user_role_cache", userRole, {
           httpOnly: true,
