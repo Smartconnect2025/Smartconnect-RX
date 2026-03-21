@@ -5,9 +5,9 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2, Copy, Check, ShieldCheck, QrCode, KeyRound } from "lucide-react";
+import { Loader2, Copy, Check, ShieldCheck, QrCode, Mail, ArrowLeft } from "lucide-react";
 
-type Step = "loading" | "qr" | "recovery" | "done";
+type Step = "loading" | "choose" | "qr" | "email-sent" | "recovery" | "done";
 
 export default function MFASetupPage() {
   const searchParams = useSearchParams();
@@ -19,38 +19,89 @@ export default function MFASetupPage() {
   const [code, setCode] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [isVerifying, setIsVerifying] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [alreadyEnabled, setAlreadyEnabled] = useState(false);
-  const [showCodeOnly, setShowCodeOnly] = useState(false);
+  const [maskedEmail, setMaskedEmail] = useState("");
+  const [emailCooldown, setEmailCooldown] = useState(0);
 
   useEffect(() => {
-    async function startSetup() {
-      try {
-        const res = await fetch("/api/mfa/setup", {
-          method: "POST",
-          credentials: "same-origin",
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || "Failed to start MFA setup");
-        }
-        setQrCode(data.qrCode);
-        setSecret(data.secret);
-        setAlreadyEnabled(data.alreadyEnabled || false);
-        setStep("qr");
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Failed to start MFA setup");
-      }
-    }
-    startSetup();
+    setStep("choose");
   }, []);
 
-  async function handleVerify() {
+  useEffect(() => {
+    if (emailCooldown <= 0) return;
+    const timer = setTimeout(() => setEmailCooldown(emailCooldown - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [emailCooldown]);
+
+  async function handleChooseQR() {
+    setStep("loading");
+    try {
+      const res = await fetch("/api/mfa/setup", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to start MFA setup");
+      }
+      setQrCode(data.qrCode);
+      setSecret(data.secret);
+      setStep("qr");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to start MFA setup");
+      setStep("choose");
+    }
+  }
+
+  async function handleChooseEmail() {
+    setIsSendingEmail(true);
+    try {
+      const res = await fetch("/api/mfa/send-email-code", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to send code");
+      }
+      setMaskedEmail(data.email || "your email");
+      setEmailCooldown(60);
+      setStep("email-sent");
+      toast.success("Verification code sent to your email!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send email code");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  }
+
+  async function handleResendEmail() {
+    if (emailCooldown > 0) return;
+    setIsSendingEmail(true);
+    try {
+      const res = await fetch("/api/mfa/send-email-code", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to resend code");
+      }
+      setEmailCooldown(60);
+      toast.success("New code sent!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to resend code");
+    } finally {
+      setIsSendingEmail(false);
+    }
+  }
+
+  async function handleVerifyQR() {
     if (code.length < 6) return;
     setIsVerifying(true);
     try {
-      const endpoint = alreadyEnabled ? "/api/mfa/verify" : "/api/mfa/verify-setup";
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/mfa/verify-setup", {
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
@@ -66,15 +117,40 @@ export default function MFASetupPage() {
         localStorage.removeItem("inactivity_logout");
       } catch {}
 
-      if (alreadyEnabled) {
-        toast.success("Authentication successful!");
-        setStep("done");
-        window.location.href = redirect;
-      } else {
-        setRecoveryCodes(data.recoveryCodes || []);
-        setStep("recovery");
-        toast.success("MFA enabled successfully!");
+      setRecoveryCodes(data.recoveryCodes || []);
+      setStep("recovery");
+      toast.success("MFA enabled successfully!");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Verification failed");
+      setCode("");
+    } finally {
+      setIsVerifying(false);
+    }
+  }
+
+  async function handleVerifyEmail() {
+    if (code.length < 6) return;
+    setIsVerifying(true);
+    try {
+      const res = await fetch("/api/mfa/verify-email-code", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Invalid code");
       }
+
+      try {
+        localStorage.setItem("last_activity", Date.now().toString());
+        localStorage.removeItem("inactivity_logout");
+      } catch {}
+
+      toast.success("Authentication successful!");
+      setStep("done");
+      window.location.href = redirect;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Verification failed");
       setCode("");
@@ -111,88 +187,169 @@ export default function MFASetupPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#1E3A8A] via-[#2563EB] to-[#00AEEF] p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        {step === "qr" && (
+        {step === "choose" && (
           <>
             <div className="text-center mb-6">
-              <div className="w-14 h-14 bg-[#00AEEF]/10 rounded-full flex items-center justify-center mx-auto mb-3">
-                <QrCode className="h-7 w-7 text-[#00AEEF]" />
+              <div className="w-14 h-14 bg-[#1D4E89]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                <ShieldCheck className="h-7 w-7 text-[#1D4E89]" />
               </div>
-              <h2 className="text-2xl font-bold text-gray-900">Two-Factor Authentication</h2>
+              <h2 className="text-2xl font-bold text-gray-900">Set Up Two-Factor Authentication</h2>
               <p className="text-sm text-gray-600 mt-2">
-                {alreadyEnabled
-                  ? "Scan the QR code with your authenticator app, or enter your 6-digit code below."
-                  : "Scan the QR code with your authenticator app (Google Authenticator, Authy, etc.)"}
+                Choose how you want to verify your identity
               </p>
             </div>
 
-            {!showCodeOnly && (
-              <>
-                <div className="flex justify-center mb-4">
-                  {qrCode && (
-                    <img
-                      src={qrCode}
-                      alt="MFA QR Code"
-                      className="w-48 h-48 border-2 border-gray-100 rounded-lg"
-                    />
+            <div className="space-y-3">
+              <button
+                onClick={handleChooseQR}
+                className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 rounded-xl hover:border-[#1D4E89] hover:bg-[#1D4E89]/5 transition-all text-left group"
+              >
+                <div className="w-12 h-12 bg-[#1D4E89]/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-[#1D4E89]/20">
+                  <QrCode className="h-6 w-6 text-[#1D4E89]" />
+                </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Authenticator App</p>
+                  <p className="text-sm text-gray-500">Use Google Authenticator, Authy, etc.</p>
+                </div>
+              </button>
+
+              <button
+                onClick={handleChooseEmail}
+                disabled={isSendingEmail}
+                className="w-full flex items-center gap-4 p-4 border-2 border-gray-200 rounded-xl hover:border-[#1D4E89] hover:bg-[#1D4E89]/5 transition-all text-left group disabled:opacity-50"
+              >
+                <div className="w-12 h-12 bg-[#1D4E89]/10 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:bg-[#1D4E89]/20">
+                  {isSendingEmail ? (
+                    <Loader2 className="h-6 w-6 text-[#1D4E89] animate-spin" />
+                  ) : (
+                    <Mail className="h-6 w-6 text-[#1D4E89]" />
                   )}
                 </div>
-
-                <div className="mb-4">
-                  <p className="text-xs text-gray-500 text-center mb-2">
-                    Or enter this code manually:
-                  </p>
-                  <div className="bg-gray-50 rounded-lg p-3 text-center">
-                    <code className="text-sm font-mono text-gray-800 break-all select-all">
-                      {secret}
-                    </code>
-                  </div>
+                <div>
+                  <p className="font-semibold text-gray-900">Email Verification</p>
+                  <p className="text-sm text-gray-500">Receive a code at your email address</p>
                 </div>
-              </>
-            )}
+              </button>
+            </div>
 
-            {alreadyEnabled && !showCodeOnly && (
-              <div className="mb-4 text-center">
-                <button
-                  onClick={() => setShowCodeOnly(true)}
-                  className="text-sm text-[#00AEEF] hover:underline flex items-center gap-1 mx-auto"
-                >
-                  <KeyRound className="w-4 h-4" />
-                  I already have my code
-                </button>
-              </div>
-            )}
+            <div className="mt-6 text-center">
+              <a
+                href="/auth/login"
+                className="text-sm text-gray-500 hover:text-gray-700"
+              >
+                Back to Sign In
+              </a>
+            </div>
+          </>
+        )}
 
-            {showCodeOnly && (
-              <div className="mb-4 text-center">
-                <button
-                  onClick={() => setShowCodeOnly(false)}
-                  className="text-sm text-[#00AEEF] hover:underline flex items-center gap-1 mx-auto"
-                >
-                  <QrCode className="w-4 h-4" />
-                  Show QR code
-                </button>
+        {step === "qr" && (
+          <>
+            <div className="text-center mb-6">
+              <div className="w-14 h-14 bg-[#1D4E89]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                <QrCode className="h-7 w-7 text-[#1D4E89]" />
               </div>
-            )}
+              <h2 className="text-2xl font-bold text-gray-900">Scan QR Code</h2>
+              <p className="text-sm text-gray-600 mt-2">
+                Scan with your authenticator app (Google Authenticator, Authy, etc.)
+              </p>
+            </div>
+
+            <div className="flex justify-center mb-4">
+              {qrCode && (
+                <img
+                  src={qrCode}
+                  alt="MFA QR Code"
+                  className="w-48 h-48 border-2 border-gray-100 rounded-lg"
+                />
+              )}
+            </div>
+
+            <div className="mb-4">
+              <p className="text-xs text-gray-500 text-center mb-2">
+                Or enter this code manually:
+              </p>
+              <div className="bg-gray-50 rounded-lg p-3 text-center">
+                <code className="text-sm font-mono text-gray-800 break-all select-all">
+                  {secret}
+                </code>
+              </div>
+            </div>
 
             <div className="space-y-3">
               <label className="text-sm font-medium text-gray-700">
-                Enter the 6-digit code from your app{alreadyEnabled ? " or an 8-character recovery code" : ""}
+                Enter the 6-digit code from your app
               </label>
               <Input
                 type="text"
                 inputMode="numeric"
-                maxLength={8}
+                maxLength={6}
                 placeholder="000000"
                 value={code}
-                onChange={(e) => setCode(e.target.value.replace(/[^a-zA-Z0-9]/g, ""))}
+                onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ""))}
                 className="text-center text-2xl tracking-[0.5em] font-mono h-14"
                 autoFocus
                 autoComplete="one-time-code"
               />
               <Button
-                onClick={handleVerify}
+                onClick={handleVerifyQR}
                 disabled={code.length < 6 || isVerifying}
-                className="w-full h-12 text-lg font-bold bg-[#00AEEF] hover:bg-[#0098D4] text-white"
+                className="w-full h-12 text-lg font-bold bg-[#1D4E89] hover:bg-[#163d6e] text-white"
+              >
+                {isVerifying ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    Verifying...
+                  </>
+                ) : (
+                  "Verify & Enable"
+                )}
+              </Button>
+            </div>
+
+            <div className="mt-4 text-center">
+              <button
+                onClick={() => { setStep("choose"); setCode(""); }}
+                className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Choose different method
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === "email-sent" && (
+          <>
+            <div className="text-center mb-6">
+              <div className="w-14 h-14 bg-[#1D4E89]/10 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Mail className="h-7 w-7 text-[#1D4E89]" />
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900">Check Your Email</h2>
+              <p className="text-sm text-gray-600 mt-2">
+                We sent a 6-digit verification code to <strong>{maskedEmail}</strong>
+              </p>
+            </div>
+
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-gray-700">
+                Enter the 6-digit code from your email
+              </label>
+              <Input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                placeholder="000000"
+                value={code}
+                onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, ""))}
+                className="text-center text-2xl tracking-[0.5em] font-mono h-14"
+                autoFocus
+                autoComplete="one-time-code"
+              />
+              <Button
+                onClick={handleVerifyEmail}
+                disabled={code.length < 6 || isVerifying}
+                className="w-full h-12 text-lg font-bold bg-[#1D4E89] hover:bg-[#163d6e] text-white"
               >
                 {isVerifying ? (
                   <>
@@ -205,13 +362,25 @@ export default function MFASetupPage() {
               </Button>
             </div>
 
-            <div className="mt-4 text-center">
-              <a
-                href="/auth/login"
-                className="text-sm text-gray-500 hover:text-gray-700"
+            <div className="mt-4 flex items-center justify-between">
+              <button
+                onClick={() => { setStep("choose"); setCode(""); }}
+                className="text-sm text-gray-500 hover:text-gray-700 inline-flex items-center gap-1"
               >
-                Back to Sign In
-              </a>
+                <ArrowLeft className="w-4 h-4" />
+                Back
+              </button>
+              <button
+                onClick={handleResendEmail}
+                disabled={emailCooldown > 0 || isSendingEmail}
+                className="text-sm text-[#1D4E89] hover:underline disabled:text-gray-400 disabled:no-underline"
+              >
+                {isSendingEmail
+                  ? "Sending..."
+                  : emailCooldown > 0
+                    ? `Resend in ${emailCooldown}s`
+                    : "Resend code"}
+              </button>
             </div>
           </>
         )}
@@ -261,7 +430,7 @@ export default function MFASetupPage() {
               </Button>
               <Button
                 onClick={handleContinue}
-                className="w-full h-12 text-lg font-bold bg-[#00AEEF] hover:bg-[#0098D4] text-white"
+                className="w-full h-12 text-lg font-bold bg-[#1D4E89] hover:bg-[#163d6e] text-white"
               >
                 Continue to Dashboard
               </Button>
