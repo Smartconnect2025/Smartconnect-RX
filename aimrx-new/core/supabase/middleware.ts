@@ -97,6 +97,29 @@ export async function updateSession(request: NextRequest) {
 
     const isExemptPath = authExemptPaths.some((p) => pathname.startsWith(p));
 
+    if (isExemptPath && (pathname.startsWith("/auth/mfa-setup") || pathname.startsWith("/auth/mfa-verify"))) {
+      const totpVerified = request.cookies.get("totp_verified")?.value === "true";
+      if (!totpVerified) {
+        const hasMfa = !!user.user_metadata?.totp_enabled;
+        const correctPath = hasMfa ? "/auth/mfa-verify" : "/auth/mfa-setup";
+        if (!pathname.startsWith(correctPath)) {
+          const redirectParam = request.nextUrl.searchParams.get("redirect") || "/";
+          const canonicalUrl = new URL(correctPath, request.url);
+          canonicalUrl.searchParams.set("redirect", redirectParam);
+          const canonicalRedirect = NextResponse.redirect(canonicalUrl);
+          for (const cookie of supabaseResponse.cookies.getAll()) {
+            canonicalRedirect.cookies.set(cookie.name, cookie.value);
+          }
+          canonicalRedirect.cookies.set("mfa_method", hasMfa ? "verify" : "setup", {
+            path: "/",
+            maxAge: 600,
+            sameSite: "lax",
+          });
+          return canonicalRedirect;
+        }
+      }
+    }
+
     if (!isExemptPath) {
       if (cached.sessionToken && await isSessionExpired(cached.sessionToken)) {
         await supabase.auth.signOut();
@@ -113,24 +136,24 @@ export async function updateSession(request: NextRequest) {
       const totpVerified = request.cookies.get("totp_verified")?.value === "true";
 
       if (!totpVerified) {
-        const mfaPending = request.cookies.get("mfa_pending")?.value === "true";
-        if (mfaPending) {
-          const verifyUrl = new URL("/auth/mfa-setup", request.url);
-          verifyUrl.searchParams.set("redirect", pathname);
-          const mfaRedirect = NextResponse.redirect(verifyUrl);
-          for (const cookie of supabaseResponse.cookies.getAll()) {
-            mfaRedirect.cookies.set(cookie.name, cookie.value);
-          }
-          return mfaRedirect;
+        let mfaMethod = request.cookies.get("mfa_method")?.value;
+        if (!mfaMethod || (mfaMethod !== "verify" && mfaMethod !== "setup")) {
+          const hasMfa = !!user.user_metadata?.totp_enabled;
+          mfaMethod = hasMfa ? "verify" : "setup";
         }
-
-        const setupUrl = new URL("/auth/mfa-setup", request.url);
-        setupUrl.searchParams.set("redirect", pathname);
-        const setupRedirect = NextResponse.redirect(setupUrl);
+        const mfaTarget = mfaMethod === "verify" ? "/auth/mfa-verify" : "/auth/mfa-setup";
+        const mfaUrl = new URL(mfaTarget, request.url);
+        mfaUrl.searchParams.set("redirect", pathname);
+        const mfaRedirect = NextResponse.redirect(mfaUrl);
         for (const cookie of supabaseResponse.cookies.getAll()) {
-          setupRedirect.cookies.set(cookie.name, cookie.value);
+          mfaRedirect.cookies.set(cookie.name, cookie.value);
         }
-        return setupRedirect;
+        mfaRedirect.cookies.set("mfa_method", mfaMethod, {
+          path: "/",
+          maxAge: 600,
+          sameSite: "lax",
+        });
+        return mfaRedirect;
       } else if (!cached.sessionToken) {
         await setSessionStarted(supabaseResponse);
       }

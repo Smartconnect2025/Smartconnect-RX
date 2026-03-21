@@ -117,7 +117,13 @@ export default function LoginPage() {
       }
 
       document.cookie = "mfa_pending=true;path=/;max-age=600;samesite=lax";
-      window.location.href = "/auth/mfa-setup?redirect=" + encodeURIComponent(targetUrl);
+      const hasMfaEnabled = data.user.user_metadata?.totp_enabled === true;
+      document.cookie = `mfa_method=${hasMfaEnabled ? "verify" : "setup"};path=/;max-age=600;samesite=lax`;
+      if (hasMfaEnabled) {
+        window.location.href = "/auth/mfa-verify?redirect=" + encodeURIComponent(targetUrl);
+      } else {
+        window.location.href = "/auth/mfa-setup?redirect=" + encodeURIComponent(targetUrl);
+      }
     } catch (error: unknown) {
       toast.error(
         error instanceof Error ? error.message : "An unknown error occurred",
