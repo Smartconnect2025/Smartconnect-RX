@@ -1,9 +1,13 @@
-import { createAdminClient } from "@core/database/client";
+import { Pool } from "pg";
 import {
   encryptApiKey,
   decryptApiKey,
   isEncrypted,
 } from "@/core/security/encryption";
+
+function getPool() {
+  return new Pool({ connectionString: process.env.DATABASE_URL });
+}
 
 export interface PharmacyPaymentConfigInput {
   pharmacyId: string;
@@ -36,162 +40,177 @@ export interface DecryptedPaymentConfig {
 export async function getActivePaymentConfig(
   pharmacyId: string,
 ): Promise<DecryptedPaymentConfig | null> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from("pharmacy_payment_configs")
-    .select("*")
-    .eq("pharmacy_id", pharmacyId)
-    .eq("is_active", true)
-    .single();
-
-  if (error || !data) return null;
-
-  return decryptConfig(data);
+  const pool = getPool();
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM pharmacy_payment_configs WHERE pharmacy_id = $1 AND is_active = true LIMIT 1",
+      [pharmacyId]
+    );
+    if (!rows[0]) return null;
+    return decryptConfig(rows[0]);
+  } finally {
+    await pool.end();
+  }
 }
 
 export async function getPaymentConfigById(
   configId: string,
 ): Promise<DecryptedPaymentConfig | null> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from("pharmacy_payment_configs")
-    .select("*")
-    .eq("id", configId)
-    .single();
-
-  if (error || !data) return null;
-
-  return decryptConfig(data);
+  const pool = getPool();
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM pharmacy_payment_configs WHERE id = $1 LIMIT 1",
+      [configId]
+    );
+    if (!rows[0]) return null;
+    return decryptConfig(rows[0]);
+  } finally {
+    await pool.end();
+  }
 }
 
 export async function getPaymentConfigsForPharmacy(
   pharmacyId: string,
 ): Promise<DecryptedPaymentConfig[]> {
-  const supabase = createAdminClient();
-
-  const { data, error } = await supabase
-    .from("pharmacy_payment_configs")
-    .select("*")
-    .eq("pharmacy_id", pharmacyId)
-    .order("created_at", { ascending: false });
-
-  if (error || !data) return [];
-
-  return data.map(decryptConfig);
+  const pool = getPool();
+  try {
+    const { rows } = await pool.query(
+      "SELECT * FROM pharmacy_payment_configs WHERE pharmacy_id = $1 ORDER BY created_at DESC",
+      [pharmacyId]
+    );
+    return rows.map(decryptConfig);
+  } finally {
+    await pool.end();
+  }
 }
 
 export async function upsertPaymentConfig(
   input: PharmacyPaymentConfigInput,
 ): Promise<{ success: boolean; configId?: string; error?: string }> {
-  const supabase = createAdminClient();
+  const pool = getPool();
+  try {
+    const stripeSecretEnc = input.stripeSecretKey ? encryptApiKey(input.stripeSecretKey) : null;
+    const stripePubKey = input.stripePublishableKey || null;
+    const stripeWebhookEnc = input.stripeWebhookSecret ? encryptApiKey(input.stripeWebhookSecret) : null;
+    const authnetLoginEnc = input.authnetApiLoginId ? encryptApiKey(input.authnetApiLoginId) : null;
+    const authnetTxnEnc = input.authnetTransactionKey ? encryptApiKey(input.authnetTransactionKey) : null;
+    const authnetSigEnc = input.authnetSignatureKey ? encryptApiKey(input.authnetSignatureKey) : null;
 
-  const updateData: Record<string, unknown> = {
-    pharmacy_id: input.pharmacyId,
-    gateway: input.gateway,
-    is_active: true,
-    environment: input.environment || "sandbox",
-    label: input.label || null,
-    updated_at: new Date().toISOString(),
-  };
+    const { rows: existing } = await pool.query(
+      "SELECT id FROM pharmacy_payment_configs WHERE pharmacy_id = $1 AND gateway = $2 LIMIT 1",
+      [input.pharmacyId, input.gateway]
+    );
 
-  if (input.gateway === "stripe") {
-    if (input.stripeSecretKey) {
-      updateData.stripe_secret_key_encrypted = encryptApiKey(input.stripeSecretKey);
+    let configId: string;
+
+    if (existing[0]) {
+      configId = existing[0].id;
+      const setClauses: string[] = [
+        "is_active = true",
+        "environment = $1",
+        "label = $2",
+        "updated_at = NOW()",
+      ];
+      const params: (string | null)[] = [
+        input.environment || "sandbox",
+        input.label || null,
+      ];
+
+      if (input.gateway === "stripe") {
+        if (stripeSecretEnc) { setClauses.push(`stripe_secret_key_encrypted = $${params.length + 1}`); params.push(stripeSecretEnc); }
+        if (stripePubKey) { setClauses.push(`stripe_publishable_key = $${params.length + 1}`); params.push(stripePubKey); }
+        if (stripeWebhookEnc) { setClauses.push(`stripe_webhook_secret_encrypted = $${params.length + 1}`); params.push(stripeWebhookEnc); }
+        setClauses.push(`authnet_api_login_id_encrypted = NULL`);
+        setClauses.push(`authnet_transaction_key_encrypted = NULL`);
+        setClauses.push(`authnet_signature_key_encrypted = NULL`);
+      } else {
+        if (authnetLoginEnc) { setClauses.push(`authnet_api_login_id_encrypted = $${params.length + 1}`); params.push(authnetLoginEnc); }
+        if (authnetTxnEnc) { setClauses.push(`authnet_transaction_key_encrypted = $${params.length + 1}`); params.push(authnetTxnEnc); }
+        if (authnetSigEnc) { setClauses.push(`authnet_signature_key_encrypted = $${params.length + 1}`); params.push(authnetSigEnc); }
+        setClauses.push(`stripe_secret_key_encrypted = NULL`);
+        setClauses.push(`stripe_publishable_key = NULL`);
+        setClauses.push(`stripe_webhook_secret_encrypted = NULL`);
+      }
+
+      params.push(configId);
+      await pool.query(
+        `UPDATE pharmacy_payment_configs SET ${setClauses.join(", ")} WHERE id = $${params.length}`,
+        params
+      );
+
+      await pool.query(
+        "UPDATE pharmacy_payment_configs SET is_active = false, updated_at = NOW() WHERE pharmacy_id = $1 AND id != $2",
+        [input.pharmacyId, configId]
+      );
+    } else {
+      const { rows: inserted } = await pool.query(
+        `INSERT INTO pharmacy_payment_configs
+         (pharmacy_id, gateway, is_active, environment, label,
+          stripe_secret_key_encrypted, stripe_publishable_key, stripe_webhook_secret_encrypted,
+          authnet_api_login_id_encrypted, authnet_transaction_key_encrypted, authnet_signature_key_encrypted)
+         VALUES ($1, $2, true, $3, $4, $5, $6, $7, $8, $9, $10)
+         RETURNING id`,
+        [
+          input.pharmacyId,
+          input.gateway,
+          input.environment || "sandbox",
+          input.label || null,
+          input.gateway === "stripe" ? stripeSecretEnc : null,
+          input.gateway === "stripe" ? stripePubKey : null,
+          input.gateway === "stripe" ? stripeWebhookEnc : null,
+          input.gateway === "authorizenet" ? authnetLoginEnc : null,
+          input.gateway === "authorizenet" ? authnetTxnEnc : null,
+          input.gateway === "authorizenet" ? authnetSigEnc : null,
+        ]
+      );
+      configId = inserted[0].id;
+
+      await pool.query(
+        "UPDATE pharmacy_payment_configs SET is_active = false, updated_at = NOW() WHERE pharmacy_id = $1 AND id != $2",
+        [input.pharmacyId, configId]
+      );
     }
-    if (input.stripePublishableKey) {
-      updateData.stripe_publishable_key = input.stripePublishableKey;
-    }
-    if (input.stripeWebhookSecret) {
-      updateData.stripe_webhook_secret_encrypted = encryptApiKey(input.stripeWebhookSecret);
-    }
-    updateData.authnet_api_login_id_encrypted = null;
-    updateData.authnet_transaction_key_encrypted = null;
-    updateData.authnet_signature_key_encrypted = null;
-  } else {
-    if (input.authnetApiLoginId) {
-      updateData.authnet_api_login_id_encrypted = encryptApiKey(input.authnetApiLoginId);
-    }
-    if (input.authnetTransactionKey) {
-      updateData.authnet_transaction_key_encrypted = encryptApiKey(input.authnetTransactionKey);
-    }
-    if (input.authnetSignatureKey) {
-      updateData.authnet_signature_key_encrypted = encryptApiKey(input.authnetSignatureKey);
-    }
-    updateData.stripe_secret_key_encrypted = null;
-    updateData.stripe_publishable_key = null;
-    updateData.stripe_webhook_secret_encrypted = null;
-  }
 
-  const { data: existing } = await supabase
-    .from("pharmacy_payment_configs")
-    .select("id")
-    .eq("pharmacy_id", input.pharmacyId)
-    .eq("gateway", input.gateway)
-    .single();
-
-  if (existing) {
-    const { error } = await supabase
-      .from("pharmacy_payment_configs")
-      .update(updateData)
-      .eq("id", existing.id);
-
-    if (error) return { success: false, error: error.message };
-
-    await supabase
-      .from("pharmacy_payment_configs")
-      .update({ is_active: false })
-      .eq("pharmacy_id", input.pharmacyId)
-      .neq("id", existing.id);
-
-    return { success: true, configId: existing.id };
-  } else {
-    const { data: newConfig, error } = await supabase
-      .from("pharmacy_payment_configs")
-      .insert(updateData)
-      .select("id")
-      .single();
-
-    if (error) return { success: false, error: error.message };
-
-    await supabase
-      .from("pharmacy_payment_configs")
-      .update({ is_active: false })
-      .eq("pharmacy_id", input.pharmacyId)
-      .neq("id", newConfig.id);
-
-    return { success: true, configId: newConfig.id };
+    return { success: true, configId };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    await pool.end();
   }
 }
 
 export async function deactivatePaymentConfig(
   configId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = createAdminClient();
-
-  const { error } = await supabase
-    .from("pharmacy_payment_configs")
-    .update({ is_active: false, updated_at: new Date().toISOString() })
-    .eq("id", configId);
-
-  if (error) return { success: false, error: error.message };
-  return { success: true };
+  const pool = getPool();
+  try {
+    await pool.query(
+      "UPDATE pharmacy_payment_configs SET is_active = false, updated_at = NOW() WHERE id = $1",
+      [configId]
+    );
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    await pool.end();
+  }
 }
 
 export async function deactivateAllGatewaysForPharmacy(
   pharmacyId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const supabase = createAdminClient();
-
-  const { error } = await supabase
-    .from("pharmacy_payment_configs")
-    .update({ is_active: false, updated_at: new Date().toISOString() })
-    .eq("pharmacy_id", pharmacyId)
-    .eq("is_active", true);
-
-  if (error) return { success: false, error: error.message };
-  return { success: true };
+  const pool = getPool();
+  try {
+    await pool.query(
+      "UPDATE pharmacy_payment_configs SET is_active = false, updated_at = NOW() WHERE pharmacy_id = $1 AND is_active = true",
+      [pharmacyId]
+    );
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : String(err) };
+  } finally {
+    await pool.end();
+  }
 }
 
 function decryptConfig(raw: Record<string, unknown>): DecryptedPaymentConfig {
