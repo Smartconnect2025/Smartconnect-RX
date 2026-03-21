@@ -1,0 +1,120 @@
+Filter events31
+Deploy live for 7669f57: Merge: CRITICAL FIX - auto-retry pharmacy submission on every code path
+March 21, 2026 at 1:07 AM
+Deploy started for 7669f57: Merge: CRITICAL FIX - auto-retry pharmacy submission on every code path
+Environment updated
+March 21, 2026 at 1:03 AM
+Deploy live for 7669f57: Merge: CRITICAL FIX - auto-retry pharmacy submission on every code path
+March 20, 2026 at 8:29 PM
+Rollback
+Deploy started for 7669f57: Merge: CRITICAL FIX - auto-retry pharmacy submission on every code path
+Manually triggered by you via Dashboard
+March 20, 2026 at 8:25 PM
+Deploy live for 7669f57: Merge: CRITICAL FIX - auto-retry pharmacy submission on every code path
+March 20, 2026 at 8:25 PM
+Rollback
+Deploy started for 7669f57: Merge: CRITICAL FIX - auto-retry pharmacy submission on every code path
+New commit via Auto-Deploy
+March 20, 2026 at 8:20 PM
+Deploy live for 7aa3ee3: Merge: architect fixes - tracker status + provider ownership check
+March 20, 2026 at 8:20 PM
+Rollback
+Deploy started for 7aa3ee3: Merge: architect fixes - tracker status + provider ownership check
+New commit via Auto-Deploy
+March 20, 2026 at 8:15 PM
+Deploy live for bbc48ed: Merge: admin override submit + status display fix
+March 20, 2026 at 8:15 PM
+Rollback
+Deploy started for bbc48ed: Merge: admin override submit + status display fix
+New commit via Auto-Deploy
+March 20, 2026 at 8:10 PM
+Deploy live for df126b5: Merge: admin Submit to Pharmacy button for stuck orders
+March 20, 2026 at 8:10 PM
+Rollback
+Deploy started for df126b5: Merge: admin Submit to Pharmacy button for stuck orders
+New commit via Auto-Deploy
+March 20, 2026 at 8:05 PM
+Deploy live for 75e84dd: Merge: final architect fixes — poll counter + email auth key
+March 20, 2026 at 7:54 PM
+Rollback
+Deploy started for 75e84dd: Merge: final architect fixes — poll counter + email auth key
+Manually triggered by you via Dashboard
+March 20, 2026 at 7:50 PM
+Deploy live for 75e84dd: Merge: final architect fixes — poll counter + email auth key
+March 20, 2026 at 7:50 PM
+Rollback
+Deploy started for 75e84dd: Merge: final architect fixes — poll counter + email auth key
+New commit via Auto-Deploy
+March 20, 2026 at 7:45 PM
+Deploy live for 839d7bc: Merge: SSR searchParams fix for payment success page
+March 20, 2026 at 7:45 PM
+Rollback
+Deploy started for 839d7bc: Merge: SSR searchParams fix for payment success page
+New commit via Auto-Deploy
+March 20, 2026 at 7:40 PM
+Deploy live for f1cc989: Merge: full architect review fixes — robust Authnet parsing, retry verification, loading fix
+March 20, 2026 at 7:40 PM
+Rollback
+Deploy started for f1cc989: Merge: full architect review fixes — robust Authnet parsing, retry verification, loading fix
+New commit via Auto-Deploy
+March 20, 2026 at 7:35 PM
+Deploy live for 38d17cd: Merge main into production: architect-reviewed payment verification fixes Fixes: proper Authorize.net batch lookup, strict amount validation, no false success on DB errors, polling stability.
+March 20, 2026 at 7:33 PM
+Rollback
+Deploy started for 38d17cd: Merge main into production: architect-reviewed payment verification fixes Fixes: proper Authorize.net batch lookup, strict amount validation, no false success on DB errors, polling stability.
+New commit via Auto-Deploy
+March 20, 2026 at 7:29 PM
+Deploy live for 2c58b0a: Merge main into production: payment verification fix Critical fix: payment-link orders now auto-verify with Authorize.net instead of depending on broken webhook.
+March 20, 2026 at 7:27 PM
+Rollback
+Deploy started for 2c58b0a: Merge main into production: payment verification fix Critical fix: payment-link orders now auto-verify with Authorize.net instead of depending on broken webhook.
+New commit via Auto-Deploy
+March 20, 2026 at 7:23 PM
+Deploy live for de8c53a: Merge main into production: React #310 fix + prescription flow hardening Includes: - Fix React Error #310 on step3 (hook ordering violation) - safeString() defensive rendering on all dynamic values - try/catch on all JSON.parse calls across step2, step3, success page - Array.isArray guards on oversightFees - Memoized supabase clients (useMemo) - Session data shape validation in step2 - Safe parseFloat on patientPrice - Patient load error state in step1
+March 19, 2026 at 6:03 PM
+Rollback
+Deploy started for de8c53a: Merge main into production: React #310 fix + prescription flow hardening Includes: - Fix React Error #310 on step3 (hook ordering violation) - safeString() defensive rendering on all dynamic values - try/catch on all JSON.parse calls across step2, step3, success page - Array.isArray guards on oversightFees - Memoized supabase clients (useMemo) - Session data shape validation in step2 - Safe parseFloat on patientPrice - Patient load error state in step1
+New commit via Auto-Deploy
+March 19, 2026 at 5:59 PM
+Deploy live for 157f914: Merge main: rename bulk upload button
+March 19, 2026 at 5:51 PM
+Rollback
+Deploy started for 157f914: Merge main: rename bulk upload button
+Manually triggered by you via Dashboard
+March 19, 2026 at 5:44 PM
+Deploy live for 157f914: Merge main: rename bulk upload button
+March 19, 2026 at 5:30 PM
+Rollback
+Deploy started for 157f914: Merge main: rename bulk upload button
+Manually triggered by you via Dashboard
+March 19, 2026 at 5:26 PM
+Deploy live for 157f914: Merge main: rename bulk upload button
+March 19, 2026 at 12:54 AM
+Rollback
+Deploy started for 157f914: Merge main: rename bulk upload button
+Manually triggered by you via Dashboard
+March 19, 2026 at 12:45 AM
+Deploy live for 157f914: Merge main: rename bulk upload button
+March 19, 2026 at 12:44 AM
+Rollback
+Deploy started for 157f914: Merge main: rename bulk upload button
+Environment updated
+March 19, 2026 at 12:39 AM
+Deploy live for 157f914: Merge main: rename bulk upload button
+March 19, 2026 at 12:39 AM
+Rollback
+Deploy started for 157f914: Merge main: rename bulk upload button
+Environment updated
+March 19, 2026 at 12:35 AM
+Deploy live for 157f914: Merge main: rename bulk upload button
+March 18, 2026 at 11:34 PM
+Rollback
+Deploy started for 157f914: Merge main: rename bulk upload button
+Environment updated
+March 18, 2026 at 11:28 PM
+Deploy live for 157f914: Merge main: rename bulk upload button
+March 18, 2026 at 5:19 AM
+Rollback
+Deploy started for 157f914: Merge main: rename bulk upload button
+Manually triggered by you via Dashboard
+March 18, 2026 at 5:14 AM
