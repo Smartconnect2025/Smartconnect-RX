@@ -37,6 +37,19 @@ export async function POST(request: NextRequest) {
 
     const admin = createAdminClient();
 
+    const { data: userData } = await admin.auth.admin.getUserById(user.id);
+    const meta = userData?.user?.user_metadata || {};
+    if (!meta.totp_enabled) {
+      await admin.auth.admin.updateUserById(user.id, {
+        user_metadata: {
+          ...meta,
+          totp_enabled: true,
+          mfa_method: "email",
+          totp_verified_at: new Date().toISOString(),
+        },
+      });
+    }
+
     const { data: roleData } = await admin
       .from("user_roles")
       .select("role")

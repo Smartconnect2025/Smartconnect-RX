@@ -23,6 +23,7 @@ export async function GET() {
     return NextResponse.json({
       success: true,
       mfaEnabled: !!meta?.totp_enabled,
+      mfaMethod: meta?.mfa_method || (meta?.totp_secret ? "totp" : null),
       hasSecret: !!meta?.totp_secret,
       verifiedAt: meta?.totp_verified_at || null,
     });

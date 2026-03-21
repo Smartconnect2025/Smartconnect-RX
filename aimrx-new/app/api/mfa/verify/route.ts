@@ -32,6 +32,27 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = createAdminClient();
+
+    const MFA_MAX_ATTEMPTS = 5;
+    const MFA_LOCKOUT_MINUTES = 15;
+
+    const { data: lockoutRecord } = await admin
+      .from("mfa_verification_attempts")
+      .select("locked_until, failed_attempts")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (lockoutRecord?.locked_until) {
+      const lockedUntil = new Date(lockoutRecord.locked_until);
+      if (lockedUntil > new Date()) {
+        const minutesLeft = Math.ceil((lockedUntil.getTime() - Date.now()) / 60000);
+        return NextResponse.json(
+          { success: false, error: `Too many failed attempts. Please wait ${minutesLeft} minute${minutesLeft === 1 ? "" : "s"} and try again.` },
+          { status: 429 },
+        );
+      }
+    }
+
     const { data: userData } = await admin.auth.admin.getUserById(user.id);
     const meta = userData?.user?.user_metadata;
 
@@ -71,10 +92,41 @@ export async function POST(request: NextRequest) {
     }
 
     if (!isValid) {
+      const currentAttempts = (lockoutRecord?.failed_attempts || 0) + 1;
+      const updateData: Record<string, unknown> = {
+        user_id: user.id,
+        failed_attempts: currentAttempts,
+        last_failed_at: new Date().toISOString(),
+      };
+      if (currentAttempts >= MFA_MAX_ATTEMPTS) {
+        const lockUntil = new Date();
+        lockUntil.setMinutes(lockUntil.getMinutes() + MFA_LOCKOUT_MINUTES);
+        updateData.locked_until = lockUntil.toISOString();
+      }
+      if (lockoutRecord) {
+        await admin.from("mfa_verification_attempts").update(updateData).eq("user_id", user.id);
+      } else {
+        await admin.from("mfa_verification_attempts").insert(updateData);
+      }
+      const remainingAttempts = MFA_MAX_ATTEMPTS - currentAttempts;
+      if (remainingAttempts <= 0) {
+        return NextResponse.json(
+          { success: false, error: `Too many failed attempts. Please wait ${MFA_LOCKOUT_MINUTES} minutes and try again.` },
+          { status: 429 },
+        );
+      }
       return NextResponse.json(
-        { success: false, error: "Invalid code. Try again." },
+        { success: false, error: `Invalid code. ${remainingAttempts} attempt${remainingAttempts === 1 ? "" : "s"} remaining.` },
         { status: 401 },
       );
+    }
+
+    if (lockoutRecord) {
+      await admin.from("mfa_verification_attempts").update({
+        failed_attempts: 0,
+        locked_until: null,
+        last_failed_at: null,
+      }).eq("user_id", user.id);
     }
 
     const { data: roleData } = await admin
