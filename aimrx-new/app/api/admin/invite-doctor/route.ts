@@ -128,7 +128,11 @@ export async function POST(request: NextRequest) {
     if (providerData) {
       let pharmacyIdToLink: string | null = null;
 
-      if (referringPharmacyId) {
+      const inviterScope = await getPharmacyAdminScope(user.id);
+
+      if (inviterScope.isPharmacyAdmin && inviterScope.pharmacyId) {
+        pharmacyIdToLink = inviterScope.pharmacyId;
+      } else if (referringPharmacyId) {
         const { data: refPharmacy } = await supabaseAdmin
           .from("pharmacies")
           .select("id")
@@ -137,12 +141,6 @@ export async function POST(request: NextRequest) {
           .single();
         if (refPharmacy) {
           pharmacyIdToLink = refPharmacy.id;
-        }
-      }
-      if (!pharmacyIdToLink) {
-        const inviterScope = await getPharmacyAdminScope(user.id);
-        if (inviterScope.isPharmacyAdmin && inviterScope.pharmacyId) {
-          pharmacyIdToLink = inviterScope.pharmacyId;
         }
       }
 

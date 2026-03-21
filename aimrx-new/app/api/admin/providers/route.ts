@@ -56,7 +56,7 @@ export async function GET() {
       const { data: providers, error } = await supabase
         .from("providers")
         .select("*")
-        .in("id", linkedProviderIds);
+        .in("user_id", linkedProviderIds);
 
       if (error) {
         return NextResponse.json({ error: "Failed to fetch providers" }, { status: 500 });

@@ -324,8 +324,10 @@ export default function PharmacyReportsPage() {
   useEffect(() => {
     fetchPharmacies();
     fetchProviders();
-    fetchGroups();
-  }, []);
+    if (!isPharmacyAdmin) {
+      fetchGroups();
+    }
+  }, [isPharmacyAdmin]);
 
   useEffect(() => {
     fetchReports();
@@ -657,7 +659,7 @@ export default function PharmacyReportsPage() {
                   </div>
                 )}
 
-                {viewMode === "by-provider" && (
+                {viewMode === "by-provider" && !isPharmacyAdmin && (
                   <div className="space-y-1.5">
                     <Label htmlFor="group" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Group</Label>
                     <Select value={selectedGroup} onValueChange={setSelectedGroup}>
@@ -676,7 +678,7 @@ export default function PharmacyReportsPage() {
                   </div>
                 )}
 
-                {viewMode === "by-provider" && (
+                {viewMode === "by-provider" && !isPharmacyAdmin && (
                   <div className="space-y-1.5">
                     <Label htmlFor="platformManager" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Platform Manager</Label>
                     <Select value={selectedPlatformManager} onValueChange={setSelectedPlatformManager}>

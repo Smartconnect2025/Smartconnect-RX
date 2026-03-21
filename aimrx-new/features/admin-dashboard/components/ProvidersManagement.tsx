@@ -32,6 +32,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { createClient } from "@core/supabase";
+import { useUser } from "@core/auth";
 
 interface GroupOption {
   id: string;
@@ -41,6 +43,8 @@ interface GroupOption {
 
 export const ProvidersManagement: React.FC = () => {
   const { guardAction } = useDemoGuard();
+  const { user } = useUser();
+  const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRevalidating, setIsRevalidating] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -86,9 +90,25 @@ export const ProvidersManagement: React.FC = () => {
   };
 
   useEffect(() => {
+    const checkScope = async () => {
+      if (!user?.id) return;
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("pharmacy_admins")
+        .select("pharmacy_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+      setIsPharmacyAdmin(!!data);
+    };
+    checkScope();
+  }, [user?.id]);
+
+  useEffect(() => {
     fetchProviders();
-    fetchGroups();
-  }, []);
+    if (!isPharmacyAdmin) {
+      fetchGroups();
+    }
+  }, [isPharmacyAdmin]);
 
   const filteredProviders = providers.filter((provider) => {
     const fullName =
@@ -171,9 +191,11 @@ export const ProvidersManagement: React.FC = () => {
       <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
         Provider
       </th>
+      {!isPharmacyAdmin && (
       <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
         Group
       </th>
+      )}
       <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
         Contact
       </th>
@@ -231,6 +253,7 @@ export const ProvidersManagement: React.FC = () => {
           </div>
         </div>
       </td>
+      {!isPharmacyAdmin && (
       <td className="p-4 align-middle">
         {provider.group_name ? (
           <div className="flex flex-col gap-0.5">
@@ -267,6 +290,7 @@ export const ProvidersManagement: React.FC = () => {
           </Button>
         )}
       </td>
+      )}
       <td className="p-4 align-middle">
         {provider.phone_number ? (
           <span className="text-sm">{provider.phone_number}</span>
@@ -480,6 +504,7 @@ export const ProvidersManagement: React.FC = () => {
               />
             </div>
 
+            {!isPharmacyAdmin && (
             <Select value={groupFilter} onValueChange={setGroupFilter}>
               <SelectTrigger className="w-[200px] h-11 border-gray-200 bg-white" data-testid="select-group-filter">
                 <SelectValue placeholder="Filter by group" />
@@ -494,6 +519,7 @@ export const ProvidersManagement: React.FC = () => {
                 ))}
               </SelectContent>
             </Select>
+            )}
 
             <Button
               variant="outline"
