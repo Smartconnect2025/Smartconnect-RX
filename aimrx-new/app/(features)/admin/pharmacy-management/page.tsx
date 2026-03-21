@@ -1882,6 +1882,14 @@ export default function PharmacyManagementPage() {
                           toast.error("Please select a Pharmacy System");
                           return;
                         }
+                        if (!pharmacyForm.store_id.trim()) {
+                          toast.error("Store ID is required");
+                          return;
+                        }
+                        if (!editingPharmacy && !pharmacyForm.api_key.trim()) {
+                          toast.error("API Key is required");
+                          return;
+                        }
                         setWizardStep(3);
                       }}
                     >
