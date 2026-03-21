@@ -3,7 +3,7 @@ import { createServerClient } from "@core/supabase/server";
 import { createAdminClient } from "@core/database/client";
 import { ensureEncrypted, decryptApiKey } from "@/core/security/encryption";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
-import { Pool } from "pg";
+
 
 /**
  * Update a pharmacy
@@ -14,6 +14,7 @@ export async function PUT(
   { params }: { params: { id: string } }
 ) {
   const supabase = await createServerClient();
+  const supabaseAdmin = createAdminClient();
 
   try {
     const {
@@ -111,13 +112,11 @@ export async function PUT(
 
     if (system_type && store_id) {
       try {
-        const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-
-        const { rows: existingRows } = await pool.query(
-          "SELECT id, api_key_encrypted FROM pharmacy_backends WHERE pharmacy_id = $1 LIMIT 1",
-          [pharmacyId]
-        );
-        const existingBackend = existingRows[0] || null;
+        const { data: existingBackend } = await supabaseAdmin
+          .from("pharmacy_backends")
+          .select("id, api_key_encrypted")
+          .eq("pharmacy_id", pharmacyId)
+          .single();
 
         let encryptedKey: string | null = null;
         if (api_key || (shared_secret && system_type === "PioneerRx")) {
@@ -145,38 +144,41 @@ export async function PUT(
         }
 
         if (existingBackend) {
-          const setClauses = [
-            "system_type = $1::pharmacy_system_type",
-            "api_url = $2",
-            "store_id = $3",
-            "location_id = $4",
-            "updated_at = NOW()",
-          ];
-          const params: (string | null)[] = [system_type, api_url || null, store_id, location_id || null];
+          const updateData: Record<string, unknown> = {
+            system_type,
+            api_url: api_url || null,
+            store_id,
+            location_id: location_id || null,
+            updated_at: new Date().toISOString(),
+          };
           if (encryptedKey) {
-            setClauses.push(`api_key_encrypted = $${params.length + 1}`);
-            params.push(encryptedKey);
+            updateData.api_key_encrypted = encryptedKey;
           }
-          params.push(pharmacyId);
-          await pool.query(
-            `UPDATE pharmacy_backends SET ${setClauses.join(", ")} WHERE pharmacy_id = $${params.length}`,
-            params
-          );
+          const { error: updateBeError } = await supabaseAdmin
+            .from("pharmacy_backends")
+            .update(updateData)
+            .eq("pharmacy_id", pharmacyId);
+          if (updateBeError) throw new Error(updateBeError.message);
         } else {
           if (!api_key) {
-            await pool.end();
             return NextResponse.json(
               { success: false, error: "API key is required to create backend integration" },
               { status: 400 }
             );
           }
-          await pool.query(
-            `INSERT INTO pharmacy_backends (pharmacy_id, system_type, api_url, api_key_encrypted, store_id, location_id, is_active)
-             VALUES ($1, $2::pharmacy_system_type, $3, $4, $5, $6, true)`,
-            [pharmacyId, system_type, api_url || null, encryptedKey || ensureEncrypted(api_key), store_id, location_id || null]
-          );
+          const { error: insertBeError } = await supabaseAdmin
+            .from("pharmacy_backends")
+            .insert({
+              pharmacy_id: pharmacyId,
+              system_type,
+              api_url: api_url || null,
+              api_key_encrypted: encryptedKey || ensureEncrypted(api_key),
+              store_id,
+              location_id: location_id || null,
+              is_active: true,
+            });
+          if (insertBeError) throw new Error(insertBeError.message);
         }
-        await pool.end();
       } catch (err) {
         console.error("Error updating pharmacy backend:", err);
         return NextResponse.json(

@@ -3,7 +3,7 @@ import { createServerClient } from "@core/supabase/server";
 import { createAdminClient } from "@core/database/client";
 import { encryptApiKey } from "@/core/security/encryption";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
-import { Pool } from "pg";
+
 
 export async function POST(request: Request) {
   const supabase = await createServerClient();
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
         name,
         slug: slug.toLowerCase().trim(),
         logo_url: logo_url || null,
-        primary_color: primary_color || "#00AEEF",
+        primary_color: primary_color || "#1D4E89",
         tagline: tagline || "Your Trusted Pharmacy",
         address: address || null,
         npi: npi || null,
@@ -99,13 +99,21 @@ export async function POST(request: Request) {
 
     let backendError: Error | null = null;
     try {
-      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-      await pool.query(
-        `INSERT INTO pharmacy_backends (pharmacy_id, system_type, api_url, api_key_encrypted, store_id, location_id, is_active)
-         VALUES ($1, $2::pharmacy_system_type, $3, $4, $5, $6, true)`,
-        [pharmacy.id, system_type, api_url || null, encryptApiKey(credentialValue), store_id, location_id || null]
-      );
-      await pool.end();
+      const { error: beInsertError } = await supabaseAdmin
+        .from("pharmacy_backends")
+        .insert({
+          pharmacy_id: pharmacy.id,
+          system_type,
+          api_url: api_url || null,
+          api_key_encrypted: encryptApiKey(credentialValue),
+          store_id,
+          location_id: location_id || null,
+          is_active: true,
+        });
+
+      if (beInsertError) {
+        throw new Error(beInsertError.message);
+      }
     } catch (err) {
       backendError = err instanceof Error ? err : new Error(String(err));
     }

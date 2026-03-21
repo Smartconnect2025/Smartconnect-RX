@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
+import { createAdminClient } from "@core/database/client";
 
-/**
- * Get all pharmacy backends with API key info
- * GET /api/admin/pharmacy-backends
- */
 export async function GET() {
   const supabase = await createServerClient();
 
@@ -43,8 +40,9 @@ export async function GET() {
       );
     }
 
-    // Fetch all pharmacy backends with pharmacy info
-    const { data: backends, error } = await supabase
+    const adminClient = createAdminClient();
+
+    const { data: backends, error } = await adminClient
       .from("pharmacy_backends")
       .select(`
         *,

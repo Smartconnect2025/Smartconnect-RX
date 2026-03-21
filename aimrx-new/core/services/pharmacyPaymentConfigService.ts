@@ -1,11 +1,12 @@
-import { Pool } from "pg";
+import { createAdminClient } from "@core/database/client";
 import {
   encryptApiKey,
   decryptApiKey,
   isEncrypted,
 } from "@/core/security/encryption";
+import { Pool } from "pg";
 
-function getPool() {
+function getLocalPool() {
   return new Pool({ connectionString: process.env.DATABASE_URL });
 }
 
@@ -37,57 +38,124 @@ export interface DecryptedPaymentConfig {
   authnetSignatureKey?: string;
 }
 
+async function queryPaymentConfigs(where: string, params: unknown[]): Promise<Record<string, unknown>[]> {
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("pharmacy_payment_configs")
+    .select("*");
+
+  if (!error && data) {
+    return data;
+  }
+
+  if (error?.message?.includes("schema cache")) {
+    const pool = getLocalPool();
+    try {
+      const { rows } = await pool.query(
+        `SELECT * FROM pharmacy_payment_configs WHERE ${where}`,
+        params
+      );
+      return rows;
+    } finally {
+      await pool.end();
+    }
+  }
+
+  return [];
+}
+
 export async function getActivePaymentConfig(
   pharmacyId: string,
 ): Promise<DecryptedPaymentConfig | null> {
-  const pool = getPool();
-  try {
-    const { rows } = await pool.query(
-      "SELECT * FROM pharmacy_payment_configs WHERE pharmacy_id = $1 AND is_active = true LIMIT 1",
-      [pharmacyId]
-    );
-    if (!rows[0]) return null;
-    return decryptConfig(rows[0]);
-  } finally {
-    await pool.end();
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("pharmacy_payment_configs")
+    .select("*")
+    .eq("pharmacy_id", pharmacyId)
+    .eq("is_active", true)
+    .single();
+
+  if (!error && data) return decryptConfig(data);
+
+  if (error?.message?.includes("schema cache")) {
+    const pool = getLocalPool();
+    try {
+      const { rows } = await pool.query(
+        "SELECT * FROM pharmacy_payment_configs WHERE pharmacy_id = $1 AND is_active = true LIMIT 1",
+        [pharmacyId]
+      );
+      if (rows[0]) return decryptConfig(rows[0]);
+    } finally {
+      await pool.end();
+    }
   }
+
+  return null;
 }
 
 export async function getPaymentConfigById(
   configId: string,
 ): Promise<DecryptedPaymentConfig | null> {
-  const pool = getPool();
-  try {
-    const { rows } = await pool.query(
-      "SELECT * FROM pharmacy_payment_configs WHERE id = $1 LIMIT 1",
-      [configId]
-    );
-    if (!rows[0]) return null;
-    return decryptConfig(rows[0]);
-  } finally {
-    await pool.end();
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("pharmacy_payment_configs")
+    .select("*")
+    .eq("id", configId)
+    .single();
+
+  if (!error && data) return decryptConfig(data);
+
+  if (error?.message?.includes("schema cache")) {
+    const pool = getLocalPool();
+    try {
+      const { rows } = await pool.query(
+        "SELECT * FROM pharmacy_payment_configs WHERE id = $1 LIMIT 1",
+        [configId]
+      );
+      if (rows[0]) return decryptConfig(rows[0]);
+    } finally {
+      await pool.end();
+    }
   }
+
+  return null;
 }
 
 export async function getPaymentConfigsForPharmacy(
   pharmacyId: string,
 ): Promise<DecryptedPaymentConfig[]> {
-  const pool = getPool();
-  try {
-    const { rows } = await pool.query(
-      "SELECT * FROM pharmacy_payment_configs WHERE pharmacy_id = $1 ORDER BY created_at DESC",
-      [pharmacyId]
-    );
-    return rows.map(decryptConfig);
-  } finally {
-    await pool.end();
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase
+    .from("pharmacy_payment_configs")
+    .select("*")
+    .eq("pharmacy_id", pharmacyId)
+    .order("created_at", { ascending: false });
+
+  if (!error && data) return data.map(decryptConfig);
+
+  if (error?.message?.includes("schema cache")) {
+    const pool = getLocalPool();
+    try {
+      const { rows } = await pool.query(
+        "SELECT * FROM pharmacy_payment_configs WHERE pharmacy_id = $1 ORDER BY created_at DESC",
+        [pharmacyId]
+      );
+      return rows.map(decryptConfig);
+    } finally {
+      await pool.end();
+    }
   }
+
+  return [];
 }
 
 export async function upsertPaymentConfig(
   input: PharmacyPaymentConfigInput,
 ): Promise<{ success: boolean; configId?: string; error?: string }> {
-  const pool = getPool();
+  const pool = getLocalPool();
   try {
     const stripeSecretEnc = input.stripeSecretKey ? encryptApiKey(input.stripeSecretKey) : null;
     const stripePubKey = input.stripePublishableKey || null;
@@ -182,7 +250,7 @@ export async function upsertPaymentConfig(
 export async function deactivatePaymentConfig(
   configId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const pool = getPool();
+  const pool = getLocalPool();
   try {
     await pool.query(
       "UPDATE pharmacy_payment_configs SET is_active = false, updated_at = NOW() WHERE id = $1",
@@ -199,7 +267,7 @@ export async function deactivatePaymentConfig(
 export async function deactivateAllGatewaysForPharmacy(
   pharmacyId: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const pool = getPool();
+  const pool = getLocalPool();
   try {
     await pool.query(
       "UPDATE pharmacy_payment_configs SET is_active = false, updated_at = NOW() WHERE pharmacy_id = $1 AND is_active = true",

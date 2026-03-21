@@ -199,7 +199,7 @@ export default function PharmacyManagementPage() {
     api_key: "",
     shared_secret: "",
     location_id: "",
-    primary_color: "#00AEEF",
+    primary_color: "#1D4E89",
     tagline: "Your Trusted Pharmacy",
   });
 
@@ -228,7 +228,7 @@ export default function PharmacyManagementPage() {
   const [pharmacyForm, setPharmacyForm] = useState({
     name: "",
     slug: "",
-    primary_color: "#00AEEF",
+    primary_color: "#1D4E89",
     tagline: "Your Trusted Pharmacy",
     logo_url: "",
     phone: "",
@@ -483,7 +483,7 @@ export default function PharmacyManagementPage() {
     setPharmacyForm({
       name: "",
       slug: "",
-      primary_color: "#00AEEF",
+      primary_color: "#1D4E89",
       tagline: "Your Trusted Pharmacy",
       logo_url: "",
       phone: "",
@@ -842,7 +842,7 @@ export default function PharmacyManagementPage() {
       api_key: "",
       shared_secret: "",
       location_id: "",
-      primary_color: "#00AEEF",
+      primary_color: "#1D4E89",
       tagline: "Your Trusted Pharmacy",
     });
 

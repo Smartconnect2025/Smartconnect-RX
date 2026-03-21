@@ -1,12 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
+import { createAdminClient } from "@core/database/client";
 import { isEncrypted, decryptApiKey } from "@core/security/encryption";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
-/**
- * POST /api/admin/pharmacy-backends/decrypt
- * Decrypts an API key for testing/verification purposes (platform admin only)
- */
 export async function POST(request: NextRequest) {
   const supabase = await createServerClient();
 
@@ -53,8 +50,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch the encrypted API key
-    const { data: backend, error: backendError } = await supabase
+    const adminClient = createAdminClient();
+
+    const { data: backend, error: backendError } = await adminClient
       .from("pharmacy_backends")
       .select("api_key_encrypted")
       .eq("id", backendId)
@@ -69,7 +67,6 @@ export async function POST(request: NextRequest) {
 
     const encryptedKey = backend.api_key_encrypted;
 
-    // Check if it's encrypted and decrypt
     let decryptedKey: string;
     let wasEncrypted: boolean;
 
@@ -77,12 +74,10 @@ export async function POST(request: NextRequest) {
       decryptedKey = decryptApiKey(encryptedKey);
       wasEncrypted = true;
     } else {
-      // Not encrypted - return as-is (legacy data)
       decryptedKey = encryptedKey;
       wasEncrypted = false;
     }
 
-    // Log this action for audit purposes
     await supabase.from("system_logs").insert({
       user_id: user.id,
       user_email: user.email || "unknown@example.com",
@@ -92,7 +87,6 @@ export async function POST(request: NextRequest) {
       status: "info",
     });
 
-    // Mask the key for security - only show first 8 and last 4 characters
     const maskedKey =
       decryptedKey.length > 12
         ? `${decryptedKey.substring(0, 8)}...${decryptedKey.substring(decryptedKey.length - 4)}`
