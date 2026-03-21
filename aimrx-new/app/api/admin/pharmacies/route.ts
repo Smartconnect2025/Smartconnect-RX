@@ -1,10 +1,13 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
+import { createAdminClient } from "@core/database/client";
 import { encryptApiKey } from "@/core/security/encryption";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
+import { Pool } from "pg";
 
 export async function POST(request: Request) {
   const supabase = await createServerClient();
+  const supabaseAdmin = await createAdminClient();
 
   try {
     const {
@@ -60,8 +63,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create pharmacy
-    const { data: pharmacy, error: insertError } = await supabase
+    const { data: pharmacy, error: insertError } = await supabaseAdmin
       .from("pharmacies")
       .insert({
         name,
@@ -95,23 +97,22 @@ export async function POST(request: Request) {
       ? `${api_key}|${shared_secret}`
       : api_key;
 
-    // Create pharmacy backend integration
-    const { error: backendError } = await supabase
-      .from("pharmacy_backends")
-      .insert({
-        pharmacy_id: pharmacy.id,
-        system_type,
-        api_url: api_url || null,
-        api_key_encrypted: encryptApiKey(credentialValue),
-        store_id,
-        location_id: location_id || null,
-        is_active: true,
-      });
+    let backendError: Error | null = null;
+    try {
+      const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+      await pool.query(
+        `INSERT INTO pharmacy_backends (pharmacy_id, system_type, api_url, api_key_encrypted, store_id, location_id, is_active)
+         VALUES ($1, $2::pharmacy_system_type, $3, $4, $5, $6, true)`,
+        [pharmacy.id, system_type, api_url || null, encryptApiKey(credentialValue), store_id, location_id || null]
+      );
+      await pool.end();
+    } catch (err) {
+      backendError = err instanceof Error ? err : new Error(String(err));
+    }
 
     if (backendError) {
       console.error("Error creating pharmacy backend:", backendError);
-      // Rollback: delete the pharmacy
-      await supabase.from("pharmacies").delete().eq("id", pharmacy.id);
+      await supabaseAdmin.from("pharmacies").delete().eq("id", pharmacy.id);
 
       return NextResponse.json(
         {

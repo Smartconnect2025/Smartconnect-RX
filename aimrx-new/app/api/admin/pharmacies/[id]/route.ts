@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
+import { createAdminClient } from "@core/database/client";
 import { ensureEncrypted, decryptApiKey } from "@/core/security/encryption";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
+import { Pool } from "pg";
 
 /**
  * Update a pharmacy
@@ -107,100 +109,84 @@ export async function PUT(
       );
     }
 
-    // Update backend integration if provided
     if (system_type && store_id) {
-      // Check if backend exists
-      const { data: existingBackend } = await supabase
-        .from("pharmacy_backends")
-        .select("id")
-        .eq("pharmacy_id", pharmacyId)
-        .single();
+      try {
+        const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-      const backendData: Record<string, unknown> = {
-        system_type,
-        api_url: api_url || null,
-        store_id,
-        location_id: location_id || null,
-      };
+        const { rows: existingRows } = await pool.query(
+          "SELECT id, api_key_encrypted FROM pharmacy_backends WHERE pharmacy_id = $1 LIMIT 1",
+          [pharmacyId]
+        );
+        const existingBackend = existingRows[0] || null;
 
-      if (api_key || (shared_secret && system_type === "PioneerRx")) {
-        if (system_type === "PioneerRx" && existingBackend) {
-          let existingApiKey = "";
-          let existingSecret = "";
-          const { data: backendRow } = await supabase
-            .from("pharmacy_backends")
-            .select("api_key_encrypted")
-            .eq("id", existingBackend.id)
-            .single();
-          if (backendRow?.api_key_encrypted) {
-            const decrypted = decryptApiKey(backendRow.api_key_encrypted);
-            if (decrypted.includes("|")) {
-              [existingApiKey, existingSecret] = decrypted.split("|", 2);
-            } else {
-              existingApiKey = decrypted;
+        let encryptedKey: string | null = null;
+        if (api_key || (shared_secret && system_type === "PioneerRx")) {
+          if (system_type === "PioneerRx" && existingBackend) {
+            let existingApiKey = "";
+            let existingSecret = "";
+            if (existingBackend.api_key_encrypted) {
+              const decrypted = decryptApiKey(existingBackend.api_key_encrypted);
+              if (decrypted.includes("|")) {
+                [existingApiKey, existingSecret] = decrypted.split("|", 2);
+              } else {
+                existingApiKey = decrypted;
+              }
             }
+            const finalApiKey = api_key || existingApiKey;
+            const finalSecret = shared_secret || existingSecret;
+            if (finalApiKey && finalSecret) {
+              encryptedKey = ensureEncrypted(`${finalApiKey}|${finalSecret}`);
+            } else if (finalApiKey) {
+              encryptedKey = ensureEncrypted(finalApiKey);
+            }
+          } else if (api_key) {
+            encryptedKey = ensureEncrypted(api_key);
           }
-          const finalApiKey = api_key || existingApiKey;
-          const finalSecret = shared_secret || existingSecret;
-          if (finalApiKey && finalSecret) {
-            backendData.api_key_encrypted = ensureEncrypted(`${finalApiKey}|${finalSecret}`);
-          } else if (finalApiKey) {
-            backendData.api_key_encrypted = ensureEncrypted(finalApiKey);
+        }
+
+        if (existingBackend) {
+          const setClauses = [
+            "system_type = $1::pharmacy_system_type",
+            "api_url = $2",
+            "store_id = $3",
+            "location_id = $4",
+            "updated_at = NOW()",
+          ];
+          const params: (string | null)[] = [system_type, api_url || null, store_id, location_id || null];
+          if (encryptedKey) {
+            setClauses.push(`api_key_encrypted = $${params.length + 1}`);
+            params.push(encryptedKey);
           }
-        } else if (api_key) {
-          backendData.api_key_encrypted = ensureEncrypted(api_key);
-        }
-      }
-
-      if (existingBackend) {
-        // Update existing backend
-        const { error: backendError } = await supabase
-          .from("pharmacy_backends")
-          .update(backendData)
-          .eq("pharmacy_id", pharmacyId);
-
-        if (backendError) {
-          console.error("Error updating pharmacy backend:", backendError);
-          return NextResponse.json(
-            {
-              success: false,
-              error: "Failed to update pharmacy backend integration",
-              details: backendError.message,
-            },
-            { status: 500 }
+          params.push(pharmacyId);
+          await pool.query(
+            `UPDATE pharmacy_backends SET ${setClauses.join(", ")} WHERE pharmacy_id = $${params.length}`,
+            params
+          );
+        } else {
+          if (!api_key) {
+            await pool.end();
+            return NextResponse.json(
+              { success: false, error: "API key is required to create backend integration" },
+              { status: 400 }
+            );
+          }
+          await pool.query(
+            `INSERT INTO pharmacy_backends (pharmacy_id, system_type, api_url, api_key_encrypted, store_id, location_id, is_active)
+             VALUES ($1, $2::pharmacy_system_type, $3, $4, $5, $6, true)`,
+            [pharmacyId, system_type, api_url || null, encryptedKey || ensureEncrypted(api_key), store_id, location_id || null]
           );
         }
-      } else {
-        // Create new backend (requires API key)
-        if (!api_key) {
-          return NextResponse.json(
-            {
-              success: false,
-              error: "API key is required to create backend integration",
-            },
-            { status: 400 }
-          );
-        }
-
-        const { error: backendError } = await supabase
-          .from("pharmacy_backends")
-          .insert({
-            pharmacy_id: pharmacyId,
-            ...backendData,
-            is_active: true,
-          });
-
-        if (backendError) {
-          console.error("Error creating pharmacy backend:", backendError);
-          return NextResponse.json(
-            {
-              success: false,
-              error: "Failed to create pharmacy backend integration",
-              details: backendError.message,
-            },
-            { status: 500 }
-          );
-        }
+        await pool.end();
+      } catch (err) {
+        console.error("Error updating pharmacy backend:", err);
+        return NextResponse.json(
+          {
+            success: false,
+            error: "Failed to update pharmacy backend integration",
+            details: err instanceof Error ? err.message : String(err),
+          },
+          { status: 500 }
+        );
       }
     }
 
