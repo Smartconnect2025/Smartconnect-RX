@@ -29,12 +29,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const scope = await getPharmacyAdminScope(user.id);
-    if (scope.isPharmacyAdmin) {
-      return NextResponse.json(
-        { error: "This action is restricted to platform administrators" },
-        { status: 403 },
-      );
+    if (userRole !== "super_admin") {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin) {
+        return NextResponse.json(
+          { error: "This action is restricted to platform administrators" },
+          { status: 403 },
+        );
+      }
     }
 
     const body = await request.json();
@@ -103,12 +105,14 @@ export async function GET() {
       );
     }
 
-    const scope = await getPharmacyAdminScope(user.id);
-    if (scope.isPharmacyAdmin) {
-      return NextResponse.json(
-        { error: "This action is restricted to platform administrators" },
-        { status: 403 },
-      );
+    if (userRole !== "super_admin") {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin) {
+        return NextResponse.json(
+          { error: "This action is restricted to platform administrators" },
+          { status: 403 },
+        );
+      }
     }
 
     // Get all users with their roles and profiles

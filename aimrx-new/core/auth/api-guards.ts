@@ -160,14 +160,16 @@ export async function requirePlatformAdmin(): Promise<ApiGuardResult> {
     };
   }
 
-  const scope = await getPharmacyAdminScope(authInfo.user!.id);
-  if (scope.isPharmacyAdmin) {
-    return {
-      success: false,
-      error: "This action is restricted to platform administrators",
-      status: 403,
-      authInfo,
-    };
+  if (authInfo.userRole !== "super_admin") {
+    const scope = await getPharmacyAdminScope(authInfo.user!.id);
+    if (scope.isPharmacyAdmin) {
+      return {
+        success: false,
+        error: "This action is restricted to platform administrators",
+        status: 403,
+        authInfo,
+      };
+    }
   }
 
   return authResult;
