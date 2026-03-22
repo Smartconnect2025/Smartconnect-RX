@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { createClient } from "@core/supabase";
+import { useUser } from "@core/auth";
 import { AdminNavigationTabs } from "@/components/layout/AdminNavigationTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +15,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Plus,
   Pencil,
@@ -43,6 +52,7 @@ interface Category {
   is_active: boolean;
   color: string | null;
   image_url: string | null;
+  pharmacy_id: string | null;
   created_at: string;
   updated_at: string;
   medication_count: number;
@@ -50,6 +60,10 @@ interface Category {
 }
 
 export default function CategoriesPage() {
+  const { userRole } = useUser();
+  const supabase = useMemo(() => createClient(), []);
+  const isSuperAdmin = userRole === "super_admin";
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -60,16 +74,36 @@ export default function CategoriesPage() {
     name: "",
     description: "",
     color: "#1E3A8A",
+    pharmacy_id: "",
   });
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
 
+  const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
+  const [pharmacies, setPharmacies] = useState<{ id: string; name: string }[]>([]);
+
+  const fetchPharmacies = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from("pharmacies")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      setPharmacies(data || []);
+    } catch (error) {
+      console.error("Error fetching pharmacies:", error);
+    }
+  }, [supabase]);
+
   const loadCategories = async () => {
     try {
-      const response = await fetch("/api/admin/categories", {
-        credentials: "include",
-      });
+      const params = new URLSearchParams();
+      if (pharmacyFilter && pharmacyFilter !== "all") {
+        params.set("pharmacyId", pharmacyFilter);
+      }
+      const url = `/api/admin/categories${params.toString() ? `?${params.toString()}` : ""}`;
+      const response = await fetch(url, { credentials: "include" });
       const data = await response.json();
       if (data.categories) {
         setCategories(data.categories);
@@ -82,8 +116,21 @@ export default function CategoriesPage() {
   };
 
   useEffect(() => {
+    if (isSuperAdmin) {
+      fetchPharmacies();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin]);
+
+  useEffect(() => {
     loadCategories();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    loadCategories();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pharmacyFilter]);
 
   const generateSlug = (name: string) => {
     return name
@@ -98,6 +145,11 @@ export default function CategoriesPage() {
       return;
     }
 
+    if (isSuperAdmin && !newCategory.pharmacy_id) {
+      alert("Please select a pharmacy");
+      return;
+    }
+
     try {
       const response = await fetch("/api/admin/categories", {
         method: "POST",
@@ -108,13 +160,14 @@ export default function CategoriesPage() {
           slug: generateSlug(newCategory.name),
           description: newCategory.description.trim() || null,
           color: newCategory.color || null,
+          pharmacy_id: newCategory.pharmacy_id || undefined,
         }),
       });
 
       const result = await response.json();
       if (response.ok) {
         setShowCreateDialog(false);
-        setNewCategory({ name: "", description: "", color: "#1E3A8A" });
+        setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_id: "" });
         await loadCategories();
       } else {
         alert(result.error || "Failed to create category");
@@ -319,6 +372,25 @@ export default function CategoriesPage() {
           </Button>
         </div>
 
+        {isSuperAdmin && (
+          <div className="mb-6 flex items-end gap-4">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="pharmacy-filter" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
+              <Select value={pharmacyFilter} onValueChange={setPharmacyFilter}>
+                <SelectTrigger id="pharmacy-filter" className="w-[280px] h-10 bg-white border-gray-200">
+                  <SelectValue placeholder="All Pharmacies" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pharmacies</SelectItem>
+                  {pharmacies.map((pharmacy) => (
+                    <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
         {isLoading ? (
           <div className="text-center py-16">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-gray-400 mb-3" />
@@ -345,7 +417,6 @@ export default function CategoriesPage() {
                 data-testid={`category-row-${category.id}`}
               >
                 <div className="flex items-center gap-4 p-4">
-                  {/* Reorder arrows */}
                   <div className="flex flex-col gap-0.5 flex-shrink-0">
                     <button
                       onClick={() => handleMoveCategory(category, "up")}
@@ -365,7 +436,6 @@ export default function CategoriesPage() {
                     </button>
                   </div>
 
-                  {/* Image */}
                   <div className="flex-shrink-0 relative group">
                     {category.image_url ? (
                       <>
@@ -402,7 +472,6 @@ export default function CategoriesPage() {
                     )}
                   </div>
 
-                  {/* Category info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       {category.color && (
@@ -443,7 +512,6 @@ export default function CategoriesPage() {
                     </div>
                   </div>
 
-                  {/* Upload button */}
                   <label
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium cursor-pointer transition-colors flex-shrink-0 ${
                       uploadingId === category.id
@@ -476,7 +544,6 @@ export default function CategoriesPage() {
                     />
                   </label>
 
-                  {/* Action buttons */}
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <Button
                       variant="ghost"
@@ -525,7 +592,6 @@ export default function CategoriesPage() {
                   </div>
                 </div>
 
-                {/* Expanded pharmacy details */}
                 {expandedId === category.id && (
                   <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
                     <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
@@ -559,7 +625,6 @@ export default function CategoriesPage() {
           </div>
         )}
 
-        {/* Hidden file input for placeholder click */}
         <input
           ref={fileInputRef}
           type="file"
@@ -584,6 +649,21 @@ export default function CategoriesPage() {
             <DialogTitle>Add New Category</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            {isSuperAdmin && (
+              <div className="space-y-1.5">
+                <Label htmlFor="cat-pharmacy">Pharmacy *</Label>
+                <Select value={newCategory.pharmacy_id} onValueChange={(value) => setNewCategory({ ...newCategory, pharmacy_id: value })}>
+                  <SelectTrigger id="cat-pharmacy" className="bg-white border-gray-200">
+                    <SelectValue placeholder="Select a pharmacy..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pharmacies.map((pharmacy) => (
+                      <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="space-y-1.5">
               <Label htmlFor="cat-name">Category Name *</Label>
               <Input

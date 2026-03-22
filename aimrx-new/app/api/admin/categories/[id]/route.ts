@@ -1,26 +1,59 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase";
 import { getUser } from "@core/auth";
-import { requireNonDemo, requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const platformCheck = await requirePlatformAdmin();
-    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+    const { user, userRole } = await getUser();
 
-    const demoCheck = await requireNonDemo();
-    if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const isSuperAdmin = userRole === "super_admin";
 
     const { id } = await params;
     const body = await request.json();
     const supabase = await createServerClient();
 
-    // For partial updates (like status changes), we only validate if certain fields are provided
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+        return NextResponse.json(
+          { error: "Unable to determine pharmacy scope" },
+          { status: 403 },
+        );
+      }
+      if (scope.isPharmacyAdmin && scope.pharmacyId) {
+        const { data: cat } = await supabase
+          .from("categories")
+          .select("pharmacy_id")
+          .eq("id", id)
+          .single();
+        if (cat && cat.pharmacy_id !== scope.pharmacyId) {
+          return NextResponse.json(
+            { error: "You can only edit categories for your pharmacy" },
+            { status: 403 },
+          );
+        }
+      }
+    }
+
     if (body.slug) {
-      // Check if slug already exists for other categories
       const { data: existingCategory } = await supabase
         .from("categories")
         .select("id")
@@ -36,7 +69,6 @@ export async function PUT(
       }
     }
 
-    // If name is changing, look up the old name to update pharmacy_medications references
     let oldCategoryName: string | null = null;
     if (body.name !== undefined) {
       const { data: existing } = await supabase
@@ -67,7 +99,6 @@ export async function PUT(
       .select()
       .single();
 
-    // If name changed, cascade-update pharmacy_medications.category text references
     if (!error && oldCategoryName && body.name) {
       const { error: cascadeError } = await supabase
         .from("pharmacy_medications")
@@ -102,23 +133,56 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const platformCheck = await requirePlatformAdmin();
-    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+    const { user, userRole } = await getUser();
 
-    const demoCheck = await requireNonDemo();
-    if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const isSuperAdmin = userRole === "super_admin";
 
     const { id } = await params;
     const supabase = await createServerClient();
 
-    // Look up the category name first (needed to clear pharmacy_medications references)
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+        return NextResponse.json(
+          { error: "Unable to determine pharmacy scope" },
+          { status: 403 },
+        );
+      }
+      if (scope.isPharmacyAdmin && scope.pharmacyId) {
+        const { data: cat } = await supabase
+          .from("categories")
+          .select("pharmacy_id")
+          .eq("id", id)
+          .single();
+        if (cat && cat.pharmacy_id !== scope.pharmacyId) {
+          return NextResponse.json(
+            { error: "You can only delete categories for your pharmacy" },
+            { status: 403 },
+          );
+        }
+      }
+    }
+
     const { data: categoryData } = await supabase
       .from("categories")
       .select("name")
       .eq("id", id)
       .single();
 
-    // Clear pharmacy_medications.category text references
     if (categoryData?.name) {
       const { error: medsError } = await supabase
         .from("pharmacy_medications")
@@ -130,7 +194,6 @@ export async function DELETE(
       }
     }
 
-    // Also clear any products.category_id references
     const { error: updateError } = await supabase
       .from("products")
       .update({ category_id: null })
@@ -140,7 +203,6 @@ export async function DELETE(
       console.error("Error updating products:", updateError);
     }
 
-    // Then delete category
     const { error } = await supabase.from("categories").delete().eq("id", id);
 
     if (error) {

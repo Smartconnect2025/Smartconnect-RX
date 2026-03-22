@@ -2,11 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase";
 import { getUser } from "@core/auth";
 import type { Category } from "@/core/database/schema";
-import { requireNonDemo, requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
-export async function GET(_request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    // Check if the current user is an admin
     const { user, userRole } = await getUser();
 
     if (!user) {
@@ -23,13 +22,36 @@ export async function GET(_request: NextRequest) {
       );
     }
 
+    const isSuperAdmin = userRole === "super_admin";
+    let pharmacyId: string | null = null;
+
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+        return NextResponse.json(
+          { error: "Unable to determine pharmacy scope" },
+          { status: 403 },
+        );
+      }
+      if (scope.isPharmacyAdmin && scope.pharmacyId) {
+        pharmacyId = scope.pharmacyId;
+      }
+    } else {
+      pharmacyId = request.nextUrl.searchParams.get("pharmacyId") || null;
+    }
+
     const supabase = await createServerClient();
 
-    // Get categories first
-    const { data: categories, error: categoriesError } = await supabase
+    let query = supabase
       .from("categories")
       .select("*")
       .order("display_order", { ascending: true });
+
+    if (pharmacyId) {
+      query = query.eq("pharmacy_id", pharmacyId);
+    }
+
+    const { data: categories, error: categoriesError } = await query;
 
     if (categoriesError) {
       console.error("Error fetching categories:", categoriesError);
@@ -39,10 +61,16 @@ export async function GET(_request: NextRequest) {
       );
     }
 
-    const { data: pharmacyMeds } = await supabase
+    let medsQuery = supabase
       .from("pharmacy_medications")
       .select("category, pharmacy_id, pharmacies(name)")
       .not("category", "is", null);
+
+    if (pharmacyId) {
+      medsQuery = medsQuery.eq("pharmacy_id", pharmacyId);
+    }
+
+    const { data: pharmacyMeds } = await medsQuery;
 
     const categoriesWithCounts = (categories || []).map((category: Category) => {
       const matchingMeds = (pharmacyMeds || []).filter(
@@ -82,16 +110,50 @@ export async function GET(_request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const platformCheck = await requirePlatformAdmin();
-    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+    const { user, userRole } = await getUser();
 
-    const demoCheck = await requireNonDemo();
-    if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const isSuperAdmin = userRole === "super_admin";
+    let pharmacyId: string | null = null;
 
     const body = await request.json();
+
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+        return NextResponse.json(
+          { error: "Unable to determine pharmacy scope" },
+          { status: 403 },
+        );
+      }
+      if (scope.isPharmacyAdmin && scope.pharmacyId) {
+        pharmacyId = scope.pharmacyId;
+      }
+    } else {
+      pharmacyId = body.pharmacy_id || null;
+      if (!pharmacyId) {
+        return NextResponse.json(
+          { error: "Pharmacy selection is required" },
+          { status: 400 },
+        );
+      }
+    }
+
     const supabase = await createServerClient();
 
-    // Validate required fields
     if (!body.name || !body.slug) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -99,35 +161,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if name already exists
     const { data: existingCategoryByName } = await supabase
       .from("categories")
       .select("id")
       .eq("name", body.name)
+      .eq("pharmacy_id", pharmacyId!)
       .single();
 
     if (existingCategoryByName) {
       return NextResponse.json(
-        { error: "A category with this name already exists" },
+        { error: "A category with this name already exists for this pharmacy" },
         { status: 400 },
       );
     }
 
-    // Check if slug already exists
     const { data: existingCategoryBySlug } = await supabase
       .from("categories")
       .select("id")
       .eq("slug", body.slug)
+      .eq("pharmacy_id", pharmacyId!)
       .single();
 
     if (existingCategoryBySlug) {
       return NextResponse.json(
-        { error: "A category with this slug already exists" },
+        { error: "A category with this slug already exists for this pharmacy" },
         { status: 400 },
       );
     }
 
-    // Get the next display order
     const { data: lastCategory } = await supabase
       .from("categories")
       .select("display_order")
@@ -137,7 +198,6 @@ export async function POST(request: NextRequest) {
 
     const nextDisplayOrder = lastCategory ? lastCategory.display_order + 1 : 0;
 
-    // Create category with default values
     const { data: category, error } = await supabase
       .from("categories")
       .insert({
@@ -145,6 +205,7 @@ export async function POST(request: NextRequest) {
         slug: body.slug,
         display_order: nextDisplayOrder,
         is_active: true,
+        pharmacy_id: pharmacyId,
         ...(body.description ? { description: body.description } : {}),
         ...(body.color ? { color: body.color } : {}),
       })
@@ -154,28 +215,23 @@ export async function POST(request: NextRequest) {
     if (error) {
       console.error("Error creating category:", error);
 
-      // Handle specific database errors
       if (error.code === "23505") {
-        // Unique constraint violation
         return NextResponse.json(
           { error: "A category with this name or slug already exists" },
           { status: 400 },
         );
       } else if (error.code === "23502") {
-        // Not null violation
         return NextResponse.json(
           { error: "Missing required fields" },
           { status: 400 },
         );
       } else if (error.code === "22001") {
-        // String data right truncation
         return NextResponse.json(
           { error: "Category name or slug is too long" },
           { status: 400 },
         );
       }
 
-      // Return generic error for other cases
       return NextResponse.json(
         {
           error:
