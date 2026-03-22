@@ -1,8 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
+import { createClient } from "@core/supabase";
+import { useUser } from "@core/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -148,6 +150,9 @@ function getCategoryImage(category: string, dbCats: CategoryData[]): string | nu
 
 export default function MedicationCatalogPage() {
   const router = useRouter();
+  const { userRole } = useUser();
+  const supabase = useMemo(() => createClient(), []);
+  const isSuperAdmin = userRole === "super_admin";
   const { isDemo, guardAction } = useDemoGuard();
   const [medications, setMedications] = useState<Medication[]>([]);
   const [isLoadingData, setIsLoadingData] = useState(true);
@@ -174,7 +179,28 @@ export default function MedicationCatalogPage() {
   });
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [dbCategories, setDbCategories] = useState<CategoryData[]>([]);
+  const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
+  const [pharmacies, setPharmacies] = useState<{ id: string; name: string }[]>([]);
   const itemsPerPage = 20;
+
+  const fetchPharmacies = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from("pharmacies")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      setPharmacies(data || []);
+    } catch (error) {
+      console.error("Error fetching pharmacies:", error);
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      fetchPharmacies();
+    }
+  }, [isSuperAdmin, fetchPharmacies]);
 
   const handleImageUpload = async (
     file: File,
@@ -256,9 +282,17 @@ export default function MedicationCatalogPage() {
   const loadMedications = async () => {
     setIsLoadingData(true);
     try {
+      const medsParams = new URLSearchParams();
+      if (pharmacyFilter && pharmacyFilter !== "all") {
+        medsParams.append("pharmacyId", pharmacyFilter);
+      }
+      const categoriesParams = new URLSearchParams();
+      if (pharmacyFilter && pharmacyFilter !== "all") {
+        categoriesParams.append("pharmacyId", pharmacyFilter);
+      }
       const [medsResponse, categoriesResponse] = await Promise.all([
-        fetch("/api/admin/medications"),
-        fetch("/api/admin/categories"),
+        fetch(`/api/admin/medications?${medsParams.toString()}`),
+        fetch(`/api/admin/categories?${categoriesParams.toString()}`),
       ]);
 
       const medsData = await medsResponse.json();
@@ -300,10 +334,10 @@ export default function MedicationCatalogPage() {
     }
   };
 
-  // Load medications and categories on mount
+  // Load medications and categories on mount and when pharmacy filter changes
   useEffect(() => {
     loadMedications();
-  }, []);
+  }, [pharmacyFilter]);
 
   // Sync categories when window gets focus or storage changes
   useEffect(() => {
@@ -504,6 +538,26 @@ export default function MedicationCatalogPage() {
   return (
     <>
       <div className="container mx-auto max-w-7xl py-8 px-4 flex flex-col min-h-screen">
+        {/* Pharmacy Filter for Super Admins */}
+        {isSuperAdmin && (
+          <div className="flex items-end gap-4 mb-6">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="pharmacy-filter" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
+              <Select value={pharmacyFilter} onValueChange={setPharmacyFilter}>
+                <SelectTrigger id="pharmacy-filter" className="w-[280px] h-10 bg-white border-gray-200">
+                  <SelectValue placeholder="All Pharmacies" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pharmacies</SelectItem>
+                  {pharmacies.map((pharmacy) => (
+                    <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex items-center gap-4 mb-6">
           {/* Search */}

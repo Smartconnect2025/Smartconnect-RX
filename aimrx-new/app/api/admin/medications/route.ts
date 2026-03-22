@@ -25,15 +25,16 @@ export async function POST(request: Request) {
     const demoCheck = await requireNonDemo();
     if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
 
+    const isSuperAdmin = userRole === "super_admin";
     const body = await request.json();
-    const scope = await getPharmacyAdminScope(user.id);
 
     let pharmacyId: string;
 
-    if (scope.isPharmacyAdmin) {
-      if (!scope.pharmacyId) {
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
         return NextResponse.json(
-          { success: false, error: "Pharmacy admin has no linked pharmacy" },
+          { success: false, error: "Unable to determine pharmacy scope" },
           { status: 403 },
         );
       }
@@ -142,7 +143,7 @@ export async function POST(request: Request) {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const supabase = await createServerClient();
 
   try {
@@ -160,15 +161,16 @@ export async function GET() {
       );
     }
 
+    const isSuperAdmin = userRole === "super_admin";
     const scope = await getPharmacyAdminScope(user.id);
 
     let medications;
     let error;
 
-    if (scope.isPharmacyAdmin) {
-      if (!scope.pharmacyId) {
+    if (!isSuperAdmin) {
+      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
         return NextResponse.json(
-          { success: false, error: "Pharmacy admin has no linked pharmacy" },
+          { success: false, error: "Unable to determine pharmacy scope" },
           { status: 403 },
         );
       }
@@ -182,11 +184,19 @@ export async function GET() {
       medications = result.data;
       error = result.error;
     } else {
-      const result = await supabase
+      const url = new URL(request.url);
+      const pharmacyIdFilter = url.searchParams.get("pharmacyId") || null;
+
+      let query = supabase
         .from("pharmacy_medications")
         .select("*")
         .order("created_at", { ascending: false });
 
+      if (pharmacyIdFilter) {
+        query = query.eq("pharmacy_id", pharmacyIdFilter);
+      }
+
+      const result = await query;
       medications = result.data;
       error = result.error;
     }

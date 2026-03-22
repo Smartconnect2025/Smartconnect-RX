@@ -32,24 +32,22 @@ export async function PUT(
 
     if (!isSuperAdmin) {
       const scope = await getPharmacyAdminScope(user.id);
-      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
         return NextResponse.json(
           { error: "Unable to determine pharmacy scope" },
           { status: 403 },
         );
       }
-      if (scope.isPharmacyAdmin && scope.pharmacyId) {
-        const { data: cat } = await supabase
-          .from("categories")
-          .select("pharmacy_id")
-          .eq("id", id)
-          .single();
-        if (cat && cat.pharmacy_id !== scope.pharmacyId) {
-          return NextResponse.json(
-            { error: "You can only edit categories for your pharmacy" },
-            { status: 403 },
-          );
-        }
+      const { data: cat } = await supabase
+        .from("categories")
+        .select("pharmacy_id")
+        .eq("id", id)
+        .single();
+      if (!cat) {
+        return NextResponse.json({ error: "Category not found" }, { status: 404 });
+      }
+      if (cat.pharmacy_id !== scope.pharmacyId) {
+        return NextResponse.json({ error: "Category not found" }, { status: 404 });
       }
     }
 
@@ -166,24 +164,22 @@ export async function DELETE(
 
     if (!isSuperAdmin) {
       const scope = await getPharmacyAdminScope(user.id);
-      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
         return NextResponse.json(
           { error: "Unable to determine pharmacy scope" },
           { status: 403 },
         );
       }
-      if (scope.isPharmacyAdmin && scope.pharmacyId) {
-        const { data: cat } = await supabase
-          .from("categories")
-          .select("pharmacy_id")
-          .eq("id", id)
-          .single();
-        if (cat && cat.pharmacy_id !== scope.pharmacyId) {
-          return NextResponse.json(
-            { error: "You can only delete categories for your pharmacy" },
-            { status: 403 },
-          );
-        }
+      const { data: cat } = await supabase
+        .from("categories")
+        .select("pharmacy_id")
+        .eq("id", id)
+        .single();
+      if (!cat) {
+        return NextResponse.json({ error: "Category not found" }, { status: 404 });
+      }
+      if (cat.pharmacy_id !== scope.pharmacyId) {
+        return NextResponse.json({ error: "Category not found" }, { status: 404 });
       }
     }
 
