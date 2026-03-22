@@ -23,6 +23,7 @@ interface Group {
   id: string;
   name: string;
   platform_manager_id: string | null;
+  pharmacy_id?: string | null;
 }
 
 interface PlatformManagerOption {
@@ -33,6 +34,7 @@ interface PlatformManagerOption {
 interface GroupFormData {
   name: string;
   platformManagerId: string;
+  pharmacyId: string;
 }
 
 interface GroupFormDialogProps {
@@ -40,6 +42,8 @@ interface GroupFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   editingGroup?: Group | null;
+  isSuperAdmin?: boolean;
+  pharmacies?: { id: string; name: string }[];
 }
 
 export function GroupFormDialog({
@@ -47,6 +51,8 @@ export function GroupFormDialog({
   onOpenChange,
   onSuccess,
   editingGroup,
+  isSuperAdmin = false,
+  pharmacies = [],
 }: GroupFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [platformManagers, setPlatformManagers] = useState<
@@ -55,9 +61,9 @@ export function GroupFormDialog({
   const [formData, setFormData] = useState<GroupFormData>({
     name: "",
     platformManagerId: "",
+    pharmacyId: "",
   });
 
-  // Fetch platform managers when dialog opens
   useEffect(() => {
     if (open) {
       fetchPlatformManagers();
@@ -69,11 +75,13 @@ export function GroupFormDialog({
       setFormData({
         name: editingGroup.name,
         platformManagerId: editingGroup.platform_manager_id || "",
+        pharmacyId: editingGroup.pharmacy_id || "",
       });
     } else {
       setFormData({
         name: "",
         platformManagerId: "",
+        pharmacyId: "",
       });
     }
   }, [editingGroup, open]);
@@ -92,6 +100,12 @@ export function GroupFormDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isSuperAdmin && !editingGroup && !formData.pharmacyId) {
+      toast.error("Please select a pharmacy for this group");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
@@ -150,6 +164,32 @@ export function GroupFormDialog({
               placeholder="Enter group name"
             />
           </div>
+          {isSuperAdmin && !editingGroup && (
+            <div className="space-y-2">
+              <Label htmlFor="pharmacyId">Pharmacy *</Label>
+              <Select
+                value={formData.pharmacyId || "none"}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    pharmacyId: value === "none" ? "" : value,
+                  }))
+                }
+              >
+                <SelectTrigger id="pharmacyId">
+                  <SelectValue placeholder="Select a pharmacy" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Select a pharmacy</SelectItem>
+                  {pharmacies.map((pharmacy) => (
+                    <SelectItem key={pharmacy.id} value={pharmacy.id}>
+                      {pharmacy.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="space-y-2">
             <Label htmlFor="platformManagerId">Platform Manager</Label>
             <Select

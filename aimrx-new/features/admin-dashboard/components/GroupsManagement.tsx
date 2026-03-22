@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
 import { Plus, Pencil, Trash2, RefreshCw, ChevronDown, ChevronRight, Users, UserMinus, UserPlus } from "lucide-react";
@@ -34,6 +35,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useUser } from "@core/auth";
+import { createClient } from "@/core/supabase/client";
 
 interface GroupProvider {
   id: string;
@@ -47,6 +50,8 @@ interface GroupProvider {
 interface Group {
   id: string;
   name: string;
+  pharmacy_id: string | null;
+  pharmacy_name: string | null;
   platform_manager_id: string | null;
   platform_manager_name: string | null;
   provider_count: number;
@@ -64,6 +69,7 @@ interface UnassignedProvider {
 
 export const GroupsManagement: React.FC = () => {
   const { guardAction } = useDemoGuard();
+  const { user } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -74,12 +80,36 @@ export const GroupsManagement: React.FC = () => {
   const [unassignedProviders, setUnassignedProviders] = useState<UnassignedProvider[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [isAssigning, setIsAssigning] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [scopeChecked, setScopeChecked] = useState(false);
+  const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
+  const [pharmacies, setPharmacies] = useState<{ id: string; name: string }[]>([]);
+
+  const fetchPharmacies = async () => {
+    try {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("pharmacies")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      setPharmacies(data || []);
+    } catch (error) {
+      console.error("Error fetching pharmacies:", error);
+    }
+  };
 
   const fetchGroups = async () => {
     setIsLoading(true);
     try {
+      const params = new URLSearchParams();
+      if (pharmacyFilter && pharmacyFilter !== "all") {
+        params.set("pharmacyId", pharmacyFilter);
+      }
+      const groupsUrl = `/api/admin/groups${params.toString() ? `?${params.toString()}` : ""}`;
+
       const [groupsRes, providersRes] = await Promise.all([
-        fetch("/api/admin/groups"),
+        fetch(groupsUrl),
         fetch("/api/admin/providers"),
       ]);
 
@@ -129,8 +159,43 @@ export const GroupsManagement: React.FC = () => {
   };
 
   useEffect(() => {
+    const checkScope = async () => {
+      if (!user?.id) return;
+      const supabase = createClient();
+
+      const { data: roleRow } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (roleRow?.role === "super_admin") {
+        setIsSuperAdmin(true);
+      }
+      setScopeChecked(true);
+    };
+    checkScope();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!scopeChecked) return;
+    if (isSuperAdmin) {
+      fetchPharmacies();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeChecked, isSuperAdmin]);
+
+  useEffect(() => {
+    if (!scopeChecked) return;
     fetchGroups();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeChecked]);
+
+  useEffect(() => {
+    if (!scopeChecked) return;
+    fetchGroups();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pharmacyFilter]);
 
   const handleEdit = (group: Group) => {
     setEditingGroup(group);
@@ -221,6 +286,8 @@ export const GroupsManagement: React.FC = () => {
     });
   };
 
+  const colSpan = isSuperAdmin ? 7 : 6;
+
   return (
     <>
       <div className="container max-w-5xl mx-auto py-6 space-y-6 px-4">
@@ -235,7 +302,7 @@ export const GroupsManagement: React.FC = () => {
           </div>
           <div className="flex gap-2">
             <Button
-              onClick={fetchGroups}
+              onClick={() => fetchGroups()}
               variant="outline"
               className="border border-border"
               data-testid="button-refresh-groups"
@@ -257,12 +324,34 @@ export const GroupsManagement: React.FC = () => {
           </div>
         </div>
 
+        {isSuperAdmin && (
+          <div className="mb-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="pharmacy-filter" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
+              <Select value={pharmacyFilter} onValueChange={setPharmacyFilter}>
+                <SelectTrigger id="pharmacy-filter" className="w-[280px] h-10 bg-white border-gray-200">
+                  <SelectValue placeholder="All Pharmacies" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pharmacies</SelectItem>
+                  {pharmacies.map((pharmacy) => (
+                    <SelectItem key={pharmacy.id} value={pharmacy.id}>
+                      {pharmacy.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-lg border border-border shadow-sm">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-10"></TableHead>
                 <TableHead>Name</TableHead>
+                {isSuperAdmin && <TableHead>Pharmacy</TableHead>}
                 <TableHead>Platform Manager</TableHead>
                 <TableHead>Providers</TableHead>
                 <TableHead>Created At</TableHead>
@@ -272,14 +361,14 @@ export const GroupsManagement: React.FC = () => {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="h-24 text-center">
+                  <TableCell colSpan={colSpan} className="h-24 text-center">
                     Loading...
                   </TableCell>
                 </TableRow>
               ) : groups.length === 0 ? (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={colSpan}
                     className="h-24 text-center text-muted-foreground"
                   >
                     No groups found. Create your first group to get started.
@@ -303,6 +392,17 @@ export const GroupsManagement: React.FC = () => {
                       <TableCell>
                         <div className="font-medium">{group.name}</div>
                       </TableCell>
+                      {isSuperAdmin && (
+                        <TableCell>
+                          {group.pharmacy_name ? (
+                            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                              {group.pharmacy_name}
+                            </Badge>
+                          ) : (
+                            <span className="text-sm text-muted-foreground">Not assigned</span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <span className="text-sm text-muted-foreground">
                           {group.platform_manager_name || "Not assigned"}
@@ -362,7 +462,7 @@ export const GroupsManagement: React.FC = () => {
 
                     {expandedGroupId === group.id && (
                       <TableRow>
-                        <TableCell colSpan={6} className="bg-gray-50/50 p-0">
+                        <TableCell colSpan={colSpan} className="bg-gray-50/50 p-0">
                           <div className="px-8 py-4">
                             {group.providers.length === 0 ? (
                               <div className="text-center py-4 text-sm text-muted-foreground">
@@ -449,7 +549,6 @@ export const GroupsManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Group Form Dialog */}
       <GroupFormDialog
         open={isFormOpen}
         onOpenChange={handleFormClose}
@@ -458,9 +557,10 @@ export const GroupsManagement: React.FC = () => {
           fetchGroups();
         }}
         editingGroup={editingGroup}
+        isSuperAdmin={isSuperAdmin}
+        pharmacies={pharmacies}
       />
 
-      {/* Assign Provider Dialog */}
       <Dialog
         open={!!assignDialogGroupId}
         onOpenChange={() => {
@@ -522,7 +622,6 @@ export const GroupsManagement: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
       <AlertDialog
         open={!!deletingGroup}
         onOpenChange={() => setDeletingGroup(null)}

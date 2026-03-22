@@ -10,6 +10,18 @@ import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
 import { requireNonDemo, createGuardErrorResponse, getPharmacyAdminScope } from "@core/auth/api-guards";
 
+async function resolvePharmacyScope(userId: string, userRole: string) {
+  const isSuperAdmin = userRole === "super_admin";
+  if (isSuperAdmin) {
+    return { isSuperAdmin: true, pharmacyId: null as string | null };
+  }
+  const scope = await getPharmacyAdminScope(userId);
+  if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+    return { isSuperAdmin: false, pharmacyId: null, error: "Unable to determine pharmacy scope" };
+  }
+  return { isSuperAdmin: false, pharmacyId: scope.isPharmacyAdmin ? scope.pharmacyId : null };
+}
+
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -31,12 +43,9 @@ export async function PATCH(
       );
     }
 
-    const scope = await getPharmacyAdminScope(user.id);
-    if (scope.isPharmacyAdmin) {
-      return NextResponse.json(
-        { error: "This action is restricted to platform administrators" },
-        { status: 403 },
-      );
+    const scopeResult = await resolvePharmacyScope(user.id, userRole);
+    if ("error" in scopeResult && scopeResult.error) {
+      return NextResponse.json({ error: scopeResult.error }, { status: 403 });
     }
 
     const demoCheck = await requireNonDemo();
@@ -47,6 +56,21 @@ export async function PATCH(
     const { name, platformManagerId } = body;
 
     const supabase = createAdminClient();
+
+    if (!scopeResult.isSuperAdmin && scopeResult.pharmacyId) {
+      const { data: existingGroup } = await supabase
+        .from("groups")
+        .select("pharmacy_id")
+        .eq("id", id)
+        .single();
+
+      if (!existingGroup || existingGroup.pharmacy_id !== scopeResult.pharmacyId) {
+        return NextResponse.json(
+          { error: "Group not found or access denied" },
+          { status: 403 },
+        );
+      }
+    }
 
     const updateData: Record<string, unknown> = {};
     if (name) updateData.name = name;
@@ -110,12 +134,9 @@ export async function DELETE(
       );
     }
 
-    const scope = await getPharmacyAdminScope(user.id);
-    if (scope.isPharmacyAdmin) {
-      return NextResponse.json(
-        { error: "This action is restricted to platform administrators" },
-        { status: 403 },
-      );
+    const scopeResult = await resolvePharmacyScope(user.id, userRole);
+    if ("error" in scopeResult && scopeResult.error) {
+      return NextResponse.json({ error: scopeResult.error }, { status: 403 });
     }
 
     const demoCheck = await requireNonDemo();
@@ -123,6 +144,21 @@ export async function DELETE(
 
     const { id } = await params;
     const supabase = createAdminClient();
+
+    if (!scopeResult.isSuperAdmin && scopeResult.pharmacyId) {
+      const { data: existingGroup } = await supabase
+        .from("groups")
+        .select("pharmacy_id")
+        .eq("id", id)
+        .single();
+
+      if (!existingGroup || existingGroup.pharmacy_id !== scopeResult.pharmacyId) {
+        return NextResponse.json(
+          { error: "Group not found or access denied" },
+          { status: 403 },
+        );
+      }
+    }
 
     const { error: fetchError } = await supabase
       .from("groups")
