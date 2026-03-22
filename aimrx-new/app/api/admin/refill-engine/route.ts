@@ -3,6 +3,10 @@ import { getUser } from "@/core/auth/get-user";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 import { createServerClient } from "@core/supabase";
 
+function safeArray(val: unknown): Array<Record<string, unknown>> {
+  return Array.isArray(val) ? val : [];
+}
+
 function sanitizeRun(run: Record<string, unknown>) {
   return {
     id: run.id,
@@ -49,21 +53,21 @@ export async function GET(request: NextRequest) {
   try {
     const supabase = await createServerClient();
 
-    const { data: runs, error } = await supabase
-      .from("cron_job_runs")
-      .select("*")
-      .order("started_at", { ascending: false })
-      .limit(50);
-
-    if (error) {
-      console.error("Error loading cron runs:", error);
-      return NextResponse.json(
-        { error: "Failed to load cron job runs" },
-        { status: 500 },
-      );
-    }
-
     if (!pharmacyId) {
+      const { data: runs, error } = await supabase
+        .from("cron_job_runs")
+        .select("*")
+        .order("started_at", { ascending: false })
+        .limit(50);
+
+      if (error) {
+        console.error("Error loading cron runs:", error);
+        return NextResponse.json(
+          { error: "Failed to load cron job runs" },
+          { status: 500 },
+        );
+      }
+
       return NextResponse.json({
         success: true,
         runs: (runs || []).map((r) => ({
@@ -73,13 +77,28 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    const { data: runs, error } = await supabase
+      .from("cron_job_runs")
+      .select("*")
+      .eq("job_name", "refill-check")
+      .order("started_at", { ascending: false })
+      .limit(200);
+
+    if (error) {
+      console.error("Error loading cron runs:", error);
+      return NextResponse.json(
+        { error: "Failed to load cron job runs" },
+        { status: 500 },
+      );
+    }
+
     const allRxIds: string[] = [];
     for (const run of runs || []) {
-      if (run.details) {
-        const processed = run.details.processed || [];
-        const failed = run.details.failed || [];
+      if (run.details && typeof run.details === "object") {
+        const processed = safeArray((run.details as Record<string, unknown>).processed);
+        const failed = safeArray((run.details as Record<string, unknown>).failed);
         for (const item of [...processed, ...failed]) {
-          if (item.rxId) allRxIds.push(item.rxId);
+          if (typeof item.rxId === "string") allRxIds.push(item.rxId);
         }
       }
     }
@@ -113,15 +132,16 @@ export async function GET(request: NextRequest) {
 
     const filteredRuns = [];
     for (const run of runs || []) {
-      if (!run.details) {
+      if (!run.details || typeof run.details !== "object") {
         continue;
       }
 
-      const processed = (run.details.processed || []).filter(
-        (item: { rxId?: string }) => item.rxId && pharmacyRxIds.has(item.rxId),
+      const details = run.details as Record<string, unknown>;
+      const processed = safeArray(details.processed).filter(
+        (item) => typeof item.rxId === "string" && pharmacyRxIds.has(item.rxId),
       );
-      const failed = (run.details.failed || []).filter(
-        (item: { rxId?: string }) => item.rxId && pharmacyRxIds.has(item.rxId),
+      const failed = safeArray(details.failed).filter(
+        (item) => typeof item.rxId === "string" && pharmacyRxIds.has(item.rxId),
       );
 
       if (processed.length > 0 || failed.length > 0) {
@@ -131,6 +151,8 @@ export async function GET(request: NextRequest) {
           details: { processed, failed },
         });
       }
+
+      if (filteredRuns.length >= 50) break;
     }
 
     return NextResponse.json({ success: true, runs: filteredRuns });

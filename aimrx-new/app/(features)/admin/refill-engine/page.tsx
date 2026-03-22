@@ -356,10 +356,10 @@ export default function RefillEnginePage() {
                                 <span
                                   key={idx}
                                   className="inline-flex items-center gap-1 text-xs bg-white border border-green-200 rounded px-2 py-1 font-mono"
-                                  title={`Rx: ${item.rxId}${item.refillId ? ` → Refill: ${item.refillId}` : ""}`}
+                                  title={`Rx: ${item.rxId || "unknown"}${item.refillId ? ` → Refill: ${item.refillId}` : ""}`}
                                 >
                                   <CheckCircle2 className="h-3 w-3 text-green-600" />
-                                  {truncateId(item.rxId as string)}
+                                  {typeof item.rxId === "string" ? truncateId(item.rxId) : "unknown"}
                                   {item.refillId && (
                                     <>
                                       <span className="text-gray-400">→</span>
