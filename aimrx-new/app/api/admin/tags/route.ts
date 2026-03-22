@@ -35,15 +35,13 @@ export async function GET(request: NextRequest) {
 
     if (!isSuperAdmin) {
       const scope = await getPharmacyAdminScope(user.id);
-      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
         return NextResponse.json(
           { error: "Unable to determine pharmacy scope" },
           { status: 403 },
         );
       }
-      if (scope.isPharmacyAdmin && scope.pharmacyId) {
-        pharmacyId = scope.pharmacyId;
-      }
+      pharmacyId = scope.pharmacyId;
     } else {
       pharmacyId = request.nextUrl.searchParams.get("pharmacyId") || null;
     }
@@ -133,15 +131,13 @@ export async function POST(request: NextRequest) {
 
     if (!isSuperAdmin) {
       const scope = await getPharmacyAdminScope(user.id);
-      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
         return NextResponse.json(
           { error: "Unable to determine pharmacy scope" },
           { status: 403 },
         );
       }
-      if (scope.isPharmacyAdmin && scope.pharmacyId) {
-        pharmacyId = scope.pharmacyId;
-      }
+      pharmacyId = scope.pharmacyId;
     } else {
       pharmacyId = body.pharmacy_id || null;
       if (!pharmacyId) {

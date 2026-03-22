@@ -59,24 +59,22 @@ export async function PUT(
 
     if (!isSuperAdmin) {
       const scope = await getPharmacyAdminScope(user.id);
-      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
         return NextResponse.json(
           { error: "Unable to determine pharmacy scope" },
           { status: 403 },
         );
       }
-      if (scope.isPharmacyAdmin && scope.pharmacyId) {
-        const { data: tag } = await supabase
-          .from("tags")
-          .select("pharmacy_id")
-          .eq("id", id)
-          .single();
-        if (tag && tag.pharmacy_id !== scope.pharmacyId) {
-          return NextResponse.json(
-            { error: "You can only edit tags for your pharmacy" },
-            { status: 403 },
-          );
-        }
+      const { data: tag } = await supabase
+        .from("tags")
+        .select("pharmacy_id")
+        .eq("id", id)
+        .single();
+      if (!tag) {
+        return NextResponse.json({ error: "Tag not found" }, { status: 404 });
+      }
+      if (tag.pharmacy_id !== scope.pharmacyId) {
+        return NextResponse.json({ error: "Tag not found" }, { status: 404 });
       }
     }
 
@@ -172,24 +170,22 @@ export async function DELETE(
 
     if (!isSuperAdmin) {
       const scope = await getPharmacyAdminScope(user.id);
-      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
         return NextResponse.json(
           { error: "Unable to determine pharmacy scope" },
           { status: 403 },
         );
       }
-      if (scope.isPharmacyAdmin && scope.pharmacyId) {
-        const { data: tag } = await supabase
-          .from("tags")
-          .select("pharmacy_id")
-          .eq("id", id)
-          .single();
-        if (tag && tag.pharmacy_id !== scope.pharmacyId) {
-          return NextResponse.json(
-            { error: "You can only delete tags for your pharmacy" },
-            { status: 403 },
-          );
-        }
+      const { data: tag } = await supabase
+        .from("tags")
+        .select("pharmacy_id")
+        .eq("id", id)
+        .single();
+      if (!tag) {
+        return NextResponse.json({ error: "Tag not found" }, { status: 404 });
+      }
+      if (tag.pharmacy_id !== scope.pharmacyId) {
+        return NextResponse.json({ error: "Tag not found" }, { status: 404 });
       }
     }
 
