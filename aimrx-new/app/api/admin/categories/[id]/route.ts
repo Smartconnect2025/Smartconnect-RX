@@ -22,7 +22,7 @@ async function verifyCategoryAccessForPharmacyAdmin(
     .eq("pharmacy_id", pharmacyId)
     .limit(1);
 
-  return (meds && meds.length > 0);
+  return !!(meds && meds.length > 0);
 }
 
 export async function PUT(
