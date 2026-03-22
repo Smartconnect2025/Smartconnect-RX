@@ -551,7 +551,7 @@ export const ProvidersManagement: React.FC = () => {
           </div>
         </div>
 
-        {isSuperAdmin && pharmacies.length > 0 && (
+        {isSuperAdmin && (
           <div className="mb-1">
             <div className="space-y-1.5">
               <Label htmlFor="pharmacy-filter" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
