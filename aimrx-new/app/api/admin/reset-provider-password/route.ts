@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { getUser } from "@core/auth";
-import { getPharmacyAdminScope } from "@/core/auth/api-guards";
+import { requireAnyAdmin, createGuardErrorResponse } from "@/core/auth/api-guards";
 
 /**
- * Reset a provider's password (platform admin only)
+ * Reset a provider's password (any admin)
  * POST /api/admin/reset-provider-password
  * Body: { email: string, newPassword: string }
  */
 export async function POST(request: Request) {
+  const adminCheck = await requireAnyAdmin();
+  if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
+
   const supabaseAdmin = createAdminClient();
 
   try {
@@ -18,21 +21,6 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
-      );
-    }
-
-    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized. Admin access required." },
-        { status: 403 }
-      );
-    }
-
-    const scope = await getPharmacyAdminScope(user.id);
-    if (scope.isPharmacyAdmin) {
-      return NextResponse.json(
-        { success: false, error: "This action is restricted to platform administrators" },
-        { status: 403 }
       );
     }
 

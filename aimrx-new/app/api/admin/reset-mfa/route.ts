@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
-import { requirePlatformAdmin, createGuardErrorResponse } from "@/core/auth/api-guards";
+import { requireAnyAdmin, createGuardErrorResponse } from "@/core/auth/api-guards";
 
 export async function POST(request: NextRequest) {
   try {
-    const guardResult = await requirePlatformAdmin();
+    const guardResult = await requireAnyAdmin();
     if (!guardResult.success) {
       return createGuardErrorResponse(guardResult);
     }

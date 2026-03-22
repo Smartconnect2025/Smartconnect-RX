@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createClient } from "@core/supabase";
 import { updateTagUsageCounts } from "@/features/admin-dashboard/utils/tagUsageUpdater";
-import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { requireAnyAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function GET(request: NextRequest) {
   try {
@@ -111,8 +111,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const platformCheck = await requirePlatformAdmin();
-    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+    const adminCheck = await requireAnyAdmin();
+    if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
 
     const body = await request.json();
     const { title, description, url, content, type, tags, cover_src } = body;

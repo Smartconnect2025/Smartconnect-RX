@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { getUser } from "@core/auth";
-import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { requireAnyAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: { id: string } }
 ) {
-  const platformCheck = await requirePlatformAdmin();
-  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+  const adminCheck = await requireAnyAdmin();
+  if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
 
   try {
     const { user, userRole } = await getUser();

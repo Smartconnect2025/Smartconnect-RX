@@ -1,35 +1,23 @@
 import { NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
-import { getPharmacyAdminScope } from "@/core/auth/api-guards";
+import { requireAnyAdmin, createGuardErrorResponse } from "@/core/auth/api-guards";
 
 /**
- * Delete a provider by email (platform admin only)
+ * Delete a provider by email (any admin)
  * DELETE /api/admin/delete-provider?email=provider@example.com
  */
 export async function DELETE(request: Request) {
   try {
+    const adminCheck = await requireAnyAdmin();
+    if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
+
     const { user, userRole } = await getUser();
 
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Not authenticated" },
         { status: 401 }
-      );
-    }
-
-    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized. Admin access required." },
-        { status: 403 }
-      );
-    }
-
-    const scope = await getPharmacyAdminScope(user.id);
-    if (scope.isPharmacyAdmin) {
-      return NextResponse.json(
-        { success: false, error: "This action is restricted to platform administrators" },
-        { status: 403 }
       );
     }
 

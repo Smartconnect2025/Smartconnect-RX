@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { createAdminClient } from "@core/database/client";
-import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { requireAnyAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 /**
  * Verify a provider account exists and check its status
  * GET /api/admin/verify-provider?email=provider@example.com
  */
 export async function GET(request: Request) {
-  const platformCheck = await requirePlatformAdmin();
-  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+  const adminCheck = await requireAnyAdmin();
+  if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
 
   const supabase = await createServerClient();
   const supabaseAdmin = await createAdminClient();

@@ -8,15 +8,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
-import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { requireAnyAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const platformCheck = await requirePlatformAdmin();
-    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+    const adminCheck = await requireAnyAdmin();
+    if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
 
     const { id } = await params;
     const body = await request.json();

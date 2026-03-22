@@ -175,6 +175,32 @@ export async function requirePlatformAdmin(): Promise<ApiGuardResult> {
   return authResult;
 }
 
+export interface AnyAdminResult extends ApiGuardResult {
+  pharmacyScope?: PharmacyAdminScope;
+}
+
+export async function requireAnyAdmin(): Promise<AnyAdminResult> {
+  const authResult = await requireAuthentication();
+  if (!authResult.success) return authResult;
+
+  const { authInfo } = authResult;
+  if (!authInfo?.userRole || !["admin", "super_admin"].includes(authInfo.userRole)) {
+    return {
+      success: false,
+      error: "Admin access required",
+      status: 403,
+      authInfo,
+    };
+  }
+
+  let pharmacyScope: PharmacyAdminScope = { isPharmacyAdmin: false, pharmacyId: null };
+  if (authInfo.userRole !== "super_admin") {
+    pharmacyScope = await getPharmacyAdminScope(authInfo.user!.id);
+  }
+
+  return { ...authResult, pharmacyScope };
+}
+
 export async function requireNonDemo(): Promise<ApiGuardResult> {
   const authResult = await requireAuthentication();
 

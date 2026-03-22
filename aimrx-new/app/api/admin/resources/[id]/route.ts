@@ -9,15 +9,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createClient } from "@core/supabase";
 import { updateTagUsageCounts } from "@/features/admin-dashboard/utils/tagUsageUpdater";
-import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { requireAnyAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const platformCheck = await requirePlatformAdmin();
-    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+    const adminCheck = await requireAnyAdmin();
+    if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
 
     const { user, userRole } = await getUser();
 
@@ -121,8 +121,8 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const platformCheck = await requirePlatformAdmin();
-    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+    const adminCheck = await requireAnyAdmin();
+    if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
 
     const { id } = await params;
     const supabase = createClient();
