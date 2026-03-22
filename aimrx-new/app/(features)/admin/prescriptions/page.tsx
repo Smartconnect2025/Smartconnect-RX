@@ -26,7 +26,10 @@ import {
 } from "@/components/ui/dialog";
 import { Search, User, Calendar, Pill, Hash, FileText, RefreshCw, AlertCircle, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { PrescriptionProgressTracker } from "@/app/(features)/prescriptions/_components/PrescriptionProgressTracker";
+import { createClient } from "@core/supabase";
+import { useUser } from "@core/auth";
 
 interface AdminPrescription {
   id: string;
@@ -103,7 +106,14 @@ const formatDateTime = (dateTime: string) => {
   });
 };
 
+interface PharmacyOption {
+  id: string;
+  name: string;
+}
+
 export default function AdminPrescriptionsPage() {
+  const { user } = useUser();
+  const supabase = createClient();
   const [prescriptions, setPrescriptions] = useState<AdminPrescription[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
@@ -112,6 +122,56 @@ export default function AdminPrescriptionsPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isSubmittingToPharmacy, setIsSubmittingToPharmacy] = useState(false);
   const [submitResult, setSubmitResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([]);
+  const [selectedPharmacy, setSelectedPharmacy] = useState<string>("all");
+  const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
+  const [scopeChecked, setScopeChecked] = useState(false);
+
+  useEffect(() => {
+    const checkScope = async () => {
+      if (!user?.id) return;
+
+      const { data: roleRow } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      const isSuperAdmin = roleRow?.role === "super_admin";
+
+      if (!isSuperAdmin) {
+        const { data } = await supabase
+          .from("pharmacy_admins")
+          .select("pharmacy_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (data?.pharmacy_id) {
+          setIsPharmacyAdmin(true);
+          setSelectedPharmacy(data.pharmacy_id);
+        }
+      }
+      setScopeChecked(true);
+    };
+    checkScope();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!scopeChecked || isPharmacyAdmin) return;
+    const fetchPharmacies = async () => {
+      try {
+        const response = await fetch("/api/admin/pharmacies");
+        const data = await response.json();
+        if (response.ok) {
+          setPharmacies(data.pharmacies || []);
+        }
+      } catch (error) {
+        console.error("Error fetching pharmacies:", error);
+      }
+    };
+    fetchPharmacies();
+  }, [scopeChecked, isPharmacyAdmin]);
 
   const handleSubmitToPharmacy = async (prescriptionId: string) => {
     setIsSubmittingToPharmacy(true);
@@ -138,7 +198,12 @@ export default function AdminPrescriptionsPage() {
   const loadPrescriptions = useCallback(async () => {
     try {
       setLoadError(null);
-      const response = await fetch("/api/admin/prescriptions");
+      const params = new URLSearchParams();
+      if (selectedPharmacy && selectedPharmacy !== "all") {
+        params.set("pharmacyId", selectedPharmacy);
+      }
+      const url = `/api/admin/prescriptions${params.toString() ? `?${params.toString()}` : ""}`;
+      const response = await fetch(url);
       const data = await response.json();
 
       if (!response.ok) {
@@ -154,7 +219,7 @@ export default function AdminPrescriptionsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [selectedPharmacy]);
 
   useEffect(() => {
     loadPrescriptions();
@@ -199,6 +264,29 @@ export default function AdminPrescriptionsPage() {
           </div>
         </div>
       </div>
+
+      {!isPharmacyAdmin && pharmacies.length > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center gap-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="pharmacy-filter" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
+              <Select value={selectedPharmacy} onValueChange={setSelectedPharmacy}>
+                <SelectTrigger id="pharmacy-filter" className="w-[260px] bg-white" data-testid="select-pharmacy-filter">
+                  <SelectValue placeholder="Select pharmacy" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pharmacies</SelectItem>
+                  {pharmacies.map((pharmacy) => (
+                    <SelectItem key={pharmacy.id} value={pharmacy.id}>
+                      {pharmacy.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="flex items-center gap-4 mb-6">
         <div className="relative flex-1">

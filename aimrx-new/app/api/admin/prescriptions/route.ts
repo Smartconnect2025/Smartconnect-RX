@@ -1,8 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { user } = await getUser();
 
@@ -30,14 +30,25 @@ export async function GET() {
     }
 
     let pharmacyId: string | null = null;
-    const { data: adminLink } = await supabase
-      .from("pharmacy_admins")
-      .select("pharmacy_id")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const isSuperAdmin = userRole === "super_admin";
 
-    if (adminLink?.pharmacy_id) {
-      pharmacyId = adminLink.pharmacy_id;
+    if (!isSuperAdmin) {
+      const { data: adminLink } = await supabase
+        .from("pharmacy_admins")
+        .select("pharmacy_id")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (adminLink?.pharmacy_id) {
+        pharmacyId = adminLink.pharmacy_id;
+      }
+    }
+
+    if (isSuperAdmin) {
+      const queryPharmacyId = request.nextUrl.searchParams.get("pharmacyId");
+      if (queryPharmacyId) {
+        pharmacyId = queryPharmacyId;
+      }
     }
 
     let query = supabase
