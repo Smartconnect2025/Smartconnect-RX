@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
 import { createClient } from "@core/supabase";
@@ -279,7 +279,10 @@ export default function MedicationCatalogPage() {
     }
   };
 
-  const loadMedications = async () => {
+  const requestIdRef = useRef(0);
+
+  const loadMedications = useCallback(async () => {
+    const currentRequestId = ++requestIdRef.current;
     setIsLoadingData(true);
     try {
       const medsParams = new URLSearchParams();
@@ -295,17 +298,19 @@ export default function MedicationCatalogPage() {
         fetch(`/api/admin/categories?${categoriesParams.toString()}`),
       ]);
 
+      if (currentRequestId !== requestIdRef.current) return;
+
       const medsData = await medsResponse.json();
       const categoriesData = await categoriesResponse.json();
+
+      if (currentRequestId !== requestIdRef.current) return;
 
       if (medsData.success) {
         const meds = medsData.medications || [];
         setMedications(meds);
 
-        // Merge categories from both medications and the categories table
         const allCategories = new Set<string>();
 
-        // Add categories from existing medications
         meds.forEach((med: Medication) => {
           if (med.category) {
             allCategories.add(med.category);
@@ -328,18 +333,19 @@ export default function MedicationCatalogPage() {
         console.error("API error:", medsData.error);
       }
     } catch (error) {
+      if (currentRequestId !== requestIdRef.current) return;
       console.error("Error loading medications:", error);
     } finally {
-      setIsLoadingData(false);
+      if (currentRequestId === requestIdRef.current) {
+        setIsLoadingData(false);
+      }
     }
-  };
-
-  // Load medications and categories on mount and when pharmacy filter changes
-  useEffect(() => {
-    loadMedications();
   }, [pharmacyFilter]);
 
-  // Sync categories when window gets focus or storage changes
+  useEffect(() => {
+    loadMedications();
+  }, [loadMedications]);
+
   useEffect(() => {
     const handleFocus = () => {
       loadMedications();
@@ -361,7 +367,7 @@ export default function MedicationCatalogPage() {
       window.removeEventListener("focus", handleFocus);
       window.removeEventListener("storage", handleStorage);
     };
-  }, []);
+  }, [loadMedications]);
 
   const handleDeleteMedication = async (medicationId: string) => {
     if (isDemo) {
