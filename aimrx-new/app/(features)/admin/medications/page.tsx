@@ -62,6 +62,7 @@ export default function MedicationManagementPage() {
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
   const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
+  const pharmacyFilterRef = useRef(pharmacyFilter);
 
   // Medication form state
   const [medicationForm, setMedicationForm] = useState({
@@ -149,14 +150,15 @@ export default function MedicationManagementPage() {
 
   const loadMedications = useCallback(async () => {
     const currentRequestId = ++requestIdRef.current;
+    const currentFilter = pharmacyFilterRef.current;
     try {
       const medsParams = new URLSearchParams();
-      if (isSuperAdmin && pharmacyFilter && pharmacyFilter !== "all") {
-        medsParams.append("pharmacyId", pharmacyFilter);
+      if (isSuperAdmin && currentFilter && currentFilter !== "all") {
+        medsParams.append("pharmacyId", currentFilter);
       }
       const categoriesParams = new URLSearchParams();
-      if (isSuperAdmin && pharmacyFilter && pharmacyFilter !== "all") {
-        categoriesParams.append("pharmacyId", pharmacyFilter);
+      if (isSuperAdmin && currentFilter && currentFilter !== "all") {
+        categoriesParams.append("pharmacyId", currentFilter);
       }
       const [medsResponse, categoriesResponse] = await Promise.all([
         fetch(`/api/admin/medications?${medsParams.toString()}`),
@@ -208,6 +210,17 @@ export default function MedicationManagementPage() {
     loadMedications();
   }, [loadMedications]);
 
+  const handlePharmacyFilterChange = useCallback((value: string) => {
+    pharmacyFilterRef.current = value;
+    setPharmacyFilter(value);
+    if (isSuperAdmin) {
+      setMedicationForm((prev) => ({
+        ...prev,
+        pharmacy_id: value !== "all" ? value : "",
+      }));
+    }
+  }, [isSuperAdmin]);
+
   const handleCreateMedication = async (e: React.FormEvent) => {
     e.preventDefault();
     guardAction(async () => {
@@ -233,9 +246,12 @@ export default function MedicationManagementPage() {
       setMedicationResult(data);
 
       if (data.success) {
-        // Reset form (preserve pharmacy_id if pharmacy admin)
         const resetPharmacyId =
-          isPharmacyAdmin && pharmacies.length === 1 ? pharmacies[0].id : "";
+          isPharmacyAdmin && pharmacies.length === 1
+            ? pharmacies[0].id
+            : isSuperAdmin && pharmacyFilterRef.current !== "all"
+              ? pharmacyFilterRef.current
+              : "";
         setMedicationForm({
           pharmacy_id: resetPharmacyId,
           name: "",
@@ -314,9 +330,12 @@ export default function MedicationManagementPage() {
       setMedicationResult(data);
 
       if (data.success) {
-        // Reset form and edit mode (preserve pharmacy_id if pharmacy admin)
         const resetPharmacyId =
-          isPharmacyAdmin && pharmacies.length === 1 ? pharmacies[0].id : "";
+          isPharmacyAdmin && pharmacies.length === 1
+            ? pharmacies[0].id
+            : isSuperAdmin && pharmacyFilterRef.current !== "all"
+              ? pharmacyFilterRef.current
+              : "";
         setEditingMedicationId(null);
         setMedicationForm({
           pharmacy_id: resetPharmacyId,
@@ -476,7 +495,7 @@ export default function MedicationManagementPage() {
             <select
               id="pharmacy-filter"
               value={pharmacyFilter}
-              onChange={(e) => setPharmacyFilter(e.target.value)}
+              onChange={(e) => handlePharmacyFilterChange(e.target.value)}
               className="flex-1 h-10 px-4 rounded-md border border-gray-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none text-sm"
             >
               <option value="all">All Pharmacies</option>
