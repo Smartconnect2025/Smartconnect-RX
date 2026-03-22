@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
-import { MapPin, Eye, Trash2, UserPlus, Search, RefreshCw, CheckCircle2, XCircle, FolderTree, UserCog } from "lucide-react";
+import { MapPin, Eye, Trash2, UserPlus, Search, RefreshCw, CheckCircle2, XCircle, FolderTree, UserCog, Building2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { BaseTableManagement } from "./BaseTableManagement";
 import { getOptimizedAvatarUrl } from "@core/services/storage/avatarStorage";
 import {
@@ -41,16 +42,23 @@ interface GroupOption {
   platform_manager_name: string | null;
 }
 
+interface PharmacyOption {
+  id: string;
+  name: string;
+}
+
 export const ProvidersManagement: React.FC = () => {
   const { guardAction } = useDemoGuard();
   const { user } = useUser();
-  const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isRevalidating, setIsRevalidating] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter] = useState<string>("all");
   const [groupFilter, setGroupFilter] = useState<string>("all");
+  const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
+  const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([]);
   const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [deletingProvider, setDeletingProvider] = useState<Provider | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -58,6 +66,7 @@ export const ProvidersManagement: React.FC = () => {
   const [assigningProvider, setAssigningProvider] = useState<Provider | null>(null);
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [isAssigning, setIsAssigning] = useState(false);
+  const [scopeChecked, setScopeChecked] = useState(false);
 
   const fetchGroups = async () => {
     try {
@@ -71,10 +80,27 @@ export const ProvidersManagement: React.FC = () => {
     }
   };
 
+  const fetchPharmacies = async () => {
+    try {
+      const response = await fetch("/api/admin/pharmacies");
+      if (response.ok) {
+        const data = await response.json();
+        setPharmacies(data.pharmacies || []);
+      }
+    } catch (error) {
+      console.error("Error fetching pharmacies:", error);
+    }
+  };
+
   const fetchProviders = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/admin/providers");
+      const params = new URLSearchParams();
+      if (pharmacyFilter && pharmacyFilter !== "all") {
+        params.set("pharmacyId", pharmacyFilter);
+      }
+      const url = `/api/admin/providers${params.toString() ? `?${params.toString()}` : ""}`;
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setProviders(data.providers || []);
@@ -93,22 +119,35 @@ export const ProvidersManagement: React.FC = () => {
     const checkScope = async () => {
       if (!user?.id) return;
       const supabase = createClient();
-      const { data } = await supabase
-        .from("pharmacy_admins")
-        .select("pharmacy_id")
+
+      const { data: roleRow } = await supabase
+        .from("user_roles")
+        .select("role")
         .eq("user_id", user.id)
         .maybeSingle();
-      setIsPharmacyAdmin(!!data);
+
+      if (roleRow?.role === "super_admin") {
+        setIsSuperAdmin(true);
+      }
+      setScopeChecked(true);
     };
     checkScope();
   }, [user?.id]);
 
   useEffect(() => {
-    fetchProviders();
-    if (!isPharmacyAdmin) {
+    if (!scopeChecked) return;
+    if (isSuperAdmin) {
       fetchGroups();
+      fetchPharmacies();
     }
-  }, [isPharmacyAdmin]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeChecked, isSuperAdmin]);
+
+  useEffect(() => {
+    if (!scopeChecked) return;
+    fetchProviders();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeChecked, pharmacyFilter]);
 
   const filteredProviders = providers.filter((provider) => {
     const fullName =
@@ -191,7 +230,12 @@ export const ProvidersManagement: React.FC = () => {
       <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
         Provider
       </th>
-      {!isPharmacyAdmin && (
+      {isSuperAdmin && (
+      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+        Pharmacy
+      </th>
+      )}
+      {isSuperAdmin && (
       <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
         Group
       </th>
@@ -253,7 +297,27 @@ export const ProvidersManagement: React.FC = () => {
           </div>
         </div>
       </td>
-      {!isPharmacyAdmin && (
+      {isSuperAdmin && (
+      <td className="p-4 align-middle">
+        {provider.pharmacy_names && provider.pharmacy_names.length > 0 ? (
+          <div className="flex flex-col gap-0.5">
+            {provider.pharmacy_names.map((name, i) => (
+              <Badge
+                key={i}
+                variant="outline"
+                className="bg-blue-50 text-blue-700 border-blue-200 text-xs w-fit"
+              >
+                <Building2 className="h-3 w-3 mr-1" />
+                {name}
+              </Badge>
+            ))}
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-xs">Not linked</span>
+        )}
+      </td>
+      )}
+      {isSuperAdmin && (
       <td className="p-4 align-middle">
         {provider.group_name ? (
           <div className="flex flex-col gap-0.5">
@@ -487,7 +551,27 @@ export const ProvidersManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* Filters */}
+        {isSuperAdmin && pharmacies.length > 0 && (
+          <div className="mb-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="pharmacy-filter" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
+              <Select value={pharmacyFilter} onValueChange={setPharmacyFilter}>
+                <SelectTrigger id="pharmacy-filter" className="w-[260px] bg-white" data-testid="select-pharmacy-filter">
+                  <SelectValue placeholder="Select pharmacy" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pharmacies</SelectItem>
+                  {pharmacies.map((pharmacy) => (
+                    <SelectItem key={pharmacy.id} value={pharmacy.id}>
+                      {pharmacy.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col gap-3">
           <div className="flex flex-row gap-4">
             <div className="relative flex-1">
@@ -504,7 +588,7 @@ export const ProvidersManagement: React.FC = () => {
               />
             </div>
 
-            {!isPharmacyAdmin && (
+            {isSuperAdmin && (
             <Select value={groupFilter} onValueChange={setGroupFilter}>
               <SelectTrigger className="w-[200px] h-11 border-gray-200 bg-white" data-testid="select-group-filter">
                 <SelectValue placeholder="Filter by group" />
@@ -524,7 +608,7 @@ export const ProvidersManagement: React.FC = () => {
             <Button
               variant="outline"
               size="icon"
-              onClick={fetchProviders}
+              onClick={() => fetchProviders()}
               className="h-11 w-11 border-gray-200 bg-white hover:bg-gray-50"
               data-testid="button-refresh-providers"
             >

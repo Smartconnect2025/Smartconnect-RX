@@ -5,12 +5,12 @@
  * Only accessible to users with admin role
  */
 
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { user, userRole } = await getUser();
 
@@ -74,6 +74,7 @@ export async function GET() {
             ...provider,
             email: userData?.user?.email || "Unknown",
             is_demo: roleData?.is_demo || false,
+            pharmacy_names: [],
           };
         })
       );
@@ -81,23 +82,49 @@ export async function GET() {
       return NextResponse.json({ providers: providerData });
     }
 
-    const { data: providerUsers, error: roleError } = await supabase
-      .from("user_roles")
-      .select("user_id, is_demo")
-      .eq("role", "provider");
+    const isSuperAdmin = userRole === "super_admin";
+    const filterPharmacyId = isSuperAdmin ? request.nextUrl.searchParams.get("pharmacyId") : null;
 
-    if (roleError) {
-      console.error("Error fetching provider roles:", roleError);
-      return NextResponse.json(
-        { error: "Failed to fetch providers" },
-        { status: 500 },
-      );
+    let providerUserIds: string[];
+
+    if (filterPharmacyId) {
+      const { data: linkedProviders, error: linkError } = await supabase
+        .from("provider_pharmacy_links")
+        .select("provider_id")
+        .eq("pharmacy_id", filterPharmacyId);
+
+      if (linkError) {
+        return NextResponse.json({ error: "Failed to fetch providers" }, { status: 500 });
+      }
+
+      providerUserIds = (linkedProviders || []).map((l: { provider_id: string }) => l.provider_id);
+      if (providerUserIds.length === 0) {
+        return NextResponse.json({ providers: [], total: 0 });
+      }
+    } else {
+      const { data: providerUsers, error: roleError } = await supabase
+        .from("user_roles")
+        .select("user_id")
+        .eq("role", "provider");
+
+      if (roleError) {
+        console.error("Error fetching provider roles:", roleError);
+        return NextResponse.json(
+          { error: "Failed to fetch providers" },
+          { status: 500 },
+        );
+      }
+      providerUserIds = providerUsers?.map((u) => u.user_id) || [];
     }
 
-    const providerUserIds = providerUsers?.map((u) => u.user_id) || [];
+    const { data: demoRows } = await supabase
+      .from("user_roles")
+      .select("user_id, is_demo")
+      .in("user_id", providerUserIds);
     const demoMap = new Map(
-      (providerUsers || []).map((u) => [u.user_id, u.is_demo || false]),
+      (demoRows || []).map((u) => [u.user_id, u.is_demo || false]),
     );
+
     const { data: providers, error } = await supabase
       .from("providers")
       .select("*")
@@ -111,11 +138,34 @@ export async function GET() {
       );
     }
 
-    // Fetch all tiers for lookup
+    const allProviderUserIds = (providers || []).map((p) => p.user_id).filter(Boolean);
+    let pharmacyLinksMap = new Map<string, string[]>();
+    if (allProviderUserIds.length > 0) {
+      const { data: allLinks } = await supabase
+        .from("provider_pharmacy_links")
+        .select("provider_id, pharmacy_id")
+        .in("provider_id", allProviderUserIds);
+
+      if (allLinks && allLinks.length > 0) {
+        const pharmacyIds = [...new Set(allLinks.map((l) => l.pharmacy_id))];
+        const { data: pharmacyRows } = await supabase
+          .from("pharmacies")
+          .select("id, name")
+          .in("id", pharmacyIds);
+        const pharmacyNameMap = new Map((pharmacyRows || []).map((p) => [p.id, p.name]));
+
+        for (const link of allLinks) {
+          const names = pharmacyLinksMap.get(link.provider_id) || [];
+          const name = pharmacyNameMap.get(link.pharmacy_id);
+          if (name) names.push(name);
+          pharmacyLinksMap.set(link.provider_id, names);
+        }
+      }
+    }
+
     const { data: tiers } = await supabase.from("tiers").select("*");
     const tierMap = new Map(tiers?.map((t) => [t.tier_code, t]) || []);
 
-    // Fetch all groups and platform managers for lookup
     const { data: groups } = await supabase.from("groups").select("*");
     const groupMap = new Map((groups || []).map((g) => [g.id, g]));
 
@@ -126,14 +176,11 @@ export async function GET() {
       pmMap = new Map((pms || []).map((pm) => [pm.id, pm.name]));
     }
 
-    // Transform the data to match the expected format
     const transformedProviders =
       providers?.map((provider) => {
-        // Get tier info from provider's tier_level column and tiers table
         const tierCode = provider.tier_level;
         const tier = tierCode ? tierMap.get(tierCode) : null;
 
-        // Check if profile is complete (payment details, addresses filled)
         const hasPaymentDetails =
           provider.payment_details &&
           typeof provider.payment_details === "object" &&
@@ -150,10 +197,6 @@ export async function GET() {
         const profileComplete =
           hasPaymentDetails && hasPhysicalAddress && hasBillingAddress;
 
-        // Status logic:
-        // - "pending" if profile is incomplete (even if is_active is true)
-        // - "active" only if profile is complete AND is_active is true
-        // - "inactive" if is_active is false and profile is complete
         let status = "pending";
         if (profileComplete) {
           status = provider.is_active ? "active" : "inactive";
@@ -194,6 +237,7 @@ export async function GET() {
           platform_manager_name: provider.group_id
             ? (pmMap.get(groupMap.get(provider.group_id)?.platform_manager_id || "") || null)
             : null,
+          pharmacy_names: pharmacyLinksMap.get(provider.user_id) || [],
         };
       }) || [];
 

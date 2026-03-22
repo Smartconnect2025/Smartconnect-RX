@@ -119,6 +119,7 @@ export interface Provider {
   is_active?: boolean;
   user_id?: string;
   is_demo?: boolean;
+  pharmacy_names?: string[];
 }
 
 // Patient types
