@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
+import { useUser } from "@core/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,9 +56,12 @@ interface Pharmacy {
 
 export default function MedicationManagementPage() {
   const { guardAction } = useDemoGuard();
+  const { userRole } = useUser();
+  const isSuperAdmin = userRole === "super_admin";
   const [medications, setMedications] = useState<Medication[]>([]);
   const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
   const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
+  const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
 
   // Medication form state
   const [medicationForm, setMedicationForm] = useState({
@@ -141,32 +145,43 @@ export default function MedicationManagementPage() {
     }
   };
 
-  // Load medications function
-  const loadMedications = async () => {
+  const requestIdRef = useRef(0);
+
+  const loadMedications = useCallback(async () => {
+    const currentRequestId = ++requestIdRef.current;
     try {
+      const medsParams = new URLSearchParams();
+      if (isSuperAdmin && pharmacyFilter && pharmacyFilter !== "all") {
+        medsParams.append("pharmacyId", pharmacyFilter);
+      }
+      const categoriesParams = new URLSearchParams();
+      if (isSuperAdmin && pharmacyFilter && pharmacyFilter !== "all") {
+        categoriesParams.append("pharmacyId", pharmacyFilter);
+      }
       const [medsResponse, categoriesResponse] = await Promise.all([
-        fetch("/api/admin/medications"),
-        fetch("/api/admin/categories"),
+        fetch(`/api/admin/medications?${medsParams.toString()}`),
+        fetch(`/api/admin/categories?${categoriesParams.toString()}`),
       ]);
+
+      if (currentRequestId !== requestIdRef.current) return;
 
       const medsData = await medsResponse.json();
       const categoriesData = await categoriesResponse.json();
+
+      if (currentRequestId !== requestIdRef.current) return;
 
       if (medsData.success) {
         const meds = medsData.medications || [];
         setMedications(meds);
 
-        // Merge categories from both medications and the categories table
         const allCategories = new Set<string>();
 
-        // Add categories from existing medications
         meds.forEach((med: Medication) => {
           if (med.category) {
             allCategories.add(med.category);
           }
         });
 
-        // Add categories from the database categories table
         if (categoriesData.categories) {
           categoriesData.categories.forEach(
             (cat: { name: string; is_active: boolean }) => {
@@ -180,15 +195,18 @@ export default function MedicationManagementPage() {
         setCustomCategories(Array.from(allCategories));
       }
     } catch (error) {
+      if (currentRequestId !== requestIdRef.current) return;
       console.error("Error loading medications:", error);
     }
-  };
+  }, [pharmacyFilter, isSuperAdmin]);
 
-  // Load pharmacies and medications on mount
   useEffect(() => {
     loadPharmacies();
-    loadMedications();
   }, []);
+
+  useEffect(() => {
+    loadMedications();
+  }, [loadMedications]);
 
   const handleCreateMedication = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -449,6 +467,29 @@ export default function MedicationManagementPage() {
 
   return (
     <div className="container mx-auto max-w-4xl py-8 px-4">
+      {isSuperAdmin && pharmacies.length > 0 && (
+        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4 mb-6">
+          <div className="flex items-center gap-4">
+            <Label htmlFor="pharmacy-filter" className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+              Filter by Pharmacy
+            </Label>
+            <select
+              id="pharmacy-filter"
+              value={pharmacyFilter}
+              onChange={(e) => setPharmacyFilter(e.target.value)}
+              className="flex-1 h-10 px-4 rounded-md border border-gray-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none text-sm"
+            >
+              <option value="all">All Pharmacies</option>
+              {pharmacies.map((pharmacy) => (
+                <option key={pharmacy.id} value={pharmacy.id}>
+                  {pharmacy.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-8">
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-3">
