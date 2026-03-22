@@ -11,6 +11,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 
 interface Tier {
@@ -33,6 +40,8 @@ interface TierFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   editingTier?: Tier | null;
+  isSuperAdmin?: boolean;
+  pharmacies?: { id: string; name: string }[];
 }
 
 export function TierFormDialog({
@@ -40,8 +49,11 @@ export function TierFormDialog({
   onOpenChange,
   onSuccess,
   editingTier,
+  isSuperAdmin = false,
+  pharmacies = [],
 }: TierFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPharmacyId, setSelectedPharmacyId] = useState("");
   const [formData, setFormData] = useState<TierFormData>({
     tierName: "",
     tierCode: "",
@@ -64,6 +76,7 @@ export function TierFormDialog({
         discountPercentage: "",
         description: "",
       });
+      setSelectedPharmacyId("");
     }
   }, [editingTier, open]);
 
@@ -76,10 +89,15 @@ export function TierFormDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isSuperAdmin && !editingTier && !selectedPharmacyId) {
+      toast.error("Please select a pharmacy");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // Validate discount percentage
       const discount = parseFloat(formData.discountPercentage);
       if (isNaN(discount) || discount < 0 || discount > 100) {
         toast.error("Discount percentage must be between 0 and 100");
@@ -93,12 +111,17 @@ export function TierFormDialog({
 
       const method = editingTier ? "PATCH" : "POST";
 
+      const bodyData: Record<string, unknown> = { ...formData };
+      if (isSuperAdmin && !editingTier && selectedPharmacyId) {
+        bodyData.pharmacy_id = selectedPharmacyId;
+      }
+
       const response = await fetch(url, {
         method,
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(bodyData),
       });
 
       const result = await response.json();
@@ -130,6 +153,22 @@ export function TierFormDialog({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          {isSuperAdmin && !editingTier && (
+            <div className="space-y-2">
+              <Label>Pharmacy *</Label>
+              <Select value={selectedPharmacyId} onValueChange={setSelectedPharmacyId}>
+                <SelectTrigger className="bg-white border-gray-200">
+                  <SelectValue placeholder="Select a pharmacy..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {pharmacies.map((pharmacy) => (
+                    <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="tierName">Tier Name *</Label>
             <Input

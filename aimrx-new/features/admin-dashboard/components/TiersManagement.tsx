@@ -1,9 +1,19 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
+import { createClient } from "@core/supabase";
+import { useUser } from "@core/auth";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
 import { Plus, Pencil, Trash2, RefreshCw } from "lucide-react";
 import {
@@ -32,11 +42,16 @@ interface Tier {
   tier_code: string;
   discount_percentage: string;
   description?: string;
+  pharmacy_id?: string | null;
   created_at: string;
   updated_at: string;
 }
 
 export const TiersManagement: React.FC = () => {
+  const { userRole } = useUser();
+  const supabase = useMemo(() => createClient(), []);
+  const isSuperAdmin = userRole === "super_admin";
+
   const { guardAction } = useDemoGuard();
   const [isLoading, setIsLoading] = useState(false);
   const [tiers, setTiers] = useState<Tier[]>([]);
@@ -44,10 +59,36 @@ export const TiersManagement: React.FC = () => {
   const [editingTier, setEditingTier] = useState<Tier | null>(null);
   const [deletingTier, setDeletingTier] = useState<Tier | null>(null);
 
-  const fetchTiers = async () => {
+  const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
+  const [pharmacies, setPharmacies] = useState<{ id: string; name: string }[]>([]);
+
+  const fetchPharmacies = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from("pharmacies")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      setPharmacies(data || []);
+    } catch (error) {
+      console.error("Error fetching pharmacies:", error);
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      fetchPharmacies();
+    }
+  }, [isSuperAdmin, fetchPharmacies]);
+
+  const fetchTiers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/admin/tiers");
+      const params = new URLSearchParams();
+      if (pharmacyFilter && pharmacyFilter !== "all") {
+        params.append("pharmacyId", pharmacyFilter);
+      }
+      const response = await fetch(`/api/admin/tiers?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
         setTiers(data.tiers || []);
@@ -60,11 +101,11 @@ export const TiersManagement: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [pharmacyFilter]);
 
   useEffect(() => {
     fetchTiers();
-  }, []);
+  }, [fetchTiers]);
 
   const handleEdit = (tier: Tier) => {
     setEditingTier(tier);
@@ -74,24 +115,24 @@ export const TiersManagement: React.FC = () => {
   const handleDelete = async () => {
     if (!deletingTier) return;
     guardAction(async () => {
-    try {
-      const response = await fetch(`/api/admin/tiers/${deletingTier.id}`, {
-        method: "DELETE",
-      });
+      try {
+        const response = await fetch(`/api/admin/tiers/${deletingTier.id}`, {
+          method: "DELETE",
+        });
 
-      const result = await response.json();
+        const result = await response.json();
 
-      if (response.ok) {
-        toast.success("Tier deleted successfully");
-        setDeletingTier(null);
-        fetchTiers();
-      } else {
-        toast.error(result.error || "Failed to delete tier");
+        if (response.ok) {
+          toast.success("Tier deleted successfully");
+          setDeletingTier(null);
+          fetchTiers();
+        } else {
+          toast.error(result.error || "Failed to delete tier");
+        }
+      } catch (error) {
+        console.error("Error deleting tier:", error);
+        toast.error("Failed to delete tier");
       }
-    } catch (error) {
-      console.error("Error deleting tier:", error);
-      toast.error("Failed to delete tier");
-    }
     });
   };
 
@@ -99,7 +140,6 @@ export const TiersManagement: React.FC = () => {
     setIsFormOpen(false);
     setEditingTier(null);
   };
-
 
   return (
     <>
@@ -134,6 +174,25 @@ export const TiersManagement: React.FC = () => {
             </Button>
           </div>
         </div>
+
+        {isSuperAdmin && (
+          <div className="flex items-end gap-4">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="pharmacy-filter" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
+              <Select value={pharmacyFilter} onValueChange={setPharmacyFilter}>
+                <SelectTrigger id="pharmacy-filter" className="w-[280px] h-10 bg-white border-gray-200">
+                  <SelectValue placeholder="All Pharmacies" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pharmacies</SelectItem>
+                  {pharmacies.map((pharmacy) => (
+                    <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
 
         <div className="bg-white rounded-lg border border-border shadow-sm">
           <Table>
@@ -208,7 +267,6 @@ export const TiersManagement: React.FC = () => {
         </div>
       </div>
 
-      {/* Tier Form Dialog */}
       <TierFormDialog
         open={isFormOpen}
         onOpenChange={handleFormClose}
@@ -217,9 +275,10 @@ export const TiersManagement: React.FC = () => {
           fetchTiers();
         }}
         editingTier={editingTier}
+        isSuperAdmin={isSuperAdmin}
+        pharmacies={pharmacies}
       />
 
-      {/* Delete Confirmation */}
       <AlertDialog
         open={!!deletingTier}
         onOpenChange={() => setDeletingTier(null)}

@@ -1,18 +1,10 @@
-/**
- * Admin Tiers API
- *
- * Endpoint for admin users to manage tier levels and discount percentages
- * Only accessible to users with admin role
- */
-
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createServerClient } from "@core/supabase/server";
-import { requireNonDemo, requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Check if the current user is an admin
     const { user, userRole } = await getUser();
 
     if (!user) {
@@ -29,18 +21,39 @@ export async function GET() {
       );
     }
 
+    const isSuperAdmin = userRole === "super_admin";
+    let pharmacyId: string | null = null;
+
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
+        return NextResponse.json(
+          { error: "Unable to determine pharmacy scope" },
+          { status: 403 },
+        );
+      }
+      pharmacyId = scope.pharmacyId;
+    } else {
+      pharmacyId = request.nextUrl.searchParams.get("pharmacyId") || null;
+    }
+
     const supabase = await createServerClient();
 
-    // Try to fetch from database first
-    const { data: dbTiers, error: dbError } = await supabase
+    let query = supabase
       .from("tiers")
       .select("*")
       .order("created_at", { ascending: false });
 
+    if (pharmacyId) {
+      query = query.eq("pharmacy_id", pharmacyId);
+    }
+
+    const { data: dbTiers, error: dbError } = await query;
+
     if (dbError) {
       return NextResponse.json(
         { error: "Failed to load tiers. Please try again." },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -59,16 +72,47 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
-    const platformCheck = await requirePlatformAdmin();
-    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+    const { user, userRole } = await getUser();
 
-    const demoCheck = await requireNonDemo();
-    if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const isSuperAdmin = userRole === "super_admin";
+    let pharmacyId: string | null = null;
 
     const body = await request.json();
     const { tierName, tierCode, discountPercentage, description } = body;
 
-    // Validate required fields
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
+        return NextResponse.json(
+          { error: "Unable to determine pharmacy scope" },
+          { status: 403 },
+        );
+      }
+      pharmacyId = scope.pharmacyId;
+    } else {
+      pharmacyId = body.pharmacy_id || null;
+      if (!pharmacyId) {
+        return NextResponse.json(
+          { error: "Pharmacy selection is required" },
+          { status: 400 },
+        );
+      }
+    }
+
     if (!tierName || !tierCode || discountPercentage === undefined) {
       return NextResponse.json(
         { error: "Missing required fields: tierName, tierCode, discountPercentage" },
@@ -76,7 +120,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate discount percentage
     const discount = parseFloat(discountPercentage);
     if (isNaN(discount) || discount < 0 || discount > 100) {
       return NextResponse.json(
@@ -87,20 +130,19 @@ export async function POST(request: NextRequest) {
 
     const supabase = await createServerClient();
 
-    // Try to create in database first
     const { data: dbTier, error: dbError } = await supabase
       .from("tiers")
       .insert({
         tier_name: tierName,
-        tier_code: tierCode.toLowerCase().replace(/\s+/g, ''),
+        tier_code: tierCode.toLowerCase().replace(/\s+/g, ""),
         discount_percentage: discount,
         description: description || null,
+        pharmacy_id: pharmacyId,
       })
       .select()
       .single();
 
     if (dbError) {
-      // Check for unique constraint violation
       if (dbError.code === "23505") {
         return NextResponse.json(
           { error: "A tier with this name or code already exists" },
