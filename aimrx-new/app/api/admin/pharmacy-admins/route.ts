@@ -42,7 +42,26 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Create auth user via Supabase Admin API (using admin client with service role key)
+    const { data: { users: existingUsers } } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = existingUsers?.find((u: { email?: string }) => u.email === email);
+    if (existingUser) {
+      const { data: existingRole } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", existingUser.id)
+        .maybeSingle();
+
+      if (existingRole && ["admin", "super_admin"].includes(existingRole.role)) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "This email belongs to a platform admin. A user cannot have two roles — they cannot be both a platform admin and a pharmacy admin.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
       password,

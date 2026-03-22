@@ -70,7 +70,30 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if link already exists
+    const { data: existingRole } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", admin_user_id)
+      .single();
+
+    if (existingRole && ["admin", "super_admin"].includes(existingRole.role)) {
+      const { data: alreadyLinked } = await supabase
+        .from("pharmacy_admins")
+        .select("user_id")
+        .eq("user_id", admin_user_id)
+        .maybeSingle();
+
+      if (!alreadyLinked) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: "This user is already a platform admin. A user cannot have two roles — they cannot be both a platform admin and a pharmacy admin.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     const { data: existingLink } = await supabase
       .from("pharmacy_admins")
       .select("*")
@@ -85,13 +108,6 @@ export async function POST(request: Request) {
         link: existingLink,
       });
     }
-
-    // Ensure user has admin role in user_roles
-    const { data: existingRole } = await supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", admin_user_id)
-      .single();
 
     const supabaseAdmin = createAdminClient();
 
