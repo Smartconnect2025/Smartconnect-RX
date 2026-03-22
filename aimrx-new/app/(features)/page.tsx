@@ -14,7 +14,7 @@ export default function Home() {
   const { user, userRole } = useUser();
 
   // Show admin dashboard for admins
-  if (userRole === "admin") {
+  if (userRole === "admin" || userRole === "super_admin") {
     return (
       <DefaultLayout>
         <AdminDashboard />

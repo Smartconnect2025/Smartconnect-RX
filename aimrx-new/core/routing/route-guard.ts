@@ -92,7 +92,7 @@ export async function handleRouteAccess(
     }
 
     // Redirect authenticated users to their role-based dashboard
-    if (role === "admin" || role === "pharmacy_admin") {
+    if (role === "admin" || role === "super_admin" || role === "pharmacy_admin") {
       return NextResponse.redirect(
         new URL(redirectPaths.adminDashboard, request.url),
       );
@@ -127,7 +127,7 @@ export async function handleRouteAccess(
     case "auth":
       // Redirect authenticated users away from auth pages
       if (isAuthenticated) {
-        if (role === "admin" || role === "pharmacy_admin") {
+        if (role === "admin" || role === "super_admin" || role === "pharmacy_admin") {
           return NextResponse.redirect(new URL(redirectPaths.adminDashboard, request.url));
         }
         if (role === "provider") {

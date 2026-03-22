@@ -297,7 +297,7 @@ export function AdminHeader() {
                         ? `${user.email.substring(0, 25)}...`
                         : user.email}
                     </p>
-                    {(userRole === "admin" || isPharmacyAdmin) && (
+                    {(userRole === "admin" || userRole === "super_admin" || isPharmacyAdmin) && (
                       <Badge className="mt-1 text-white hover:opacity-90" style={{ backgroundColor: brandColor }}>
                         {isPharmacyAdmin ? (pharmacyBranding?.name || "Pharmacy Admin") : "Admin"}
                       </Badge>

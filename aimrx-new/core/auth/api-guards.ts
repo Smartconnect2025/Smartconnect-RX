@@ -43,7 +43,7 @@ export async function requireAuthentication(): Promise<ApiGuardResult> {
           success: true,
           authInfo: {
             user: { id: "c6e644ab-6ed4-4007-9184-7c27d5762ac6", email: "joseph+200@smartconnects.com" } as User,
-            userRole: "admin",
+            userRole: "super_admin",
             isDemo: false,
           },
         };

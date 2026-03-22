@@ -30,30 +30,29 @@ export async function GET(request: NextRequest) {
     }
 
     let pharmacyId: string | null = null;
-    const isSuperAdmin = userRole === "super_admin";
+
+    const { data: adminLink, error: adminLinkError } = await supabase
+      .from("pharmacy_admins")
+      .select("pharmacy_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    if (adminLinkError) {
+      console.error("Error checking pharmacy admin scope:", adminLinkError);
+      return NextResponse.json({ error: "Failed to verify pharmacy scope" }, { status: 500 });
+    }
+
+    const isSuperAdmin = !adminLink;
 
     if (isSuperAdmin) {
       const queryPharmacyId = request.nextUrl.searchParams.get("pharmacyId");
       if (queryPharmacyId) {
         pharmacyId = queryPharmacyId;
       }
+    } else if (adminLink?.pharmacy_id) {
+      pharmacyId = adminLink.pharmacy_id;
     } else {
-      const { data: adminLink, error: adminLinkError } = await supabase
-        .from("pharmacy_admins")
-        .select("pharmacy_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (adminLinkError) {
-        console.error("Error checking pharmacy admin scope:", adminLinkError);
-        return NextResponse.json({ error: "Failed to verify pharmacy scope" }, { status: 500 });
-      }
-
-      if (adminLink?.pharmacy_id) {
-        pharmacyId = adminLink.pharmacy_id;
-      } else {
-        return NextResponse.json({ error: "No pharmacy assigned to your account" }, { status: 403 });
-      }
+      return NextResponse.json({ error: "No pharmacy assigned to your account" }, { status: 403 });
     }
 
     let query = supabase

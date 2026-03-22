@@ -45,18 +45,17 @@ export async function fetchUserRoleFromDatabase(
       .eq("user_id", userId)
       .single();
 
-    const { data: pharmAdmin } = await supabase
-      .from("pharmacy_admins")
-      .select("pharmacy_id")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (pharmAdmin) {
-      return { role: "admin", isDemo: false };
-    }
-
     if (!error && data?.role) {
       if (data.role === "admin") {
+        const { data: pharmAdmin } = await supabase
+          .from("pharmacy_admins")
+          .select("pharmacy_id")
+          .eq("user_id", userId)
+          .maybeSingle();
+
+        if (pharmAdmin) {
+          return { role: "admin", isDemo: data.is_demo || false };
+        }
         return { role: "super_admin", isDemo: data.is_demo || false };
       }
       return { role: data.role, isDemo: data.is_demo || false };

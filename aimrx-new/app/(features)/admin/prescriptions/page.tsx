@@ -138,8 +138,17 @@ export default function AdminPrescriptionsPage() {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      if (roleRow?.role === "super_admin") {
-        setIsSuperAdmin(true);
+      if (roleRow?.role === "admin") {
+        const { data: pharmacyAdminData } = await supabase
+          .from("pharmacy_admins")
+          .select("pharmacy_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+        if (!pharmacyAdminData) {
+          setIsSuperAdmin(true);
+        } else if (pharmacyAdminData.pharmacy_id) {
+          setSelectedPharmacy(pharmacyAdminData.pharmacy_id);
+        }
       } else {
         const { data } = await supabase
           .from("pharmacy_admins")

@@ -6,7 +6,7 @@
 
 import { redirectPaths } from "./routes-config";
 
-export type UserRole = "admin" | "provider" | "user" | null;
+export type UserRole = "admin" | "super_admin" | "provider" | "user" | null;
 
 export interface RoleBasedRedirectOptions {
   userRole: UserRole;
@@ -20,6 +20,7 @@ export interface RoleBasedRedirectOptions {
 export function getDashboardUrl(userRole: UserRole): string {
   switch (userRole) {
     case "admin":
+    case "super_admin":
       return redirectPaths.adminDashboard;
     case "provider":
       return redirectPaths.providerDashboard;
@@ -68,6 +69,7 @@ export function shouldRedirectToDashboard(options: RoleBasedRedirectOptions): {
   // If user is on a role-specific page that doesn't match their role, redirect
   const roleSpecificPaths = {
     admin: ["/admin"],
+    super_admin: ["/admin"],
     provider: ["/provider"],
     user: ["/patient", "/dashboard"],
   };
@@ -75,6 +77,9 @@ export function shouldRedirectToDashboard(options: RoleBasedRedirectOptions): {
   // Check if user is on a role-specific page that doesn't match their role
   for (const [role, paths] of Object.entries(roleSpecificPaths)) {
     if (role !== userRole) {
+      if ((role === "admin" && userRole === "super_admin") || (role === "super_admin" && userRole === "admin")) {
+        continue;
+      }
       const isOnWrongRolePage = paths.some((path) =>
         currentPath?.startsWith(path),
       );
@@ -145,7 +150,7 @@ export function hasRouteAccess(
     case "provider":
       return userRole === "provider";
     case "admin":
-      return userRole === "admin";
+      return userRole === "admin" || userRole === "super_admin";
     case "intake_required":
       return userRole === "user"; // Only patients need to complete intake
     case "special":
@@ -163,6 +168,7 @@ export function getNavigationItems(userRole: UserRole) {
 
   switch (userRole) {
     case "admin":
+    case "super_admin":
       return [
         ...baseItems,
         { label: "Dashboard", href: "/admin" },

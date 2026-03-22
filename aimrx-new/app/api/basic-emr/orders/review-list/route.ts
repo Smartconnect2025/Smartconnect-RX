@@ -20,7 +20,7 @@ export async function GET() {
     if (
       roleError ||
       !userRole ||
-      (userRole.role !== "provider" && userRole.role !== "admin")
+      (userRole.role !== "provider" && userRole.role !== "admin" && userRole.role !== "super_admin")
     ) {
       return NextResponse.json(
         { error: "Only providers can access order review" },

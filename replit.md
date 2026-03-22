@@ -44,6 +44,16 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 3. Route access defined in `core/routing/routes-config.ts` — admin routes need admin role, provider routes need provider role
 4. Role fetched from `user_roles` table in database
 
+### Role Mapping (CRITICAL)
+- DB `user_role` enum does NOT include `super_admin` — only `admin`, `provider`, `user`, `pharmacy_admin`
+- `fetchUserRoleFromDatabase()` in `core/auth/auth-utils.ts` maps roles:
+  - `admin` in `user_roles` + NOT in `pharmacy_admins` → returns `"super_admin"` (platform admin)
+  - `admin` in `user_roles` + IS in `pharmacy_admins` → returns `"admin"` (pharmacy-scoped admin)
+- All role checks throughout the codebase MUST accept BOTH `"admin"` and `"super_admin"` for admin access
+- `getUser()` returns the mapped role; direct DB queries return raw `"admin"`
+- Dev mode: `get-user.ts` and `api-guards.ts` dev fallbacks return `"super_admin"`
+- `UserClient.tsx` preserves server-provided dev user when no real Supabase session exists
+
 ### MFA Flow
 - Email OTP via SendGrid from `noreply@aimrx.com`
 - Codes stored in `mfa_codes` table, 10-minute expiry

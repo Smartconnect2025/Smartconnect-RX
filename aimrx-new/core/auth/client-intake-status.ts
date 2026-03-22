@@ -27,7 +27,7 @@ export async function checkIntakeStatusClient(
 ): Promise<IntakeStatus> {
   try {
     // Providers and admins don't need intake completion
-    if (userRole === "provider" || userRole === "admin") {
+    if (userRole === "provider" || userRole === "admin" || userRole === "super_admin") {
       return {
         hasCompletedIntake: true,
         patientId: undefined,

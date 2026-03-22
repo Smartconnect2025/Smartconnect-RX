@@ -67,7 +67,6 @@ export function UserClient({
   const isRefreshing = useRef(false);
 
   const refresh = useCallback(async () => {
-    // Prevent concurrent refresh calls
     if (isRefreshing.current) {
       return;
     }
@@ -82,7 +81,6 @@ export function UserClient({
           error,
         } = await supabase.auth.getSession();
 
-        // If there's a network error, silently ignore it to prevent console spam
         if (error && error.message?.includes("Failed to fetch")) {
           return;
         }
@@ -94,8 +92,16 @@ export function UserClient({
 
         newSupabaseUser = session?.user ?? null;
       } catch {
-        // Silently handle network errors during form entry
         return;
+      }
+
+      if (!newSupabaseUser) {
+        const hostName = typeof window !== "undefined" ? window.location.hostname : "";
+        const isDevEnvironment = hostName.includes("replit") || hostName.includes("riker") || hostName.includes("repl.co") || hostName.includes("repl.dev") || hostName === "localhost" || hostName === "127.0.0.1";
+        if (isDevEnvironment && initialUser) {
+          setIsLoading(false);
+          return;
+        }
       }
 
       const newSerializedUser = newSupabaseUser

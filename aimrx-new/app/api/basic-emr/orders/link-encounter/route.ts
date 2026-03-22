@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     if (
       roleError ||
       !userRole ||
-      (userRole.role !== "provider" && userRole.role !== "admin")
+      (userRole.role !== "provider" && userRole.role !== "admin" && userRole.role !== "super_admin")
     ) {
       return NextResponse.json(
         { error: "Only providers can create encounters from orders" },

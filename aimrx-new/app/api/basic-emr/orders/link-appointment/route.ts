@@ -11,7 +11,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!userRole || (userRole !== "provider" && userRole !== "admin")) {
+    if (!userRole || (userRole !== "provider" && userRole !== "admin" && userRole !== "super_admin")) {
       return NextResponse.json(
         { error: "Only providers and admins can link appointments to orders" },
         { status: 403 },
