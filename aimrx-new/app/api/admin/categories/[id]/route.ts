@@ -70,14 +70,18 @@ export async function PUT(
     }
 
     let oldCategoryName: string | null = null;
+    let categoryPharmacyId: string | null = null;
     if (body.name !== undefined) {
       const { data: existing } = await supabase
         .from("categories")
-        .select("name")
+        .select("name, pharmacy_id")
         .eq("id", id)
         .single();
-      if (existing && existing.name !== body.name) {
-        oldCategoryName = existing.name;
+      if (existing) {
+        categoryPharmacyId = existing.pharmacy_id;
+        if (existing.name !== body.name) {
+          oldCategoryName = existing.name;
+        }
       }
     }
 
@@ -100,10 +104,16 @@ export async function PUT(
       .single();
 
     if (!error && oldCategoryName && body.name) {
-      const { error: cascadeError } = await supabase
+      let cascadeQuery = supabase
         .from("pharmacy_medications")
         .update({ category: body.name })
         .eq("category", oldCategoryName);
+
+      if (categoryPharmacyId) {
+        cascadeQuery = cascadeQuery.eq("pharmacy_id", categoryPharmacyId);
+      }
+
+      const { error: cascadeError } = await cascadeQuery;
 
       if (cascadeError) {
         console.error("Error cascading category name change to pharmacy_medications:", cascadeError);
@@ -179,15 +189,21 @@ export async function DELETE(
 
     const { data: categoryData } = await supabase
       .from("categories")
-      .select("name")
+      .select("name, pharmacy_id")
       .eq("id", id)
       .single();
 
     if (categoryData?.name) {
-      const { error: medsError } = await supabase
+      let medsQuery = supabase
         .from("pharmacy_medications")
         .update({ category: null })
         .eq("category", categoryData.name);
+
+      if (categoryData.pharmacy_id) {
+        medsQuery = medsQuery.eq("pharmacy_id", categoryData.pharmacy_id);
+      }
+
+      const { error: medsError } = await medsQuery;
 
       if (medsError) {
         console.error("Error clearing pharmacy_medications category:", medsError);
