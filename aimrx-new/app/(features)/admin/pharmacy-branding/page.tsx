@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { createClient } from "@core/supabase";
 import { useUser } from "@core/auth";
 import { Button } from "@/components/ui/button";
@@ -62,7 +62,7 @@ interface PharmacyData {
 
 export default function PharmacyBrandingPage() {
   const { user, userRole } = useUser();
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const isSuperAdmin = userRole === "super_admin";
 
   const [pharmacy, setPharmacy] = useState<PharmacyData | null>(null);
@@ -82,6 +82,7 @@ export default function PharmacyBrandingPage() {
   const [selectedPharmacyId, setSelectedPharmacyId] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadRequestRef = useRef(0);
 
   const fetchPharmacies = useCallback(async () => {
     try {
@@ -97,6 +98,7 @@ export default function PharmacyBrandingPage() {
   }, [supabase]);
 
   const loadPharmacyById = useCallback(async (pharmacyId: string) => {
+    const requestId = ++loadRequestRef.current;
     setLoading(true);
     try {
       const { data: pharmacyData } = await supabase
@@ -104,6 +106,8 @@ export default function PharmacyBrandingPage() {
         .select("id, name, logo_url, primary_color, tagline, phone, address")
         .eq("id", pharmacyId)
         .single();
+
+      if (requestId !== loadRequestRef.current) return;
 
       if (pharmacyData) {
         setPharmacy(pharmacyData);
@@ -116,10 +120,13 @@ export default function PharmacyBrandingPage() {
         setPharmacy(null);
       }
     } catch (err) {
+      if (requestId !== loadRequestRef.current) return;
       console.error("Failed to load pharmacy:", err);
       setPharmacy(null);
     } finally {
-      setLoading(false);
+      if (requestId === loadRequestRef.current) {
+        setLoading(false);
+      }
     }
   }, [supabase]);
 
@@ -152,13 +159,15 @@ export default function PharmacyBrandingPage() {
     } else {
       loadPharmacyForAdmin();
     }
-  }, [isSuperAdmin, fetchPharmacies, loadPharmacyForAdmin]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin]);
 
   useEffect(() => {
     if (isSuperAdmin && selectedPharmacyId) {
       loadPharmacyById(selectedPharmacyId);
     }
-  }, [isSuperAdmin, selectedPharmacyId, loadPharmacyById]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPharmacyId]);
 
   const handlePharmacyChange = (value: string) => {
     setSelectedPharmacyId(value);
