@@ -125,7 +125,7 @@ export default function AdminPrescriptionsPage() {
 
   const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([]);
   const [selectedPharmacy, setSelectedPharmacy] = useState<string>("all");
-  const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [scopeChecked, setScopeChecked] = useState(false);
 
   useEffect(() => {
@@ -138,16 +138,15 @@ export default function AdminPrescriptionsPage() {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      const isSuperAdmin = roleRow?.role === "super_admin";
-
-      if (!isSuperAdmin) {
+      if (roleRow?.role === "super_admin") {
+        setIsSuperAdmin(true);
+      } else {
         const { data } = await supabase
           .from("pharmacy_admins")
           .select("pharmacy_id")
           .eq("user_id", user.id)
           .maybeSingle();
         if (data?.pharmacy_id) {
-          setIsPharmacyAdmin(true);
           setSelectedPharmacy(data.pharmacy_id);
         }
       }
@@ -158,7 +157,7 @@ export default function AdminPrescriptionsPage() {
   }, [user?.id]);
 
   useEffect(() => {
-    if (!scopeChecked || isPharmacyAdmin) return;
+    if (!scopeChecked || !isSuperAdmin) return;
     const fetchPharmacies = async () => {
       try {
         const response = await fetch("/api/admin/pharmacies");
@@ -171,7 +170,7 @@ export default function AdminPrescriptionsPage() {
       }
     };
     fetchPharmacies();
-  }, [scopeChecked, isPharmacyAdmin]);
+  }, [scopeChecked, isSuperAdmin]);
 
   const handleSubmitToPharmacy = async (prescriptionId: string) => {
     setIsSubmittingToPharmacy(true);
@@ -195,16 +194,19 @@ export default function AdminPrescriptionsPage() {
     }
   };
 
-  const loadPrescriptions = useCallback(async () => {
+  const loadPrescriptions = useCallback(async (signal?: AbortSignal) => {
     try {
+      setIsLoading(true);
       setLoadError(null);
       const params = new URLSearchParams();
       if (selectedPharmacy && selectedPharmacy !== "all") {
         params.set("pharmacyId", selectedPharmacy);
       }
       const url = `/api/admin/prescriptions${params.toString() ? `?${params.toString()}` : ""}`;
-      const response = await fetch(url);
+      const response = await fetch(url, { signal });
       const data = await response.json();
+
+      if (signal?.aborted) return;
 
       if (!response.ok) {
         console.error("Error loading prescriptions:", data.error);
@@ -214,19 +216,24 @@ export default function AdminPrescriptionsPage() {
 
       setPrescriptions(data.prescriptions || []);
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
       console.error("Error loading prescriptions:", error);
       setLoadError("Failed to connect to server");
     } finally {
-      setIsLoading(false);
+      if (!signal?.aborted) {
+        setIsLoading(false);
+      }
     }
   }, [selectedPharmacy]);
 
   useEffect(() => {
-    loadPrescriptions();
+    const controller = new AbortController();
+    loadPrescriptions(controller.signal);
 
-    const interval = setInterval(loadPrescriptions, 15000);
+    const interval = setInterval(() => loadPrescriptions(controller.signal), 15000);
 
     return () => {
+      controller.abort();
       clearInterval(interval);
     };
   }, [loadPrescriptions]);
@@ -265,7 +272,7 @@ export default function AdminPrescriptionsPage() {
         </div>
       </div>
 
-      {!isPharmacyAdmin && pharmacies.length > 0 && (
+      {isSuperAdmin && pharmacies.length > 0 && (
         <div className="mb-4">
           <div className="flex items-center gap-4">
             <div className="space-y-1.5">
@@ -353,7 +360,7 @@ export default function AdminPrescriptionsPage() {
                     <div className="flex flex-col items-center gap-2 text-red-600">
                       <AlertCircle className="h-5 w-5" />
                       <p className="text-sm font-medium">{loadError}</p>
-                      <button onClick={loadPrescriptions} className="text-xs text-blue-600 hover:underline mt-1">
+                      <button onClick={() => loadPrescriptions()} className="text-xs text-blue-600 hover:underline mt-1">
                         Try again
                       </button>
                     </div>
