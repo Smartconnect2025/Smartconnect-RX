@@ -29,14 +29,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let pharmacyScope: { isPharmacyAdmin: boolean; pharmacyId: string | null } = { isPharmacyAdmin: false, pharmacyId: null };
     if (userRole !== "super_admin") {
-      const scope = await getPharmacyAdminScope(user.id);
-      if (scope.isPharmacyAdmin) {
-        return NextResponse.json(
-          { error: "This action is restricted to platform administrators" },
-          { status: 403 },
-        );
-      }
+      pharmacyScope = await getPharmacyAdminScope(user.id);
     }
 
     const body = await request.json();
@@ -58,6 +53,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (pharmacyScope.isPharmacyAdmin && role === "admin") {
+      return NextResponse.json(
+        { error: "Pharmacy admins cannot create other admin accounts" },
+        { status: 403 },
+      );
+    }
+
     // Create the user account
     const result = await createUserAccount({
       email,
@@ -71,6 +73,14 @@ export async function POST(request: NextRequest) {
     });
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
+    }
+
+    if (pharmacyScope.isPharmacyAdmin && pharmacyScope.pharmacyId && result.userId) {
+      const supabase = createAdminClient();
+      await supabase.from("provider_pharmacy_links").upsert({
+        provider_id: result.userId,
+        pharmacy_id: pharmacyScope.pharmacyId,
+      }, { onConflict: "provider_id,pharmacy_id" });
     }
 
     return NextResponse.json({
