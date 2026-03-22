@@ -23,7 +23,7 @@ export async function GET() {
 
   let resolvedRole = userRole?.role || null;
 
-  if (!resolvedRole || resolvedRole === "user") {
+  if (resolvedRole === "admin") {
     const { data: pharmAdmin } = await supabase
       .from("pharmacy_admins")
       .select("pharmacy_id")
@@ -31,6 +31,8 @@ export async function GET() {
       .maybeSingle();
     if (pharmAdmin) {
       resolvedRole = "admin";
+    } else {
+      resolvedRole = "super_admin";
     }
   }
 
