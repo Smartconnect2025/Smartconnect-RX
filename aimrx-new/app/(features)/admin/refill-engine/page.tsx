@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { createClient } from "@core/supabase";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { useUser } from "@core/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -34,6 +34,13 @@ interface CronJobRun {
   started_at: string;
   finished_at: string | null;
   duration_ms: number | null;
+}
+
+interface Pharmacy {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
@@ -74,43 +81,94 @@ function truncateId(id: string): string {
 }
 
 export default function RefillEnginePage() {
-  const supabase = createClient();
+  const { userRole } = useUser();
+  const isSuperAdmin = userRole === "super_admin";
   const [runs, setRuns] = useState<CronJobRun[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
+  const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
+  const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
+  const pharmacyFilterRef = useRef(pharmacyFilter);
+  const requestIdRef = useRef(0);
+
+  const loadPharmacies = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/pharmacies");
+      const data = await response.json();
+      if (data.success) {
+        const activePharmacies = data.pharmacies.filter(
+          (p: Pharmacy) => p.is_active,
+        );
+        setPharmacies(activePharmacies);
+
+        if (!isSuperAdmin && activePharmacies.length === 1) {
+          const singleId = activePharmacies[0].id;
+          pharmacyFilterRef.current = singleId;
+          setPharmacyFilter(singleId);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading pharmacies:", err);
+    }
+  }, [isSuperAdmin]);
+
   const loadRuns = useCallback(async () => {
+    const currentRequestId = ++requestIdRef.current;
     setIsRefreshing(true);
     try {
-      const { data, error } = await supabase
-        .from("cron_job_runs")
-        .select("*")
-        .order("started_at", { ascending: false })
-        .limit(50);
+      const currentFilter = pharmacyFilterRef.current;
+      const params = new URLSearchParams();
+      if (currentFilter && currentFilter !== "all") {
+        params.set("pharmacyId", currentFilter);
+      }
 
-      if (error) {
-        console.error("Error loading cron runs:", error);
-        toast.error("Failed to load cron job runs");
+      const response = await fetch(`/api/admin/refill-engine?${params.toString()}`);
+
+      if (currentRequestId !== requestIdRef.current) return;
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Error loading cron runs:", errorData);
+        toast.error(errorData.error || "Failed to load cron job runs");
         return;
       }
 
-      setRuns((data as CronJobRun[]) || []);
+      const data = await response.json();
+
+      if (currentRequestId !== requestIdRef.current) return;
+
+      setRuns((data.runs as CronJobRun[]) || []);
       setLastRefresh(new Date());
     } catch (err) {
+      if (currentRequestId !== requestIdRef.current) return;
       console.error("Error loading cron runs:", err);
       toast.error("Failed to load cron job runs");
     } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
+      if (currentRequestId === requestIdRef.current) {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }
     }
-  }, [supabase]);
+  }, []);
+
+  useEffect(() => {
+    loadPharmacies();
+  }, [loadPharmacies]);
 
   useEffect(() => {
     loadRuns();
-  }, [loadRuns]);
+  }, [loadRuns, pharmacyFilter]);
 
-  // Summary stats
+  const handlePharmacyFilterChange = useCallback(
+    (value: string) => {
+      pharmacyFilterRef.current = value;
+      setPharmacyFilter(value);
+    },
+    [],
+  );
+
   const totalRuns = runs.length;
   const successRuns = runs.filter((r) => r.status === "success").length;
   const partialRuns = runs.filter((r) => r.status === "partial").length;
@@ -140,6 +198,28 @@ export default function RefillEnginePage() {
           Monitor automated refill cron job executions and track successes and failures.
         </p>
       </div>
+
+      {/* Pharmacy Filter */}
+      {isSuperAdmin && pharmacies.length > 0 && (
+        <div className="mb-6 flex items-center gap-3">
+          <label htmlFor="pharmacy-filter" className="text-sm font-medium text-gray-700">
+            Filter by Pharmacy:
+          </label>
+          <select
+            id="pharmacy-filter"
+            value={pharmacyFilter}
+            onChange={(e) => handlePharmacyFilterChange(e.target.value)}
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Pharmacies</option>
+            {pharmacies.map((pharmacy) => (
+              <option key={pharmacy.id} value={pharmacy.id}>
+                {pharmacy.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
@@ -253,7 +333,6 @@ export default function RefillEnginePage() {
                   </AccordionTrigger>
                   <AccordionContent>
                     <div className="pl-9 space-y-4">
-                      {/* Global error message */}
                       {run.error_message && (
                         <div className="rounded-lg border border-red-200 bg-red-50 p-3">
                           <div className="flex items-start gap-2">
@@ -266,7 +345,6 @@ export default function RefillEnginePage() {
                         </div>
                       )}
 
-                      {/* Successes */}
                       {processed.length > 0 && (
                         <div>
                           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
@@ -295,7 +373,6 @@ export default function RefillEnginePage() {
                         </div>
                       )}
 
-                      {/* Failures */}
                       {failed.length > 0 && (
                         <div>
                           <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
@@ -336,7 +413,6 @@ export default function RefillEnginePage() {
                         </div>
                       )}
 
-                      {/* No details */}
                       {!run.details && !run.error_message && (
                         <p className="text-sm text-gray-400 italic">
                           No details recorded for this run.
