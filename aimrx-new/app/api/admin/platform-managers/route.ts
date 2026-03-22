@@ -42,10 +42,18 @@ export async function GET(request: NextRequest) {
     let pmIds: string[] | null = null;
 
     if (pharmacyIdFilter) {
-      const { data: links } = await supabase
+      const { data: links, error: linksError } = await supabase
         .from("platform_manager_pharmacies")
         .select("platform_manager_id")
         .eq("pharmacy_id", pharmacyIdFilter);
+
+      if (linksError) {
+        console.error("Error querying platform_manager_pharmacies:", linksError);
+        return NextResponse.json(
+          { error: "Failed to filter by pharmacy. Please try again." },
+          { status: 500 },
+        );
+      }
 
       pmIds = links ? links.map((l) => l.platform_manager_id) : [];
     }
@@ -76,12 +84,17 @@ export async function GET(request: NextRequest) {
 
     if (platformManagers && platformManagers.length > 0) {
       const ids = platformManagers.map((pm) => pm.id);
-      const { data: allLinks } = await supabase
+      const { data: allLinks, error: enrichError } = await supabase
         .from("platform_manager_pharmacies")
         .select("platform_manager_id, pharmacy_id")
         .in("platform_manager_id", ids);
 
-      if (allLinks && allLinks.length > 0) {
+      if (enrichError) {
+        console.error("Error enriching pharmacy associations:", enrichError);
+        for (const pm of platformManagers) {
+          (pm as any).pharmacies = [];
+        }
+      } else if (allLinks && allLinks.length > 0) {
         const pharmacyIds = [...new Set(allLinks.map((l) => l.pharmacy_id))];
         const { data: pharmacyData } = await supabase
           .from("pharmacies")
@@ -183,7 +196,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (pharmacy_ids && Array.isArray(pharmacy_ids) && pharmacy_ids.length > 0) {
+    if (isSuperAdmin && pharmacy_ids && Array.isArray(pharmacy_ids) && pharmacy_ids.length > 0) {
       const links = pharmacy_ids.map((pharmacyId: string) => ({
         platform_manager_id: platformManager.id,
         pharmacy_id: pharmacyId,

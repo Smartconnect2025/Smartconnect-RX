@@ -72,7 +72,7 @@ export async function PATCH(
       );
     }
 
-    if (pharmacy_ids !== undefined && Array.isArray(pharmacy_ids)) {
+    if (isSuperAdmin && pharmacy_ids !== undefined && Array.isArray(pharmacy_ids)) {
       const { data: previousLinks } = await supabase
         .from("platform_manager_pharmacies")
         .select("platform_manager_id, pharmacy_id")
