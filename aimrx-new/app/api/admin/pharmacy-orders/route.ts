@@ -116,7 +116,8 @@ export async function GET(request: NextRequest) {
 
     const medicationSales: Record<string, { count: number; revenue: number }> = {};
     prescriptions?.forEach((p) => {
-      const medName = p.medication || 'Unknown';
+      const med = p.medication as { name?: string } | string | null;
+      const medName = typeof med === 'string' ? med : (med?.name || 'Unknown');
       if (!medicationSales[medName]) {
         medicationSales[medName] = { count: 0, revenue: 0 };
       }
