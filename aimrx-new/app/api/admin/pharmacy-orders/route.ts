@@ -1,5 +1,4 @@
-import { NextResponse } from "next/server";
-import { createServerClient } from "@core/supabase/server";
+import { NextResponse, NextRequest } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
@@ -7,9 +6,10 @@ import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 /**
  * Get all orders/prescriptions for the pharmacy admin's pharmacy
  * Platform admins (no pharmacy link) see ALL orders across all pharmacies
+ * Super admins can filter by ?pharmacyId=xxx
  * GET /api/admin/pharmacy-orders
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const { user, userRole } = await getUser();
 
@@ -27,17 +27,26 @@ export async function GET() {
       );
     }
 
-    const scope = await getPharmacyAdminScope(user.id);
-
-    if (scope.isPharmacyAdmin && !scope.pharmacyId) {
-      return NextResponse.json(
-        { success: false, error: "Unable to determine pharmacy scope" },
-        { status: 403 }
-      );
-    }
-
     const supabase = createAdminClient();
-    const pharmacyId = scope.isPharmacyAdmin ? scope.pharmacyId : null;
+    const isSuperAdmin = userRole === "super_admin";
+    let pharmacyId: string | null = null;
+
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+
+      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+        return NextResponse.json(
+          { success: false, error: "Unable to determine pharmacy scope" },
+          { status: 403 }
+        );
+      }
+
+      if (scope.isPharmacyAdmin && scope.pharmacyId) {
+        pharmacyId = scope.pharmacyId;
+      }
+    } else {
+      pharmacyId = request.nextUrl.searchParams.get("pharmacyId") || null;
+    }
 
     let query = supabase
       .from("prescriptions")
@@ -80,18 +89,15 @@ export async function GET() {
       );
     }
 
-    // Calculate analytics
     const totalOrders = prescriptions?.length || 0;
     const totalRevenue = prescriptions?.reduce((sum, p) => sum + (p.total_paid_cents || 0), 0) || 0;
     const totalProfit = prescriptions?.reduce((sum, p) => sum + (p.profit_cents || 0), 0) || 0;
 
-    // Orders by status
     const ordersByStatus = prescriptions?.reduce((acc, p) => {
       acc[p.status] = (acc[p.status] || 0) + 1;
       return acc;
     }, {} as Record<string, number>) || {};
 
-    // Orders by month (last 6 months)
     const ordersByMonth: Record<string, number> = {};
     const today = new Date();
     for (let i = 5; i >= 0; i--) {
@@ -108,7 +114,6 @@ export async function GET() {
       }
     });
 
-    // Best-selling medications
     const medicationSales: Record<string, { count: number; revenue: number }> = {};
     prescriptions?.forEach((p) => {
       const medName = p.medication || 'Unknown';
@@ -124,7 +129,6 @@ export async function GET() {
       .slice(0, 10)
       .map(([name, data]) => ({ name, ...data }));
 
-    // Doctor payment breakdown
     const doctorStats: Record<string, { name: string; orders: number; revenue: number; profit: number }> = {};
     prescriptions?.forEach((p) => {
       const doctorId = p.prescriber_id;
@@ -142,7 +146,6 @@ export async function GET() {
     const doctorBreakdown = Object.values(doctorStats)
       .sort((a, b) => b.revenue - a.revenue);
 
-    // Get total unique doctors count
     const uniqueDoctors = new Set(prescriptions?.map(p => p.prescriber_id) || []).size;
 
     return NextResponse.json({
@@ -150,8 +153,8 @@ export async function GET() {
       orders: prescriptions,
       analytics: {
         totalOrders,
-        totalRevenue: totalRevenue / 100, // Convert cents to dollars
-        totalProfit: totalProfit / 100, // Convert cents to dollars
+        totalRevenue: totalRevenue / 100,
+        totalProfit: totalProfit / 100,
         ordersByStatus,
         ordersByMonth,
         topMedications,
