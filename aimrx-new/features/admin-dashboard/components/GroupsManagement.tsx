@@ -69,7 +69,7 @@ interface UnassignedProvider {
 
 export const GroupsManagement: React.FC = () => {
   const { guardAction } = useDemoGuard();
-  const { user } = useUser();
+  const { user, userRole } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -80,10 +80,10 @@ export const GroupsManagement: React.FC = () => {
   const [unassignedProviders, setUnassignedProviders] = useState<UnassignedProvider[]>([]);
   const [selectedProviderId, setSelectedProviderId] = useState<string>("");
   const [isAssigning, setIsAssigning] = useState(false);
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [scopeChecked, setScopeChecked] = useState(false);
   const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
   const [pharmacies, setPharmacies] = useState<{ id: string; name: string }[]>([]);
+
+  const isSuperAdmin = userRole === "super_admin";
 
   const fetchPharmacies = async () => {
     try {
@@ -159,42 +159,20 @@ export const GroupsManagement: React.FC = () => {
   };
 
   useEffect(() => {
-    const checkScope = async () => {
-      if (!user?.id) return;
-      const supabase = createClient();
-
-      const { data: roleRow } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (roleRow?.role === "super_admin") {
-        setIsSuperAdmin(true);
-      }
-      setScopeChecked(true);
-    };
-    checkScope();
-  }, [user?.id]);
-
-  useEffect(() => {
-    if (!scopeChecked) return;
     if (isSuperAdmin) {
       fetchPharmacies();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopeChecked, isSuperAdmin]);
+  }, [isSuperAdmin]);
 
   useEffect(() => {
-    if (!scopeChecked) return;
     fetchGroups();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scopeChecked]);
+  }, []);
 
   useEffect(() => {
-    if (!scopeChecked) return;
     fetchGroups();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks-deps
   }, [pharmacyFilter]);
 
   const handleEdit = (group: Group) => {
