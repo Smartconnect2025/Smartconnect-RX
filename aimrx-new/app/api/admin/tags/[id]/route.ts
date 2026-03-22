@@ -1,22 +1,14 @@
-/**
- * Admin Tags API - Individual Tag Operations
- *
- * Endpoint for admin users to update and delete specific tags
- * Only accessible to users with admin role
- */
-
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createClient } from "@core/supabase";
-import { requireNonDemo, requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
-// Helper function to generate slug from name
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
-    .replace(/\s+/g, "-") // Replace spaces with hyphens
-    .replace(/-+/g, "-") // Replace multiple hyphens with single
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
     .trim();
 }
 
@@ -25,17 +17,28 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const platformCheck = await requirePlatformAdmin();
-    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+    const { user, userRole } = await getUser();
 
-    const demoCheck = await requireNonDemo();
-    if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const isSuperAdmin = userRole === "super_admin";
 
     const { id } = await params;
     const body = await request.json();
     const { name } = body;
 
-    // Validate required fields
     if (!name || !name.trim()) {
       return NextResponse.json(
         { error: "Tag name is required" },
@@ -45,7 +48,6 @@ export async function PUT(
 
     const trimmedName = name.trim();
 
-    // Validate name length
     if (trimmedName.length > 50) {
       return NextResponse.json(
         { error: "Tag name must be 50 characters or less" },
@@ -55,10 +57,32 @@ export async function PUT(
 
     const supabase = createClient();
 
-    // Check if tag exists
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+        return NextResponse.json(
+          { error: "Unable to determine pharmacy scope" },
+          { status: 403 },
+        );
+      }
+      if (scope.isPharmacyAdmin && scope.pharmacyId) {
+        const { data: tag } = await supabase
+          .from("tags")
+          .select("pharmacy_id")
+          .eq("id", id)
+          .single();
+        if (tag && tag.pharmacy_id !== scope.pharmacyId) {
+          return NextResponse.json(
+            { error: "You can only edit tags for your pharmacy" },
+            { status: 403 },
+          );
+        }
+      }
+    }
+
     const { data: existingTag, error: fetchError } = await supabase
       .from("tags")
-      .select("id, name")
+      .select("id, name, pharmacy_id")
       .eq("id", id)
       .single();
 
@@ -66,25 +90,27 @@ export async function PUT(
       return NextResponse.json({ error: "Tag not found" }, { status: 404 });
     }
 
-    // Check if another tag with this name already exists (excluding current tag)
-    const { data: duplicateTag } = await supabase
+    let duplicateQuery = supabase
       .from("tags")
       .select("id")
       .eq("name", trimmedName)
-      .neq("id", id)
-      .single();
+      .neq("id", id);
+
+    if (existingTag.pharmacy_id) {
+      duplicateQuery = duplicateQuery.eq("pharmacy_id", existingTag.pharmacy_id);
+    }
+
+    const { data: duplicateTag } = await duplicateQuery.single();
 
     if (duplicateTag) {
       return NextResponse.json(
-        { error: "A tag with this name already exists" },
+        { error: "A tag with this name already exists for this pharmacy" },
         { status: 400 },
       );
     }
 
-    // Generate new slug
     const slug = generateSlug(trimmedName);
 
-    // Update the tag
     const { data, error } = await supabase
       .from("tags")
       .update({
@@ -123,19 +149,53 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const platformCheck = await requirePlatformAdmin();
-    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+    const { user, userRole } = await getUser();
 
-    const demoCheck = await requireNonDemo();
-    if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const isSuperAdmin = userRole === "super_admin";
 
     const { id } = await params;
     const supabase = createClient();
 
-    // Check if tag exists
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+        return NextResponse.json(
+          { error: "Unable to determine pharmacy scope" },
+          { status: 403 },
+        );
+      }
+      if (scope.isPharmacyAdmin && scope.pharmacyId) {
+        const { data: tag } = await supabase
+          .from("tags")
+          .select("pharmacy_id")
+          .eq("id", id)
+          .single();
+        if (tag && tag.pharmacy_id !== scope.pharmacyId) {
+          return NextResponse.json(
+            { error: "You can only delete tags for your pharmacy" },
+            { status: 403 },
+          );
+        }
+      }
+    }
+
     const { data: existingTag, error: fetchError } = await supabase
       .from("tags")
-      .select("id, name, usage_count")
+      .select("id, name, usage_count, pharmacy_id")
       .eq("id", id)
       .single();
 
@@ -143,13 +203,17 @@ export async function DELETE(
       return NextResponse.json({ error: "Tag not found" }, { status: 404 });
     }
 
-    // Remove the tag from all resources that use it (automatic cleanup)
-    // First, get all resources that use this tag
+    let resourcesQuery = supabase
+      .from("resources")
+      .select("id, tags")
+      .contains("tags", [existingTag.name]);
+
+    if (existingTag.pharmacy_id) {
+      resourcesQuery = resourcesQuery.eq("pharmacy_id", existingTag.pharmacy_id);
+    }
+
     const { data: resourcesWithTag, error: fetchResourcesError } =
-      await supabase
-        .from("resources")
-        .select("id, tags")
-        .contains("tags", [existingTag.name]);
+      await resourcesQuery;
 
     if (fetchResourcesError) {
       console.error("Error fetching resources with tag:", fetchResourcesError);
@@ -159,7 +223,6 @@ export async function DELETE(
       );
     }
 
-    // Update each resource to remove the tag
     let resourcesUpdated = 0;
     if (resourcesWithTag && resourcesWithTag.length > 0) {
       for (const resource of resourcesWithTag) {
@@ -182,7 +245,6 @@ export async function DELETE(
       }
     }
 
-    // Delete the tag
     const { error } = await supabase.from("tags").delete().eq("id", id);
 
     if (error) {

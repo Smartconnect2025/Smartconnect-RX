@@ -18,7 +18,7 @@ export function useAdminTags() {
   const pageSize = 10;
 
   const fetchTags = useCallback(
-    async (page: number = 1, filters?: { search?: string }) => {
+    async (page: number = 1, filters?: { search?: string; pharmacyId?: string }) => {
       try {
         setLoading(true);
         setError(null);
@@ -30,6 +30,7 @@ export function useAdminTags() {
         });
 
         if (filters?.search) params.append("search", filters.search);
+        if (filters?.pharmacyId && filters.pharmacyId !== "all") params.append("pharmacyId", filters.pharmacyId);
 
         const response = await fetch(`/api/admin/tags?${params.toString()}`);
         if (!response.ok) throw new Error("Failed to fetch tags");
@@ -97,7 +98,7 @@ export function useAdminTags() {
   }, []);
 
   const deleteTag = useCallback(
-    async (id: string, currentFilters?: { search?: string }) => {
+    async (id: string, currentFilters?: { search?: string; pharmacyId?: string }) => {
       // Prevent multiple simultaneous deletions of the same item
       if (deletingIds.has(id)) {
         return;
@@ -189,7 +190,7 @@ export function useAdminTags() {
   }, [fetchTags, currentPage]);
 
   const handlePageChange = useCallback(
-    (page: number, filters?: { search?: string }) => {
+    (page: number, filters?: { search?: string; pharmacyId?: string }) => {
       setCurrentPage(page);
       fetchTags(page, filters);
     },

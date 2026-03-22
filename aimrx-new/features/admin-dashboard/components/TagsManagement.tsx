@@ -1,10 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { Plus, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
+import { createClient } from "@core/supabase";
+import { useUser } from "@core/auth";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
 import { AdminTagsTable } from "./AdminTagsTable";
 import { TagFormDialog } from "./TagFormDialog";
@@ -13,10 +23,17 @@ import type { Tag } from "../types";
 import type { TagFormData } from "./TagFormDialog";
 
 export function TagsManagement() {
+  const { userRole } = useUser();
+  const supabase = useMemo(() => createClient(), []);
+  const isSuperAdmin = userRole === "super_admin";
+
   const { guardAction } = useDemoGuard();
   const [searchTerm, setSearchTerm] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingTag, setEditingTag] = useState<Tag | null>(null);
+
+  const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
+  const [pharmacies, setPharmacies] = useState<{ id: string; name: string }[]>([]);
 
   const {
     tags,
@@ -32,23 +49,46 @@ export function TagsManagement() {
     fetchTags,
   } = useAdminTags();
 
+  const fetchPharmacies = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from("pharmacies")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      setPharmacies(data || []);
+    } catch (error) {
+      console.error("Error fetching pharmacies:", error);
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      fetchPharmacies();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSuperAdmin]);
+
+  const getFilters = useCallback(() => {
+    return {
+      search: searchTerm,
+      pharmacyId: pharmacyFilter,
+    };
+  }, [searchTerm, pharmacyFilter]);
+
   const handleDeleteTag = async (tagId: string) => {
     guardAction(async () => {
-    try {
-      const filters = {
-        search: searchTerm,
-      };
-      await deleteTag(tagId, filters);
-    } catch (error) {
-      console.error("Error deleting tag:", error);
-      throw error;
-    }
+      try {
+        await deleteTag(tagId, getFilters());
+      } catch (error) {
+        console.error("Error deleting tag:", error);
+        throw error;
+      }
     });
   };
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    // Reset to first page when search changes
     if (currentPage !== 1) {
       handlePageChange(1);
     }
@@ -66,58 +106,47 @@ export function TagsManagement() {
 
   const handleFormSubmit = async (data: TagFormData) => {
     guardAction(async () => {
-    try {
-      if (editingTag) {
-        await updateTag(editingTag.id, data);
-        toast.success("Tag updated successfully");
-      } else {
-        await createTag(data);
-        toast.success("Tag created successfully");
+      try {
+        if (editingTag) {
+          await updateTag(editingTag.id, data);
+          toast.success("Tag updated successfully");
+        } else {
+          await createTag(data);
+          toast.success("Tag created successfully");
+        }
+        setIsFormOpen(false);
+        setEditingTag(null);
+        fetchTags(currentPage, getFilters());
+      } catch (error) {
+        console.error("Error saving tag:", error);
       }
-      setIsFormOpen(false);
-      setEditingTag(null);
-
-      // Refresh with current filters
-      const filters = {
-        search: searchTerm,
-      };
-      fetchTags(currentPage, filters);
-    } catch (error) {
-      console.error("Error saving tag:", error);
-    }
     });
   };
 
-  // 🔍 Debounced search: only when searchTerm changes
   useEffect(() => {
     const timeoutId = setTimeout(() => {
-      const filters = {
-        search: searchTerm,
-      };
-      fetchTags(1, filters); // start at page 1 for a new search
-      handlePageChange(1, filters); // keep state in sync
-    }, 300); // 300ms debounce delay
+      const filters = getFilters();
+      fetchTags(1, filters);
+      handlePageChange(1, filters);
+    }, 300);
 
     return () => clearTimeout(timeoutId);
-  }, [searchTerm, fetchTags, handlePageChange]);
+  }, [searchTerm, fetchTags, handlePageChange, getFilters]);
 
-  // 📄 Page change: run with current filters, no debounce
   useEffect(() => {
-    const filters = {
-      search: searchTerm,
-    };
-    fetchTags(currentPage, filters);
-  }, [currentPage, searchTerm, fetchTags]);
+    fetchTags(currentPage, getFilters());
+  }, [currentPage, fetchTags, getFilters]);
 
-  // Handle page changes with current search
+  useEffect(() => {
+    fetchTags(1, getFilters());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pharmacyFilter]);
+
   const handlePageChangeWithSearch = useCallback(
     (page: number) => {
-      const filters = {
-        search: searchTerm,
-      };
-      handlePageChange(page, filters);
+      handlePageChange(page, getFilters());
     },
-    [searchTerm, handlePageChange],
+    [handlePageChange, getFilters],
   );
 
   return (
@@ -138,7 +167,25 @@ export function TagsManagement() {
         </Button>
       </div>
 
-      {/* Stats Cards */}
+      {isSuperAdmin && (
+        <div className="flex items-end gap-4">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="pharmacy-filter" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
+            <Select value={pharmacyFilter} onValueChange={setPharmacyFilter}>
+              <SelectTrigger id="pharmacy-filter" className="w-[280px] h-10 bg-white border-gray-200">
+                <SelectValue placeholder="All Pharmacies" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Pharmacies</SelectItem>
+                {pharmacies.map((pharmacy) => (
+                  <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 md:grid-cols-3">
         <div className="bg-white rounded-lg border border-border p-4">
           <div className="text-2xl font-bold">{totalCount}</div>
@@ -158,7 +205,6 @@ export function TagsManagement() {
         </div>
       </div>
 
-      {/* Search */}
       <div className="flex flex-col gap-3">
         <div className="relative flex-1">
           <Search
@@ -174,7 +220,6 @@ export function TagsManagement() {
         </div>
       </div>
 
-      {/* Tags Table */}
       <AdminTagsTable
         tags={tags}
         loading={loading}
@@ -187,12 +232,13 @@ export function TagsManagement() {
         onPageChange={handlePageChangeWithSearch}
       />
 
-      {/* Tag Form Dialog */}
       <TagFormDialog
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         tag={editingTag}
         onSubmit={handleFormSubmit}
+        isSuperAdmin={isSuperAdmin}
+        pharmacies={pharmacies}
       />
     </div>
   );

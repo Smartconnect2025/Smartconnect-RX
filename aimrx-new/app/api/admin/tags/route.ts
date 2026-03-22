@@ -1,28 +1,19 @@
-/**
- * Admin Tags API
- *
- * Endpoint for admin users to manage resource tags
- * Only accessible to users with admin role
- */
-
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createClient } from "@core/supabase";
-import { requireNonDemo, requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
+import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
-// Helper function to generate slug from name
 function generateSlug(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, "") // Remove special characters
-    .replace(/\s+/g, "-") // Replace spaces with hyphens
-    .replace(/-+/g, "-") // Replace multiple hyphens with single
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
     .trim();
 }
 
 export async function GET(request: NextRequest) {
   try {
-    // Check if the current user is an admin
     const { user, userRole } = await getUser();
 
     if (!user) {
@@ -39,6 +30,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const isSuperAdmin = userRole === "super_admin";
+    let pharmacyId: string | null = null;
+
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+        return NextResponse.json(
+          { error: "Unable to determine pharmacy scope" },
+          { status: 403 },
+        );
+      }
+      if (scope.isPharmacyAdmin && scope.pharmacyId) {
+        pharmacyId = scope.pharmacyId;
+      }
+    } else {
+      pharmacyId = request.nextUrl.searchParams.get("pharmacyId") || null;
+    }
+
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
@@ -47,30 +56,31 @@ export async function GET(request: NextRequest) {
 
     const supabase = createClient();
 
-    // Build the query
-    let query = supabase
+    let countQuery = supabase
       .from("tags")
       .select("*", { count: "exact", head: true });
 
-    // Apply search filter
     if (search) {
-      query = query.ilike("name", `%${search}%`);
+      countQuery = countQuery.ilike("name", `%${search}%`);
+    }
+    if (pharmacyId) {
+      countQuery = countQuery.eq("pharmacy_id", pharmacyId);
     }
 
-    // Get total count with filters
-    const { count } = await query;
+    const { count } = await countQuery;
 
-    // Get paginated tags with filters
     let tagsQuery = supabase.from("tags").select("*");
 
-    // Apply same filters
     if (search) {
       tagsQuery = tagsQuery.ilike("name", `%${search}%`);
     }
+    if (pharmacyId) {
+      tagsQuery = tagsQuery.eq("pharmacy_id", pharmacyId);
+    }
 
     const { data: tags, error } = await tagsQuery
-      .order("usage_count", { ascending: false }) // Sort by usage count descending
-      .order("name", { ascending: true }) // Then by name ascending
+      .order("usage_count", { ascending: false })
+      .order("name", { ascending: true })
       .range(offset, offset + limit - 1);
 
     if (error) {
@@ -99,16 +109,49 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const platformCheck = await requirePlatformAdmin();
-    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+    const { user, userRole } = await getUser();
 
-    const demoCheck = await requireNonDemo();
-    if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
+    if (!user) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 },
+      );
+    }
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
+      );
+    }
+
+    const isSuperAdmin = userRole === "super_admin";
+    let pharmacyId: string | null = null;
 
     const body = await request.json();
     const { name } = body;
 
-    // Validate required fields
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin && !scope.pharmacyId) {
+        return NextResponse.json(
+          { error: "Unable to determine pharmacy scope" },
+          { status: 403 },
+        );
+      }
+      if (scope.isPharmacyAdmin && scope.pharmacyId) {
+        pharmacyId = scope.pharmacyId;
+      }
+    } else {
+      pharmacyId = body.pharmacy_id || null;
+      if (!pharmacyId) {
+        return NextResponse.json(
+          { error: "Pharmacy selection is required" },
+          { status: 400 },
+        );
+      }
+    }
+
     if (!name || !name.trim()) {
       return NextResponse.json(
         { error: "Tag name is required" },
@@ -118,7 +161,6 @@ export async function POST(request: NextRequest) {
 
     const trimmedName = name.trim();
 
-    // Validate name length
     if (trimmedName.length > 50) {
       return NextResponse.json(
         { error: "Tag name must be 50 characters or less" },
@@ -128,30 +170,29 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient();
 
-    // Check if tag name already exists
     const { data: existingTag } = await supabase
       .from("tags")
       .select("id")
       .eq("name", trimmedName)
+      .eq("pharmacy_id", pharmacyId!)
       .single();
 
     if (existingTag) {
       return NextResponse.json(
-        { error: "A tag with this name already exists" },
+        { error: "A tag with this name already exists for this pharmacy" },
         { status: 400 },
       );
     }
 
-    // Generate slug
     const slug = generateSlug(trimmedName);
 
-    // Create the tag
     const { data, error } = await supabase
       .from("tags")
       .insert({
         name: trimmedName,
         slug,
         usage_count: 0,
+        pharmacy_id: pharmacyId,
       })
       .select()
       .single();

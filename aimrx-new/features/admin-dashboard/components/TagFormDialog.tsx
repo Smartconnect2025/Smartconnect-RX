@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +14,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import type { Tag } from "../types";
 
@@ -23,13 +31,15 @@ const tagFormSchema = z.object({
     .max(50, "Tag name must be 50 characters or less"),
 });
 
-export type TagFormData = z.infer<typeof tagFormSchema>;
+export type TagFormData = z.infer<typeof tagFormSchema> & { pharmacy_id?: string };
 
 interface TagFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tag?: Tag | null;
   onSubmit: (data: TagFormData) => void;
+  isSuperAdmin?: boolean;
+  pharmacies?: { id: string; name: string }[];
 }
 
 export function TagFormDialog({
@@ -37,10 +47,13 @@ export function TagFormDialog({
   onOpenChange,
   tag,
   onSubmit,
+  isSuperAdmin = false,
+  pharmacies = [],
 }: TagFormDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedPharmacyId, setSelectedPharmacyId] = useState("");
 
-  const form = useForm<TagFormData>({
+  const form = useForm<{ name: string }>({
     resolver: zodResolver(tagFormSchema),
     defaultValues: {
       name: "",
@@ -48,30 +61,30 @@ export function TagFormDialog({
     mode: "onChange",
   });
 
-  // Reset form when dialog opens/closes or tag changes
   useEffect(() => {
     if (open) {
       if (tag) {
-        // Editing existing tag
-        form.reset({
-          name: tag.name || "",
-        });
+        form.reset({ name: tag.name || "" });
       } else {
-        // Creating new tag
-        form.reset({
-          name: "",
-        });
+        form.reset({ name: "" });
+        setSelectedPharmacyId("");
       }
     }
   }, [open, tag, form]);
 
-  const handleSubmit = async (data: TagFormData) => {
+  const handleSubmit = async (data: { name: string }) => {
+    if (isSuperAdmin && !tag && !selectedPharmacyId) {
+      toast.error("Please select a pharmacy");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      await onSubmit(data);
-      toast.success(
-        tag ? "Tag updated successfully" : "Tag created successfully",
-      );
+      const submitData: TagFormData = {
+        ...data,
+        ...(isSuperAdmin && !tag && selectedPharmacyId ? { pharmacy_id: selectedPharmacyId } : {}),
+      };
+      await onSubmit(submitData);
     } catch (error) {
       console.error("Error saving tag:", error);
       toast.error("Failed to save tag");
@@ -93,7 +106,22 @@ export function TagFormDialog({
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
-          {/* Tag Name */}
+          {isSuperAdmin && !tag && (
+            <div>
+              <Label className="text-sm font-medium">Pharmacy *</Label>
+              <Select value={selectedPharmacyId} onValueChange={setSelectedPharmacyId}>
+                <SelectTrigger className="mt-1 bg-white border-gray-200">
+                  <SelectValue placeholder="Select a pharmacy..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {pharmacies.map((pharmacy) => (
+                    <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           <div>
             <label className="text-sm font-medium">Tag Name *</label>
             <Input
@@ -112,7 +140,6 @@ export function TagFormDialog({
             </p>
           </div>
 
-          {/* Form Actions */}
           <div className="flex justify-end gap-3 pt-4">
             <Button
               type="button"
