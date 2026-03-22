@@ -56,6 +56,9 @@ export async function fetchUserRoleFromDatabase(
     }
 
     if (!error && data?.role) {
+      if (data.role === "admin") {
+        return { role: "super_admin", isDemo: data.is_demo || false };
+      }
       return { role: data.role, isDemo: data.is_demo || false };
     }
 

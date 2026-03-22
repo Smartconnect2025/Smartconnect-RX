@@ -11,7 +11,7 @@ export const getUser = cache(async (): Promise<AuthResult> => {
   if (process.env.NODE_ENV === 'development') {
     return {
       user: { id: "c6e644ab-6ed4-4007-9184-7c27d5762ac6", email: "joseph+200@smartconnects.com" },
-      userRole: "admin",
+      userRole: "super_admin",
       isDemo: false,
     };
   }
