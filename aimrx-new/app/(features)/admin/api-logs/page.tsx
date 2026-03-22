@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
-import { createClient } from "@core/supabase";
+import { useEffect, useState, useCallback, useMemo, useRef } from "react";
+import { useUser } from "@core/auth";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -77,10 +77,17 @@ interface Issue {
   nextSteps: string[];
 }
 
-export default function APILogsPage() {
-  const supabase = createClient();
+interface Pharmacy {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+}
 
-  // Data states
+export default function APILogsPage() {
+  const { userRole } = useUser();
+  const isSuperAdmin = userRole === "super_admin";
+
   const [healthData, setHealthData] = useState<{
     success: boolean;
     overallStatus: string;
@@ -93,17 +100,19 @@ export default function APILogsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  // Accordion states
+  const [pharmacies, setPharmacies] = useState<Pharmacy[]>([]);
+  const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
+  const pharmacyFilterRef = useRef(pharmacyFilter);
+  const requestIdRef = useRef(0);
+
   const [issuesExpanded, setIssuesExpanded] = useState(true);
   const [apiStatusExpanded, setApiStatusExpanded] = useState(false);
   const [recentActivityExpanded, setRecentActivityExpanded] = useState(false);
   const [prescriptionsExpanded, setPrescriptionsExpanded] = useState(false);
 
-  // Filter states
   const [logsSearch, setLogsSearch] = useState("");
   const [logsStatusFilter, setLogsStatusFilter] = useState("all");
 
-  // Issue history tracking (persisted in localStorage)
   const [issueHistory, setIssueHistory] = useState<Record<string, {
     firstSeen: string;
     lastSeen: string;
@@ -116,90 +125,95 @@ export default function APILogsPage() {
     return {};
   });
 
-  // Load all data
+  const loadPharmacies = useCallback(async () => {
+    try {
+      const response = await fetch("/api/admin/pharmacies");
+      const data = await response.json();
+      if (data.success) {
+        const activePharmacies = data.pharmacies.filter(
+          (p: Pharmacy) => p.is_active,
+        );
+        setPharmacies(activePharmacies);
+
+        if (!isSuperAdmin && activePharmacies.length === 1) {
+          const singleId = activePharmacies[0].id;
+          pharmacyFilterRef.current = singleId;
+          setPharmacyFilter(singleId);
+        }
+      }
+    } catch (err) {
+      console.error("Error loading pharmacies:", err);
+    }
+  }, [isSuperAdmin]);
+
   const loadAllData = useCallback(async () => {
+    const currentRequestId = ++requestIdRef.current;
     setIsRefreshing(true);
     try {
-      // Load health data
-      const healthResponse = await fetch("/api/admin/api-health");
+      const currentFilter = pharmacyFilterRef.current;
+      const params = new URLSearchParams();
+      if (currentFilter && currentFilter !== "all") {
+        params.set("pharmacyId", currentFilter);
+      }
+
+      const [healthResponse, logsResponse] = await Promise.all([
+        fetch("/api/admin/api-health"),
+        fetch(`/api/admin/api-logs?${params.toString()}`),
+      ]);
+
+      if (currentRequestId !== requestIdRef.current) return;
+
       const healthJson = await healthResponse.json();
       if (healthJson.success) {
         setHealthData(healthJson);
       }
 
-      // Load system logs (last 50)
-      const { data: logsData } = await supabase
-        .from("system_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (logsData) {
-        setSystemLogs(logsData);
+      if (!logsResponse.ok) {
+        const errorData = await logsResponse.json().catch(() => ({}));
+        console.error("Error loading logs data:", errorData);
+        toast.error(errorData.error || "Failed to load system data");
+        return;
       }
 
-      // Load prescriptions (last 20)
-      const { data: rxData } = await supabase
-        .from("prescriptions")
-        .select(
-          `
-          id,
-          queue_id,
-          submitted_at,
-          medication,
-          dosage,
-          status,
-          patient:patients(first_name, last_name)
-        `
-        )
-        .order("submitted_at", { ascending: false })
-        .limit(20);
+      const logsJson = await logsResponse.json();
 
-      if (rxData) {
-        setPrescriptions(rxData as unknown as PrescriptionData[]);
-      }
+      if (currentRequestId !== requestIdRef.current) return;
 
-      // Calculate stats
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const weekAgo = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
-
-      const { data: allRx } = await supabase
-        .from("prescriptions")
-        .select("submitted_at");
-
-      if (allRx) {
-        const todayCount = allRx.filter(
-          (rx) => new Date(rx.submitted_at) >= today
-        ).length;
-        const weekCount = allRx.filter(
-          (rx) => new Date(rx.submitted_at) >= weekAgo
-        ).length;
-        setStats({
-          today: todayCount,
-          thisWeek: weekCount,
-          allTime: allRx.length,
-        });
-      }
-
+      setSystemLogs(logsJson.systemLogs || []);
+      setPrescriptions((logsJson.prescriptions || []) as PrescriptionData[]);
+      setStats(logsJson.stats || { today: 0, thisWeek: 0, allTime: 0 });
       setLastRefresh(new Date());
     } catch (error) {
+      if (currentRequestId !== requestIdRef.current) return;
       console.error("Error loading data:", error);
       toast.error("Failed to load system data");
     } finally {
-      setIsRefreshing(false);
+      if (currentRequestId === requestIdRef.current) {
+        setIsRefreshing(false);
+      }
     }
-  }, [supabase]);
+  }, []);
+
+  useEffect(() => {
+    loadPharmacies();
+  }, [loadPharmacies]);
 
   useEffect(() => {
     loadAllData();
-  }, [loadAllData]);
+  }, [loadAllData, pharmacyFilter]);
 
-  // Auto-refresh every 30 seconds
   useEffect(() => {
     const interval = setInterval(loadAllData, 30000);
     return () => clearInterval(interval);
   }, [loadAllData]);
+
+  const handlePharmacyFilterChange = useCallback(
+    (value: string) => {
+      pharmacyFilterRef.current = value;
+      setPharmacyFilter(value);
+    },
+    [],
+  );
 
   // Helper to calculate duration
   const calculateDuration = (start: Date, end?: Date): string => {
@@ -532,6 +546,28 @@ export default function APILogsPage() {
           Monitor system health, identify issues, and track prescription activity
         </p>
       </div>
+
+      {/* Pharmacy Filter */}
+      {isSuperAdmin && pharmacies.length > 0 && (
+        <div className="mb-6 flex items-center gap-3">
+          <label htmlFor="pharmacy-filter" className="text-sm font-medium text-gray-700">
+            Filter by Pharmacy:
+          </label>
+          <select
+            id="pharmacy-filter"
+            value={pharmacyFilter}
+            onChange={(e) => handlePharmacyFilterChange(e.target.value)}
+            className="border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All Pharmacies</option>
+            {pharmacies.map((pharmacy) => (
+              <option key={pharmacy.id} value={pharmacy.id}>
+                {pharmacy.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* Quick Stats Dashboard */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
