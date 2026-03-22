@@ -19,6 +19,8 @@ import {
   Users,
   Copy,
   Check,
+  Globe,
+  Info,
 } from "lucide-react";
 import {
   Table,
@@ -171,8 +173,9 @@ export const SuperAdminsManagement: React.FC = () => {
       return diff < 30 * 24 * 60 * 60 * 1000;
     }).length;
     const neverLoggedIn = admins.filter((a) => !a.last_sign_in).length;
-    const linkedToPharmacy = admins.filter((a) => a.pharmacies.length > 0).length;
-    return { total, recentlyActive, neverLoggedIn, linkedToPharmacy };
+    const superAdminCount = admins.filter((a) => a.pharmacies.length === 0).length;
+    const pharmacyAdminCount = admins.filter((a) => a.pharmacies.length > 0).length;
+    return { total, recentlyActive, neverLoggedIn, superAdminCount, pharmacyAdminCount };
   }, [admins]);
 
   const generatePassword = () => {
@@ -225,7 +228,8 @@ export const SuperAdminsManagement: React.FC = () => {
       const result = await response.json();
 
       if (response.ok) {
-        toast.success("Super admin created successfully");
+        const roleLabel = formData.pharmacy_ids.length === 0 ? "Super Admin" : "Pharmacy Admin";
+        toast.success(`${roleLabel} created successfully`);
         setIsFormOpen(false);
         setFormData({ email: "", password: "", full_name: "", pharmacy_ids: [] });
         fetchAdmins();
@@ -258,7 +262,8 @@ export const SuperAdminsManagement: React.FC = () => {
       const result = await response.json();
 
       if (response.ok) {
-        toast.success("Admin updated successfully");
+        const roleLabel = editFormData.pharmacy_ids.length === 0 ? "Super Admin" : "Pharmacy Admin";
+        toast.success(`${roleLabel} updated successfully`);
         setIsEditOpen(false);
         setEditingAdmin(null);
         fetchAdmins();
@@ -360,10 +365,10 @@ export const SuperAdminsManagement: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
-              Super Admins
+              Admin Management
             </h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Platform-level administrators with full access to all pharmacies and settings
+              Manage all platform administrators and their pharmacy access levels
             </p>
           </div>
           <div className="flex gap-2">
@@ -386,18 +391,51 @@ export const SuperAdminsManagement: React.FC = () => {
               data-testid="button-create-admin"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create Super Admin
+              Create Admin
             </Button>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+          <div className="flex items-start gap-3">
+            <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+            <div className="space-y-2 text-sm">
+              <p className="font-semibold text-blue-900">How admin roles work:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex items-start gap-2">
+                  <Badge className="bg-[#1D4E89] text-white shrink-0 mt-0.5">Super Admin</Badge>
+                  <span className="text-blue-800">Has full access to <strong>all pharmacies</strong> and platform settings. Not linked to any specific pharmacy.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Badge className="bg-emerald-600 text-white shrink-0 mt-0.5">Pharmacy Admin</Badge>
+                  <span className="text-blue-800">Can only manage their <strong>assigned pharmacy</strong>. Linked to one or more specific pharmacies.</span>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-lg border border-border p-4" data-testid="stat-total">
             <div className="flex items-center gap-2 mb-1">
-              <Users className="h-4 w-4 text-[#1E3A8A]" />
+              <Users className="h-4 w-4 text-[#1D4E89]" />
               <span className="text-sm text-muted-foreground">Total Admins</span>
             </div>
             <p className="text-2xl font-bold">{stats.total}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-border p-4" data-testid="stat-super-admins">
+            <div className="flex items-center gap-2 mb-1">
+              <Globe className="h-4 w-4 text-[#1D4E89]" />
+              <span className="text-sm text-muted-foreground">Super Admins</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.superAdminCount}</p>
+          </div>
+          <div className="bg-white rounded-lg border border-border p-4" data-testid="stat-pharmacy-admins">
+            <div className="flex items-center gap-2 mb-1">
+              <Building2 className="h-4 w-4 text-emerald-600" />
+              <span className="text-sm text-muted-foreground">Pharmacy Admins</span>
+            </div>
+            <p className="text-2xl font-bold">{stats.pharmacyAdminCount}</p>
           </div>
           <div className="bg-white rounded-lg border border-border p-4" data-testid="stat-active">
             <div className="flex items-center gap-2 mb-1">
@@ -405,20 +443,6 @@ export const SuperAdminsManagement: React.FC = () => {
               <span className="text-sm text-muted-foreground">Active (30d)</span>
             </div>
             <p className="text-2xl font-bold">{stats.recentlyActive}</p>
-          </div>
-          <div className="bg-white rounded-lg border border-border p-4" data-testid="stat-never-logged-in">
-            <div className="flex items-center gap-2 mb-1">
-              <ShieldCheck className="h-4 w-4 text-amber-600" />
-              <span className="text-sm text-muted-foreground">Never Logged In</span>
-            </div>
-            <p className="text-2xl font-bold">{stats.neverLoggedIn}</p>
-          </div>
-          <div className="bg-white rounded-lg border border-border p-4" data-testid="stat-pharmacy">
-            <div className="flex items-center gap-2 mb-1">
-              <Building2 className="h-4 w-4 text-purple-600" />
-              <span className="text-sm text-muted-foreground">Pharmacy Linked</span>
-            </div>
-            <p className="text-2xl font-bold">{stats.linkedToPharmacy}</p>
           </div>
         </div>
 
@@ -434,13 +458,13 @@ export const SuperAdminsManagement: React.FC = () => {
             />
           </div>
           <Select value={filterType} onValueChange={(val) => setFilterType(val as typeof filterType)}>
-            <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-filter">
-              <SelectValue placeholder="Filter" />
+            <SelectTrigger className="w-full sm:w-[220px]" data-testid="select-filter">
+              <SelectValue placeholder="Filter by role" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Admins</SelectItem>
-              <SelectItem value="platform">Platform Only</SelectItem>
-              <SelectItem value="pharmacy">Pharmacy Linked</SelectItem>
+              <SelectItem value="platform">Super Admins Only</SelectItem>
+              <SelectItem value="pharmacy">Pharmacy Admins Only</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -450,9 +474,9 @@ export const SuperAdminsManagement: React.FC = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Admin</TableHead>
-                <TableHead>Linked Pharmacies</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Pharmacy Access</TableHead>
                 <TableHead>Last Sign In</TableHead>
-                <TableHead>Created</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
@@ -468,97 +492,109 @@ export const SuperAdminsManagement: React.FC = () => {
                   <TableCell colSpan={5} className="h-24 text-center text-muted-foreground">
                     {searchQuery || filterType !== "all"
                       ? "No admins match your search/filter."
-                      : "No super admins found."}
+                      : "No admins found."}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredAdmins.map((admin) => (
-                  <TableRow key={admin.user_id} data-testid={`row-admin-${admin.user_id}`}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <ShieldCheck className="h-4 w-4 text-[#1E3A8A] shrink-0" />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className="font-medium truncate" data-testid={`text-admin-email-${admin.user_id}`}>
-                              {admin.email}
-                            </span>
-                            {admin.is_current_user && (
-                              <Badge variant="outline" className="text-xs shrink-0 border-blue-300 text-blue-700">
-                                You
-                              </Badge>
+                filteredAdmins.map((admin) => {
+                  const isSuperAdmin = admin.pharmacies.length === 0;
+                  return (
+                    <TableRow key={admin.user_id} data-testid={`row-admin-${admin.user_id}`}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isSuperAdmin ? "bg-[#1D4E89]/10" : "bg-emerald-50"}`}>
+                            {isSuperAdmin
+                              ? <Globe className="h-4 w-4 text-[#1D4E89]" />
+                              : <Building2 className="h-4 w-4 text-emerald-600" />
+                            }
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium truncate" data-testid={`text-admin-email-${admin.user_id}`}>
+                                {admin.email}
+                              </span>
+                              {admin.is_current_user && (
+                                <Badge variant="outline" className="text-xs shrink-0 border-blue-300 text-blue-700">
+                                  You
+                                </Badge>
+                              )}
+                            </div>
+                            {admin.full_name && (
+                              <div className="text-sm text-muted-foreground truncate">{admin.full_name}</div>
                             )}
                           </div>
-                          {admin.full_name && (
-                            <div className="text-sm text-muted-foreground truncate">{admin.full_name}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {isSuperAdmin ? (
+                          <Badge className="bg-[#1D4E89] text-white hover:bg-[#1D4E89]/90 text-xs">
+                            Super Admin
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-emerald-600 text-white hover:bg-emerald-600/90 text-xs">
+                            Pharmacy Admin
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {isSuperAdmin ? (
+                            <span className="text-sm font-medium text-[#1D4E89]">All Pharmacies</span>
+                          ) : (
+                            admin.pharmacies.map((p, i) => (
+                              <Badge key={i} variant="secondary" className="text-xs">
+                                {(p.pharmacies as { name: string } | null)?.name || "Unknown"}
+                              </Badge>
+                            ))
                           )}
                         </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {admin.pharmacies.length > 0 ? (
-                          admin.pharmacies.map((p, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs">
-                              {(p.pharmacies as { name: string } | null)?.name || "Unknown"}
-                            </Badge>
-                          ))
-                        ) : (
-                          <span className="text-sm text-muted-foreground">Platform only</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {admin.last_sign_in
-                          ? new Date(admin.last_sign_in).toLocaleDateString()
-                          : "Never"}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <span className="text-sm text-muted-foreground">
-                        {admin.created_at
-                          ? new Date(admin.created_at).toLocaleDateString()
-                          : "—"}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openEditDialog(admin)}
-                          className="border border-border"
-                          title="Edit admin"
-                          data-testid={`button-edit-admin-${admin.user_id}`}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openResetPasswordDialog(admin)}
-                          className="border border-border"
-                          title="Reset password"
-                          data-testid={`button-reset-password-${admin.user_id}`}
-                        >
-                          <KeyRound className="h-4 w-4" />
-                        </Button>
-                        {!admin.is_current_user && (
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">
+                          {admin.last_sign_in
+                            ? new Date(admin.last_sign_in).toLocaleDateString()
+                            : "Never"}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => setDeletingAdmin(admin)}
-                            className="border border-border text-destructive hover:text-destructive"
-                            title="Remove admin"
-                            data-testid={`button-delete-admin-${admin.user_id}`}
+                            onClick={() => openEditDialog(admin)}
+                            className="border border-border"
+                            title="Edit admin"
+                            data-testid={`button-edit-admin-${admin.user_id}`}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Pencil className="h-4 w-4" />
                           </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openResetPasswordDialog(admin)}
+                            className="border border-border"
+                            title="Reset password"
+                            data-testid={`button-reset-password-${admin.user_id}`}
+                          >
+                            <KeyRound className="h-4 w-4" />
+                          </Button>
+                          {!admin.is_current_user && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setDeletingAdmin(admin)}
+                              className="border border-border text-destructive hover:text-destructive"
+                              title="Remove admin"
+                              data-testid={`button-delete-admin-${admin.user_id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -574,9 +610,9 @@ export const SuperAdminsManagement: React.FC = () => {
       <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
         <DialogContent className="bg-white border border-border sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Create Super Admin</DialogTitle>
+            <DialogTitle>Create New Admin</DialogTitle>
             <DialogDescription>
-              This creates a platform-level admin with full access to all pharmacies and settings — same privileges as your account.
+              Add a new administrator. Their role is determined by pharmacy assignment below.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4 max-h-[60vh] overflow-y-auto">
@@ -635,8 +671,20 @@ export const SuperAdminsManagement: React.FC = () => {
             </div>
             {pharmacies.length > 0 && (
               <div className="space-y-2">
-                <Label>Link to Pharmacies (optional)</Label>
-                <p className="text-xs text-muted-foreground">Select pharmacies this admin will manage. Leave empty for platform-wide access only.</p>
+                <Label>Assign to Pharmacies</Label>
+                <div className={`rounded-md border p-3 text-xs mb-2 ${formData.pharmacy_ids.length === 0 ? "border-[#1D4E89]/30 bg-[#1D4E89]/5 text-[#1D4E89]" : "border-emerald-300 bg-emerald-50 text-emerald-700"}`}>
+                  {formData.pharmacy_ids.length === 0 ? (
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-3.5 w-3.5 shrink-0" />
+                      <span><strong>Super Admin</strong> — No pharmacies selected. This admin will have access to ALL pharmacies.</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-3.5 w-3.5 shrink-0" />
+                      <span><strong>Pharmacy Admin</strong> — This admin will only manage the {formData.pharmacy_ids.length} selected {formData.pharmacy_ids.length === 1 ? "pharmacy" : "pharmacies"}.</span>
+                    </div>
+                  )}
+                </div>
                 <div className="border border-border rounded-md p-3 space-y-2 max-h-32 overflow-y-auto">
                   {pharmacies.map((pharmacy) => (
                     <label key={pharmacy.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
@@ -676,7 +724,7 @@ export const SuperAdminsManagement: React.FC = () => {
               className="bg-primary hover:bg-primary/90"
               data-testid="button-submit-create"
             >
-              {isSubmitting ? "Creating..." : "Create Super Admin"}
+              {isSubmitting ? "Creating..." : formData.pharmacy_ids.length === 0 ? "Create Super Admin" : "Create Pharmacy Admin"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -714,8 +762,20 @@ export const SuperAdminsManagement: React.FC = () => {
             </div>
             {pharmacies.length > 0 && (
               <div className="space-y-2">
-                <Label>Linked Pharmacies</Label>
-                <p className="text-xs text-muted-foreground">Select which pharmacies this admin manages.</p>
+                <Label>Assign to Pharmacies</Label>
+                <div className={`rounded-md border p-3 text-xs mb-2 ${editFormData.pharmacy_ids.length === 0 ? "border-[#1D4E89]/30 bg-[#1D4E89]/5 text-[#1D4E89]" : "border-emerald-300 bg-emerald-50 text-emerald-700"}`}>
+                  {editFormData.pharmacy_ids.length === 0 ? (
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-3.5 w-3.5 shrink-0" />
+                      <span><strong>Super Admin</strong> — No pharmacies selected. This admin has access to ALL pharmacies.</span>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <Building2 className="h-3.5 w-3.5 shrink-0" />
+                      <span><strong>Pharmacy Admin</strong> — This admin only manages the {editFormData.pharmacy_ids.length} selected {editFormData.pharmacy_ids.length === 1 ? "pharmacy" : "pharmacies"}.</span>
+                    </div>
+                  )}
+                </div>
                 <div className="border border-border rounded-md p-3 space-y-2 max-h-32 overflow-y-auto">
                   {pharmacies.map((pharmacy) => (
                     <label key={pharmacy.id} className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded">
