@@ -1,10 +1,3 @@
-/**
- * Admin Platform Manager Management API
- *
- * Endpoint for admin users to update or delete specific platform managers
- * Only accessible to users with admin role
- */
-
 import { NextRequest, NextResponse } from "next/server";
 import { getUser } from "@core/auth";
 import { createServerClient } from "@core/supabase/server";
@@ -31,19 +24,23 @@ export async function PATCH(
       );
     }
 
-    const scope = await getPharmacyAdminScope(user.id);
-    if (scope.isPharmacyAdmin) {
-      return NextResponse.json(
-        { error: "This action is restricted to platform administrators" },
-        { status: 403 },
-      );
+    const isSuperAdmin = userRole === "super_admin";
+
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin) {
+        return NextResponse.json(
+          { error: "This action is restricted to platform administrators" },
+          { status: 403 },
+        );
+      }
     }
 
     const demoCheck = await requireNonDemo();
     if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
 
     const body = await request.json();
-    const { name, email } = body;
+    const { name, email, pharmacy_ids } = body;
 
     if (!name) {
       return NextResponse.json(
@@ -53,11 +50,12 @@ export async function PATCH(
     }
 
     const supabase = await createServerClient();
+    const { id } = await params;
 
     const { data: platformManager, error } = await supabase
       .from("platform_managers")
       .update({ name, email: email || null, updated_at: new Date().toISOString() })
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -72,6 +70,53 @@ export async function PATCH(
         { error: "Failed to update platform manager. Please try again." },
         { status: 500 },
       );
+    }
+
+    if (pharmacy_ids !== undefined && Array.isArray(pharmacy_ids)) {
+      const { data: previousLinks } = await supabase
+        .from("platform_manager_pharmacies")
+        .select("platform_manager_id, pharmacy_id")
+        .eq("platform_manager_id", id);
+
+      const { error: deleteError } = await supabase
+        .from("platform_manager_pharmacies")
+        .delete()
+        .eq("platform_manager_id", id);
+
+      if (deleteError) {
+        console.error("Error clearing pharmacy links:", deleteError);
+        return NextResponse.json(
+          { error: "Failed to update pharmacy associations." },
+          { status: 500 },
+        );
+      }
+
+      if (pharmacy_ids.length > 0) {
+        const links = pharmacy_ids.map((pharmacyId: string) => ({
+          platform_manager_id: id,
+          pharmacy_id: pharmacyId,
+        }));
+
+        const { error: linkError } = await supabase
+          .from("platform_manager_pharmacies")
+          .insert(links);
+
+        if (linkError) {
+          console.error("Error inserting pharmacy links:", linkError);
+          if (previousLinks && previousLinks.length > 0) {
+            await supabase
+              .from("platform_manager_pharmacies")
+              .insert(previousLinks.map((l) => ({
+                platform_manager_id: l.platform_manager_id,
+                pharmacy_id: l.pharmacy_id,
+              })));
+          }
+          return NextResponse.json(
+            { error: "Failed to update pharmacy associations." },
+            { status: 500 },
+          );
+        }
+      }
     }
 
     return NextResponse.json({
@@ -109,23 +154,28 @@ export async function DELETE(
       );
     }
 
-    const scope = await getPharmacyAdminScope(user.id);
-    if (scope.isPharmacyAdmin) {
-      return NextResponse.json(
-        { error: "This action is restricted to platform administrators" },
-        { status: 403 },
-      );
+    const isSuperAdmin = userRole === "super_admin";
+
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (scope.isPharmacyAdmin) {
+        return NextResponse.json(
+          { error: "This action is restricted to platform administrators" },
+          { status: 403 },
+        );
+      }
     }
 
     const demoCheck = await requireNonDemo();
     if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
 
     const supabase = await createServerClient();
+    const { id } = await params;
 
     const { error: fetchError } = await supabase
       .from("platform_managers")
       .select("id")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (fetchError) {
@@ -144,7 +194,7 @@ export async function DELETE(
     const { error } = await supabase
       .from("platform_managers")
       .delete()
-      .eq("id", params.id);
+      .eq("id", id);
 
     if (error) {
       return NextResponse.json(

@@ -12,10 +12,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
+interface Pharmacy {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 interface PlatformManager {
   id: string;
   name: string;
   email?: string;
+  pharmacies?: Pharmacy[];
 }
 
 interface PlatformManagerFormDialogProps {
@@ -34,16 +41,51 @@ export function PlatformManagerFormDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [selectedPharmacyIds, setSelectedPharmacyIds] = useState<string[]>([]);
+  const [availablePharmacies, setAvailablePharmacies] = useState<Pharmacy[]>([]);
+
+  useEffect(() => {
+    if (open) {
+      loadPharmacies();
+    }
+  }, [open]);
 
   useEffect(() => {
     if (editingPlatformManager) {
       setName(editingPlatformManager.name);
       setEmail(editingPlatformManager.email || "");
+      setSelectedPharmacyIds(
+        editingPlatformManager.pharmacies?.map((p) => p.id) || [],
+      );
     } else {
       setName("");
       setEmail("");
+      setSelectedPharmacyIds([]);
     }
   }, [editingPlatformManager, open]);
+
+  const loadPharmacies = async () => {
+    try {
+      const response = await fetch("/api/admin/pharmacies");
+      if (response.ok) {
+        const data = await response.json();
+        const active = (data.pharmacies || []).filter(
+          (p: Pharmacy & { is_active: boolean }) => p.is_active,
+        );
+        setAvailablePharmacies(active);
+      }
+    } catch (error) {
+      console.error("Error loading pharmacies:", error);
+    }
+  };
+
+  const togglePharmacy = (pharmacyId: string) => {
+    setSelectedPharmacyIds((prev) =>
+      prev.includes(pharmacyId)
+        ? prev.filter((id) => id !== pharmacyId)
+        : [...prev, pharmacyId],
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,7 +103,11 @@ export function PlatformManagerFormDialog({
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name, email: email || null }),
+        body: JSON.stringify({
+          name,
+          email: email || null,
+          pharmacy_ids: selectedPharmacyIds,
+        }),
       });
 
       const result = await response.json();
@@ -117,6 +163,36 @@ export function PlatformManagerFormDialog({
               placeholder="Enter email address"
             />
           </div>
+
+          <div className="space-y-2">
+            <Label>Pharmacy Association</Label>
+            <p className="text-xs text-muted-foreground">
+              Select which pharmacies this manager is associated with
+            </p>
+            {availablePharmacies.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">
+                No pharmacies available
+              </p>
+            ) : (
+              <div className="max-h-40 overflow-y-auto border border-border rounded-md p-2 space-y-1">
+                {availablePharmacies.map((pharmacy) => (
+                  <label
+                    key={pharmacy.id}
+                    className="flex items-center gap-2 p-1.5 rounded hover:bg-gray-50 cursor-pointer"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedPharmacyIds.includes(pharmacy.id)}
+                      onChange={() => togglePharmacy(pharmacy.id)}
+                      className="w-4 h-4 rounded border-gray-300"
+                    />
+                    <span className="text-sm">{pharmacy.name}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex justify-end gap-2">
             <Button
               type="button"
