@@ -40,16 +40,10 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createServerClient();
 
-    let query = supabase
+    const { data: allCategories, error: categoriesError } = await supabase
       .from("categories")
       .select("*")
       .order("display_order", { ascending: true });
-
-    if (pharmacyId) {
-      query = query.eq("pharmacy_id", pharmacyId);
-    }
-
-    const { data: categories, error: categoriesError } = await query;
 
     if (categoriesError) {
       console.error("Error fetching categories:", categoriesError);
@@ -70,7 +64,16 @@ export async function GET(request: NextRequest) {
 
     const { data: pharmacyMeds } = await medsQuery;
 
-    const categoriesWithCounts = (categories || []).map((category: Category) => {
+    let categories = allCategories || [];
+
+    if (pharmacyId) {
+      const pharmacyCategoryNames = new Set(
+        (pharmacyMeds || []).map((m: { category: string | null }) => m.category).filter(Boolean),
+      );
+      categories = categories.filter((c: Category) => pharmacyCategoryNames.has(c.name));
+    }
+
+    const categoriesWithCounts = categories.map((category: Category) => {
       const matchingMeds = (pharmacyMeds || []).filter(
         (m: { category: string | null }) => m.category === category.name,
       );
@@ -88,7 +91,16 @@ export async function GET(request: NextRequest) {
       }
 
       return {
-        ...category,
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+        description: category.description,
+        display_order: category.display_order,
+        is_active: category.is_active,
+        color: category.color,
+        image_url: category.image_url,
+        created_at: category.created_at,
+        updated_at: category.updated_at,
         medication_count: matchingMeds.length,
         pharmacy_counts: Array.from(pharmacyMap.values()),
       };
@@ -124,29 +136,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const isSuperAdmin = userRole === "super_admin";
-    let pharmacyId: string | null = null;
-
     const body = await request.json();
-
-    if (!isSuperAdmin) {
-      const scope = await getPharmacyAdminScope(user.id);
-      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
-        return NextResponse.json(
-          { error: "Unable to determine pharmacy scope" },
-          { status: 403 },
-        );
-      }
-      pharmacyId = scope.pharmacyId;
-    } else {
-      pharmacyId = body.pharmacy_id || null;
-      if (!pharmacyId) {
-        return NextResponse.json(
-          { error: "Pharmacy selection is required" },
-          { status: 400 },
-        );
-      }
-    }
 
     const supabase = await createServerClient();
 
@@ -161,12 +151,11 @@ export async function POST(request: NextRequest) {
       .from("categories")
       .select("id")
       .eq("name", body.name)
-      .eq("pharmacy_id", pharmacyId!)
       .single();
 
     if (existingCategoryByName) {
       return NextResponse.json(
-        { error: "A category with this name already exists for this pharmacy" },
+        { error: "A category with this name already exists" },
         { status: 400 },
       );
     }
@@ -175,12 +164,11 @@ export async function POST(request: NextRequest) {
       .from("categories")
       .select("id")
       .eq("slug", body.slug)
-      .eq("pharmacy_id", pharmacyId!)
       .single();
 
     if (existingCategoryBySlug) {
       return NextResponse.json(
-        { error: "A category with this slug already exists for this pharmacy" },
+        { error: "A category with this slug already exists" },
         { status: 400 },
       );
     }
@@ -201,7 +189,6 @@ export async function POST(request: NextRequest) {
         slug: body.slug,
         display_order: nextDisplayOrder,
         is_active: true,
-        pharmacy_id: pharmacyId,
         ...(body.description ? { description: body.description } : {}),
         ...(body.color ? { color: body.color } : {}),
       })

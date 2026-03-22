@@ -52,7 +52,6 @@ interface Category {
   is_active: boolean;
   color: string | null;
   image_url: string | null;
-  pharmacy_id: string | null;
   created_at: string;
   updated_at: string;
   medication_count: number;
@@ -74,7 +73,6 @@ export default function CategoriesPage() {
     name: "",
     description: "",
     color: "#1E3A8A",
-    pharmacy_id: "",
   });
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -145,11 +143,6 @@ export default function CategoriesPage() {
       return;
     }
 
-    if (isSuperAdmin && !newCategory.pharmacy_id) {
-      alert("Please select a pharmacy");
-      return;
-    }
-
     try {
       const response = await fetch("/api/admin/categories", {
         method: "POST",
@@ -160,14 +153,13 @@ export default function CategoriesPage() {
           slug: generateSlug(newCategory.name),
           description: newCategory.description.trim() || null,
           color: newCategory.color || null,
-          pharmacy_id: newCategory.pharmacy_id || undefined,
         }),
       });
 
       const result = await response.json();
       if (response.ok) {
         setShowCreateDialog(false);
-        setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_id: "" });
+        setNewCategory({ name: "", description: "", color: "#1E3A8A" });
         await loadCategories();
       } else {
         alert(result.error || "Failed to create category");
@@ -649,21 +641,6 @@ export default function CategoriesPage() {
             <DialogTitle>Add New Category</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            {isSuperAdmin && (
-              <div className="space-y-1.5">
-                <Label htmlFor="cat-pharmacy">Pharmacy *</Label>
-                <Select value={newCategory.pharmacy_id} onValueChange={(value) => setNewCategory({ ...newCategory, pharmacy_id: value })}>
-                  <SelectTrigger id="cat-pharmacy" className="bg-white border-gray-200">
-                    <SelectValue placeholder="Select a pharmacy..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {pharmacies.map((pharmacy) => (
-                      <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
             <div className="space-y-1.5">
               <Label htmlFor="cat-name">Category Name *</Label>
               <Input

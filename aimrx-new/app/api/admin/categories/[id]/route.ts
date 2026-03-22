@@ -3,6 +3,28 @@ import { createServerClient } from "@core/supabase";
 import { getUser } from "@core/auth";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
+async function verifyCategoryAccessForPharmacyAdmin(
+  supabase: Awaited<ReturnType<typeof createServerClient>>,
+  categoryId: string,
+  pharmacyId: string,
+): Promise<boolean> {
+  const { data: cat } = await supabase
+    .from("categories")
+    .select("name")
+    .eq("id", categoryId)
+    .single();
+  if (!cat) return false;
+
+  const { data: meds } = await supabase
+    .from("pharmacy_medications")
+    .select("id")
+    .eq("category", cat.name)
+    .eq("pharmacy_id", pharmacyId)
+    .limit(1);
+
+  return (meds && meds.length > 0);
+}
+
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -25,7 +47,6 @@ export async function PUT(
     }
 
     const isSuperAdmin = userRole === "super_admin";
-
     const { id } = await params;
     const body = await request.json();
     const supabase = await createServerClient();
@@ -38,15 +59,8 @@ export async function PUT(
           { status: 403 },
         );
       }
-      const { data: cat } = await supabase
-        .from("categories")
-        .select("pharmacy_id")
-        .eq("id", id)
-        .single();
-      if (!cat) {
-        return NextResponse.json({ error: "Category not found" }, { status: 404 });
-      }
-      if (cat.pharmacy_id !== scope.pharmacyId) {
+      const hasAccess = await verifyCategoryAccessForPharmacyAdmin(supabase, id, scope.pharmacyId);
+      if (!hasAccess) {
         return NextResponse.json({ error: "Category not found" }, { status: 404 });
       }
     }
@@ -68,18 +82,14 @@ export async function PUT(
     }
 
     let oldCategoryName: string | null = null;
-    let categoryPharmacyId: string | null = null;
     if (body.name !== undefined) {
       const { data: existing } = await supabase
         .from("categories")
-        .select("name, pharmacy_id")
+        .select("name")
         .eq("id", id)
         .single();
-      if (existing) {
-        categoryPharmacyId = existing.pharmacy_id;
-        if (existing.name !== body.name) {
-          oldCategoryName = existing.name;
-        }
+      if (existing && existing.name !== body.name) {
+        oldCategoryName = existing.name;
       }
     }
 
@@ -102,16 +112,10 @@ export async function PUT(
       .single();
 
     if (!error && oldCategoryName && body.name) {
-      let cascadeQuery = supabase
+      const { error: cascadeError } = await supabase
         .from("pharmacy_medications")
         .update({ category: body.name })
         .eq("category", oldCategoryName);
-
-      if (categoryPharmacyId) {
-        cascadeQuery = cascadeQuery.eq("pharmacy_id", categoryPharmacyId);
-      }
-
-      const { error: cascadeError } = await cascadeQuery;
 
       if (cascadeError) {
         console.error("Error cascading category name change to pharmacy_medications:", cascadeError);
@@ -158,7 +162,6 @@ export async function DELETE(
     }
 
     const isSuperAdmin = userRole === "super_admin";
-
     const { id } = await params;
     const supabase = await createServerClient();
 
@@ -170,36 +173,27 @@ export async function DELETE(
           { status: 403 },
         );
       }
-      const { data: cat } = await supabase
-        .from("categories")
-        .select("pharmacy_id")
-        .eq("id", id)
-        .single();
-      if (!cat) {
-        return NextResponse.json({ error: "Category not found" }, { status: 404 });
-      }
-      if (cat.pharmacy_id !== scope.pharmacyId) {
+      const hasAccess = await verifyCategoryAccessForPharmacyAdmin(supabase, id, scope.pharmacyId);
+      if (!hasAccess) {
         return NextResponse.json({ error: "Category not found" }, { status: 404 });
       }
     }
 
     const { data: categoryData } = await supabase
       .from("categories")
-      .select("name, pharmacy_id")
+      .select("name")
       .eq("id", id)
       .single();
 
-    if (categoryData?.name) {
-      let medsQuery = supabase
+    if (!categoryData) {
+      return NextResponse.json({ error: "Category not found" }, { status: 404 });
+    }
+
+    if (categoryData.name) {
+      const { error: medsError } = await supabase
         .from("pharmacy_medications")
         .update({ category: null })
         .eq("category", categoryData.name);
-
-      if (categoryData.pharmacy_id) {
-        medsQuery = medsQuery.eq("pharmacy_id", categoryData.pharmacy_id);
-      }
-
-      const { error: medsError } = await medsQuery;
 
       if (medsError) {
         console.error("Error clearing pharmacy_medications category:", medsError);
