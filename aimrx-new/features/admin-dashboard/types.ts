@@ -137,8 +137,8 @@ export interface Patient {
   created_at: string;
   status: "active" | "inactive";
   role: string;
-  pharmacy_id?: string;
-  pharmacy_name?: string;
+  pharmacy_id?: string | null;
+  pharmacy_name?: string | null;
   // Intake data
   height?: string;
   weight?: string;
