@@ -27,7 +27,7 @@ export async function PATCH(
     const isSuperAdmin = userRole === "super_admin";
 
     const body = await request.json();
-    const { tierName, tierCode, discountPercentage, description } = body;
+    const { tierName, discountPercentage, description } = body;
 
     if (discountPercentage !== undefined) {
       const discount = parseFloat(discountPercentage);
@@ -40,6 +40,7 @@ export async function PATCH(
     }
 
     const supabase = await createServerClient();
+    let scopedPharmacyId: string | null = null;
 
     if (!isSuperAdmin) {
       const scope = await getPharmacyAdminScope(user.id);
@@ -49,37 +50,32 @@ export async function PATCH(
           { status: 403 },
         );
       }
-      const { data: tier } = await supabase
-        .from("tiers")
-        .select("pharmacy_id")
-        .eq("id", params.id)
-        .single();
-      if (!tier) {
-        return NextResponse.json({ error: "Tier not found" }, { status: 404 });
-      }
-      if (tier.pharmacy_id !== scope.pharmacyId) {
-        return NextResponse.json({ error: "Tier not found" }, { status: 404 });
-      }
+      scopedPharmacyId = scope.pharmacyId;
     }
 
     const updateData: Record<string, unknown> = {};
     if (tierName) updateData.tier_name = tierName;
-    if (tierCode) updateData.tier_code = tierCode.toLowerCase().replace(/\s+/g, "");
     if (discountPercentage !== undefined) updateData.discount_percentage = parseFloat(discountPercentage);
     if (description !== undefined) updateData.description = description;
     updateData.updated_at = new Date().toISOString();
 
-    const { data: dbTier, error: dbError } = await supabase
+    let updateQuery = supabase
       .from("tiers")
       .update(updateData)
-      .eq("id", params.id)
+      .eq("id", params.id);
+
+    if (scopedPharmacyId) {
+      updateQuery = updateQuery.eq("pharmacy_id", scopedPharmacyId);
+    }
+
+    const { data: dbTier, error: dbError } = await updateQuery
       .select()
       .single();
 
     if (dbError) {
       if (dbError.code === "23505") {
         return NextResponse.json(
-          { error: "A tier with this name or code already exists" },
+          { error: "A tier with this name already exists" },
           { status: 409 },
         );
       }
@@ -133,6 +129,7 @@ export async function DELETE(
     const isSuperAdmin = userRole === "super_admin";
 
     const supabase = await createServerClient();
+    let scopedPharmacyId: string | null = null;
 
     if (!isSuperAdmin) {
       const scope = await getPharmacyAdminScope(user.id);
@@ -142,24 +139,19 @@ export async function DELETE(
           { status: 403 },
         );
       }
-      const { data: tier } = await supabase
-        .from("tiers")
-        .select("pharmacy_id")
-        .eq("id", params.id)
-        .single();
-      if (!tier) {
-        return NextResponse.json({ error: "Tier not found" }, { status: 404 });
-      }
-      if (tier.pharmacy_id !== scope.pharmacyId) {
-        return NextResponse.json({ error: "Tier not found" }, { status: 404 });
-      }
+      scopedPharmacyId = scope.pharmacyId;
     }
 
-    const { error: fetchError } = await supabase
+    let existsQuery = supabase
       .from("tiers")
       .select("id")
-      .eq("id", params.id)
-      .single();
+      .eq("id", params.id);
+
+    if (scopedPharmacyId) {
+      existsQuery = existsQuery.eq("pharmacy_id", scopedPharmacyId);
+    }
+
+    const { error: fetchError } = await existsQuery.single();
 
     if (fetchError) {
       if (fetchError.code === "PGRST116") {
@@ -174,10 +166,16 @@ export async function DELETE(
       );
     }
 
-    const { error: dbError } = await supabase
+    let deleteQuery = supabase
       .from("tiers")
       .delete()
       .eq("id", params.id);
+
+    if (scopedPharmacyId) {
+      deleteQuery = deleteQuery.eq("pharmacy_id", scopedPharmacyId);
+    }
+
+    const { error: dbError } = await deleteQuery;
 
     if (dbError) {
       return NextResponse.json(

@@ -19,13 +19,14 @@ export const tiers = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
 
     // Tier Information
-    tier_name: text("tier_name").notNull().unique(), // e.g., "Tier 1", "Tier 2", "Tier 3"
-    tier_code: text("tier_code").notNull().unique(), // e.g., "tier1", "tier2", "tier3"
+    tier_name: text("tier_name").notNull(),
+    tier_code: text("tier_code").notNull(),
     discount_percentage: decimal("discount_percentage", {
       precision: 5,
       scale: 2,
     }).notNull(), // e.g., 10.00, 15.50, 20.00
-    description: text("description"), // Optional description of the tier
+    description: text("description"),
+    pharmacy_id: uuid("pharmacy_id"),
 
     // Timestamps
     created_at: timestamp("created_at", { withTimezone: true })
