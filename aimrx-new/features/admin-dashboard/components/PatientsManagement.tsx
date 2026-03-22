@@ -17,8 +17,18 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { BaseTableManagement } from "./BaseTableManagement";
 import { getOptimizedAvatarUrl } from "@core/services/storage/avatarStorage";
+import { useUser } from "@core/auth";
+import { createClient } from "@/core/supabase/client";
 
 import type { Patient } from "../types";
 import { PatientDetailView } from "./PatientDetailView";
@@ -36,17 +46,41 @@ import {
 
 export const PatientsManagement: React.FC = () => {
   const { guardAction } = useDemoGuard();
+  const { user } = useUser();
   const [isLoading, setIsLoading] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter] = useState<string>("all");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [deletingPatient, setDeletingPatient] = useState<Patient | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  const [scopeChecked, setScopeChecked] = useState(false);
+  const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
+  const [pharmacies, setPharmacies] = useState<{ id: string; name: string }[]>([]);
+
+  const fetchPharmacies = async () => {
+    try {
+      const supabase = createClient();
+      const { data } = await supabase
+        .from("pharmacies")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      setPharmacies(data || []);
+    } catch (error) {
+      console.error("Error fetching pharmacies:", error);
+    }
+  };
 
   const fetchPatients = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/admin/patients");
+      const params = new URLSearchParams();
+      if (pharmacyFilter && pharmacyFilter !== "all") {
+        params.set("pharmacyId", pharmacyFilter);
+      }
+      const url = `/api/admin/patients${params.toString() ? `?${params.toString()}` : ""}`;
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         setPatients(data.patients || []);
@@ -62,8 +96,37 @@ export const PatientsManagement: React.FC = () => {
   };
 
   useEffect(() => {
+    const checkScope = async () => {
+      if (!user?.id) return;
+      const supabase = createClient();
+
+      const { data: roleRow } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (roleRow?.role === "super_admin") {
+        setIsSuperAdmin(true);
+      }
+      setScopeChecked(true);
+    };
+    checkScope();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!scopeChecked) return;
+    if (isSuperAdmin) {
+      fetchPharmacies();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeChecked, isSuperAdmin]);
+
+  useEffect(() => {
+    if (!scopeChecked) return;
     fetchPatients();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopeChecked, pharmacyFilter]);
 
   const filteredPatients = patients.filter((patient) => {
     const matchesSearch =
@@ -108,6 +171,11 @@ export const PatientsManagement: React.FC = () => {
       <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
         Contact
       </th>
+      {isSuperAdmin && (
+        <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
+          Pharmacy
+        </th>
+      )}
       <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
         Location
       </th>
@@ -163,6 +231,17 @@ export const PatientsManagement: React.FC = () => {
           <span className="text-muted-foreground">N/A</span>
         )}
       </td>
+      {isSuperAdmin && (
+        <td className="p-4 align-middle">
+          {patient.pharmacy_name ? (
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+              {patient.pharmacy_name}
+            </Badge>
+          ) : (
+            <span className="text-muted-foreground text-sm">Not assigned</span>
+          )}
+        </td>
+      )}
       <td className="p-4 align-middle">
         {patient.city && patient.state ? (
           <div className="flex items-center text-sm text-muted-foreground">
@@ -261,12 +340,33 @@ export const PatientsManagement: React.FC = () => {
           <Button
             variant="outline"
             size="icon"
-            onClick={fetchPatients}
+            onClick={() => fetchPatients()}
             className="h-11 w-11 border-gray-200 bg-white hover:bg-gray-50"
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
+
+        {isSuperAdmin && (
+          <div className="mb-1">
+            <div className="space-y-1.5">
+              <Label htmlFor="pharmacy-filter" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
+              <Select value={pharmacyFilter} onValueChange={setPharmacyFilter}>
+                <SelectTrigger id="pharmacy-filter" className="w-[280px] h-10 bg-white border-gray-200">
+                  <SelectValue placeholder="All Pharmacies" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Pharmacies</SelectItem>
+                  {pharmacies.map((pharmacy) => (
+                    <SelectItem key={pharmacy.id} value={pharmacy.id}>
+                      {pharmacy.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
       </div>
 
       <BaseTableManagement
