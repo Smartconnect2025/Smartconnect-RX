@@ -142,9 +142,13 @@ export function UserClient({
         }
       }
 
-      setCurrentUser(newSerializedUser);
-      setCurrentUserRole(newExtractedUserRole);
-      setCurrentIsDemo(newIsDemo);
+      if (newSerializedUser) {
+        setCurrentUser(newSerializedUser);
+      }
+      if (newExtractedUserRole !== null) {
+        setCurrentUserRole(newExtractedUserRole);
+        setCurrentIsDemo(newIsDemo);
+      }
       setIsLoading(false);
     } finally {
       isRefreshing.current = false;
