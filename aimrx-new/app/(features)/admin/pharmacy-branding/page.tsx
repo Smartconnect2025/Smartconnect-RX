@@ -14,6 +14,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Loader2,
   CheckCircle2,
   AlertCircle,
@@ -54,8 +61,9 @@ interface PharmacyData {
 }
 
 export default function PharmacyBrandingPage() {
-  const { user } = useUser();
+  const { user, userRole } = useUser();
   const supabase = createClient();
+  const isSuperAdmin = userRole === "super_admin";
 
   const [pharmacy, setPharmacy] = useState<PharmacyData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,9 +78,52 @@ export default function PharmacyBrandingPage() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
 
+  const [pharmacies, setPharmacies] = useState<{ id: string; name: string }[]>([]);
+  const [selectedPharmacyId, setSelectedPharmacyId] = useState<string>("");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const loadPharmacy = useCallback(async () => {
+  const fetchPharmacies = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from("pharmacies")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("name");
+      setPharmacies(data || []);
+    } catch (error) {
+      console.error("Error fetching pharmacies:", error);
+    }
+  }, [supabase]);
+
+  const loadPharmacyById = useCallback(async (pharmacyId: string) => {
+    setLoading(true);
+    try {
+      const { data: pharmacyData } = await supabase
+        .from("pharmacies")
+        .select("id, name, logo_url, primary_color, tagline, phone, address")
+        .eq("id", pharmacyId)
+        .single();
+
+      if (pharmacyData) {
+        setPharmacy(pharmacyData);
+        setLogoUrl(pharmacyData.logo_url || "");
+        setPrimaryColor(pharmacyData.primary_color || "#00AEEF");
+        setTagline(pharmacyData.tagline || "");
+        setPhone(pharmacyData.phone || "");
+        setAddress(pharmacyData.address || "");
+      } else {
+        setPharmacy(null);
+      }
+    } catch (err) {
+      console.error("Failed to load pharmacy:", err);
+      setPharmacy(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [supabase]);
+
+  const loadPharmacyForAdmin = useCallback(async () => {
     if (!user?.id) return;
 
     try {
@@ -87,30 +138,40 @@ export default function PharmacyBrandingPage() {
         return;
       }
 
-      const { data: pharmacyData } = await supabase
-        .from("pharmacies")
-        .select("id, name, logo_url, primary_color, tagline, phone, address")
-        .eq("id", adminRecord.pharmacy_id)
-        .single();
-
-      if (pharmacyData) {
-        setPharmacy(pharmacyData);
-        setLogoUrl(pharmacyData.logo_url || "");
-        setPrimaryColor(pharmacyData.primary_color || "#00AEEF");
-        setTagline(pharmacyData.tagline || "");
-        setPhone(pharmacyData.phone || "");
-        setAddress(pharmacyData.address || "");
-      }
+      await loadPharmacyById(adminRecord.pharmacy_id);
     } catch (err) {
       console.error("Failed to load pharmacy:", err);
-    } finally {
       setLoading(false);
     }
-  }, [user?.id, supabase]);
+  }, [user?.id, supabase, loadPharmacyById]);
 
   useEffect(() => {
-    loadPharmacy();
-  }, [loadPharmacy]);
+    if (isSuperAdmin) {
+      fetchPharmacies();
+      setLoading(false);
+    } else {
+      loadPharmacyForAdmin();
+    }
+  }, [isSuperAdmin, fetchPharmacies, loadPharmacyForAdmin]);
+
+  useEffect(() => {
+    if (isSuperAdmin && selectedPharmacyId) {
+      loadPharmacyById(selectedPharmacyId);
+    }
+  }, [isSuperAdmin, selectedPharmacyId, loadPharmacyById]);
+
+  const handlePharmacyChange = (value: string) => {
+    setSelectedPharmacyId(value);
+    setPharmacy(null);
+    setLoading(true);
+    setSaveStatus("idle");
+    setErrorMessage("");
+    setLogoUrl("");
+    setPrimaryColor("#00AEEF");
+    setTagline("");
+    setPhone("");
+    setAddress("");
+  };
 
   const handleSave = async () => {
     if (!pharmacy) return;
@@ -207,6 +268,46 @@ export default function PharmacyBrandingPage() {
     );
   }
 
+  if (isSuperAdmin && !selectedPharmacyId) {
+    return (
+      <div className="max-w-6xl mx-auto p-4 sm:p-6 space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
+            <Building2 className="h-6 w-6 text-blue-600" />
+            Pharmacy Branding
+          </h1>
+          <p className="text-gray-500 mt-1">
+            Select a pharmacy to manage its branding — logo, colors, and contact details.
+          </p>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Select a Pharmacy</CardTitle>
+            <CardDescription>
+              Choose which pharmacy&apos;s branding you want to manage.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="pharmacy-selector" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
+              <Select value={selectedPharmacyId} onValueChange={handlePharmacyChange}>
+                <SelectTrigger id="pharmacy-selector" className="w-[350px] h-10 bg-white border-gray-200">
+                  <SelectValue placeholder="Select a pharmacy..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {pharmacies.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (!pharmacy) {
     return (
       <div className="max-w-4xl mx-auto p-6">
@@ -233,6 +334,32 @@ export default function PharmacyBrandingPage() {
           Customize how your pharmacy appears to patients in emails, payment pages, and more.
         </p>
       </div>
+
+      {isSuperAdmin && (
+        <Card>
+          <CardContent className="pt-4 pb-4">
+            <div className="flex items-center gap-4">
+              <div className="flex flex-col gap-1">
+                <Label htmlFor="pharmacy-selector-inline" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
+                <Select value={selectedPharmacyId} onValueChange={handlePharmacyChange}>
+                  <SelectTrigger id="pharmacy-selector-inline" className="w-[350px] h-10 bg-white border-gray-200">
+                    <SelectValue placeholder="Select a pharmacy..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pharmacies.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2 mt-5">
+                <Building2 className="h-4 w-4 text-gray-400" />
+                <span className="text-sm font-medium text-gray-700">{pharmacy.name}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {saveStatus === "success" && (
         <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
