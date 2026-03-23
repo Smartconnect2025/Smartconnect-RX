@@ -1,19 +1,58 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { AdminDashboardProps } from "./types";
 import { cn } from "@/utils/tailwind-utils";
-import { Users, Building2, Pill, ShieldCheck, LayoutGrid } from "lucide-react";
+import { Users, Building2, Pill, ShieldCheck, LayoutGrid, TrendingUp, DollarSign, ShoppingCart } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 import { useAdminDashboard } from "./hooks/useAdminDashboard";
 import { MetricCard } from "./components/MetricCard";
+
+interface PharmacyMetric {
+  id: string;
+  name: string;
+  slug: string;
+  is_active: boolean;
+  logo_url: string | null;
+  provider_count: number;
+  active_providers: number;
+  order_count: number;
+  total_revenue_cents: number;
+}
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   className,
 }) => {
   const { metrics, isLoading, error } = useAdminDashboard();
+  const [pharmacyMetrics, setPharmacyMetrics] = useState<PharmacyMetric[]>([]);
+  const [isLoadingPharmacies, setIsLoadingPharmacies] = useState(true);
+
+  useEffect(() => {
+    const fetchPharmacyMetrics = async () => {
+      try {
+        const response = await fetch("/api/admin/pharmacy-metrics");
+        if (response.ok) {
+          const data = await response.json();
+          setPharmacyMetrics(data.pharmacyMetrics || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch pharmacy metrics:", err);
+      } finally {
+        setIsLoadingPharmacies(false);
+      }
+    };
+    fetchPharmacyMetrics();
+  }, []);
+
+  const formatCurrency = (cents: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+    }).format(cents / 100);
+  };
 
   if (error) {
     return (
@@ -128,6 +167,97 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           </Link>
         </div>
       </div>
+
+      {(isLoadingPharmacies || pharmacyMetrics.length > 0) && (
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold">Pharmacy Performance</h2>
+            <Link href="/admin/pharmacy-management" className="text-sm text-primary hover:underline">
+              Manage Pharmacies
+            </Link>
+          </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {isLoadingPharmacies ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Card key={i} className="py-5">
+                  <CardContent>
+                    <div className="animate-pulse space-y-3">
+                      <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                      <div className="h-8 bg-gray-200 rounded w-1/3"></div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            ) : (
+              pharmacyMetrics.map((pharmacy) => (
+                <Card key={pharmacy.id} className="py-5 hover:shadow-md transition-shadow">
+                  <CardContent>
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        {pharmacy.logo_url ? (
+                          <img
+                            src={pharmacy.logo_url}
+                            alt={pharmacy.name}
+                            className="h-10 w-10 rounded-full object-cover border border-gray-200"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
+                            <Building2 className="h-5 w-5 text-[#1E3A8A]" />
+                          </div>
+                        )}
+                        <div>
+                          <h3 className="font-semibold text-base">{pharmacy.name}</h3>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "text-xs mt-1",
+                              pharmacy.is_active
+                                ? "bg-green-50 text-green-700 border-green-200"
+                                : "bg-red-50 text-red-700 border-red-200"
+                            )}
+                          >
+                            {pharmacy.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </div>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className="bg-blue-50 text-blue-700 border-blue-200 text-xs"
+                      >
+                        <Users className="h-3 w-3 mr-1" />
+                        {pharmacy.provider_count}
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="text-center p-2 rounded-lg bg-gray-50">
+                        <div className="flex items-center justify-center mb-1">
+                          <TrendingUp className="h-3.5 w-3.5 text-green-600" />
+                        </div>
+                        <div className="text-xs text-muted-foreground">Active</div>
+                        <div className="text-lg font-bold text-green-700">{pharmacy.active_providers}</div>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-gray-50">
+                        <div className="flex items-center justify-center mb-1">
+                          <ShoppingCart className="h-3.5 w-3.5 text-blue-600" />
+                        </div>
+                        <div className="text-xs text-muted-foreground">Orders</div>
+                        <div className="text-lg font-bold text-blue-700">{pharmacy.order_count}</div>
+                      </div>
+                      <div className="text-center p-2 rounded-lg bg-gray-50">
+                        <div className="flex items-center justify-center mb-1">
+                          <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                        </div>
+                        <div className="text-xs text-muted-foreground">Revenue</div>
+                        <div className="text-sm font-bold text-emerald-700">{formatCurrency(pharmacy.total_revenue_cents)}</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
     </div>
   );
