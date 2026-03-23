@@ -30,6 +30,7 @@ export function AdminHeader() {
   const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
   const [pharmacyBranding, setPharmacyBranding] = useState<PharmacyBranding | null>(null);
   const [logoLoadError, setLogoLoadError] = useState(false);
+  const [headerReady, setHeaderReady] = useState(false);
   const { user, userRole } = useUser();
   const router = useRouter();
   const pathname = usePathname();
@@ -37,7 +38,10 @@ export function AdminHeader() {
 
   useEffect(() => {
     const checkPharmacyAdmin = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setHeaderReady(true);
+        return;
+      }
 
       const { data } = await supabase
         .from("pharmacy_admins")
@@ -62,6 +66,7 @@ export function AdminHeader() {
         setPharmacyBranding(null);
         setLogoLoadError(false);
       }
+      setHeaderReady(true);
     };
 
     checkPharmacyAdmin();
@@ -97,6 +102,19 @@ export function AdminHeader() {
       ];
 
   const brandColor = pharmacyBranding?.primary_color || "#1E3A8A";
+
+  if (!headerReady) {
+    return (
+      <header className="sticky top-0 z-50 w-full shadow-sm border-b border-gray-200 bg-white">
+        <div className="container max-w-7xl mx-auto px-4">
+          <div className="flex items-center justify-between py-3">
+            <div className="h-14 w-40" />
+            <div className="h-10" />
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <>
