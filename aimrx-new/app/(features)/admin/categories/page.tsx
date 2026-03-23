@@ -69,6 +69,7 @@ export default function CategoriesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editPharmacyIds, setEditPharmacyIds] = useState<string[]>([]);
   const [uploadingId, setUploadingId] = useState<number | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
   const [newCategory, setNewCategory] = useState({
@@ -383,16 +384,58 @@ export default function CategoriesPage() {
     if (editingCategory.description !== original.description) updates.description = editingCategory.description;
     if (editingCategory.color !== original.color) updates.color = editingCategory.color;
     if (editingCategory.is_active !== original.is_active) updates.is_active = editingCategory.is_active;
-    if (isSuperAdmin && editingCategory.pharmacy_id !== original.pharmacy_id) updates.pharmacy_id = editingCategory.pharmacy_id;
 
     if (editingCategory.name !== original.name) {
       updates.slug = generateSlug(editingCategory.name);
     }
 
+    if (isSuperAdmin && editPharmacyIds.length > 0) {
+      const firstPharmId = editPharmacyIds[0];
+      if (firstPharmId !== original.pharmacy_id) {
+        updates.pharmacy_id = firstPharmId;
+      }
+    }
+
     if (Object.keys(updates).length > 0) {
       await handleUpdateCategory(original, updates);
     }
+
+    if (isSuperAdmin && editPharmacyIds.length > 1) {
+      const additionalPharmIds = editPharmacyIds.slice(1);
+      let failedCount = 0;
+      const failedErrors: string[] = [];
+      for (const pharmId of additionalPharmIds) {
+        const existsAlready = categories.some(
+          (c) => c.name === editingCategory.name && c.pharmacy_id === pharmId
+        );
+        if (existsAlready) continue;
+
+        const pharmacyName = pharmacies.find((p) => p.id === pharmId)?.name || pharmId;
+        const response = await fetch("/api/admin/categories", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: editingCategory.name,
+            slug: generateSlug(editingCategory.name),
+            description: editingCategory.description || null,
+            color: editingCategory.color || null,
+            pharmacy_id: pharmId,
+          }),
+        });
+        if (!response.ok) {
+          failedCount++;
+          const result = await response.json();
+          failedErrors.push(`${pharmacyName}: ${result.error || "Unknown error"}`);
+        }
+      }
+      if (failedCount > 0) {
+        alert(`Some pharmacies failed:\n${failedErrors.join("\n")}`);
+      }
+    }
+
     setEditingCategory(null);
+    await loadCategories();
   };
 
   const sorted = [...categories].sort((a, b) => a.display_order - b.display_order);
@@ -609,7 +652,10 @@ export default function CategoriesPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setEditingCategory({ ...category })}
+                      onClick={() => {
+                        setEditingCategory({ ...category });
+                        setEditPharmacyIds(category.pharmacy_id ? [category.pharmacy_id] : []);
+                      }}
                       title="Edit"
                       data-testid={`button-edit-${category.id}`}
                     >
@@ -1028,24 +1074,58 @@ export default function CategoriesPage() {
               </div>
               {isSuperAdmin && pharmacies.length > 0 && (
                 <div className="space-y-1.5">
-                  <Label>Assigned Pharmacy</Label>
-                  <select
-                    value={editingCategory.pharmacy_id || ""}
-                    onChange={(e) =>
-                      setEditingCategory({ ...editingCategory, pharmacy_id: e.target.value || null })
-                    }
-                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    data-testid="select-edit-category-pharmacy"
-                  >
-                    <option value="">— No pharmacy —</option>
-                    {pharmacies.map((pharmacy) => (
-                      <option key={pharmacy.id} value={pharmacy.id}>
-                        {pharmacy.name}
-                      </option>
-                    ))}
-                  </select>
+                  <Label>Assigned Pharmacies</Label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={editPharmacyIds.length === pharmacies.length ? "default" : "outline"}
+                      onClick={() => {
+                        if (editPharmacyIds.length === pharmacies.length) {
+                          setEditPharmacyIds(editingCategory.pharmacy_id ? [editingCategory.pharmacy_id] : []);
+                        } else {
+                          setEditPharmacyIds(pharmacies.map((p) => p.id));
+                        }
+                      }}
+                    >
+                      {editPharmacyIds.length === pharmacies.length ? "Deselect All" : "Select All"}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      {editPharmacyIds.length} of {pharmacies.length} selected
+                    </span>
+                  </div>
+                  <div className="max-h-40 overflow-y-auto border rounded-md p-2 space-y-1">
+                    {pharmacies.map((pharmacy) => {
+                      const isSelected = editPharmacyIds.includes(pharmacy.id);
+                      const isOriginal = pharmacy.id === editingCategory.pharmacy_id;
+                      return (
+                        <label
+                          key={pharmacy.id}
+                          className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover:bg-gray-50 ${isSelected ? "bg-blue-50" : ""}`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => {
+                              const ids = isSelected
+                                ? editPharmacyIds.filter((id) => id !== pharmacy.id)
+                                : [...editPharmacyIds, pharmacy.id];
+                              setEditPharmacyIds(ids);
+                            }}
+                            className="rounded border-gray-300"
+                          />
+                          <span className="text-sm">{pharmacy.name}</span>
+                          {isOriginal && (
+                            <span className="text-xs text-blue-600 font-medium">(current)</span>
+                          )}
+                        </label>
+                      );
+                    })}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Change which pharmacy this category belongs to
+                    {editPharmacyIds.length > 1
+                      ? `This category will be assigned to ${editPharmacyIds.length} pharmacies. New copies will be created for additional pharmacies.`
+                      : "Select which pharmacies should have this category"}
                   </p>
                 </div>
               )}
