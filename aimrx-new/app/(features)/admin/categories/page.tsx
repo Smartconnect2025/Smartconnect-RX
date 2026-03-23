@@ -168,15 +168,21 @@ export default function CategoriesPage() {
             formData.append("type", "category");
             formData.append("entityId", String(result.id));
             formData.append("entityName", newCategory.name.trim());
-            await fetch("/api/admin/upload", {
+            const uploadRes = await fetch("/api/admin/upload", {
               method: "POST",
               credentials: "include",
               body: formData,
             });
+            const uploadResult = await uploadRes.json();
+            if (!uploadRes.ok || !uploadResult.success) {
+              alert(`Category created, but image upload failed: ${uploadResult.error || "Unknown error"}. You can upload the image from the categories list.`);
+            }
           } catch (uploadErr) {
             console.error("Image upload after create failed:", uploadErr);
+            alert("Category created, but image upload failed. You can upload the image from the categories list.");
           }
         }
+        if (createImagePreview) URL.revokeObjectURL(createImagePreview);
         setShowCreateDialog(false);
         setNewCategory({ name: "", description: "", color: "#1E3A8A" });
         setCreateImageFile(null);
@@ -656,7 +662,15 @@ export default function CategoriesPage() {
       </div>
 
       {/* Create Category Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+      <Dialog open={showCreateDialog} onOpenChange={(open) => {
+        if (!open) {
+          setNewCategory({ name: "", description: "", color: "#1E3A8A" });
+          if (createImagePreview) URL.revokeObjectURL(createImagePreview);
+          setCreateImageFile(null);
+          setCreateImagePreview(null);
+        }
+        setShowCreateDialog(open);
+      }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Add New Category</DialogTitle>
@@ -746,6 +760,7 @@ export default function CategoriesPage() {
                         alert(`File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 3MB.`);
                         return;
                       }
+                      if (createImagePreview) URL.revokeObjectURL(createImagePreview);
                       setCreateImageFile(file);
                       setCreateImagePreview(URL.createObjectURL(file));
                     }
@@ -770,11 +785,7 @@ export default function CategoriesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setShowCreateDialog(false);
-              setCreateImageFile(null);
-              setCreateImagePreview(null);
-            }}>
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
               Cancel
             </Button>
             <Button onClick={handleCreateCategory} data-testid="button-save-category">
