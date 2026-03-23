@@ -94,9 +94,6 @@ export default function MedicationManagementPage() {
   );
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Custom category state
-  const [isAddingCategory, setIsAddingCategory] = useState(false);
-  const [newCategory, setNewCategory] = useState("");
   const [customCategories, setCustomCategories] = useState<string[]>([]);
   // Delete category state
   const [isDeleteCategoryModalOpen, setIsDeleteCategoryModalOpen] =
@@ -359,46 +356,6 @@ export default function MedicationManagementPage() {
       setMedicationResult({ error: "Failed to update medication" });
     } finally {
       setIsUpdating(false);
-    }
-    });
-  };
-
-  // Add custom category
-  const handleAddCategory = async () => {
-    guardAction(async () => {
-    if (newCategory && !categories.includes(newCategory)) {
-      const updatedCategories = [...customCategories, newCategory];
-      setCustomCategories(updatedCategories);
-      setMedicationForm({ ...medicationForm, category: newCategory });
-
-      // Generate slug from category name
-      const slug = newCategory
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
-
-      // Save to database
-      try {
-        const response = await fetch("/api/admin/categories", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: newCategory, slug }),
-        });
-
-        if (!response.ok) {
-          const data = await response.json();
-          console.error("Error creating category in database:", data.error);
-        }
-      } catch (error) {
-        console.error("Error creating category in database:", error);
-      }
-
-      setNewCategory("");
-      setIsAddingCategory(false);
-      setMedicationResult({
-        success: true,
-        message: `Category "${newCategory}" added successfully`,
-      });
     }
     });
   };
@@ -736,22 +693,12 @@ export default function MedicationManagementPage() {
                 <div className="flex gap-2 mt-2">
                   <select
                     id="med-category"
-                    value={
-                      isAddingCategory
-                        ? "__create_new__"
-                        : medicationForm.category
-                    }
+                    value={medicationForm.category}
                     onChange={(e) => {
-                      if (e.target.value === "__create_new__") {
-                        setIsAddingCategory(true);
-                        setNewCategory("");
-                      } else {
-                        setIsAddingCategory(false);
-                        setMedicationForm({
-                          ...medicationForm,
-                          category: e.target.value,
-                        });
-                      }
+                      setMedicationForm({
+                        ...medicationForm,
+                        category: e.target.value,
+                      });
                     }}
                     className="flex-1 h-11 px-4 rounded-md border border-gray-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
                   >
@@ -760,9 +707,6 @@ export default function MedicationManagementPage() {
                         {cat}
                       </option>
                     ))}
-                    <option value="__create_new__">
-                      + Create new category
-                    </option>
                   </select>
                   <Button
                     type="button"
@@ -779,44 +723,6 @@ export default function MedicationManagementPage() {
                     Delete
                   </Button>
                 </div>
-                {isAddingCategory && (
-                  <div className="mt-3 flex gap-2">
-                    <Input
-                      placeholder="New category name"
-                      value={newCategory}
-                      onChange={(e) => setNewCategory(e.target.value)}
-                      onKeyPress={(e) =>
-                        e.key === "Enter" &&
-                        (e.preventDefault(), handleAddCategory())
-                      }
-                      className="h-11"
-                    />
-                    <Button
-                      type="button"
-                      onClick={handleAddCategory}
-                      size="sm"
-                      className="h-11"
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => {
-                        setIsAddingCategory(false);
-                        setNewCategory("");
-                        setMedicationForm({
-                          ...medicationForm,
-                          category: categories[0],
-                        });
-                      }}
-                      size="sm"
-                      className="h-11"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                )}
               </div>
 
               <div>

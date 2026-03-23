@@ -74,6 +74,9 @@ export default function CategoriesPage() {
     description: "",
     color: "#1E3A8A",
   });
+  const [createImageFile, setCreateImageFile] = useState<File | null>(null);
+  const [createImagePreview, setCreateImagePreview] = useState<string | null>(null);
+  const createFileInputRef = useRef<HTMLInputElement>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editFileInputRef = useRef<HTMLInputElement>(null);
@@ -158,8 +161,26 @@ export default function CategoriesPage() {
 
       const result = await response.json();
       if (response.ok) {
+        if (createImageFile && result.id) {
+          try {
+            const formData = new FormData();
+            formData.append("file", createImageFile);
+            formData.append("type", "category");
+            formData.append("entityId", String(result.id));
+            formData.append("entityName", newCategory.name.trim());
+            await fetch("/api/admin/upload", {
+              method: "POST",
+              credentials: "include",
+              body: formData,
+            });
+          } catch (uploadErr) {
+            console.error("Image upload after create failed:", uploadErr);
+          }
+        }
         setShowCreateDialog(false);
         setNewCategory({ name: "", description: "", color: "#1E3A8A" });
+        setCreateImageFile(null);
+        setCreateImagePreview(null);
         await loadCategories();
       } else {
         alert(result.error || "Failed to create category");
@@ -668,6 +689,72 @@ export default function CategoriesPage() {
               />
             </div>
             <div className="space-y-1.5">
+              <Label>Category Image</Label>
+              <div className="flex items-center gap-4">
+                {createImagePreview ? (
+                  <div className="relative group">
+                    <img
+                      src={createImagePreview}
+                      alt="Preview"
+                      className="w-24 h-16 rounded-lg object-cover border border-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreateImageFile(null);
+                        setCreateImagePreview(null);
+                      }}
+                      className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    className="w-24 h-16 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                    onClick={() => createFileInputRef.current?.click()}
+                  >
+                    <ImageIcon className="h-5 w-5 text-gray-300" />
+                  </div>
+                )}
+                <div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => createFileInputRef.current?.click()}
+                  >
+                    <Upload className="h-3.5 w-3.5 mr-1.5" />
+                    {createImagePreview ? "Change" : "Upload Image"}
+                  </Button>
+                  <p className="text-xs text-muted-foreground mt-1">JPG, PNG, or WebP. Max 3MB.</p>
+                </div>
+                <input
+                  ref={createFileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+                      if (!allowedTypes.includes(file.type)) {
+                        alert("Invalid file type. Please use JPG, PNG, or WebP images only.");
+                        return;
+                      }
+                      if (file.size > 3 * 1024 * 1024) {
+                        alert(`File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Maximum size is 3MB.`);
+                        return;
+                      }
+                      setCreateImageFile(file);
+                      setCreateImagePreview(URL.createObjectURL(file));
+                    }
+                    e.target.value = "";
+                  }}
+                />
+              </div>
+            </div>
+            <div className="space-y-1.5">
               <Label htmlFor="cat-color">Color</Label>
               <div className="flex items-center gap-3">
                 <input
@@ -683,7 +770,11 @@ export default function CategoriesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setShowCreateDialog(false);
+              setCreateImageFile(null);
+              setCreateImagePreview(null);
+            }}>
               Cancel
             </Button>
             <Button onClick={handleCreateCategory} data-testid="button-save-category">
