@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { email, password, role, firstName, lastName, phone, tierLevel, groupId } = body;
+    const { email, password, role, firstName, lastName, phone, tierLevel, groupId, pharmacyId: explicitPharmacyId } = body;
 
     // Validate required fields
     if (!email || !password || !role) {
@@ -77,18 +77,21 @@ export async function POST(request: NextRequest) {
     }
 
     let pharmacyName: string | null = null;
+    const linkPharmacyId = pharmacyScope.isPharmacyAdmin && pharmacyScope.pharmacyId
+      ? pharmacyScope.pharmacyId
+      : explicitPharmacyId || null;
 
-    if (pharmacyScope.isPharmacyAdmin && pharmacyScope.pharmacyId && result.userId) {
+    if (linkPharmacyId && result.userId && role === "provider") {
       const supabase = createAdminClient();
       await supabase.from("provider_pharmacy_links").upsert({
         provider_id: result.userId,
-        pharmacy_id: pharmacyScope.pharmacyId,
+        pharmacy_id: linkPharmacyId,
       }, { onConflict: "provider_id,pharmacy_id" });
 
       const { data: pharmacy } = await supabase
         .from("pharmacies")
         .select("name")
-        .eq("id", pharmacyScope.pharmacyId)
+        .eq("id", linkPharmacyId)
         .single();
       if (pharmacy) pharmacyName = pharmacy.name;
     }

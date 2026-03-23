@@ -36,12 +36,16 @@ interface ProviderFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
+  pharmacyId?: string | null;
+  isSuperAdmin?: boolean;
 }
 
 export function ProviderFormDialog({
   open,
   onOpenChange,
   onSuccess,
+  pharmacyId,
+  isSuperAdmin = false,
 }: ProviderFormDialogProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -57,6 +61,7 @@ export function ProviderFormDialog({
 
   useEffect(() => {
     const fetchData = async () => {
+      if (!isSuperAdmin) return;
       try {
         const groupsRes = await fetch("/api/admin/groups");
 
@@ -73,7 +78,7 @@ export function ProviderFormDialog({
     if (open) {
       fetchData();
     }
-  }, [open]);
+  }, [open, isSuperAdmin]);
 
   const handleInputChange = (
     field: keyof CreateProviderFormData,
@@ -101,6 +106,7 @@ export function ProviderFormDialog({
         ...formData,
         role: "provider",
         groupId: formData.groupId || undefined,
+        pharmacyId: pharmacyId || undefined,
       };
       const response = await fetch("/api/admin/users", {
         method: "POST",
@@ -227,6 +233,7 @@ export function ProviderFormDialog({
               data-testid="input-provider-phone"
             />
           </div>
+          {isSuperAdmin && (
           <div className="space-y-2">
             <div className="space-y-2">
               <Label htmlFor="groupId">Group</Label>
@@ -253,6 +260,7 @@ export function ProviderFormDialog({
               </Select>
             </div>
           </div>
+          )}
           <div className="flex justify-end gap-2">
             <Button
               type="button"
