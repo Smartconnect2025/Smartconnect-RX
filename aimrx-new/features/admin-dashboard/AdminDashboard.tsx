@@ -194,17 +194,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <CardContent>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        {pharmacy.logo_url ? (
-                          <img
-                            src={pharmacy.logo_url}
-                            alt={pharmacy.name}
-                            className="h-10 w-10 rounded-full object-cover border border-gray-200"
-                          />
-                        ) : (
-                          <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center">
-                            <Building2 className="h-5 w-5 text-[#1E3A8A]" />
-                          </div>
-                        )}
+                        <div className="h-10 w-10 rounded-lg bg-[#1D4E89]/10 flex items-center justify-center flex-shrink-0">
+                          <Building2 className="h-5 w-5 text-[#1D4E89]" />
+                        </div>
                         <div>
                           <h3 className="font-semibold text-base">{pharmacy.name}</h3>
                           <Badge
