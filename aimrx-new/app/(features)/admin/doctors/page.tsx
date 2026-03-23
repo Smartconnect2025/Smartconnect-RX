@@ -144,6 +144,8 @@ export default function ManageDoctorsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [pharmacyFilter, setPharmacyFilter] = useState("all");
+  const [pharmaciesForFilter, setPharmaciesForFilter] = useState<Array<{ id: string; name: string }>>([]);
   const [activeTab, setActiveTab] = useState<"providers" | "pending">(
     "providers",
   );
@@ -356,12 +358,14 @@ export default function ManageDoctorsPage() {
   }>({ isVerifying: false, result: null });
 
   // Load doctors from Supabase and merge with tier information
-  const loadDoctors = useCallback(async () => {
+  const loadDoctors = useCallback(async (filterByPharmacyId?: string) => {
     setLoading(true);
 
     try {
-      // Fetch providers with tier info from API endpoint
-      const response = await fetch("/api/admin/providers");
+      const url = filterByPharmacyId && filterByPharmacyId !== "all"
+        ? `/api/admin/providers?pharmacyId=${filterByPharmacyId}`
+        : "/api/admin/providers";
+      const response = await fetch(url);
 
       if (!response.ok) {
         const errorData = await response
@@ -555,7 +559,7 @@ export default function ManageDoctorsPage() {
       setIsInviteModalOpen(false);
 
       // Reload both lists
-      await loadDoctors();
+      await loadDoctors(pharmacyFilter);
       await loadAccessRequests();
     } catch (error) {
       console.error("Error inviting doctor:", error);
@@ -641,7 +645,7 @@ export default function ManageDoctorsPage() {
       }
 
       toast.success("Provider updated successfully");
-      await loadDoctors();
+      await loadDoctors(pharmacyFilter);
       setIsEditModalOpen(false);
       setEditingDoctor(null);
     } catch (error) {
@@ -841,7 +845,7 @@ export default function ManageDoctorsPage() {
       toast.success(
         `Provider ${!doctorToToggle.is_active ? "activated" : "deactivated"} successfully`,
       );
-      await loadDoctors();
+      await loadDoctors(pharmacyFilter);
     } catch (error) {
       console.error("Error toggling provider status:", error);
       toast.error("Failed to update provider status");
@@ -927,7 +931,7 @@ export default function ManageDoctorsPage() {
       toast.success("Provider deleted successfully");
       setIsDeleteDialogOpen(false);
       setDoctorToDelete(null);
-      await loadDoctors();
+      await loadDoctors(pharmacyFilter);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to delete provider";
@@ -937,9 +941,29 @@ export default function ManageDoctorsPage() {
   };
 
   useEffect(() => {
-    loadDoctors();
+    const fetchPharmaciesForFilter = async () => {
+      try {
+        const response = await fetch("/api/admin/pharmacies/list");
+        if (response.ok) {
+          const data = await response.json();
+          setPharmaciesForFilter(
+            (data.pharmacies || []).map((p: { id: string; name: string }) => ({
+              id: p.id,
+              name: p.name,
+            }))
+          );
+        }
+      } catch (err) {
+        console.error("Error fetching pharmacies for filter:", err);
+      }
+    };
+    fetchPharmaciesForFilter();
     loadAccessRequests();
-  }, [loadDoctors, loadAccessRequests]);
+  }, [loadAccessRequests]);
+
+  useEffect(() => {
+    loadDoctors(pharmacyFilter);
+  }, [pharmacyFilter, loadDoctors]);
 
   // Handle access request approval - prefill invite form
   const handleApproveRequest = (request: AccessRequest) => {
@@ -1183,6 +1207,24 @@ export default function ManageDoctorsPage() {
 
         {activeTab === "providers" && (
           <>
+            {/* Pharmacy Filter */}
+            {pharmaciesForFilter.length > 1 && (
+              <div className="mb-4">
+                <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
+                <Select value={pharmacyFilter} onValueChange={setPharmacyFilter}>
+                  <SelectTrigger className="w-[280px] h-10 bg-white border-gray-200 mt-1">
+                    <SelectValue placeholder="All Pharmacies" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Pharmacies</SelectItem>
+                    {pharmaciesForFilter.map((pharmacy) => (
+                      <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             {/* Filters */}
             <div className="flex gap-4 mb-6">
               {/* Search */}
