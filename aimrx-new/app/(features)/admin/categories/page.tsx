@@ -53,6 +53,7 @@ interface Category {
   is_active: boolean;
   color: string | null;
   image_url: string | null;
+  pharmacy_id: string | null;
   created_at: string;
   updated_at: string;
   medication_count: number;
@@ -378,6 +379,7 @@ export default function CategoriesPage() {
     if (editingCategory.description !== original.description) updates.description = editingCategory.description;
     if (editingCategory.color !== original.color) updates.color = editingCategory.color;
     if (editingCategory.is_active !== original.is_active) updates.is_active = editingCategory.is_active;
+    if (isSuperAdmin && editingCategory.pharmacy_id !== original.pharmacy_id) updates.pharmacy_id = editingCategory.pharmacy_id;
 
     if (editingCategory.name !== original.name) {
       updates.slug = generateSlug(editingCategory.name);
@@ -1020,6 +1022,29 @@ export default function CategoriesPage() {
                   {editingCategory.is_active ? "Active" : "Inactive"}
                 </span>
               </div>
+              {isSuperAdmin && pharmacies.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label>Assigned Pharmacy</Label>
+                  <select
+                    value={editingCategory.pharmacy_id || ""}
+                    onChange={(e) =>
+                      setEditingCategory({ ...editingCategory, pharmacy_id: e.target.value || null })
+                    }
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    data-testid="select-edit-category-pharmacy"
+                  >
+                    <option value="">— No pharmacy —</option>
+                    {pharmacies.map((pharmacy) => (
+                      <option key={pharmacy.id} value={pharmacy.id}>
+                        {pharmacy.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Change which pharmacy this category belongs to
+                  </p>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>

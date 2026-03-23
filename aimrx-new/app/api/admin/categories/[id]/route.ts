@@ -109,6 +109,7 @@ export async function PUT(
     if (body.image_url !== undefined) updateData.image_url = body.image_url;
     if (body.color !== undefined) updateData.color = body.color;
     if (body.description !== undefined) updateData.description = body.description;
+    if (isSuperAdmin && body.pharmacy_id !== undefined) updateData.pharmacy_id = body.pharmacy_id;
 
     const { data: category, error } = await supabase
       .from("categories")

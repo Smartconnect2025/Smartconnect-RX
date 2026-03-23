@@ -98,6 +98,7 @@ export async function GET(request: NextRequest) {
         is_active: category.is_active,
         color: category.color,
         image_url: category.image_url,
+        pharmacy_id: category.pharmacy_id || null,
         created_at: category.created_at,
         updated_at: category.updated_at,
         medication_count: matchingMeds.length,
