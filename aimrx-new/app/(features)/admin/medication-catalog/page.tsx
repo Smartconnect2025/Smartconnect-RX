@@ -1242,6 +1242,33 @@ export default function MedicationCatalogPage() {
                 </div>
               </div>
 
+              {isSuperAdmin && pharmacies.length > 0 && (
+                <div className="space-y-2">
+                  <Label>Assigned Pharmacy</Label>
+                  <select
+                    value={editingMedication.pharmacy_id || ""}
+                    onChange={(e) =>
+                      setEditingMedication({
+                        ...editingMedication,
+                        pharmacy_id: e.target.value,
+                      })
+                    }
+                    className="w-full h-10 rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    data-testid="select-edit-medication-pharmacy"
+                  >
+                    <option value="">— Select pharmacy —</option>
+                    {pharmacies.map((pharmacy) => (
+                      <option key={pharmacy.id} value={pharmacy.id}>
+                        {pharmacy.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-muted-foreground">
+                    Change which pharmacy this medication belongs to
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <Label>Preparation Time (days)</Label>
                 <Input

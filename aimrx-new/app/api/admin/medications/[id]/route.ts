@@ -67,6 +67,7 @@ export async function PATCH(
       }
     }
 
+    const isSuperAdmin = userRole === "super_admin";
     const body = await request.json();
     const {
       name,
@@ -84,6 +85,7 @@ export async function PATCH(
       in_stock,
       preparation_time_days,
       notes,
+      pharmacy_id,
     } = body;
 
     const updateData: Record<string, unknown> = {
@@ -112,6 +114,7 @@ export async function PATCH(
       updateData.aimrx_site_pricing_cents = parseInt(aimrx_site_pricing_cents);
     }
     if (notes !== undefined) updateData.notes = notes;
+    if (isSuperAdmin && pharmacy_id !== undefined) updateData.pharmacy_id = pharmacy_id;
 
     let medication, updateError;
     if (scope.isPharmacyAdmin) {
