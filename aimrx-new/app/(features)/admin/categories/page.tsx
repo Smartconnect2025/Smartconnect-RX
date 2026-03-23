@@ -715,6 +715,7 @@ export default function CategoriesPage() {
                     <button
                       type="button"
                       onClick={() => {
+                        if (createImagePreview) URL.revokeObjectURL(createImagePreview);
                         setCreateImageFile(null);
                         setCreateImagePreview(null);
                       }}
@@ -785,7 +786,13 @@ export default function CategoriesPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+            <Button variant="outline" onClick={() => {
+              setNewCategory({ name: "", description: "", color: "#1E3A8A" });
+              if (createImagePreview) URL.revokeObjectURL(createImagePreview);
+              setCreateImageFile(null);
+              setCreateImagePreview(null);
+              setShowCreateDialog(false);
+            }}>
               Cancel
             </Button>
             <Button onClick={handleCreateCategory} data-testid="button-save-category">
