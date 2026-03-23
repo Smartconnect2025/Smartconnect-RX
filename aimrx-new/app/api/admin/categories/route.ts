@@ -170,19 +170,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let dupQuery = supabase
+    const { data: existingCategoryByName } = await supabase
       .from("categories")
       .select("id")
       .eq("name", body.name)
-      .eq("pharmacy_id", pharmacyId);
-
-    const { data: existingCategoryByName } = await dupQuery.single();
+      .eq("pharmacy_id", pharmacyId)
+      .single();
 
     if (existingCategoryByName) {
       return NextResponse.json(
         { error: "A category with this name already exists for this pharmacy" },
         { status: 400 },
       );
+    }
+
+    let slug = body.slug;
+    const { data: existingSlug } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("slug", slug)
+      .single();
+
+    if (existingSlug) {
+      const pharmacySlugSuffix = pharmacyId.substring(0, 6);
+      slug = `${slug}-${pharmacySlugSuffix}`;
+
+      const { data: stillDuplicate } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("slug", slug)
+        .single();
+      if (stillDuplicate) {
+        slug = `${body.slug}-${Date.now()}`;
+      }
     }
 
     const { data: lastCategory } = await supabase
@@ -198,7 +218,7 @@ export async function POST(request: NextRequest) {
       .from("categories")
       .insert({
         name: body.name,
-        slug: body.slug,
+        slug,
         display_order: nextDisplayOrder,
         is_active: true,
         pharmacy_id: pharmacyId,

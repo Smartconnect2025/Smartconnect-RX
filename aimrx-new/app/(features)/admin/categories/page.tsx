@@ -159,8 +159,10 @@ export default function CategoriesPage() {
     try {
       let lastCreatedId: number | null = null;
       let failedCount = 0;
+      const failedErrors: string[] = [];
 
       for (const pharmId of pharmacyIdsToCreate) {
+        const pharmacyName = pharmacies.find((p) => p.id === pharmId)?.name || pharmId;
         const response = await fetch("/api/admin/categories", {
           method: "POST",
           credentials: "include",
@@ -199,14 +201,16 @@ export default function CategoriesPage() {
           }
         } else {
           failedCount++;
+          failedErrors.push(`${pharmacyName}: ${result.error || "Unknown error"}`);
           console.error(`Failed to create category for pharmacy ${pharmId}:`, result.error);
         }
       }
 
       if (failedCount > 0 && failedCount < pharmacyIdsToCreate.length) {
-        alert(`Category created for ${pharmacyIdsToCreate.length - failedCount} pharmacies. ${failedCount} failed.`);
+        alert(`Category created for ${pharmacyIdsToCreate.length - failedCount} pharmacies. ${failedCount} failed:\n${failedErrors.join("\n")}`);
       } else if (failedCount === pharmacyIdsToCreate.length) {
-        alert("Failed to create category for any pharmacy");
+        alert(`Failed to create category:\n${failedErrors.join("\n")}`);
+        return;
       }
 
       if (createImagePreview) URL.revokeObjectURL(createImagePreview);
