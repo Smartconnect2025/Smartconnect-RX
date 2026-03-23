@@ -476,6 +476,7 @@ export default function ManageDoctorsPage() {
             country: "USA",
           },
           referringPharmacyId: approvingReferringPharmacyId || selectedPharmacyId || null,
+          accessRequestId: approvingRequestId || null,
         }),
       });
 

@@ -16,7 +16,8 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { firstName, lastName, email, phone, password, tierLevel, groupId, npiNumber, medicalLicense, licenseState, companyName, physicalAddress, billingAddress, referringPharmacyId } = body;
+    const { firstName, lastName, email, phone, password, tierLevel, groupId, companyName, physicalAddress, billingAddress, accessRequestId } = body;
+    let { npiNumber, medicalLicense, licenseState, referringPharmacyId } = body;
 
     // Validate required fields
     if (!firstName || !lastName || !email || !password) {
@@ -28,6 +29,41 @@ export async function POST(request: NextRequest) {
 
     // Create Supabase admin client
     const supabaseAdmin = createAdminClient();
+
+    if (accessRequestId) {
+      const { data: accessReq } = await supabaseAdmin
+        .from("access_requests")
+        .select("email, type, form_data")
+        .eq("id", accessRequestId)
+        .eq("type", "doctor")
+        .single();
+
+      if (accessReq && accessReq.email?.toLowerCase() === email.toLowerCase() && accessReq.form_data) {
+        const fd = accessReq.form_data;
+        if (!npiNumber && fd.npiNumber) npiNumber = fd.npiNumber;
+        if (!medicalLicense && fd.medicalLicense) medicalLicense = fd.medicalLicense;
+        if (!licenseState && fd.licenseState) licenseState = fd.licenseState;
+        if (!referringPharmacyId && fd.referringPharmacyId) referringPharmacyId = fd.referringPharmacyId;
+      }
+    } else if (email && !npiNumber) {
+      const { data: accessReq } = await supabaseAdmin
+        .from("access_requests")
+        .select("form_data")
+        .eq("email", email.toLowerCase())
+        .eq("type", "doctor")
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (accessReq?.form_data) {
+        const fd = accessReq.form_data;
+        if (!npiNumber && fd.npiNumber) npiNumber = fd.npiNumber;
+        if (!medicalLicense && fd.medicalLicense) medicalLicense = fd.medicalLicense;
+        if (!licenseState && fd.licenseState) licenseState = fd.licenseState;
+        if (!referringPharmacyId && fd.referringPharmacyId) referringPharmacyId = fd.referringPharmacyId;
+      }
+    }
 
     // Create auth user with email already confirmed
     const { data: authUser, error: authError } =
