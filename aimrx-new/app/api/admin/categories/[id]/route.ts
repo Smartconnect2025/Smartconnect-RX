@@ -10,11 +10,12 @@ async function verifyCategoryAccessForPharmacyAdmin(
 ): Promise<boolean> {
   const { data: cat } = await supabase
     .from("categories")
-    .select("id, pharmacy_id")
+    .select("*")
     .eq("id", categoryId)
     .single();
   if (!cat) return false;
 
+  if (!cat.pharmacy_id) return true;
   return cat.pharmacy_id === pharmacyId;
 }
 
@@ -61,19 +62,26 @@ export async function PUT(
       }
     }
 
-    const { data: existingCat } = await supabase
+    const { data: existingCat, error: existingCatError } = await supabase
       .from("categories")
-      .select("name, pharmacy_id")
+      .select("*")
       .eq("id", id)
       .single();
+
+    if (existingCatError) {
+      console.error("Error fetching category for update:", existingCatError, "id:", id);
+    }
 
     if (!existingCat) {
       return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
+    const existingPharmacyId = existingCat.pharmacy_id || null;
     const effectivePharmacyId = isSuperAdmin
-      ? (body.pharmacy_id !== undefined ? body.pharmacy_id : existingCat.pharmacy_id)
-      : (scopedPharmacyId || existingCat.pharmacy_id);
+      ? (body.pharmacy_id !== undefined ? body.pharmacy_id : existingPharmacyId)
+      : (scopedPharmacyId || existingPharmacyId);
+
+    const hasPharmacyIdColumn = existingPharmacyId !== undefined && 'pharmacy_id' in existingCat;
 
     if (body.slug) {
       let slugQuery = supabase
@@ -82,7 +90,7 @@ export async function PUT(
         .eq("slug", body.slug)
         .neq("id", id);
 
-      if (effectivePharmacyId) {
+      if (effectivePharmacyId && hasPharmacyIdColumn) {
         slugQuery = slugQuery.eq("pharmacy_id", effectivePharmacyId);
       }
 
@@ -90,7 +98,7 @@ export async function PUT(
 
       if (existingCategory) {
         return NextResponse.json(
-          { error: "Category with this slug already exists for this pharmacy" },
+          { error: "Category with this slug already exists" },
           { status: 400 },
         );
       }
@@ -111,7 +119,7 @@ export async function PUT(
     if (body.image_url !== undefined) updateData.image_url = body.image_url;
     if (body.color !== undefined) updateData.color = body.color;
     if (body.description !== undefined) updateData.description = body.description;
-    if (isSuperAdmin && body.pharmacy_id !== undefined) updateData.pharmacy_id = body.pharmacy_id;
+    if (isSuperAdmin && body.pharmacy_id !== undefined && hasPharmacyIdColumn) updateData.pharmacy_id = body.pharmacy_id;
 
     const { data: category, error } = await supabase
       .from("categories")
@@ -194,7 +202,7 @@ export async function DELETE(
 
     const { data: categoryData } = await supabase
       .from("categories")
-      .select("name, pharmacy_id")
+      .select("*")
       .eq("id", id)
       .single();
 

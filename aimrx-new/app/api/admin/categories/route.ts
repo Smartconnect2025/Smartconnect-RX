@@ -49,14 +49,30 @@ export async function GET(request: NextRequest) {
       categoriesQuery = categoriesQuery.or(`pharmacy_id.eq.${pharmacyId},pharmacy_id.is.null`);
     }
 
-    const { data: allCategories, error: categoriesError } = await categoriesQuery;
+    let allCategories;
+    const { data: catData, error: categoriesError } = await categoriesQuery;
 
-    if (categoriesError) {
+    if (categoriesError && categoriesError.code === "42703") {
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from("categories")
+        .select("*")
+        .order("display_order", { ascending: true });
+      if (fallbackError) {
+        console.error("Error fetching categories:", fallbackError);
+        return NextResponse.json(
+          { error: "Failed to fetch categories" },
+          { status: 500 },
+        );
+      }
+      allCategories = fallbackData;
+    } else if (categoriesError) {
       console.error("Error fetching categories:", categoriesError);
       return NextResponse.json(
         { error: "Failed to fetch categories" },
         { status: 500 },
       );
+    } else {
+      allCategories = catData;
     }
 
     let medsQuery = supabase
@@ -170,14 +186,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: existingCategoryByName } = await supabase
+    let hasPharmacyIdColumn = true;
+    const { data: existingCategoryByName, error: nameCheckError } = await supabase
       .from("categories")
       .select("id")
       .eq("name", body.name)
       .eq("pharmacy_id", pharmacyId)
       .single();
 
-    if (existingCategoryByName) {
+    if (nameCheckError && nameCheckError.code === "42703") {
+      hasPharmacyIdColumn = false;
+      const { data: existingByNameGlobal } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("name", body.name)
+        .single();
+      if (existingByNameGlobal) {
+        return NextResponse.json(
+          { error: "A category with this name already exists" },
+          { status: 400 },
+        );
+      }
+    } else if (existingCategoryByName) {
       return NextResponse.json(
         { error: "A category with this name already exists for this pharmacy" },
         { status: 400 },
@@ -214,17 +244,21 @@ export async function POST(request: NextRequest) {
 
     const nextDisplayOrder = lastCategory ? lastCategory.display_order + 1 : 0;
 
+    const insertData: Record<string, unknown> = {
+      name: body.name,
+      slug,
+      display_order: nextDisplayOrder,
+      is_active: true,
+      ...(body.description ? { description: body.description } : {}),
+      ...(body.color ? { color: body.color } : {}),
+    };
+    if (hasPharmacyIdColumn) {
+      insertData.pharmacy_id = pharmacyId;
+    }
+
     const { data: category, error } = await supabase
       .from("categories")
-      .insert({
-        name: body.name,
-        slug,
-        display_order: nextDisplayOrder,
-        is_active: true,
-        pharmacy_id: pharmacyId,
-        ...(body.description ? { description: body.description } : {}),
-        ...(body.color ? { color: body.color } : {}),
-      })
+      .insert(insertData)
       .select()
       .single();
 
