@@ -146,6 +146,7 @@ export default function ManageDoctorsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [pharmacyFilter, setPharmacyFilter] = useState("all");
   const [pharmaciesForFilter, setPharmaciesForFilter] = useState<Array<{ id: string; name: string }>>([]);
+  const loadDoctorsAbortRef = React.useRef<AbortController | null>(null);
   const [activeTab, setActiveTab] = useState<"providers" | "pending">(
     "providers",
   );
@@ -357,15 +358,20 @@ export default function ManageDoctorsPage() {
     message?: string;
   }>({ isVerifying: false, result: null });
 
-  // Load doctors from Supabase and merge with tier information
   const loadDoctors = useCallback(async (filterByPharmacyId?: string) => {
+    if (loadDoctorsAbortRef.current) {
+      loadDoctorsAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    loadDoctorsAbortRef.current = controller;
+
     setLoading(true);
 
     try {
       const url = filterByPharmacyId && filterByPharmacyId !== "all"
-        ? `/api/admin/providers?pharmacyId=${filterByPharmacyId}`
+        ? `/api/admin/providers?pharmacyId=${encodeURIComponent(filterByPharmacyId)}`
         : "/api/admin/providers";
-      const response = await fetch(url);
+      const response = await fetch(url, { signal: controller.signal });
 
       if (!response.ok) {
         const errorData = await response
@@ -379,19 +385,23 @@ export default function ManageDoctorsPage() {
 
       const data = await response.json();
 
-      if (data.providers) {
-        // The API already includes tier_level and tier_code from mock store
-        setDoctors(data.providers);
-        setFilteredDoctors(data.providers);
-      } else {
-        setDoctors([]);
-        setFilteredDoctors([]);
+      if (!controller.signal.aborted) {
+        if (data.providers) {
+          setDoctors(data.providers);
+          setFilteredDoctors(data.providers);
+        } else {
+          setDoctors([]);
+          setFilteredDoctors([]);
+        }
       }
     } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
       console.error("Error loading doctors:", error);
       toast.error("Failed to load doctors");
     } finally {
-      setLoading(false);
+      if (!controller.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, []);
 
