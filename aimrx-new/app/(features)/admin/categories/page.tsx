@@ -36,6 +36,7 @@ import {
   EyeOff,
   Building2,
   Package,
+  Check,
 } from "lucide-react";
 
 interface PharmacyCount {
@@ -73,7 +74,7 @@ export default function CategoriesPage() {
     name: "",
     description: "",
     color: "#1E3A8A",
-    pharmacy_id: "",
+    pharmacy_ids: [] as string[],
   });
   const [createImageFile, setCreateImageFile] = useState<File | null>(null);
   const [createImagePreview, setCreateImagePreview] = useState<string | null>(null);
@@ -145,18 +146,14 @@ export default function CategoriesPage() {
       return;
     }
 
-    const selectedPharmacyValue = isSuperAdmin
-      ? newCategory.pharmacy_id || pharmacyFilter
-      : pharmacies[0]?.id;
+    const pharmacyIdsToCreate = isSuperAdmin
+      ? newCategory.pharmacy_ids
+      : [pharmacies[0]?.id].filter(Boolean);
 
-    if (!selectedPharmacyValue || selectedPharmacyValue === "all") {
-      alert("Please select a pharmacy for this category");
+    if (pharmacyIdsToCreate.length === 0) {
+      alert("Please select at least one pharmacy for this category");
       return;
     }
-
-    const pharmacyIdsToCreate = selectedPharmacyValue === "all_pharmacies"
-      ? pharmacies.map((p) => p.id)
-      : [selectedPharmacyValue];
 
     try {
       let lastCreatedId: number | null = null;
@@ -213,7 +210,7 @@ export default function CategoriesPage() {
 
       if (createImagePreview) URL.revokeObjectURL(createImagePreview);
       setShowCreateDialog(false);
-      setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_id: "" });
+      setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_ids: [] });
       setCreateImageFile(null);
       setCreateImagePreview(null);
       await loadCategories();
@@ -690,7 +687,7 @@ export default function CategoriesPage() {
       {/* Create Category Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={(open) => {
         if (!open) {
-          setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_id: "" });
+          setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_ids: [] });
           if (createImagePreview) URL.revokeObjectURL(createImagePreview);
           setCreateImageFile(null);
           setCreateImagePreview(null);
@@ -705,29 +702,67 @@ export default function CategoriesPage() {
             <div className="space-y-1.5">
               <Label>Pharmacy <span className="text-red-500">*</span></Label>
               {isSuperAdmin ? (
-                <Select
-                  value={newCategory.pharmacy_id || (pharmacyFilter !== "all" ? pharmacyFilter : "")}
-                  onValueChange={(value) => setNewCategory({ ...newCategory, pharmacy_id: value })}
-                >
-                  <SelectTrigger className="w-full" data-testid="select-category-pharmacy">
-                    <SelectValue placeholder="Select a pharmacy..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all_pharmacies">All Pharmacies</SelectItem>
-                    {pharmacies.map((pharmacy) => (
-                      <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant={newCategory.pharmacy_ids.length === pharmacies.length ? "default" : "outline"}
+                      size="sm"
+                      className="text-xs h-7"
+                      onClick={() => {
+                        if (newCategory.pharmacy_ids.length === pharmacies.length) {
+                          setNewCategory({ ...newCategory, pharmacy_ids: [] });
+                        } else {
+                          setNewCategory({ ...newCategory, pharmacy_ids: pharmacies.map((p) => p.id) });
+                        }
+                      }}
+                    >
+                      {newCategory.pharmacy_ids.length === pharmacies.length ? "Deselect All" : "Select All"}
+                    </Button>
+                    <span className="text-xs text-muted-foreground">
+                      {newCategory.pharmacy_ids.length} of {pharmacies.length} selected
+                    </span>
+                  </div>
+                  <div className="border border-gray-200 rounded-lg max-h-40 overflow-y-auto">
+                    {pharmacies.map((pharmacy) => {
+                      const isSelected = newCategory.pharmacy_ids.includes(pharmacy.id);
+                      return (
+                        <button
+                          key={pharmacy.id}
+                          type="button"
+                          className={`w-full flex items-center gap-3 px-3 py-2 text-sm text-left transition-colors hover:bg-gray-50 ${
+                            isSelected ? "bg-blue-50" : ""
+                          }`}
+                          onClick={() => {
+                            const ids = isSelected
+                              ? newCategory.pharmacy_ids.filter((id) => id !== pharmacy.id)
+                              : [...newCategory.pharmacy_ids, pharmacy.id];
+                            setNewCategory({ ...newCategory, pharmacy_ids: ids });
+                          }}
+                        >
+                          <div className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${
+                            isSelected ? "bg-blue-600 border-blue-600" : "border-gray-300"
+                          }`}>
+                            {isSelected && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <Building2 className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                          <span className={isSelected ? "font-medium" : ""}>{pharmacy.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               ) : (
                 <div className="w-full h-10 px-3 rounded-md border border-gray-300 bg-gray-50 flex items-center text-gray-700 text-sm">
                   {pharmacies[0]?.name || "Your Pharmacy"}
                 </div>
               )}
               <p className="text-xs text-muted-foreground">
-                {newCategory.pharmacy_id === "all_pharmacies"
+                {newCategory.pharmacy_ids.length === pharmacies.length && pharmacies.length > 1
                   ? "This category will be available to all pharmacies"
-                  : "This category will belong to the selected pharmacy only"}
+                  : newCategory.pharmacy_ids.length > 1
+                  ? `This category will be created for ${newCategory.pharmacy_ids.length} pharmacies`
+                  : "Select which pharmacies should have this category"}
               </p>
             </div>
             <div className="space-y-1.5">
@@ -841,7 +876,7 @@ export default function CategoriesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
-              setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_id: "" });
+              setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_ids: [] });
               if (createImagePreview) URL.revokeObjectURL(createImagePreview);
               setCreateImageFile(null);
               setCreateImagePreview(null);
