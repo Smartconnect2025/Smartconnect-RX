@@ -81,7 +81,6 @@ export function AdminHeader() {
   const mainNavLinks = isPharmacyAdmin
     ? [
         { href: "/admin/prescriptions", label: "Incoming Prescriptions" },
-        { href: "/admin/pharmacy-orders", label: "Orders" },
         { href: "/admin/medications", label: "Medications" },
         { href: "/admin/medication-catalog", label: "Catalog" },
         { href: "/admin/providers", label: "Providers" },
