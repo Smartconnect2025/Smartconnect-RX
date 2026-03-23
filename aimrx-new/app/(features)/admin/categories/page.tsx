@@ -145,61 +145,78 @@ export default function CategoriesPage() {
       return;
     }
 
-    const pharmacyIdToUse = isSuperAdmin
+    const selectedPharmacyValue = isSuperAdmin
       ? newCategory.pharmacy_id || pharmacyFilter
       : pharmacies[0]?.id;
 
-    if (!pharmacyIdToUse || pharmacyIdToUse === "all") {
+    if (!selectedPharmacyValue || selectedPharmacyValue === "all") {
       alert("Please select a pharmacy for this category");
       return;
     }
 
-    try {
-      const response = await fetch("/api/admin/categories", {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: newCategory.name.trim(),
-          slug: generateSlug(newCategory.name),
-          description: newCategory.description.trim() || null,
-          color: newCategory.color || null,
-          pharmacy_id: pharmacyIdToUse,
-        }),
-      });
+    const pharmacyIdsToCreate = selectedPharmacyValue === "all_pharmacies"
+      ? pharmacies.map((p) => p.id)
+      : [selectedPharmacyValue];
 
-      const result = await response.json();
-      if (response.ok) {
-        if (createImageFile && result.id) {
-          try {
-            const formData = new FormData();
-            formData.append("file", createImageFile);
-            formData.append("type", "category");
-            formData.append("entityId", String(result.id));
-            formData.append("entityName", newCategory.name.trim());
-            const uploadRes = await fetch("/api/admin/upload", {
-              method: "POST",
-              credentials: "include",
-              body: formData,
-            });
-            const uploadResult = await uploadRes.json();
-            if (!uploadRes.ok || !uploadResult.success) {
-              alert(`Category created, but image upload failed: ${uploadResult.error || "Unknown error"}. You can upload the image from the categories list.`);
+    try {
+      let lastCreatedId: number | null = null;
+      let failedCount = 0;
+
+      for (const pharmId of pharmacyIdsToCreate) {
+        const response = await fetch("/api/admin/categories", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: newCategory.name.trim(),
+            slug: generateSlug(newCategory.name),
+            description: newCategory.description.trim() || null,
+            color: newCategory.color || null,
+            pharmacy_id: pharmId,
+          }),
+        });
+
+        const result = await response.json();
+        if (response.ok) {
+          if (!lastCreatedId) lastCreatedId = result.id;
+          if (createImageFile && result.id) {
+            try {
+              const formData = new FormData();
+              formData.append("file", createImageFile);
+              formData.append("type", "category");
+              formData.append("entityId", String(result.id));
+              formData.append("entityName", newCategory.name.trim());
+              const uploadRes = await fetch("/api/admin/upload", {
+                method: "POST",
+                credentials: "include",
+                body: formData,
+              });
+              const uploadResult = await uploadRes.json();
+              if (!uploadRes.ok || !uploadResult.success) {
+                console.error("Image upload failed for category:", result.id);
+              }
+            } catch (uploadErr) {
+              console.error("Image upload after create failed:", uploadErr);
             }
-          } catch (uploadErr) {
-            console.error("Image upload after create failed:", uploadErr);
-            alert("Category created, but image upload failed. You can upload the image from the categories list.");
           }
+        } else {
+          failedCount++;
+          console.error(`Failed to create category for pharmacy ${pharmId}:`, result.error);
         }
-        if (createImagePreview) URL.revokeObjectURL(createImagePreview);
-        setShowCreateDialog(false);
-        setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_id: "" });
-        setCreateImageFile(null);
-        setCreateImagePreview(null);
-        await loadCategories();
-      } else {
-        alert(result.error || "Failed to create category");
       }
+
+      if (failedCount > 0 && failedCount < pharmacyIdsToCreate.length) {
+        alert(`Category created for ${pharmacyIdsToCreate.length - failedCount} pharmacies. ${failedCount} failed.`);
+      } else if (failedCount === pharmacyIdsToCreate.length) {
+        alert("Failed to create category for any pharmacy");
+      }
+
+      if (createImagePreview) URL.revokeObjectURL(createImagePreview);
+      setShowCreateDialog(false);
+      setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_id: "" });
+      setCreateImageFile(null);
+      setCreateImagePreview(null);
+      await loadCategories();
     } catch (error) {
       console.error("Error creating category:", error);
       alert("Failed to create category");
@@ -696,6 +713,7 @@ export default function CategoriesPage() {
                     <SelectValue placeholder="Select a pharmacy..." />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="all_pharmacies">All Pharmacies</SelectItem>
                     {pharmacies.map((pharmacy) => (
                       <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
                     ))}
@@ -706,7 +724,11 @@ export default function CategoriesPage() {
                   {pharmacies[0]?.name || "Your Pharmacy"}
                 </div>
               )}
-              <p className="text-xs text-muted-foreground">This category will belong to the selected pharmacy only</p>
+              <p className="text-xs text-muted-foreground">
+                {newCategory.pharmacy_id === "all_pharmacies"
+                  ? "This category will be available to all pharmacies"
+                  : "This category will belong to the selected pharmacy only"}
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="cat-name">Category Name *</Label>
