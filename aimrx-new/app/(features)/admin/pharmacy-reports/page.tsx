@@ -87,12 +87,6 @@ interface ProviderOption {
   email: string;
 }
 
-interface GroupOption {
-  id: string;
-  name: string;
-  platform_manager_id: string | null;
-  platform_manager_name: string | null;
-}
 
 function AnimatedNumber({ value, prefix = "", decimals = 0, duration = 800 }: { value: number; prefix?: string; decimals?: number; duration?: number }) {
   const [display, setDisplay] = useState(0);
@@ -193,7 +187,6 @@ export default function PharmacyReportsPage() {
   const [reports, setReports] = useState<PharmacyReport[]>([]);
   const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([]);
   const [providers, setProviders] = useState<ProviderOption[]>([]);
-  const [groups, setGroups] = useState<GroupOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -203,8 +196,6 @@ export default function PharmacyReportsPage() {
 
   const [selectedPharmacy, setSelectedPharmacy] = useState<string>("all");
   const [selectedProvider, setSelectedProvider] = useState<string>("all");
-  const [selectedGroup, setSelectedGroup] = useState<string>("all");
-  const [selectedPlatformManager, setSelectedPlatformManager] = useState<string>("all");
 
   useEffect(() => {
     const checkScope = async () => {
@@ -263,17 +254,6 @@ export default function PharmacyReportsPage() {
     }
   };
 
-  const fetchGroups = async () => {
-    try {
-      const response = await fetch("/api/admin/groups");
-      const data = await response.json();
-      if (response.ok) {
-        setGroups(data.groups || []);
-      }
-    } catch (error) {
-      console.error("Error fetching groups:", error);
-    }
-  };
 
   const fetchReports = useCallback(async () => {
     setIsLoading(true);
@@ -324,9 +304,6 @@ export default function PharmacyReportsPage() {
   useEffect(() => {
     fetchPharmacies();
     fetchProviders();
-    if (!isPharmacyAdmin) {
-      fetchGroups();
-    }
   }, [isPharmacyAdmin]);
 
   useEffect(() => {
@@ -334,26 +311,9 @@ export default function PharmacyReportsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedPharmacy, selectedProvider, startDate, endDate]);
 
-  const matchingGroupIds = new Set<string>();
-  if (selectedGroup !== "all" || selectedPlatformManager !== "all") {
-    groups.forEach((group) => {
-      const matchesGroup = selectedGroup === "all" || group.id === selectedGroup;
-      const matchesPM = selectedPlatformManager === "all" || group.platform_manager_id === selectedPlatformManager;
-      if (matchesGroup && matchesPM) {
-        matchingGroupIds.add(group.id);
-      }
-    });
-  }
-
   const filteredReports = reports
     .map((report) => {
       let providers = report.providers;
-
-      if (selectedGroup !== "all" || selectedPlatformManager !== "all") {
-        providers = providers.filter(
-          (p) => p.provider.group_id && matchingGroupIds.has(p.provider.group_id)
-        );
-      }
 
       if (searchTerm) {
         const searchLower = searchTerm.toLowerCase();
@@ -395,19 +355,16 @@ export default function PharmacyReportsPage() {
 
   const exportToCSV = () => {
     const csvRows: string[] = [];
-    csvRows.push("Pharmacy,Provider,Provider Email,Group,Platform Manager,Patient,Medication,Quantity,Refills,Date,Medication Price,Provider Fees,Total Price,Status");
+    csvRows.push("Pharmacy,Provider,Provider Email,Patient,Medication,Quantity,Refills,Date,Medication Price,Provider Fees,Total Price,Status");
 
     filteredReports.forEach((report) => {
       report.providers.forEach((providerData) => {
-        const group = groups.find(g => g.id === providerData.provider.group_id);
         providerData.orders.forEach((order) => {
           csvRows.push(
             [
               report.pharmacy.name,
               providerData.provider.name,
               providerData.provider.email,
-              `"${group?.name || ""}"`,
-              `"${group?.platform_manager_name || ""}"`,
               order.patient,
               order.medication,
               order.quantity,
@@ -448,7 +405,7 @@ export default function PharmacyReportsPage() {
   });
   const activeProviderCount = uniqueProviderIds.size;
   const topMedication = Object.entries(medicationCounts).sort((a, b) => b[1] - a[1])[0];
-  const hasActiveFilters = selectedPharmacy !== "all" || selectedProvider !== "all" || selectedGroup !== "all" || selectedPlatformManager !== "all" || startDate || endDate || searchTerm;
+  const hasActiveFilters = selectedPharmacy !== "all" || selectedProvider !== "all" || startDate || endDate || searchTerm;
 
   const kpiValues: Record<string, { value: number; display?: string; sub?: string }> = {
     orders: { value: totalOrders },
@@ -659,51 +616,6 @@ export default function PharmacyReportsPage() {
                   </div>
                 )}
 
-                {viewMode === "by-provider" && !isPharmacyAdmin && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="group" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Group</Label>
-                    <Select value={selectedGroup} onValueChange={setSelectedGroup}>
-                      <SelectTrigger id="group" className="bg-white" data-testid="select-group">
-                        <SelectValue placeholder="Select group" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Groups</SelectItem>
-                        {groups.map((group) => (
-                          <SelectItem key={group.id} value={group.id}>
-                            {group.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
-
-                {viewMode === "by-provider" && !isPharmacyAdmin && (
-                  <div className="space-y-1.5">
-                    <Label htmlFor="platformManager" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Platform Manager</Label>
-                    <Select value={selectedPlatformManager} onValueChange={setSelectedPlatformManager}>
-                      <SelectTrigger id="platformManager" className="bg-white" data-testid="select-platform-manager">
-                        <SelectValue placeholder="Select platform manager" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Platform Managers</SelectItem>
-                        {groups
-                          .filter((g) => g.platform_manager_id && g.platform_manager_name)
-                          .reduce((unique, g) => {
-                            if (!unique.some((u) => u.platform_manager_id === g.platform_manager_id)) {
-                              unique.push(g);
-                            }
-                            return unique;
-                          }, [] as GroupOption[])
-                          .map((g) => (
-                            <SelectItem key={g.platform_manager_id!} value={g.platform_manager_id!}>
-                              {g.platform_manager_name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
 
                 <div className="space-y-1.5">
                   <Label htmlFor="search" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Search</Label>
