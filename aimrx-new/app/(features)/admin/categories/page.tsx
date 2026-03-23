@@ -73,6 +73,7 @@ export default function CategoriesPage() {
     name: "",
     description: "",
     color: "#1E3A8A",
+    pharmacy_id: "",
   });
   const [createImageFile, setCreateImageFile] = useState<File | null>(null);
   const [createImagePreview, setCreateImagePreview] = useState<string | null>(null);
@@ -117,11 +118,9 @@ export default function CategoriesPage() {
   };
 
   useEffect(() => {
-    if (isSuperAdmin) {
-      fetchPharmacies();
-    }
+    fetchPharmacies();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSuperAdmin]);
+  }, []);
 
   useEffect(() => {
     loadCategories();
@@ -146,6 +145,15 @@ export default function CategoriesPage() {
       return;
     }
 
+    const pharmacyIdToUse = isSuperAdmin
+      ? newCategory.pharmacy_id || pharmacyFilter
+      : pharmacies[0]?.id;
+
+    if (!pharmacyIdToUse || pharmacyIdToUse === "all") {
+      alert("Please select a pharmacy for this category");
+      return;
+    }
+
     try {
       const response = await fetch("/api/admin/categories", {
         method: "POST",
@@ -156,6 +164,7 @@ export default function CategoriesPage() {
           slug: generateSlug(newCategory.name),
           description: newCategory.description.trim() || null,
           color: newCategory.color || null,
+          pharmacy_id: pharmacyIdToUse,
         }),
       });
 
@@ -184,7 +193,7 @@ export default function CategoriesPage() {
         }
         if (createImagePreview) URL.revokeObjectURL(createImagePreview);
         setShowCreateDialog(false);
-        setNewCategory({ name: "", description: "", color: "#1E3A8A" });
+        setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_id: "" });
         setCreateImageFile(null);
         setCreateImagePreview(null);
         await loadCategories();
@@ -664,7 +673,7 @@ export default function CategoriesPage() {
       {/* Create Category Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={(open) => {
         if (!open) {
-          setNewCategory({ name: "", description: "", color: "#1E3A8A" });
+          setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_id: "" });
           if (createImagePreview) URL.revokeObjectURL(createImagePreview);
           setCreateImageFile(null);
           setCreateImagePreview(null);
@@ -676,6 +685,29 @@ export default function CategoriesPage() {
             <DialogTitle>Add New Category</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label>Pharmacy <span className="text-red-500">*</span></Label>
+              {isSuperAdmin ? (
+                <Select
+                  value={newCategory.pharmacy_id || (pharmacyFilter !== "all" ? pharmacyFilter : "")}
+                  onValueChange={(value) => setNewCategory({ ...newCategory, pharmacy_id: value })}
+                >
+                  <SelectTrigger className="w-full" data-testid="select-category-pharmacy">
+                    <SelectValue placeholder="Select a pharmacy..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {pharmacies.map((pharmacy) => (
+                      <SelectItem key={pharmacy.id} value={pharmacy.id}>{pharmacy.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="w-full h-10 px-3 rounded-md border border-gray-300 bg-gray-50 flex items-center text-gray-700 text-sm">
+                  {pharmacies[0]?.name || "Your Pharmacy"}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">This category will belong to the selected pharmacy only</p>
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="cat-name">Category Name *</Label>
               <Input
@@ -787,7 +819,7 @@ export default function CategoriesPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => {
-              setNewCategory({ name: "", description: "", color: "#1E3A8A" });
+              setNewCategory({ name: "", description: "", color: "#1E3A8A", pharmacy_id: "" });
               if (createImagePreview) URL.revokeObjectURL(createImagePreview);
               setCreateImageFile(null);
               setCreateImagePreview(null);

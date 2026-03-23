@@ -40,10 +40,16 @@ export async function GET(request: NextRequest) {
 
     const supabase = await createServerClient();
 
-    const { data: allCategories, error: categoriesError } = await supabase
+    let categoriesQuery = supabase
       .from("categories")
       .select("*")
       .order("display_order", { ascending: true });
+
+    if (pharmacyId) {
+      categoriesQuery = categoriesQuery.or(`pharmacy_id.eq.${pharmacyId},pharmacy_id.is.null`);
+    }
+
+    const { data: allCategories, error: categoriesError } = await categoriesQuery;
 
     if (categoriesError) {
       console.error("Error fetching categories:", categoriesError);
@@ -65,13 +71,6 @@ export async function GET(request: NextRequest) {
     const { data: pharmacyMeds } = await medsQuery;
 
     let categories = allCategories || [];
-
-    if (pharmacyId) {
-      const pharmacyCategoryNames = new Set(
-        (pharmacyMeds || []).map((m: { category: string | null }) => m.category).filter(Boolean),
-      );
-      categories = categories.filter((c: Category) => pharmacyCategoryNames.has(c.name));
-    }
 
     const categoriesWithCounts = categories.map((category: Category) => {
       const matchingMeds = (pharmacyMeds || []).filter(
@@ -147,28 +146,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: existingCategoryByName } = await supabase
-      .from("categories")
-      .select("id")
-      .eq("name", body.name)
-      .single();
+    const isSuperAdmin = userRole === "super_admin";
+    let pharmacyId: string | null = null;
 
-    if (existingCategoryByName) {
+    if (!isSuperAdmin) {
+      const scope = await getPharmacyAdminScope(user.id);
+      if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
+        return NextResponse.json(
+          { error: "Unable to determine pharmacy scope" },
+          { status: 403 },
+        );
+      }
+      pharmacyId = scope.pharmacyId;
+    } else {
+      pharmacyId = body.pharmacy_id || null;
+    }
+
+    if (!pharmacyId) {
       return NextResponse.json(
-        { error: "A category with this name already exists" },
+        { error: "Please select a pharmacy for this category" },
         { status: 400 },
       );
     }
 
-    const { data: existingCategoryBySlug } = await supabase
+    let dupQuery = supabase
       .from("categories")
       .select("id")
-      .eq("slug", body.slug)
-      .single();
+      .eq("name", body.name)
+      .eq("pharmacy_id", pharmacyId);
 
-    if (existingCategoryBySlug) {
+    const { data: existingCategoryByName } = await dupQuery.single();
+
+    if (existingCategoryByName) {
       return NextResponse.json(
-        { error: "A category with this slug already exists" },
+        { error: "A category with this name already exists for this pharmacy" },
         { status: 400 },
       );
     }
@@ -189,6 +200,7 @@ export async function POST(request: NextRequest) {
         slug: body.slug,
         display_order: nextDisplayOrder,
         is_active: true,
+        pharmacy_id: pharmacyId,
         ...(body.description ? { description: body.description } : {}),
         ...(body.color ? { color: body.color } : {}),
       })

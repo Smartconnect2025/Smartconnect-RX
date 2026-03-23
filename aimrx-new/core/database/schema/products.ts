@@ -9,6 +9,7 @@ import {
   varchar,
   boolean,
   jsonb,
+  uuid,
 } from "drizzle-orm/pg-core";
 import { authenticatedRole } from "drizzle-orm/supabase";
 
@@ -19,21 +20,19 @@ import { authenticatedRole } from "drizzle-orm/supabase";
 export const categories = pgTable(
   "categories",
   {
-    // Primary key (serial for auto-increment integer)
     id: serial("id").primaryKey(),
 
-    // Category details
-    name: varchar("name", { length: 255 }).notNull().unique(),
-    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    name: varchar("name", { length: 255 }).notNull(),
+    slug: varchar("slug", { length: 255 }).notNull(),
     description: text("description"),
 
-    // Display configuration
+    pharmacy_id: uuid("pharmacy_id"),
+
     display_order: integer("display_order").notNull().default(0),
     is_active: boolean("is_active").notNull().default(true),
-    color: varchar("color", { length: 50 }), // Hex color or color name for branding
-    image_url: text("image_url"), // Category image/icon
+    color: varchar("color", { length: 50 }),
+    image_url: text("image_url"),
 
-    // Timestamps
     created_at: timestamp("created_at", { withTimezone: true })
       .defaultNow()
       .notNull(),
