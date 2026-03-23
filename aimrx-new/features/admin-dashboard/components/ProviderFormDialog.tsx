@@ -29,7 +29,6 @@ interface CreateProviderFormData {
   firstName: string;
   lastName: string;
   phone: string;
-  tierLevel?: string;
   groupId?: string;
 }
 
@@ -53,7 +52,6 @@ export function ProviderFormDialog({
     firstName: "",
     lastName: "",
     phone: "",
-    tierLevel: "",
     groupId: "",
   });
 
@@ -103,7 +101,6 @@ export function ProviderFormDialog({
         ...formData,
         role: "provider",
         groupId: formData.groupId || undefined,
-        tierLevel: formData.tierLevel || undefined,
       };
       const response = await fetch("/api/admin/users", {
         method: "POST",
@@ -125,7 +122,6 @@ export function ProviderFormDialog({
           firstName: "",
           lastName: "",
           phone: "",
-          tierLevel: "",
           groupId: "",
         });
         onOpenChange(false);
@@ -231,9 +227,7 @@ export function ProviderFormDialog({
               data-testid="input-provider-phone"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="hidden">
-            </div>
+          <div className="space-y-2">
             <div className="space-y-2">
               <Label htmlFor="groupId">Group</Label>
               <Select

@@ -202,8 +202,7 @@ export default function ManageDoctorsPage() {
     phone: "",
     companyName: "",
     password: "",
-    tierLevel: "", // Will be set from tiers
-    groupId: "", // Will be set from groups
+    groupId: "",
     npiNumber: "",
     medicalLicense: "",
     licenseState: "",
@@ -222,7 +221,6 @@ export default function ManageDoctorsPage() {
     email: "",
     phone: "",
     companyName: "",
-    tierLevel: "",
   });
 
   useEffect(() => {
@@ -271,7 +269,6 @@ export default function ManageDoctorsPage() {
       phone: "",
       companyName: "",
       password: "",
-      tierLevel: tiers.length > 0 ? tiers[0].tier_code : "",
       groupId: "",
       npiNumber: "",
       medicalLicense: "",
@@ -460,7 +457,6 @@ export default function ManageDoctorsPage() {
           phone: inviteFormData.phone || null,
           companyName: inviteFormData.companyName || null,
           password: inviteFormData.password,
-          tierLevel: inviteFormData.tierLevel,
           groupId: inviteFormData.groupId || null,
           npiNumber: inviteFormData.npiNumber || null,
           medicalLicense: inviteFormData.medicalLicense || null,
@@ -582,7 +578,6 @@ export default function ManageDoctorsPage() {
           email: freshProviderData.email || "",
           phone: freshProviderData.phone_number || "",
           companyName: freshProviderData.company_name || "",
-          tierLevel: "",
         });
       }
 
@@ -601,7 +596,7 @@ export default function ManageDoctorsPage() {
   // Open edit modal - fetch fresh data from database
   const openEditModal = async (doctor: Doctor) => {
     try {
-      // Fetch fresh provider data from database AND tier info from API
+      // Fetch fresh provider data from database
       const providerResponse = await supabase.from("providers").select("*").eq("id", doctor.id).single();
 
       if (providerResponse.error) {
@@ -619,7 +614,6 @@ export default function ManageDoctorsPage() {
         email: freshData.email || "",
         phone: freshData.phone_number || "",
         companyName: freshData.company_name || "",
-        tierLevel: "",
       });
 
       // Reset NPI verification status when opening modal
@@ -933,7 +927,6 @@ export default function ManageDoctorsPage() {
       phone: request.phone || "",
       companyName: request.form_data?.companyName || "",
       password: autoPassword, // Auto-generated secure password
-      tierLevel: tiers.length > 0 ? tiers[0].tier_code : "", // Default to first tier
       groupId: "",
       npiNumber: request.form_data?.npiNumber || "",
       medicalLicense: request.form_data?.medicalLicense || "",
@@ -1522,7 +1515,7 @@ export default function ManageDoctorsPage() {
                 <p className="text-sm text-green-800">
                   <strong>Approving Access Request:</strong> The form has been
                   pre-filled with the applicant&apos;s information. Review the
-                  details, adjust the tier level if needed, and click
+                  details and click
                   &quot;Invite Doctor&quot; to complete the approval.
                 </p>
               </div>

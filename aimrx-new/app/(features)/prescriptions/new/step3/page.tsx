@@ -19,10 +19,6 @@ import { toast } from "sonner";
 import { createClient } from "@core/supabase";
 import { useUser } from "@core/auth";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
-import {
-  getProviderTierDiscount,
-  type TierDiscountResult,
-} from "@core/services/pricing/tierDiscountService";
 import { clearPrescriptionSession } from "../prescriptionSessionUtils";
 import { generatePrescriptionPdf } from "@/utils/generatePrescriptionPdf";
 
@@ -96,9 +92,6 @@ export default function PrescriptionStep3Page() {
     name: string;
     dataUrl: string;
   } | null>(null);
-  const [tierDiscount, setTierDiscount] = useState<TierDiscountResult | null>(
-    null,
-  );
   const [useCustomAddress, setUseCustomAddress] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [customAddress, setCustomAddress] = useState<AddressData>({
@@ -158,19 +151,6 @@ export default function PrescriptionStep3Page() {
     fetchPatient();
   }, [patientId, supabase]);
 
-  // Fetch provider's tier discount
-  useEffect(() => {
-    const fetchTierDiscount = async () => {
-      if (!user?.id) return;
-
-      const result = await getProviderTierDiscount(supabase, user.id);
-      if (result.discountPercentage > 0) {
-        setTierDiscount(result);
-      }
-    };
-
-    fetchTierDiscount();
-  }, [user?.id, supabase]);
 
   useEffect(() => {
     // ALWAYS read from prescriptionFormData (the fresh data from Step 2)

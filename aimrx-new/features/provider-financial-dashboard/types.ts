@@ -12,8 +12,3 @@ export interface MonthFilter {
   year: number;
   month: number;
 }
-
-export interface TierInfo {
-  discountPercentage: number;
-  tierName: string | null;
-}

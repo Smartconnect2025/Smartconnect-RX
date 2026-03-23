@@ -235,18 +235,6 @@ export function ProfileForm() {
       clearPersistedData();
       form.reset(form.getValues());
 
-      // Refetch tier level after successful save
-      try {
-        const response = await fetch("/api/provider/tier");
-        if (response.ok) {
-          const tierData = await response.json();
-          if (tierData.tier_level) {
-            setTierLevel(tierData.tier_level);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to refresh tier level:", error);
-      }
     }
   }
 

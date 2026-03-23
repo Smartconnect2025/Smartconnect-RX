@@ -415,7 +415,6 @@ export default function ProviderCatalogPage() {
   const [selectedPharmacy, setSelectedPharmacy] = useState<string>("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [sortBy, setSortBy] = useState<"name" | "price-low" | "price-high">("name");
-  const [tierDiscount, setTierDiscount] = useState(0);
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [dbCategoryImages, setDbCategoryImages] = useState<Record<string, string>>({});
@@ -442,7 +441,6 @@ export default function ProviderCatalogPage() {
         const data = await medsResponse.json();
         if (data.success) {
           setMedications(data.medications || []);
-          setTierDiscount(data.tierDiscount || 0);
         }
         if (catsResponse?.ok) {
           const catsData = await catsResponse.json();
