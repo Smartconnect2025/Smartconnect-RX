@@ -31,7 +31,6 @@ export function ProfileForm() {
   const { user } = useUser();
   const { guardAction } = useDemoGuard();
   const { profile, updatePersonalInfo, isSubmitting } = useProviderProfile();
-  const [tierLevel, setTierLevel] = useState<string>("Not set");
   const [groupInfo, setGroupInfo] = useState<{
     name: string;
     platform_manager_name: string | null;
@@ -90,28 +89,6 @@ export function ProfileForm() {
     excludeFields: ["paymentDetails", "physicalAddress", "billingAddress"] as (keyof ProfileFormValues)[],
     disabled: !user?.id,
   });
-
-  // Fetch tier level from API for the current provider
-  useEffect(() => {
-    async function fetchTierLevel() {
-      if (!profile?.id) return;
-
-      try {
-        // Use the provider-specific endpoint (doesn't require admin access)
-        const response = await fetch("/api/provider/tier");
-        if (response.ok) {
-          const data = await response.json();
-          if (data.tier_level) {
-            setTierLevel(data.tier_level);
-          }
-        }
-      } catch (error) {
-        console.error("Failed to fetch tier level:", error);
-      }
-    }
-
-    fetchTierLevel();
-  }, [profile?.id]);
 
   // Fetch group info when profile loads
   useEffect(() => {
@@ -286,7 +263,7 @@ export function ProfileForm() {
             onSubmit={form.handleSubmit((data) => guardAction(() => onSubmit(data)))}
             className="p-6 space-y-6"
           >
-            <PersonalInfoSection form={form} tierLevel={tierLevel} />
+            <PersonalInfoSection form={form} />
 
             <Separator className="bg-gray-200" />
 

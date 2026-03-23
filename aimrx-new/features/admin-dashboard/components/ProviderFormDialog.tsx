@@ -46,7 +46,6 @@ export function ProviderFormDialog({
 }: ProviderFormDialogProps) {
   const [isCreating, setIsCreating] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [tiers, setTiers] = useState<Array<{ id: string; tier_name: string; tier_code: string; discount_percentage: string }>>([]);
   const [groups, setGroups] = useState<Array<{ id: string; name: string; platform_manager_name: string | null }>>([]);
   const [formData, setFormData] = useState<CreateProviderFormData>({
     email: "",
@@ -61,18 +60,7 @@ export function ProviderFormDialog({
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [tiersRes, groupsRes] = await Promise.all([
-          fetch("/api/admin/tiers"),
-          fetch("/api/admin/groups"),
-        ]);
-
-        if (tiersRes.ok) {
-          const data = await tiersRes.json();
-          setTiers(data.tiers || []);
-        } else {
-          console.error("Failed to fetch tiers:", tiersRes.status);
-          toast.error("Failed to load tiers");
-        }
+        const groupsRes = await fetch("/api/admin/groups");
 
         if (groupsRes.ok) {
           const data = await groupsRes.json();
@@ -244,29 +232,7 @@ export function ProviderFormDialog({
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label htmlFor="tierLevel">Tier Level</Label>
-              <Select
-                value={formData.tierLevel}
-                onValueChange={(value) => handleInputChange("tierLevel", value)}
-              >
-                <SelectTrigger id="tierLevel" data-testid="select-provider-tier">
-                  <SelectValue placeholder="Select tier" />
-                </SelectTrigger>
-                <SelectContent>
-                  {tiers.length > 0 ? (
-                    tiers.map((tier) => (
-                      <SelectItem key={tier.id} value={tier.tier_code}>
-                        {tier.tier_name} ({tier.discount_percentage}%)
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="none" disabled>
-                      No tiers available
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
+            <div className="hidden">
             </div>
             <div className="space-y-2">
               <Label htmlFor="groupId">Group</Label>

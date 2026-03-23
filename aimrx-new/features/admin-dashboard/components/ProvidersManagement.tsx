@@ -244,9 +244,6 @@ export const ProvidersManagement: React.FC = () => {
         Contact
       </th>
       <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-        Tier Level
-      </th>
-      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
         NPI Number
       </th>
       <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
@@ -360,18 +357,6 @@ export const ProvidersManagement: React.FC = () => {
           <span className="text-sm">{provider.phone_number}</span>
         ) : (
           <span className="text-muted-foreground">No phone</span>
-        )}
-      </td>
-      <td className="p-4 align-middle">
-        {provider.tier_level && provider.tier_level !== "Not set" ? (
-          <Badge
-            variant="outline"
-            className="bg-blue-50 text-blue-700 border border-border text-xs"
-          >
-            {provider.tier_level}
-          </Badge>
-        ) : (
-          <span className="text-muted-foreground text-sm">Not set</span>
         )}
       </td>
       <td className="p-4 align-middle">

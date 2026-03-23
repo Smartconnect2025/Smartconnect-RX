@@ -1,0 +1,114 @@
+
+## aimrx-new/app/(features)/admin/doctors/page.tsx
+lines: 94, 95, 187, 190, 191, 213, 233, 236, 238, 240, 243, 244, 246, 247, 248, 252, 256, 259, 294, 298, 309, 498, 605, 606, 607, 608, 613, 618, 619, 632, 633, 634, 636, 637, 641, 642, 653, 672, 673, 686, 687, 688, 689, 693, 697, 708, 709, 1023, 1292, 1326, 1331, 1629, 1769, 1771, 1773, 1776, 1779, 1780, 1781, 1786, 1787, 1788, 1791, 1792, 1793, 1801, 1994, 1996, 1998, 2001, 2004, 2005, 2006, 2011, 2012, 2013, 2016, 2017, 2018, 2026
+
+## aimrx-new/app/(features)/admin/tiers/page.tsx
+lines: 2, 4, 8, 10, 13
+
+## aimrx-new/app/(features)/prescriptions/new/step3/page.tsx
+lines: 23, 24, 25, 99, 161, 163, 166, 168, 172, 996, 998, 999
+
+## aimrx-new/app/(features)/provider/catalog/page.tsx
+lines: 419, 446, 604, 607, 611, 892, 893, 1068, 1070, 1138
+
+## aimrx-new/app/api/admin/invite-doctor/route.ts
+lines: 19, 164, 165, 167, 170, 171, 172
+
+## aimrx-new/app/api/admin/providers/[id]/tier/route.ts
+lines: 56, 68, 73, 75, 77, 78, 82, 83, 85, 88, 90, 91, 96, 97, 98, 101
+
+## aimrx-new/app/api/admin/providers/route.ts
+lines: 169, 170, 184, 185, 224, 225, 227
+
+## aimrx-new/app/api/admin/providers/tier-assignment/route.ts
+lines: 26, 28, 30, 39, 44, 51, 54
+
+## aimrx-new/app/api/admin/tiers/[id]/route.ts
+lines: 30, 57, 63, 71, 78, 84, 89, 96, 97, 100, 146, 159, 164, 170, 182, 189, 192
+
+## aimrx-new/app/api/admin/tiers/ensure-table.ts
+lines: 3, 8, 17, 21, 23, 24, 35, 36, 39, 42
+
+## aimrx-new/app/api/admin/tiers/init/route.ts
+lines: 23, 25, 26, 37, 41, 48, 51
+
+## aimrx-new/app/api/admin/tiers/route.ts
+lines: 43, 51, 55, 61, 62, 65, 95, 116, 118, 133, 134, 136, 137, 148, 153, 160, 161, 164
+
+## aimrx-new/app/api/admin/users/route.ts
+lines: 39, 72
+
+## aimrx-new/app/api/provider/pharmacy/route.ts
+lines: 3, 71, 72, 139
+
+## aimrx-new/app/api/provider/tier/route.ts
+lines: 18, 21, 27, 28, 32, 34, 36, 37, 41, 42, 43, 45, 48, 50, 51, 56, 57, 58, 61
+
+## aimrx-new/components/layout/AdminHeader.tsx
+lines: 94
+
+## aimrx-new/core/database/migrations/20260204165952_remove_rls_temp.sql
+lines: 31, 170, 171, 172, 173
+
+## aimrx-new/core/database/migrations/20260204171759_restore_rls.sql
+lines: 31, 540, 541, 542, 543
+
+## aimrx-new/core/database/schema/index.ts
+lines: 44
+
+## aimrx-new/core/database/schema/providers.ts
+lines: 95
+
+## aimrx-new/core/database/schema/tiers.ts
+lines: 13, 14, 16, 17, 21, 22, 23, 41, 47, 53, 59, 67, 68
+
+## aimrx-new/core/services/account-management.ts
+lines: 18, 114, 115, 118
+
+## aimrx-new/core/services/index.ts
+lines: 16
+
+## aimrx-new/core/services/pricing/tierDiscountService.ts
+lines: 2, 4, 11, 13, 14, 18, 22, 24, 27, 28, 30, 31, 36, 40, 44, 45, 46, 47, 50, 55, 56, 57
+
+## aimrx-new/features/admin-dashboard/components/GroupsManagement.tsx
+lines: 47, 128, 134
+
+## aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx
+lines: 32, 49, 57, 64, 65, 69, 70, 71, 73, 74, 118, 140, 248, 250, 251, 253, 254, 257, 258, 259, 260, 265
+
+## aimrx-new/features/admin-dashboard/components/ProvidersManagement.tsx
+lines: 247, 366, 371
+
+## aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx
+lines: 23, 25, 26, 31, 32, 33, 38, 42, 47, 51, 54, 57, 58, 59, 65, 67, 68, 69, 70, 74, 75, 81, 83, 93, 108, 109, 110, 112, 115, 131, 132, 133, 137, 140, 152, 156, 173, 175, 176, 177, 179, 183, 185, 186, 187, 189, 190, 192, 194, 215, 224, 239, 242, 243, 244
+
+## aimrx-new/features/admin-dashboard/components/TiersManagement.tsx
+lines: 27, 39, 41, 42, 50, 57, 59, 60, 84, 91, 94, 96, 99, 100, 107, 108, 110, 111, 116, 119, 126, 127, 128, 130, 133, 134, 141, 150, 153, 158, 167, 173, 201, 202, 215, 218, 222, 223, 225, 229, 234, 239, 247, 255, 270, 275, 277, 283, 284, 288, 290, 291
+
+## aimrx-new/features/admin-dashboard/index.ts
+lines: 14
+
+## aimrx-new/features/admin-dashboard/types.ts
+lines: 120, 121
+
+## aimrx-new/features/provider-financial-dashboard/ProviderFinancialDashboard.tsx
+lines: 65, 74, 120, 124, 125, 126, 151, 159, 203
+
+## aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts
+lines: 4, 5, 11, 13, 20, 22, 24, 25, 27, 30, 85, 92, 96, 98, 104
+
+## aimrx-new/features/provider-financial-dashboard/types.ts
+lines: 16, 18
+
+## aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx
+lines: 34, 94, 96, 101, 104, 105, 109, 113, 261, 263, 265, 266, 267, 271, 289
+
+## aimrx-new/features/provider-profile/components/profile/PersonalInfoSection.tsx
+lines: 23, 28, 104, 143, 146
+
+## aimrx-new/scripts/add-tier-level-column.sql
+lines: 1, 2, 3, 6, 9
+
+## aimrx-new/scripts/create-tiers-table.sql
+lines: 1, 2, 4, 5, 13, 14, 15, 16, 17, 19, 20, 21, 22, 23, 24

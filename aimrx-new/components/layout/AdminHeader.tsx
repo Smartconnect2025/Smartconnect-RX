@@ -91,7 +91,6 @@ export function AdminHeader() {
         { href: "/admin", label: "Dashboard" },
         { href: "/admin/prescriptions", label: "Incoming Queue" },
         { href: "/admin/pharmacy-reports", label: "Reporting & Analytics" },
-        { href: "/admin/tiers", label: "Manage Tiers" },
         { href: "/admin/refill-engine", label: "Refill Engine" },
         { href: "/admin/api-logs", label: "API & Logs" },
         { href: "/admin/settings", label: "Integration Settings" },

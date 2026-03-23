@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { DollarSign, Tag } from "lucide-react";
+import { DollarSign } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -61,17 +61,12 @@ export function ProviderFinancialDashboard() {
   const {
     prescriptions,
     totalProfitCents,
-    totalDiscountCents,
-    tierInfo,
     isLoading,
     error,
   } = useProviderFinancialData(monthFilter);
 
-  // Generate year options (current year and 2 previous)
   const currentYear = now.getFullYear();
   const yearOptions = [currentYear - 2, currentYear - 1, currentYear];
-
-  const hasDiscount = tierInfo.discountPercentage > 0;
 
   return (
     <div className="container max-w-7xl mx-auto px-4 py-8 space-y-6">
@@ -117,17 +112,6 @@ export function ProviderFinancialDashboard() {
         </div>
       </div>
 
-      {/* Tier Info Banner */}
-      {hasDiscount && (
-        <div className="bg-blue-50 rounded-lg px-4 py-3 border border-blue-200">
-          <p className="text-sm text-blue-800">
-            Your pricing tier:{" "}
-            <span className="font-semibold">{tierInfo.tierName}</span> —{" "}
-            {tierInfo.discountPercentage}% discount on medications
-          </p>
-        </div>
-      )}
-
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Total Oversight Fees */}
@@ -148,25 +132,6 @@ export function ProviderFinancialDashboard() {
           </div>
         </div>
 
-        {/* Total Tier Discount */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-blue-100 flex items-center justify-center">
-              <Tag className="h-6 w-6 text-blue-700" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">
-                Total Tier Discount — {MONTH_NAMES[monthFilter.month]}{" "}
-                {monthFilter.year}
-              </p>
-              <p className="text-3xl font-bold text-blue-700">
-                {hasDiscount
-                  ? `-${formatCentsToDollars(totalDiscountCents)}`
-                  : "$0.00"}
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* Prescriptions Table */}
@@ -189,7 +154,6 @@ export function ProviderFinancialDashboard() {
                 <TableHead>Medication</TableHead>
                 <TableHead>Payment Status</TableHead>
                 <TableHead className="text-right">Medication Price</TableHead>
-                <TableHead className="text-right">Discount</TableHead>
                 <TableHead className="text-right">Oversight Fee</TableHead>
               </TableRow>
             </TableHeader>
@@ -197,12 +161,6 @@ export function ProviderFinancialDashboard() {
               {prescriptions.map((rx) => {
                 const basePrice =
                   rx.medication_data?.aimrx_site_pricing_cents ?? null;
-                const discountCents =
-                  basePrice != null && hasDiscount
-                    ? Math.round(
-                        basePrice * (tierInfo.discountPercentage / 100),
-                      )
-                    : null;
 
                 return (
                   <TableRow key={rx.id}>
@@ -233,11 +191,6 @@ export function ProviderFinancialDashboard() {
                     <TableCell className="text-right text-sm">
                       {basePrice != null
                         ? formatCentsToDollars(basePrice)
-                        : "—"}
-                    </TableCell>
-                    <TableCell className="text-right text-sm text-green-700 font-medium">
-                      {discountCents != null && discountCents > 0
-                        ? `-${formatCentsToDollars(discountCents)}`
                         : "—"}
                     </TableCell>
                     <TableCell className="text-right font-semibold">

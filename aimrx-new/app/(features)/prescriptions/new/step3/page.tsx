@@ -993,12 +993,6 @@ export default function PrescriptionStep3Page() {
                 <p className="text-2xl font-bold text-gray-900">
                   ${(parseFloat(prescriptionData.patientPrice || "0") || 0).toFixed(2)}
                 </p>
-                {tierDiscount && tierDiscount.discountPercentage > 0 && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    {safeString(tierDiscount.discountPercentage)}% discount applied (
-                    {safeString(tierDiscount.tierName)} )
-                  </p>
-                )}
               </div>
             </div>
           )}

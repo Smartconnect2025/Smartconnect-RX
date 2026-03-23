@@ -20,7 +20,6 @@ import {
   Beaker,
   Syringe,
   Heart,
-  Star,
   Clock,
   CheckCircle2,
   XCircle,
@@ -601,17 +600,6 @@ export default function ProviderCatalogPage() {
                 <p className="text-blue-100 text-base sm:text-lg mt-1 max-w-xl">
                   Browse products, compare pricing, and check availability across all pharmacies.
                 </p>
-                {tierDiscount > 0 && (
-                  <div
-                    className="inline-flex items-center gap-2 mt-3 px-4 py-1.5 bg-emerald-500/90 backdrop-blur-sm rounded-full"
-                    data-testid="badge-tier-discount"
-                  >
-                    <Star className="h-4 w-4 text-yellow-300 fill-yellow-300" />
-                    <span className="text-sm font-semibold text-white">
-                      {tierDiscount}% Tier Discount Applied
-                    </span>
-                  </div>
-                )}
               </div>
 
               <div className="flex items-center gap-3">
@@ -889,9 +877,6 @@ export default function ProviderCatalogPage() {
                       <div className="absolute top-3 right-3">
                         <div className="bg-white/95 backdrop-blur-sm rounded-lg px-2.5 py-1 shadow-sm">
                           <span className="text-lg font-bold text-gray-900" data-testid={`text-price-${med.id}`}>${formatPrice(med.aimrx_site_pricing_cents)}</span>
-                          {tierDiscount > 0 && (
-                            <span className="text-xs text-emerald-600 font-medium ml-1">{tierDiscount}% off</span>
-                          )}
                         </div>
                       </div>
                       <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent h-16" />
@@ -1065,11 +1050,6 @@ export default function ProviderCatalogPage() {
                             <div className="text-xl font-bold text-gray-900">
                               ${formatPrice(med.aimrx_site_pricing_cents)}
                             </div>
-                            {tierDiscount > 0 && (
-                              <div className="text-xs text-emerald-600 font-medium">
-                                {tierDiscount}% off
-                              </div>
-                            )}
                           </div>
 
                           <button
@@ -1135,7 +1115,6 @@ export default function ProviderCatalogPage() {
             <div className="mt-8 mb-12 text-center">
               <p className="text-sm text-gray-400">
                 Showing {filteredMedications.length} of {medications.length} products
-                {tierDiscount > 0 && ` \u2022 ${tierDiscount}% tier discount applied to all prices`}
               </p>
             </div>
           )}

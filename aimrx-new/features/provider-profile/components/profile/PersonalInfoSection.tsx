@@ -20,12 +20,10 @@ import { ProfileFormValues } from "./types";
 
 interface PersonalInfoSectionProps {
   form: UseFormReturn<ProfileFormValues>;
-  tierLevel?: string;
 }
 
 export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({
   form,
-  tierLevel = "Not set",
 }) => {
   const { user } = useUser();
   const { updateAvatarUrl, refreshProfile } = useProviderProfile();
@@ -139,16 +137,6 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({
           )}
         />
 
-        <FormItem>
-          <FormLabel>Tier Level</FormLabel>
-          <FormControl>
-            <Input
-              value={tierLevel}
-              disabled
-              className="bg-gray-50 cursor-not-allowed"
-            />
-          </FormControl>
-        </FormItem>
       </div>
 
       {/* Company Name - Read-only */}

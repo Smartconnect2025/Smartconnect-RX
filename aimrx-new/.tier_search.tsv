@@ -1,0 +1,1058 @@
+aimrx-new/CLAUDE.md	91	  `provider_pharmacy_links`, `tiers`, `system_logs`, `mfa_codes`
+aimrx-new/CLAUDE.md	141	/api/provider/                    # Provider endpoints (check-active, pharmacy, tier)
+aimrx-new/CLAUDE.md	197	npm run format         # Format code with Prettier
+aimrx-new/CLIENT_PRESENTATION_BRIEF.md	73	- Configure tier-based pricing
+aimrx-new/CLIENT_PRESENTATION_BRIEF.md	111	- Tier level and commission rates
+aimrx-new/CLIENT_PRESENTATION_BRIEF.md	191	- Set provider tier levels (Tier 1-4)
+aimrx-new/CLIENT_PRESENTATION_BRIEF.md	192	- Configure discount rates per tier
+aimrx-new/CLIENT_PRESENTATION_BRIEF.md	220	3. **Provider List with Tiers** - Table showing all providers and tier levels
+aimrx-new/CLIENT_PRESENTATION_BRIEF.md	320	- Tier-based discount rates (Tier 1-4)
+aimrx-new/CLIENT_PRESENTATION_BRIEF.md	401	- Automatic discount application based on provider tier
+aimrx-new/CLIENT_PRESENTATION_BRIEF.md	658	- [ ] Provider list with tiers
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	470	| 7.1.2 | View provider details | Shows: Name, Email, Specialty, Status, Tier Level | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	473	| 7.1.5 | Filter by tier level | Shows only providers in selected tier | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	487	## 7.3 Assign Provider Tier
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	490	| 7.3.1 | Click "Assign Tier" on provider | Opens tier selection dialog | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	491	| 7.3.2 | Select tier (Tier 1, 2, 3, or 4) | Tier dropdown shows all options | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	492	| 7.3.3 | Save tier assignment | Provider tier updated, discount rates apply | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	493	| 7.3.4 | Verify tier in provider list | Tier level displays correctly | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	496	- POST `/api/admin/providers/[id]/tier`
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	562	# 9️⃣ TIER MANAGEMENT (ADMIN)
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	564	## 9.1 View Tiers
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	567	| 9.1.1 | Navigate to "Tiers" | Shows list of all discount tiers | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	568	| 9.1.2 | View tier details | Shows: Tier Name, Discount Percentage, Description | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	570	**Files:** `app/(features)/admin/tiers/page.tsx`
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	572	## 9.2 Create/Edit Tier
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	575	| 9.2.1 | Click "Add Tier" | Opens tier form | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	576	| 9.2.2 | Enter tier name (e.g., "Tier 1") | Field accepts text | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	579	| 9.2.5 | Save tier | Tier created, appears in list | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	580	| 9.2.6 | Edit existing tier | Changes save successfully | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	583	- POST `/api/admin/tiers`
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	584	- PATCH `/api/admin/tiers/[id]`
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	586	## 9.3 Delete Tier
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	589	| 9.3.1 | Click "Delete" on tier | Confirmation dialog appears | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	590	| 9.3.2 | Try to delete tier with assigned providers | Shows error: "Cannot delete tier with active providers" | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	591	| 9.3.3 | Delete unused tier | Tier deleted successfully | [ ] |
+aimrx-new/COMPLETE_TESTING_CHECKLIST.md	594	- DELETE `/api/admin/tiers/[id]`
+aimrx-new/DEPLOYMENT_EMAIL_TO_SPECODE.md	296	9. Tier Management (10+ tests)
+aimrx-new/IMPLEMENTATION_COMPLETE.md	5	A complete 3-tier role-based access system with Supabase integration:
+aimrx-new/IMPLEMENTATION_COMPLETE.md	388	The 3-tier role system is now complete and integrated with Supabase:
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	45	**Assign tier levels (Tier 1-4)**: Each provider is assigned to a pricing tier that determines their discount rate on prescriptions. Tier 1 receives the highest discounts, Tier 4 receives standard rates, allowing flexible pricing for different provider relationships.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	47	**Configure discount rates per tier**: Admins set the percentage discount each tier receives on medication costs. These discounts are automatically applied when providers create prescriptions, ensuring accurate pricing without manual calculations.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	53	**View all registered providers**: A comprehensive table lists every provider on the platform with their name, email, tier level, join date, and activity status. Admins can search and filter to quickly find specific providers.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	55	**Edit provider information**: Click any provider to update their professional credentials, contact information, tier assignment, or active status. Changes are saved immediately and reflected throughout the platform.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	57	**Assign/update tier levels**: Admins can change a provider's tier at any time, which automatically adjusts the discount rates on all future prescriptions. Historical prescriptions maintain their original pricing.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	65	#### **Tier-Based Pricing System**
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	67	**Tier 1: Highest discount rate**: Reserved for high-volume providers or strategic partnerships. These providers receive the maximum discount on medication costs, making prescriptions most affordable for their patients.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	69	**Tier 2: Medium-high discount**: For established providers with consistent prescription volume. Offers competitive pricing while maintaining healthy margins for the platform.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	71	**Tier 3: Medium discount**: Standard tier for most providers. Provides fair pricing that balances provider satisfaction with platform profitability.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	73	**Tier 4: Standard discount**: Entry-level tier for new providers or those with lower volume. As providers grow their prescription volume, admins can promote them to higher tiers.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	75	**Automated commission calculations**: The system automatically calculates provider earnings based on their tier discount rate and prescription volume. No manual spreadsheets or calculations required.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	97	**Set pricing (AIM price, pharmacy price, patient price)**: For each medication, configure three price points: AIM RX cost (what you pay), pharmacy retail price (reference), and patient price (what patients pay). Tier discounts apply to patient pricing.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	115	**Pricing tiers**: View how each medication is priced across different provider tiers. Ensures pricing consistency and helps admins optimize margins while staying competitive.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	149	**Provider information**: See which provider created the prescription, their tier level, contact information, and professional credentials. Useful for tracing prescription sources and provider performance.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	183	**Revenue by provider**: See how much revenue each provider has generated through their prescriptions. Identify top performers and calculate commission payments based on their tier discount rates.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	363	**Patient price (what patient pays)**: The actual price charged to the patient through your platform. This is typically lower than retail due to provider tier discounts and platform negotiations.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	365	**Automatic discount calculation based on provider tier**: The system automatically applies the provider's tier discount rate to calculate patient pricing. Tier 1 providers get bigger discounts than Tier 4, all calculated automatically.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	399	**Pricing confirmation**: Review all pricing including medication cost, any fees, total amount, and tier discount applied. Ensures patients are charged correctly.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	533	**Tier-based pricing and commissions**: Providers benefit from tier-based discount rates that reduce patient costs while earning commission on prescriptions. Higher-volume providers receive better tier placements and larger discounts.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	563	**Provider tier management**: Admins control which providers are assigned to which pricing tiers, adjusting tier levels as provider volume and relationships evolve. Tier changes take effect immediately for new prescriptions.
+aimrx-new/QUICK_CLIENT_PRESENTATION.md	639	**💰 Tier-based provider commissions**: Providers earn commission based on their tier level, incentivizing prescription volume while maintaining healthy platform margins. Higher tiers reward loyal, high-volume providers.
+aimrx-new/RLS.md	104	| tiers | `tiers.ts` |
+aimrx-new/SUPER_ADMIN_SETUP.md	1	# Super Admin - 3-Tier System Documentation
+aimrx-new/app/(features)/admin/doctors/page.tsx	94	  tier_level: string | null;
+aimrx-new/app/(features)/admin/doctors/page.tsx	95	  tier_code: string | null;
+aimrx-new/app/(features)/admin/doctors/page.tsx	187	  const [tiers, setTiers] = useState<
+aimrx-new/app/(features)/admin/doctors/page.tsx	190	      tier_name: string;
+aimrx-new/app/(features)/admin/doctors/page.tsx	191	      tier_code: string;
+aimrx-new/app/(features)/admin/doctors/page.tsx	213	    tierLevel: "", // Will be set from tiers
+aimrx-new/app/(features)/admin/doctors/page.tsx	233	    tierLevel: "",
+aimrx-new/app/(features)/admin/doctors/page.tsx	236	  // Fetch tiers and groups when either modal opens
+aimrx-new/app/(features)/admin/doctors/page.tsx	238	    const fetchTiers = async () => {
+aimrx-new/app/(features)/admin/doctors/page.tsx	240	        const response = await fetch("/api/admin/tiers");
+aimrx-new/app/(features)/admin/doctors/page.tsx	243	          setTiers(data.tiers || []);
+aimrx-new/app/(features)/admin/doctors/page.tsx	244	          // Set default tier level to first tier if available and form is empty
+aimrx-new/app/(features)/admin/doctors/page.tsx	246	            data.tiers &&
+aimrx-new/app/(features)/admin/doctors/page.tsx	247	            data.tiers.length > 0 &&
+aimrx-new/app/(features)/admin/doctors/page.tsx	248	            !inviteFormData.tierLevel
+aimrx-new/app/(features)/admin/doctors/page.tsx	252	              tierLevel: data.tiers[0].tier_code,
+aimrx-new/app/(features)/admin/doctors/page.tsx	256	          console.error("Failed to fetch tiers:", response.status);
+aimrx-new/app/(features)/admin/doctors/page.tsx	259	        console.error("Error fetching tiers:", error);
+aimrx-new/app/(features)/admin/doctors/page.tsx	294	      fetchTiers();
+aimrx-new/app/(features)/admin/doctors/page.tsx	298	  }, [isInviteModalOpen, isEditModalOpen, inviteFormData.tierLevel]);
+aimrx-new/app/(features)/admin/doctors/page.tsx	309	      tierLevel: tiers.length > 0 ? tiers[0].tier_code : "",
+aimrx-new/app/(features)/admin/doctors/page.tsx	498	          tierLevel: inviteFormData.tierLevel,
+aimrx-new/app/(features)/admin/doctors/page.tsx	605	      // Update tier level in mock store (temporary until database migration)
+aimrx-new/app/(features)/admin/doctors/page.tsx	606	      if (editFormData.tierLevel) {
+aimrx-new/app/(features)/admin/doctors/page.tsx	607	        // Save to mock tier store
+aimrx-new/app/(features)/admin/doctors/page.tsx	608	        const response = await fetch("/api/admin/providers/tier-assignment", {
+aimrx-new/app/(features)/admin/doctors/page.tsx	613	            tierCode: editFormData.tierLevel,
+aimrx-new/app/(features)/admin/doctors/page.tsx	618	          console.error("Failed to update tier assignment");
+aimrx-new/app/(features)/admin/doctors/page.tsx	619	          toast.warning("Provider updated but tier assignment may have failed");
+aimrx-new/app/(features)/admin/doctors/page.tsx	632	        // Get tier info from the providers API
+aimrx-new/app/(features)/admin/doctors/page.tsx	633	        const tiersApiResponse = await fetch("/api/admin/providers");
+aimrx-new/app/(features)/admin/doctors/page.tsx	634	        let tierCodeForProvider = editFormData.tierLevel;
+aimrx-new/app/(features)/admin/doctors/page.tsx	636	        if (tiersApiResponse.ok) {
+aimrx-new/app/(features)/admin/doctors/page.tsx	637	          const providersData = await tiersApiResponse.json();
+aimrx-new/app/(features)/admin/doctors/page.tsx	641	          tierCodeForProvider =
+aimrx-new/app/(features)/admin/doctors/page.tsx	642	            matchingProvider?.tier_code || editFormData.tierLevel;
+aimrx-new/app/(features)/admin/doctors/page.tsx	653	          tierLevel: tierCodeForProvider,
+aimrx-new/app/(features)/admin/doctors/page.tsx	672	      // Fetch fresh provider data from database AND tier info from API
+aimrx-new/app/(features)/admin/doctors/page.tsx	673	      const [providerResponse, tiersApiResponse] = await Promise.all([
+aimrx-new/app/(features)/admin/doctors/page.tsx	686	      // Get tier info from the providers API (which includes tier_code)
+aimrx-new/app/(features)/admin/doctors/page.tsx	687	      let tierCodeForProvider = "";
+aimrx-new/app/(features)/admin/doctors/page.tsx	688	      if (tiersApiResponse.ok) {
+aimrx-new/app/(features)/admin/doctors/page.tsx	689	        const providersData = await tiersApiResponse.json();
+aimrx-new/app/(features)/admin/doctors/page.tsx	693	        tierCodeForProvider = matchingProvider?.tier_code || "";
+aimrx-new/app/(features)/admin/doctors/page.tsx	697	          tiersApiResponse.status,
+aimrx-new/app/(features)/admin/doctors/page.tsx	708	        tierLevel:
+aimrx-new/app/(features)/admin/doctors/page.tsx	709	          tierCodeForProvider || (tiers.length > 0 ? tiers[0].tier_code : ""),
+aimrx-new/app/(features)/admin/doctors/page.tsx	1023	      tierLevel: tiers.length > 0 ? tiers[0].tier_code : "", // Default to first tier
+aimrx-new/app/(features)/admin/doctors/page.tsx	1292	                          Tier Level
+aimrx-new/app/(features)/admin/doctors/page.tsx	1326	                              {doctor.tier_level ? (
+aimrx-new/app/(features)/admin/doctors/page.tsx	1331	                                  {doctor.tier_level.replace(/_/g, " ")}
+aimrx-new/app/(features)/admin/doctors/page.tsx	1629	                  details, adjust the tier level if needed, and click
+aimrx-new/app/(features)/admin/doctors/page.tsx	1769	                <Label htmlFor="tierLevel">Tier Level *</Label>
+aimrx-new/app/(features)/admin/doctors/page.tsx	1771	                  value={inviteFormData.tierLevel}
+aimrx-new/app/(features)/admin/doctors/page.tsx	1773	                    setInviteFormData({ ...inviteFormData, tierLevel: value })
+aimrx-new/app/(features)/admin/doctors/page.tsx	1776	                  <SelectTrigger id="tierLevel">
+aimrx-new/app/(features)/admin/doctors/page.tsx	1779	                        tiers.length === 0
+aimrx-new/app/(features)/admin/doctors/page.tsx	1780	                          ? "Loading tiers..."
+aimrx-new/app/(features)/admin/doctors/page.tsx	1781	                          : "Select tier level"
+aimrx-new/app/(features)/admin/doctors/page.tsx	1786	                    {tiers.length === 0 ? (
+aimrx-new/app/(features)/admin/doctors/page.tsx	1787	                      <SelectItem value="no-tiers" disabled>
+aimrx-new/app/(features)/admin/doctors/page.tsx	1788	                        No tiers available. Create tiers in Manage Tiers first.
+aimrx-new/app/(features)/admin/doctors/page.tsx	1791	                      tiers.map((tier) => (
+aimrx-new/app/(features)/admin/doctors/page.tsx	1792	                        <SelectItem key={tier.id} value={tier.tier_code}>
+aimrx-new/app/(features)/admin/doctors/page.tsx	1793	                          {tier.tier_name} - {tier.discount_percentage}%
+aimrx-new/app/(features)/admin/doctors/page.tsx	1801	                  Tier levels are managed in the &quot;Manage Tiers&quot;
+aimrx-new/app/(features)/admin/doctors/page.tsx	1994	                <Label htmlFor="editTierLevel">Tier Level *</Label>
+aimrx-new/app/(features)/admin/doctors/page.tsx	1996	                  value={editFormData.tierLevel}
+aimrx-new/app/(features)/admin/doctors/page.tsx	1998	                    setEditFormData({ ...editFormData, tierLevel: value })
+aimrx-new/app/(features)/admin/doctors/page.tsx	2001	                  <SelectTrigger id="editTierLevel">
+aimrx-new/app/(features)/admin/doctors/page.tsx	2004	                        tiers.length === 0
+aimrx-new/app/(features)/admin/doctors/page.tsx	2005	                          ? "Loading tiers..."
+aimrx-new/app/(features)/admin/doctors/page.tsx	2006	                          : "Select tier level"
+aimrx-new/app/(features)/admin/doctors/page.tsx	2011	                    {tiers.length === 0 ? (
+aimrx-new/app/(features)/admin/doctors/page.tsx	2012	                      <SelectItem value="no-tiers" disabled>
+aimrx-new/app/(features)/admin/doctors/page.tsx	2013	                        No tiers available. Create tiers in Manage Tiers first.
+aimrx-new/app/(features)/admin/doctors/page.tsx	2016	                      tiers.map((tier) => (
+aimrx-new/app/(features)/admin/doctors/page.tsx	2017	                        <SelectItem key={tier.id} value={tier.tier_code}>
+aimrx-new/app/(features)/admin/doctors/page.tsx	2018	                          {tier.tier_name} - {tier.discount_percentage}%
+aimrx-new/app/(features)/admin/doctors/page.tsx	2026	                  Tier levels are managed in the &quot;Manage Tiers&quot;
+aimrx-new/app/(features)/admin/tiers/page.tsx	2	 * Admin Tiers Management Page
+aimrx-new/app/(features)/admin/tiers/page.tsx	4	 * Page for managing tier levels and discount percentages
+aimrx-new/app/(features)/admin/tiers/page.tsx	8	import { TiersManagement } from "@/features/admin-dashboard/components/TiersManagement";
+aimrx-new/app/(features)/admin/tiers/page.tsx	10	export default function AdminTiersPage() {
+aimrx-new/app/(features)/admin/tiers/page.tsx	13	      <TiersManagement />
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	23	  getProviderTierDiscount,
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	24	  type TierDiscountResult,
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	25	} from "@core/services/pricing/tierDiscountService";
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	99	  const [tierDiscount, setTierDiscount] = useState<TierDiscountResult | null>(
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	161	  // Fetch provider's tier discount
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	163	    const fetchTierDiscount = async () => {
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	166	      const result = await getProviderTierDiscount(supabase, user.id);
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	168	        setTierDiscount(result);
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	172	    fetchTierDiscount();
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	996	                {tierDiscount && tierDiscount.discountPercentage > 0 && (
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	998	                    {safeString(tierDiscount.discountPercentage)}% discount applied (
+aimrx-new/app/(features)/prescriptions/new/step3/page.tsx	999	                    {safeString(tierDiscount.tierName)} )
+aimrx-new/app/(features)/provider/catalog/page.tsx	419	  const [tierDiscount, setTierDiscount] = useState(0);
+aimrx-new/app/(features)/provider/catalog/page.tsx	446	          setTierDiscount(data.tierDiscount || 0);
+aimrx-new/app/(features)/provider/catalog/page.tsx	604	                {tierDiscount > 0 && (
+aimrx-new/app/(features)/provider/catalog/page.tsx	607	                    data-testid="badge-tier-discount"
+aimrx-new/app/(features)/provider/catalog/page.tsx	611	                      {tierDiscount}% Tier Discount Applied
+aimrx-new/app/(features)/provider/catalog/page.tsx	892	                          {tierDiscount > 0 && (
+aimrx-new/app/(features)/provider/catalog/page.tsx	893	                            <span className="text-xs text-emerald-600 font-medium ml-1">{tierDiscount}% off</span>
+aimrx-new/app/(features)/provider/catalog/page.tsx	1068	                            {tierDiscount > 0 && (
+aimrx-new/app/(features)/provider/catalog/page.tsx	1070	                                {tierDiscount}% off
+aimrx-new/app/(features)/provider/catalog/page.tsx	1138	                {tierDiscount > 0 && ` \u2022 ${tierDiscount}% tier discount applied to all prices`}
+aimrx-new/app/api/admin/invite-doctor/route.ts	19	    const { firstName, lastName, email, phone, password, tierLevel, groupId, npiNumber, medicalLicense, licenseState, companyName, physicalAddress, billingAddress, referringPharmacyId } = body;
+aimrx-new/app/api/admin/invite-doctor/route.ts	164	    if (tierLevel && providerData) {
+aimrx-new/app/api/admin/invite-doctor/route.ts	165	      const { error: tierError } = await supabaseAdmin
+aimrx-new/app/api/admin/invite-doctor/route.ts	167	        .update({ tier_level: tierLevel })
+aimrx-new/app/api/admin/invite-doctor/route.ts	170	      if (tierError) {
+aimrx-new/app/api/admin/invite-doctor/route.ts	171	        console.error("Error setting tier level:", tierError);
+aimrx-new/app/api/admin/invite-doctor/route.ts	172	        // Don't fail the entire request if tier assignment fails
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	56	      .select("tier_level")
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	68	        { error: "Failed to fetch provider tier. Please try again." },
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	73	    const tierCode = provider?.tier_level;
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	75	    if (!tierCode) {
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	77	        tier_level: "Not set",
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	78	        tier_code: null,
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	82	    const { data: tier, error: tierError } = await supabase
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	83	      .from("tiers")
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	85	      .eq("tier_code", tierCode)
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	88	    if (tierError || !tier) {
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	90	        tier_level: "Not set",
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	91	        tier_code: tierCode,
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	96	      tier_level: `${tier.tier_name} (${tier.discount_percentage}%)`,
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	97	      tier_code: tierCode,
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	98	      tier_details: tier,
+aimrx-new/app/api/admin/providers/[id]/tier/route.ts	101	    console.error("Error fetching provider tier:", error);
+aimrx-new/app/api/admin/providers/route.ts	169	    const { data: tiers } = await supabase.from("tiers").select("*");
+aimrx-new/app/api/admin/providers/route.ts	170	    const tierMap = new Map(tiers?.map((t) => [t.tier_code, t]) || []);
+aimrx-new/app/api/admin/providers/route.ts	184	        const tierCode = provider.tier_level;
+aimrx-new/app/api/admin/providers/route.ts	185	        const tier = tierCode ? tierMap.get(tierCode) : null;
+aimrx-new/app/api/admin/providers/route.ts	224	          tier_level: tier
+aimrx-new/app/api/admin/providers/route.ts	225	            ? `${tier.tier_name} (${tier.discount_percentage}%)`
+aimrx-new/app/api/admin/providers/route.ts	227	          tier_code: tierCode || null,
+aimrx-new/app/api/admin/providers/tier-assignment/route.ts	26	    const { providerId, tierCode } = body;
+aimrx-new/app/api/admin/providers/tier-assignment/route.ts	28	    if (!providerId || !tierCode) {
+aimrx-new/app/api/admin/providers/tier-assignment/route.ts	30	        { error: "Missing providerId or tierCode" },
+aimrx-new/app/api/admin/providers/tier-assignment/route.ts	39	      .update({ tier_level: tierCode })
+aimrx-new/app/api/admin/providers/tier-assignment/route.ts	44	        { error: "Failed to update tier assignment. Please try again." },
+aimrx-new/app/api/admin/providers/tier-assignment/route.ts	51	      message: "Tier assignment updated successfully"
+aimrx-new/app/api/admin/providers/tier-assignment/route.ts	54	    console.error("Error updating tier assignment:", error);
+aimrx-new/app/api/admin/tiers/[id]/route.ts	30	    const { tierName, discountPercentage, description } = body;
+aimrx-new/app/api/admin/tiers/[id]/route.ts	57	    if (tierName) updateData.tier_name = tierName;
+aimrx-new/app/api/admin/tiers/[id]/route.ts	63	      .from("tiers")
+aimrx-new/app/api/admin/tiers/[id]/route.ts	71	    const { data: dbTier, error: dbError } = await updateQuery
+aimrx-new/app/api/admin/tiers/[id]/route.ts	78	          { error: "A tier with this name already exists" },
+aimrx-new/app/api/admin/tiers/[id]/route.ts	84	          { error: "Tier not found" },
+aimrx-new/app/api/admin/tiers/[id]/route.ts	89	        { error: "Failed to update tier. Please try again." },
+aimrx-new/app/api/admin/tiers/[id]/route.ts	96	      tier: dbTier,
+aimrx-new/app/api/admin/tiers/[id]/route.ts	97	      message: "Tier updated successfully",
+aimrx-new/app/api/admin/tiers/[id]/route.ts	100	    console.error("Error updating tier:", error);
+aimrx-new/app/api/admin/tiers/[id]/route.ts	146	      .from("tiers")
+aimrx-new/app/api/admin/tiers/[id]/route.ts	159	          { error: "Tier not found" },
+aimrx-new/app/api/admin/tiers/[id]/route.ts	164	        { error: "Failed to delete tier. Please try again." },
+aimrx-new/app/api/admin/tiers/[id]/route.ts	170	      .from("tiers")
+aimrx-new/app/api/admin/tiers/[id]/route.ts	182	        { error: "Failed to delete tier. Please try again." },
+aimrx-new/app/api/admin/tiers/[id]/route.ts	189	      message: "Tier deleted successfully",
+aimrx-new/app/api/admin/tiers/[id]/route.ts	192	    console.error("Error deleting tier:", error);
+aimrx-new/app/api/admin/tiers/ensure-table.ts	3	export async function ensureTiersTable(): Promise<void> {
+aimrx-new/app/api/admin/tiers/ensure-table.ts	8	      .from("tiers")
+aimrx-new/app/api/admin/tiers/ensure-table.ts	17	      console.log("Tiers table doesn't exist, creating it now...");
+aimrx-new/app/api/admin/tiers/ensure-table.ts	21	          CREATE TABLE IF NOT EXISTS tiers (
+aimrx-new/app/api/admin/tiers/ensure-table.ts	23	            tier_name TEXT NOT NULL,
+aimrx-new/app/api/admin/tiers/ensure-table.ts	24	            tier_code TEXT NOT NULL,
+aimrx-new/app/api/admin/tiers/ensure-table.ts	35	        console.error("Failed to create tiers table via RPC:", createError);
+aimrx-new/app/api/admin/tiers/ensure-table.ts	36	        throw new Error(`Could not create tiers table: ${createError.message}`);
+aimrx-new/app/api/admin/tiers/ensure-table.ts	39	      console.log("Tiers table created successfully");
+aimrx-new/app/api/admin/tiers/ensure-table.ts	42	    console.error("Error ensuring tiers table exists:", error);
+aimrx-new/app/api/admin/tiers/init/route.ts	23	        CREATE TABLE IF NOT EXISTS tiers (
+aimrx-new/app/api/admin/tiers/init/route.ts	25	          tier_name TEXT NOT NULL,
+aimrx-new/app/api/admin/tiers/init/route.ts	26	          tier_code TEXT NOT NULL,
+aimrx-new/app/api/admin/tiers/init/route.ts	37	      console.log("Tiers table initialized successfully");
+aimrx-new/app/api/admin/tiers/init/route.ts	41	        message: "Tiers table initialized successfully",
+aimrx-new/app/api/admin/tiers/init/route.ts	48	    console.error("Error initializing tiers table:", error);
+aimrx-new/app/api/admin/tiers/init/route.ts	51	        error: "Failed to initialize tiers table",
+aimrx-new/app/api/admin/tiers/route.ts	43	      .from("tiers")
+aimrx-new/app/api/admin/tiers/route.ts	51	    const { data: dbTiers, error: dbError } = await query;
+aimrx-new/app/api/admin/tiers/route.ts	55	        { error: "Failed to load tiers. Please try again." },
+aimrx-new/app/api/admin/tiers/route.ts	61	      tiers: dbTiers || [],
+aimrx-new/app/api/admin/tiers/route.ts	62	      total: dbTiers?.length || 0,
+aimrx-new/app/api/admin/tiers/route.ts	65	    console.error("Error listing tiers:", error);
+aimrx-new/app/api/admin/tiers/route.ts	95	    const { tierName, tierCode, discountPercentage, description } = body;
+aimrx-new/app/api/admin/tiers/route.ts	116	    if (!tierName || !tierCode || discountPercentage === undefined) {
+aimrx-new/app/api/admin/tiers/route.ts	118	        { error: "Missing required fields: tierName, tierCode, discountPercentage" },
+aimrx-new/app/api/admin/tiers/route.ts	133	    const { data: dbTier, error: dbError } = await supabase
+aimrx-new/app/api/admin/tiers/route.ts	134	      .from("tiers")
+aimrx-new/app/api/admin/tiers/route.ts	136	        tier_name: tierName,
+aimrx-new/app/api/admin/tiers/route.ts	137	        tier_code: tierCode.toLowerCase().replace(/\s+/g, ""),
+aimrx-new/app/api/admin/tiers/route.ts	148	          { error: "A tier with this name or code already exists" },
+aimrx-new/app/api/admin/tiers/route.ts	153	        { error: "Failed to create tier. Please try again." },
+aimrx-new/app/api/admin/tiers/route.ts	160	      tier: dbTier,
+aimrx-new/app/api/admin/tiers/route.ts	161	      message: "Tier created successfully",
+aimrx-new/app/api/admin/tiers/route.ts	164	    console.error("Error creating tier:", error);
+aimrx-new/app/api/admin/users/route.ts	39	    const { email, password, role, firstName, lastName, phone, tierLevel, groupId } = body;
+aimrx-new/app/api/admin/users/route.ts	72	      tierLevel,
+aimrx-new/app/api/provider/pharmacy/route.ts	3	import { getProviderTierDiscount } from "@core/services/pricing/tierDiscountService";
+aimrx-new/app/api/provider/pharmacy/route.ts	71	      const tierInfo = await getProviderTierDiscount(supabase, user.id);
+aimrx-new/app/api/provider/pharmacy/route.ts	72	      discountPercentage = tierInfo.discountPercentage;
+aimrx-new/app/api/provider/pharmacy/route.ts	139	      tierDiscount: discountPercentage,
+aimrx-new/app/api/provider/tier/route.ts	18	    // Get the provider profile for this user including tier_level
+aimrx-new/app/api/provider/tier/route.ts	21	      .select("id, tier_level")
+aimrx-new/app/api/provider/tier/route.ts	27	        tier_level: "Not set",
+aimrx-new/app/api/provider/tier/route.ts	28	        tier_code: null,
+aimrx-new/app/api/provider/tier/route.ts	32	    const tierCode = provider.tier_level;
+aimrx-new/app/api/provider/tier/route.ts	34	    if (!tierCode) {
+aimrx-new/app/api/provider/tier/route.ts	36	        tier_level: "Not set",
+aimrx-new/app/api/provider/tier/route.ts	37	        tier_code: null,
+aimrx-new/app/api/provider/tier/route.ts	41	    // Get tier details from tiers table
+aimrx-new/app/api/provider/tier/route.ts	42	    const { data: tier, error: tierError } = await supabase
+aimrx-new/app/api/provider/tier/route.ts	43	      .from("tiers")
+aimrx-new/app/api/provider/tier/route.ts	45	      .eq("tier_code", tierCode)
+aimrx-new/app/api/provider/tier/route.ts	48	    if (tierError || !tier) {
+aimrx-new/app/api/provider/tier/route.ts	50	        tier_level: "Not set",
+aimrx-new/app/api/provider/tier/route.ts	51	        tier_code: tierCode,
+aimrx-new/app/api/provider/tier/route.ts	56	      tier_level: `${tier.tier_name} (${tier.discount_percentage}%)`,
+aimrx-new/app/api/provider/tier/route.ts	57	      tier_code: tierCode,
+aimrx-new/app/api/provider/tier/route.ts	58	      tier_details: tier,
+aimrx-new/app/api/provider/tier/route.ts	61	    console.error("Error fetching provider tier:", error);
+aimrx-new/components/layout/AdminHeader.tsx	94	        { href: "/admin/tiers", label: "Manage Tiers" },
+aimrx-new/core/database/migrations/20260204165952_remove_rls_temp.sql	31	ALTER TABLE "tiers" DISABLE ROW LEVEL SECURITY;
+aimrx-new/core/database/migrations/20260204165952_remove_rls_temp.sql	170	DROP POLICY "tiers_select_policy" ON "tiers" CASCADE;
+aimrx-new/core/database/migrations/20260204165952_remove_rls_temp.sql	171	DROP POLICY "tiers_insert_policy" ON "tiers" CASCADE;
+aimrx-new/core/database/migrations/20260204165952_remove_rls_temp.sql	172	DROP POLICY "tiers_update_policy" ON "tiers" CASCADE;
+aimrx-new/core/database/migrations/20260204165952_remove_rls_temp.sql	173	DROP POLICY "tiers_delete_policy" ON "tiers" CASCADE;
+aimrx-new/core/database/migrations/20260204171759_restore_rls.sql	31	ALTER TABLE "tiers" ENABLE ROW LEVEL SECURITY;
+aimrx-new/core/database/migrations/20260204171759_restore_rls.sql	540	CREATE POLICY "tiers_select_policy" ON "tiers" AS PERMISSIVE FOR SELECT TO "authenticated" USING (true);
+aimrx-new/core/database/migrations/20260204171759_restore_rls.sql	541	CREATE POLICY "tiers_insert_policy" ON "tiers" AS PERMISSIVE FOR INSERT TO "authenticated" WITH CHECK (public.is_admin(auth.uid()));
+aimrx-new/core/database/migrations/20260204171759_restore_rls.sql	542	CREATE POLICY "tiers_update_policy" ON "tiers" AS PERMISSIVE FOR UPDATE TO "authenticated" USING (public.is_admin(auth.uid()));
+aimrx-new/core/database/migrations/20260204171759_restore_rls.sql	543	CREATE POLICY "tiers_delete_policy" ON "tiers" AS PERMISSIVE FOR DELETE TO "authenticated" USING (public.is_admin(auth.uid()));
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	1014	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	1015	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4844	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4845	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4855	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4856	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4861	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4862	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4898	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4899	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4902	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4905	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4906	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4909	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4914	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4915	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4923	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4924	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4932	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4933	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4941	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260202174723_snapshot.json	4942	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	1014	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	1015	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4851	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4852	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4862	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4863	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4868	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4869	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4905	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4906	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4909	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4912	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4913	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4916	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4921	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4922	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4930	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4931	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4939	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4940	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4948	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260202180233_snapshot.json	4949	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	1061	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	1062	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4898	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4899	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4909	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4910	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4915	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4916	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4952	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4953	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4956	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4959	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4960	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4963	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4968	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4969	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4977	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4978	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4986	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4987	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4995	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260204145204_snapshot.json	4996	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	911	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	912	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3712	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3713	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3723	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3724	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3729	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3730	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3766	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3767	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3770	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3773	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3774	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260204165952_snapshot.json	3777	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	1061	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	1062	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4898	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4899	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4909	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4910	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4915	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4916	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4952	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4953	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4956	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4959	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4960	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4963	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4968	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4969	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4977	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4978	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4986	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4987	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4995	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260204171759_snapshot.json	4996	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	1061	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	1062	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4898	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4899	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4909	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4910	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4915	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4916	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4952	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4953	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4956	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4959	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4960	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4963	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4968	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4969	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4977	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4978	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4986	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4987	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4995	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260205171714_snapshot.json	4996	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	1061	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	1062	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4911	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4912	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4922	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4923	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4928	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4929	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4965	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4966	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4969	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4972	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4973	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4976	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4981	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4982	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4990	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4991	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	4999	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	5000	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	5008	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260205230827_snapshot.json	5009	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	1061	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	1062	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4912	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4913	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4923	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4924	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4929	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4930	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4966	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4967	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4970	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4973	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4974	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4977	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4982	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4983	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4991	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	4992	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	5000	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	5001	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	5009	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260206173144_snapshot.json	5010	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	1061	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	1062	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4905	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4906	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4916	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4917	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4922	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4923	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4959	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4960	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4963	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4966	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4967	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4970	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4975	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4976	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4984	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4985	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4993	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	4994	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	5002	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260206194211_snapshot.json	5003	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	1061	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	1062	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4919	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4920	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4930	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4931	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4936	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4937	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4973	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4974	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4977	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4980	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4981	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4984	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4989	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4990	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4998	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	4999	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	5007	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	5008	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	5016	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260210185457_snapshot.json	5017	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	1068	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	1069	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4926	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4927	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4937	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4938	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4943	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4944	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4980	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4981	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4984	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4987	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4988	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4991	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4996	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	4997	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	5005	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	5006	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	5014	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	5015	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	5023	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260210210903_snapshot.json	5024	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	1068	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	1069	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	4939	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	4940	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	4950	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	4951	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	4956	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	4957	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	4993	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	4994	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	4997	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	5000	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	5001	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	5004	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	5009	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	5010	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	5018	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	5019	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	5027	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	5028	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	5036	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260210231804_snapshot.json	5037	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	1068	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	1069	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4933	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4934	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4944	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4945	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4950	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4951	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4987	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4988	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4991	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4994	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4995	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	4998	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	5003	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	5004	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	5012	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	5013	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	5021	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	5022	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	5030	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260211002151_snapshot.json	5031	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	1068	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	1069	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	4951	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	4952	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	4962	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	4963	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	4968	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	4969	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5005	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5006	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5009	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5012	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5013	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5016	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5021	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5022	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5030	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5031	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5039	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5040	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5048	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260216155834_snapshot.json	5049	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	1068	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	1069	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	4957	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	4958	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	4968	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	4969	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	4974	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	4975	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5011	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5012	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5015	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5018	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5019	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5022	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5027	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5028	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5036	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5037	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5045	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5046	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5054	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260217165648_snapshot.json	5055	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	1068	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	1069	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	4990	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	4991	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5001	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5002	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5007	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5008	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5044	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5045	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5048	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5051	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5052	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5055	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5060	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5061	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5069	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5070	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5078	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5079	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5087	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260223181517_snapshot.json	5088	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	1068	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	1069	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	4990	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	4991	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5001	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5002	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5007	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5008	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5044	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5045	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5048	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5051	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5052	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5055	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5060	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5061	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5069	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5070	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5078	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5079	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5087	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260224140043_snapshot.json	5088	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	1157	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	1158	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5092	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5093	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5103	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5104	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5109	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5110	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5146	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5147	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5150	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5153	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5154	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5157	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5162	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5163	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5171	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5172	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5180	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5181	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5189	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260225183503_snapshot.json	5190	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	1248	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	1249	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5183	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5184	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5194	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5195	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5200	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5201	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5237	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5238	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5241	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5244	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5245	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5248	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5253	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5254	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5262	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5263	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5271	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5272	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5280	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260225201057_snapshot.json	5281	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	1248	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	1249	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5189	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5190	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5200	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5201	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5206	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5207	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5243	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5244	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5247	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5250	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5251	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5254	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5259	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5260	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5268	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5269	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5277	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5278	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5286	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260227020154_snapshot.json	5287	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	1248	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	1249	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5195	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5196	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5206	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5207	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5212	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5213	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5249	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5250	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5253	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5256	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5257	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5260	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5265	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5266	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5274	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5275	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5283	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5284	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5292	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260227031142_snapshot.json	5293	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	1344	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	1345	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5315	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5316	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5326	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5327	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5332	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5333	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5369	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5370	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5373	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5376	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5377	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5380	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5385	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5386	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5394	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5395	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5403	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5404	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5412	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260304200316_snapshot.json	5413	          "name": "tiers_delete_policy",
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	1357	        "tier_level": {
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	1358	          "name": "tier_level",
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5346	    "public.tiers": {
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5347	      "name": "tiers",
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5357	        "tier_name": {
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5358	          "name": "tier_name",
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5363	        "tier_code": {
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5364	          "name": "tier_code",
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5400	        "tiers_tier_name_unique": {
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5401	          "name": "tiers_tier_name_unique",
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5404	            "tier_name"
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5407	        "tiers_tier_code_unique": {
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5408	          "name": "tiers_tier_code_unique",
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5411	            "tier_code"
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5416	        "tiers_select_policy": {
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5417	          "name": "tiers_select_policy",
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5425	        "tiers_insert_policy": {
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5426	          "name": "tiers_insert_policy",
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5434	        "tiers_update_policy": {
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5435	          "name": "tiers_update_policy",
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5443	        "tiers_delete_policy": {
+aimrx-new/core/database/migrations/meta/20260317032516_snapshot.json	5444	          "name": "tiers_delete_policy",
+aimrx-new/core/database/schema/index.ts	44	export * from "./tiers";
+aimrx-new/core/database/schema/providers.ts	95	    tier_level: text("tier_level"), // Tier level set by admin (Tier 1, Tier 2, Tier 3, Tier 4) - each tier has different discount rate
+aimrx-new/core/database/schema/tiers.ts	13	 * Tiers table for managing provider discount tiers
+aimrx-new/core/database/schema/tiers.ts	14	 * Stores tier information including name and discount percentage
+aimrx-new/core/database/schema/tiers.ts	16	export const tiers = pgTable(
+aimrx-new/core/database/schema/tiers.ts	17	  "tiers",
+aimrx-new/core/database/schema/tiers.ts	21	    // Tier Information
+aimrx-new/core/database/schema/tiers.ts	22	    tier_name: text("tier_name").notNull(),
+aimrx-new/core/database/schema/tiers.ts	23	    tier_code: text("tier_code").notNull(),
+aimrx-new/core/database/schema/tiers.ts	41	    pgPolicy("tiers_select_policy", {
+aimrx-new/core/database/schema/tiers.ts	47	    pgPolicy("tiers_insert_policy", {
+aimrx-new/core/database/schema/tiers.ts	53	    pgPolicy("tiers_update_policy", {
+aimrx-new/core/database/schema/tiers.ts	59	    pgPolicy("tiers_delete_policy", {
+aimrx-new/core/database/schema/tiers.ts	67	export type Tier = typeof tiers.$inferSelect;
+aimrx-new/core/database/schema/tiers.ts	68	export type NewTier = typeof tiers.$inferInsert;
+aimrx-new/core/services/account-management.ts	18	  tierLevel?: string;
+aimrx-new/core/services/account-management.ts	114	      // Update tier_level in providers table if tier was specified
+aimrx-new/core/services/account-management.ts	115	      if (params.tierLevel && providerRecord) {
+aimrx-new/core/services/account-management.ts	118	          .update({ tier_level: params.tierLevel })
+aimrx-new/core/services/index.ts	16	export { getProviderTierDiscount } from "./pricing/tierDiscountService";
+aimrx-new/core/services/pricing/tierDiscountService.ts	2	 * Tier Discount Service
+aimrx-new/core/services/pricing/tierDiscountService.ts	4	 * Fetches the tier-based discount percentage for a provider.
+aimrx-new/core/services/pricing/tierDiscountService.ts	11	export interface TierDiscountResult {
+aimrx-new/core/services/pricing/tierDiscountService.ts	13	  tierName: string | null;
+aimrx-new/core/services/pricing/tierDiscountService.ts	14	  tierCode: string | null;
+aimrx-new/core/services/pricing/tierDiscountService.ts	18	 * Get the tier discount for a provider based on their tier_level.
+aimrx-new/core/services/pricing/tierDiscountService.ts	22	 * @returns TierDiscountResult with discountPercentage (0 if no tier)
+aimrx-new/core/services/pricing/tierDiscountService.ts	24	export async function getProviderTierDiscount(
+aimrx-new/core/services/pricing/tierDiscountService.ts	27	): Promise<TierDiscountResult> {
+aimrx-new/core/services/pricing/tierDiscountService.ts	28	  const defaultResult: TierDiscountResult = {
+aimrx-new/core/services/pricing/tierDiscountService.ts	30	    tierName: null,
+aimrx-new/core/services/pricing/tierDiscountService.ts	31	    tierCode: null,
+aimrx-new/core/services/pricing/tierDiscountService.ts	36	    .select("tier_level")
+aimrx-new/core/services/pricing/tierDiscountService.ts	40	  if (!provider?.tier_level) {
+aimrx-new/core/services/pricing/tierDiscountService.ts	44	  const { data: tier } = await supabase
+aimrx-new/core/services/pricing/tierDiscountService.ts	45	    .from("tiers")
+aimrx-new/core/services/pricing/tierDiscountService.ts	46	    .select("discount_percentage, tier_name, tier_code")
+aimrx-new/core/services/pricing/tierDiscountService.ts	47	    .eq("tier_code", provider.tier_level)
+aimrx-new/core/services/pricing/tierDiscountService.ts	50	  if (!tier) {
+aimrx-new/core/services/pricing/tierDiscountService.ts	55	    discountPercentage: parseFloat(tier.discount_percentage),
+aimrx-new/core/services/pricing/tierDiscountService.ts	56	    tierName: tier.tier_name,
+aimrx-new/core/services/pricing/tierDiscountService.ts	57	    tierCode: tier.tier_code,
+aimrx-new/docs/SYSTEM_ARCHITECTURE_V1.0.md	121	- **Prettier** - Code formatting
+aimrx-new/eslint.config.mjs	62	  ...compat.extends("next/core-web-vitals", "next/typescript", "prettier"),
+aimrx-new/features/admin-dashboard/components/GroupsManagement.tsx	47	  tier_level: string;
+aimrx-new/features/admin-dashboard/components/GroupsManagement.tsx	128	            providers: groupProviders.map((p: GroupProvider & { group_id?: string; tier_level?: string }) => ({
+aimrx-new/features/admin-dashboard/components/GroupsManagement.tsx	134	              tier_level: p.tier_level || "Not set",
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	32	  tierLevel?: string;
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	49	  const [tiers, setTiers] = useState<Array<{ id: string; tier_name: string; tier_code: string; discount_percentage: string }>>([]);
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	57	    tierLevel: "",
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	64	        const [tiersRes, groupsRes] = await Promise.all([
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	65	          fetch("/api/admin/tiers"),
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	69	        if (tiersRes.ok) {
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	70	          const data = await tiersRes.json();
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	71	          setTiers(data.tiers || []);
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	73	          console.error("Failed to fetch tiers:", tiersRes.status);
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	74	          toast.error("Failed to load tiers");
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	118	        tierLevel: formData.tierLevel || undefined,
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	140	          tierLevel: "",
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	248	              <Label htmlFor="tierLevel">Tier Level</Label>
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	250	                value={formData.tierLevel}
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	251	                onValueChange={(value) => handleInputChange("tierLevel", value)}
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	253	                <SelectTrigger id="tierLevel" data-testid="select-provider-tier">
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	254	                  <SelectValue placeholder="Select tier" />
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	257	                  {tiers.length > 0 ? (
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	258	                    tiers.map((tier) => (
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	259	                      <SelectItem key={tier.id} value={tier.tier_code}>
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	260	                        {tier.tier_name} ({tier.discount_percentage}%)
+aimrx-new/features/admin-dashboard/components/ProviderFormDialog.tsx	265	                      No tiers available
+aimrx-new/features/admin-dashboard/components/ProvidersManagement.tsx	247	        Tier Level
+aimrx-new/features/admin-dashboard/components/ProvidersManagement.tsx	366	        {provider.tier_level && provider.tier_level !== "Not set" ? (
+aimrx-new/features/admin-dashboard/components/ProvidersManagement.tsx	371	            {provider.tier_level}
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	23	interface Tier {
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	25	  tier_name: string;
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	26	  tier_code: string;
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	31	interface TierFormData {
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	32	  tierName: string;
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	33	  tierCode: string;
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	38	interface TierFormDialogProps {
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	42	  editingTier?: Tier | null;
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	47	export function TierFormDialog({
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	51	  editingTier,
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	54	}: TierFormDialogProps) {
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	57	  const [formData, setFormData] = useState<TierFormData>({
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	58	    tierName: "",
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	59	    tierCode: "",
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	65	    if (editingTier) {
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	67	        tierName: editingTier.tier_name,
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	68	        tierCode: editingTier.tier_code,
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	69	        discountPercentage: editingTier.discount_percentage,
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	70	        description: editingTier.description || "",
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	74	        tierName: "",
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	75	        tierCode: "",
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	81	  }, [editingTier, open]);
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	83	  const handleInputChange = (field: keyof TierFormData, value: string) => {
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	93	    if (isSuperAdmin && !editingTier && !selectedPharmacyId) {
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	108	      const url = editingTier
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	109	        ? `/api/admin/tiers/${editingTier.id}`
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	110	        : "/api/admin/tiers";
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	112	      const method = editingTier ? "PATCH" : "POST";
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	115	      if (isSuperAdmin && !editingTier && selectedPharmacyId) {
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	131	          editingTier
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	132	            ? "Tier updated successfully"
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	133	            : "Tier created successfully",
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	137	        toast.error(result.error || "Failed to save tier");
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	140	      console.error("Error saving tier:", error);
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	152	            {editingTier ? "Edit Tier" : "Create New Tier"}
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	156	          {isSuperAdmin && !editingTier && (
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	173	            <Label htmlFor="tierName">Tier Name *</Label>
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	175	              id="tierName"
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	176	              value={formData.tierName}
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	177	              onChange={(e) => handleInputChange("tierName", e.target.value)}
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	179	              placeholder="e.g., Tier 1, Gold Tier"
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	183	            <Label htmlFor="tierCode">Tier Code *</Label>
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	185	              id="tierCode"
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	186	              value={formData.tierCode}
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	187	              onChange={(e) => handleInputChange("tierCode", e.target.value)}
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	189	              placeholder="e.g., tier1, gold"
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	190	              disabled={!!editingTier}
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	192	            {editingTier && (
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	194	                Tier code cannot be changed after creation
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	215	              Enter the discount percentage for this tier (0-100)
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	224	              placeholder="Optional description of this tier"
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	239	                ? editingTier
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	242	                : editingTier
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	243	                  ? "Update Tier"
+aimrx-new/features/admin-dashboard/components/TierFormDialog.tsx	244	                  : "Create Tier"}
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	27	import { TierFormDialog } from "./TierFormDialog";
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	39	interface Tier {
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	41	  tier_name: string;
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	42	  tier_code: string;
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	50	export const TiersManagement: React.FC = () => {
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	57	  const [tiers, setTiers] = useState<Tier[]>([]);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	59	  const [editingTier, setEditingTier] = useState<Tier | null>(null);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	60	  const [deletingTier, setDeletingTier] = useState<Tier | null>(null);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	84	  const fetchTiers = useCallback(async () => {
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	91	      const response = await fetch(`/api/admin/tiers?${params.toString()}`);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	94	        setTiers(data.tiers || []);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	96	        toast.error("Failed to fetch tiers");
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	99	      console.error("Error fetching tiers:", error);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	100	      toast.error("Failed to fetch tiers");
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	107	    fetchTiers();
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	108	  }, [fetchTiers]);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	110	  const handleEdit = (tier: Tier) => {
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	111	    setEditingTier(tier);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	116	    if (!deletingTier) return;
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	119	        const response = await fetch(`/api/admin/tiers/${deletingTier.id}`, {
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	126	          toast.success("Tier deleted successfully");
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	127	          setDeletingTier(null);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	128	          fetchTiers();
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	130	          toast.error(result.error || "Failed to delete tier");
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	133	        console.error("Error deleting tier:", error);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	134	        toast.error("Failed to delete tier");
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	141	    setEditingTier(null);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	150	              Tier Management
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	153	              Manage discount tiers and percentages for providers
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	158	              onClick={fetchTiers}
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	167	                setEditingTier(null);
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	173	              Create Tier
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	201	                <TableHead>Tier Name</TableHead>
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	202	                <TableHead>Tier Code</TableHead>
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	215	              ) : tiers.length === 0 ? (
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	218	                    No tiers found. Create your first tier to get started.
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	222	                tiers.map((tier) => (
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	223	                  <TableRow key={tier.id}>
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	225	                      <div className="font-medium">{tier.tier_name}</div>
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	229	                        {tier.tier_code}
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	234	                        {tier.discount_percentage}%
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	239	                        {tier.description || "No description"}
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	247	                          onClick={() => handleEdit(tier)}
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	255	                          onClick={() => setDeletingTier(tier)}
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	270	      <TierFormDialog
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	275	          fetchTiers();
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	277	        editingTier={editingTier}
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	283	        open={!!deletingTier}
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	284	        onOpenChange={() => setDeletingTier(null)}
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	288	            <AlertDialogTitle>Delete Tier</AlertDialogTitle>
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	290	              Are you sure you want to delete &ldquo;{deletingTier?.tier_name}&rdquo;?
+aimrx-new/features/admin-dashboard/components/TiersManagement.tsx	291	              This action cannot be undone. Make sure no providers are assigned to this tier before deleting.
+aimrx-new/features/admin-dashboard/index.ts	14	export { TiersManagement } from "./components/TiersManagement";
+aimrx-new/features/admin-dashboard/types.ts	120	  tier_level?: string;
+aimrx-new/features/admin-dashboard/types.ts	121	  tier_code?: string | null;
+aimrx-new/features/provider-financial-dashboard/ProviderFinancialDashboard.tsx	65	    tierInfo,
+aimrx-new/features/provider-financial-dashboard/ProviderFinancialDashboard.tsx	74	  const hasDiscount = tierInfo.discountPercentage > 0;
+aimrx-new/features/provider-financial-dashboard/ProviderFinancialDashboard.tsx	120	      {/* Tier Info Banner */}
+aimrx-new/features/provider-financial-dashboard/ProviderFinancialDashboard.tsx	124	            Your pricing tier:{" "}
+aimrx-new/features/provider-financial-dashboard/ProviderFinancialDashboard.tsx	125	            <span className="font-semibold">{tierInfo.tierName}</span> —{" "}
+aimrx-new/features/provider-financial-dashboard/ProviderFinancialDashboard.tsx	126	            {tierInfo.discountPercentage}% discount on medications
+aimrx-new/features/provider-financial-dashboard/ProviderFinancialDashboard.tsx	151	        {/* Total Tier Discount */}
+aimrx-new/features/provider-financial-dashboard/ProviderFinancialDashboard.tsx	159	                Total Tier Discount — {MONTH_NAMES[monthFilter.month]}{" "}
+aimrx-new/features/provider-financial-dashboard/ProviderFinancialDashboard.tsx	203	                        basePrice * (tierInfo.discountPercentage / 100),
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	4	import { getProviderTierDiscount } from "@core/services/pricing/tierDiscountService";
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	5	import type { FinancialPrescription, MonthFilter, TierInfo } from "../types";
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	11	  const [tierInfo, setTierInfo] = useState<TierInfo>({
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	13	    tierName: null,
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	20	  // Fetch tier discount once when user changes
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	22	    const fetchTier = async () => {
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	24	      const result = await getProviderTierDiscount(supabase, user.id);
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	25	      setTierInfo({
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	27	        tierName: result.tierName,
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	30	    fetchTier();
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	85	  // Derive totals from prescriptions + tier info (no extra fetches)
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	92	    if (tierInfo.discountPercentage === 0) return 0;
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	96	      return sum + Math.round(basePrice * (tierInfo.discountPercentage / 100));
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	98	  }, [prescriptions, tierInfo.discountPercentage]);
+aimrx-new/features/provider-financial-dashboard/hooks/useProviderFinancialData.ts	104	    tierInfo,
+aimrx-new/features/provider-financial-dashboard/types.ts	16	export interface TierInfo {
+aimrx-new/features/provider-financial-dashboard/types.ts	18	  tierName: string | null;
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	34	  const [tierLevel, setTierLevel] = useState<string>("Not set");
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	94	  // Fetch tier level from API for the current provider
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	96	    async function fetchTierLevel() {
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	101	        const response = await fetch("/api/provider/tier");
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	104	          if (data.tier_level) {
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	105	            setTierLevel(data.tier_level);
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	109	        console.error("Failed to fetch tier level:", error);
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	113	    fetchTierLevel();
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	261	      // Refetch tier level after successful save
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	263	        const response = await fetch("/api/provider/tier");
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	265	          const tierData = await response.json();
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	266	          if (tierData.tier_level) {
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	267	            setTierLevel(tierData.tier_level);
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	271	        console.error("Failed to refresh tier level:", error);
+aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	289	            <PersonalInfoSection form={form} tierLevel={tierLevel} />
+aimrx-new/features/provider-profile/components/profile/PersonalInfoSection.tsx	23	  tierLevel?: string;
+aimrx-new/features/provider-profile/components/profile/PersonalInfoSection.tsx	28	  tierLevel = "Not set",
+aimrx-new/features/provider-profile/components/profile/PersonalInfoSection.tsx	104	      {/* Name Fields and Tier - Read-only */}
+aimrx-new/features/provider-profile/components/profile/PersonalInfoSection.tsx	143	          <FormLabel>Tier Level</FormLabel>
+aimrx-new/features/provider-profile/components/profile/PersonalInfoSection.tsx	146	              value={tierLevel}
+aimrx-new/package-lock.json	110	        "eslint-config-prettier": "^10.1.8",
+aimrx-new/package-lock.json	113	        "prettier": "^3.6.2",
+aimrx-new/package-lock.json	7719	    "node_modules/eslint-config-prettier": {
+aimrx-new/package-lock.json	7721	      "resolved": "https://registry.npmjs.org/eslint-config-prettier/-/eslint-config-prettier-10.1.8.tgz",
+aimrx-new/package-lock.json	7726	        "eslint-config-prettier": "bin/cli.js"
+aimrx-new/package-lock.json	7729	        "url": "https://opencollective.com/eslint-config-prettier"
+aimrx-new/package-lock.json	11731	    "node_modules/prettier": {
+aimrx-new/package-lock.json	11733	      "resolved": "https://registry.npmjs.org/prettier/-/prettier-3.8.1.tgz",
+aimrx-new/package-lock.json	11738	        "prettier": "bin/prettier.cjs"
+aimrx-new/package-lock.json	11744	        "url": "https://github.com/prettier/prettier?sponsor=1"
+aimrx-new/package.json	17	    "format": "prettier --write .",
+aimrx-new/package.json	18	    "format:check": "prettier --check ."
+aimrx-new/package.json	22	      "prettier --write",
+aimrx-new/package.json	26	    "*.{json,md,yml,yaml}": "prettier --write"
+aimrx-new/package.json	132	    "eslint-config-prettier": "^10.1.8",
+aimrx-new/package.json	135	    "prettier": "^3.6.2",
+aimrx-new/replit.md	108	  - Provider quick-create form: Group dropdown alongside Tier Level
+aimrx-new/replit.md	147	  - Tier discount badge showing provider's discount percentage
+aimrx-new/scripts/add-tier-level-column.sql	1	-- Add tier_level column to providers table
+aimrx-new/scripts/add-tier-level-column.sql	2	-- This column stores the tier level assigned by admin (tier1, tier2, tier3)
+aimrx-new/scripts/add-tier-level-column.sql	3	-- Each tier has a different discount rate for the provider
+aimrx-new/scripts/add-tier-level-column.sql	6	ADD COLUMN IF NOT EXISTS tier_level TEXT;
+aimrx-new/scripts/add-tier-level-column.sql	9	COMMENT ON COLUMN providers.tier_level IS 'Tier level set by admin (tier1, tier2, tier3, tier4) - each tier has different discount rate';
+aimrx-new/scripts/create-tiers-table.sql	1	-- Create tiers table for managing provider discount tiers
+aimrx-new/scripts/create-tiers-table.sql	2	CREATE TABLE IF NOT EXISTS tiers (
+aimrx-new/scripts/create-tiers-table.sql	4	  tier_name TEXT NOT NULL UNIQUE,
+aimrx-new/scripts/create-tiers-table.sql	5	  tier_code TEXT NOT NULL UNIQUE,
+aimrx-new/scripts/create-tiers-table.sql	13	COMMENT ON TABLE tiers IS 'Stores tier information for provider discount management';
+aimrx-new/scripts/create-tiers-table.sql	14	COMMENT ON COLUMN tiers.tier_name IS 'Display name of the tier (e.g., Tier 1, Tier 2)';
+aimrx-new/scripts/create-tiers-table.sql	15	COMMENT ON COLUMN tiers.tier_code IS 'Code identifier for the tier (e.g., tier1, tier2)';
+aimrx-new/scripts/create-tiers-table.sql	16	COMMENT ON COLUMN tiers.discount_percentage IS 'Discount percentage for providers in this tier (e.g., 10.00, 15.50)';
+aimrx-new/scripts/create-tiers-table.sql	17	COMMENT ON COLUMN tiers.description IS 'Optional description of what this tier offers';
+aimrx-new/scripts/create-tiers-table.sql	19	-- Insert default tiers
+aimrx-new/scripts/create-tiers-table.sql	20	INSERT INTO tiers (tier_name, tier_code, discount_percentage, description) VALUES
+aimrx-new/scripts/create-tiers-table.sql	21	  ('Tier 1', 'tier1', 10.00, 'Basic tier with 10% discount'),
+aimrx-new/scripts/create-tiers-table.sql	22	  ('Tier 2', 'tier2', 15.00, 'Standard tier with 15% discount'),
+aimrx-new/scripts/create-tiers-table.sql	23	  ('Tier 3', 'tier3', 20.00, 'Premium tier with 20% discount')
+aimrx-new/scripts/create-tiers-table.sql	24	ON CONFLICT (tier_code) DO NOTHING;

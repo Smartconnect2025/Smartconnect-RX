@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -146,7 +146,7 @@ export default function ManageDoctorsPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [pharmacyFilter, setPharmacyFilter] = useState("all");
   const [pharmaciesForFilter, setPharmaciesForFilter] = useState<Array<{ id: string; name: string }>>([]);
-  const loadDoctorsAbortRef = React.useRef<AbortController | null>(null);
+  const loadDoctorsAbortRef = useRef<AbortController | null>(null);
   const [activeTab, setActiveTab] = useState<"providers" | "pending">(
     "providers",
   );
@@ -184,14 +184,6 @@ export default function ManageDoctorsPage() {
   const [approvedRequestIds, setApprovedRequestIds] = useState<Set<string>>(
     new Set(),
   );
-  const [tiers, setTiers] = useState<
-    Array<{
-      id: string;
-      tier_name: string;
-      tier_code: string;
-      discount_percentage: string;
-    }>
-  >([]);
   const [groups, setGroups] = useState<
     Array<{
       id: string;
@@ -233,33 +225,7 @@ export default function ManageDoctorsPage() {
     tierLevel: "",
   });
 
-  // Fetch tiers and groups when either modal opens
   useEffect(() => {
-    const fetchTiers = async () => {
-      try {
-        const response = await fetch("/api/admin/tiers");
-        if (response.ok) {
-          const data = await response.json();
-          setTiers(data.tiers || []);
-          // Set default tier level to first tier if available and form is empty
-          if (
-            data.tiers &&
-            data.tiers.length > 0 &&
-            !inviteFormData.tierLevel
-          ) {
-            setInviteFormData((prev) => ({
-              ...prev,
-              tierLevel: data.tiers[0].tier_code,
-            }));
-          }
-        } else {
-          console.error("Failed to fetch tiers:", response.status);
-        }
-      } catch (error) {
-        console.error("Error fetching tiers:", error);
-      }
-    };
-
     const fetchGroups = async () => {
       try {
         const response = await fetch("/api/admin/groups");
@@ -291,11 +257,10 @@ export default function ManageDoctorsPage() {
     };
 
     if (isInviteModalOpen || isEditModalOpen) {
-      fetchTiers();
       fetchGroups();
       fetchPharmacies();
     }
-  }, [isInviteModalOpen, isEditModalOpen, inviteFormData.tierLevel]);
+  }, [isInviteModalOpen, isEditModalOpen]);
 
   // Reset invite form to empty state
   const resetInviteForm = () => {
@@ -602,25 +567,6 @@ export default function ManageDoctorsPage() {
 
       if (error) throw error;
 
-      // Update tier level in mock store (temporary until database migration)
-      if (editFormData.tierLevel) {
-        // Save to mock tier store
-        const response = await fetch("/api/admin/providers/tier-assignment", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            providerId: editingDoctor.id,
-            tierCode: editFormData.tierLevel,
-          }),
-        });
-
-        if (!response.ok) {
-          console.error("Failed to update tier assignment");
-          toast.warning("Provider updated but tier assignment may have failed");
-        } else {
-        }
-      }
-
       // Fetch fresh data from database to update the modal
       const { data: freshProviderData, error: fetchError } = await supabase
         .from("providers")
@@ -629,20 +575,6 @@ export default function ManageDoctorsPage() {
         .single();
 
       if (!fetchError && freshProviderData) {
-        // Get tier info from the providers API
-        const tiersApiResponse = await fetch("/api/admin/providers");
-        let tierCodeForProvider = editFormData.tierLevel;
-
-        if (tiersApiResponse.ok) {
-          const providersData = await tiersApiResponse.json();
-          const matchingProvider = providersData.providers?.find(
-            (p: { id: string }) => p.id === editingDoctor.id,
-          );
-          tierCodeForProvider =
-            matchingProvider?.tier_code || editFormData.tierLevel;
-        }
-
-        // Update the editing doctor state with fresh data
         setEditingDoctor(freshProviderData);
         setEditFormData({
           firstName: freshProviderData.first_name || "",
@@ -650,7 +582,7 @@ export default function ManageDoctorsPage() {
           email: freshProviderData.email || "",
           phone: freshProviderData.phone_number || "",
           companyName: freshProviderData.company_name || "",
-          tierLevel: tierCodeForProvider,
+          tierLevel: "",
         });
       }
 
@@ -670,10 +602,7 @@ export default function ManageDoctorsPage() {
   const openEditModal = async (doctor: Doctor) => {
     try {
       // Fetch fresh provider data from database AND tier info from API
-      const [providerResponse, tiersApiResponse] = await Promise.all([
-        supabase.from("providers").select("*").eq("id", doctor.id).single(),
-        fetch("/api/admin/providers"),
-      ]);
+      const providerResponse = await supabase.from("providers").select("*").eq("id", doctor.id).single();
 
       if (providerResponse.error) {
         console.error("Error fetching provider data:", providerResponse.error);
@@ -683,21 +612,6 @@ export default function ManageDoctorsPage() {
 
       const freshData = providerResponse.data;
 
-      // Get tier info from the providers API (which includes tier_code)
-      let tierCodeForProvider = "";
-      if (tiersApiResponse.ok) {
-        const providersData = await tiersApiResponse.json();
-        const matchingProvider = providersData.providers?.find(
-          (p: { id: string }) => p.id === doctor.id,
-        );
-        tierCodeForProvider = matchingProvider?.tier_code || "";
-      } else {
-        console.error(
-          "Failed to fetch providers API:",
-          tiersApiResponse.status,
-        );
-      }
-
       setEditingDoctor(freshData);
       setEditFormData({
         firstName: freshData.first_name || "",
@@ -705,8 +619,7 @@ export default function ManageDoctorsPage() {
         email: freshData.email || "",
         phone: freshData.phone_number || "",
         companyName: freshData.company_name || "",
-        tierLevel:
-          tierCodeForProvider || (tiers.length > 0 ? tiers[0].tier_code : ""),
+        tierLevel: "",
       });
 
       // Reset NPI verification status when opening modal
@@ -1288,9 +1201,6 @@ export default function ManageDoctorsPage() {
                         </TableHead>
                         <TableHead className="font-semibold">Email</TableHead>
                         <TableHead className="font-semibold">Phone</TableHead>
-                        <TableHead className="font-semibold whitespace-nowrap">
-                          Tier Level
-                        </TableHead>
                         <TableHead className="font-semibold">Group</TableHead>
                         <TableHead className="font-semibold whitespace-nowrap">
                           Date Added
@@ -1303,7 +1213,7 @@ export default function ManageDoctorsPage() {
                       {filteredDoctors.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={8}
+                            colSpan={7}
                             className="text-center text-muted-foreground py-8"
                           >
                             No doctors found
@@ -1321,20 +1231,6 @@ export default function ManageDoctorsPage() {
                             <TableCell>{doctor.email || "N/A"}</TableCell>
                             <TableCell>
                               {doctor.phone_number || "N/A"}
-                            </TableCell>
-                            <TableCell>
-                              {doctor.tier_level ? (
-                                <Badge
-                                  variant="outline"
-                                  className="bg-blue-50 text-blue-700 border-blue-200 capitalize"
-                                >
-                                  {doctor.tier_level.replace(/_/g, " ")}
-                                </Badge>
-                              ) : (
-                                <span className="text-muted-foreground">
-                                  Not set
-                                </span>
-                              )}
                             </TableCell>
                             <TableCell>
                               {doctor.group_name ? (
@@ -1766,44 +1662,6 @@ export default function ManageDoctorsPage() {
               </div>
 
               <div>
-                <Label htmlFor="tierLevel">Tier Level *</Label>
-                <Select
-                  value={inviteFormData.tierLevel}
-                  onValueChange={(value) =>
-                    setInviteFormData({ ...inviteFormData, tierLevel: value })
-                  }
-                >
-                  <SelectTrigger id="tierLevel">
-                    <SelectValue
-                      placeholder={
-                        tiers.length === 0
-                          ? "Loading tiers..."
-                          : "Select tier level"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tiers.length === 0 ? (
-                      <SelectItem value="no-tiers" disabled>
-                        No tiers available. Create tiers in Manage Tiers first.
-                      </SelectItem>
-                    ) : (
-                      tiers.map((tier) => (
-                        <SelectItem key={tier.id} value={tier.tier_code}>
-                          {tier.tier_name} - {tier.discount_percentage}%
-                          discount
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Tier levels are managed in the &quot;Manage Tiers&quot;
-                  section
-                </p>
-              </div>
-
-              <div>
                 <Label htmlFor="groupId">Group</Label>
                 <Select
                   value={inviteFormData.groupId}
@@ -1988,44 +1846,6 @@ export default function ManageDoctorsPage() {
                   }
                   placeholder="Enter company name"
                 />
-              </div>
-
-              <div>
-                <Label htmlFor="editTierLevel">Tier Level *</Label>
-                <Select
-                  value={editFormData.tierLevel}
-                  onValueChange={(value) =>
-                    setEditFormData({ ...editFormData, tierLevel: value })
-                  }
-                >
-                  <SelectTrigger id="editTierLevel">
-                    <SelectValue
-                      placeholder={
-                        tiers.length === 0
-                          ? "Loading tiers..."
-                          : "Select tier level"
-                      }
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {tiers.length === 0 ? (
-                      <SelectItem value="no-tiers" disabled>
-                        No tiers available. Create tiers in Manage Tiers first.
-                      </SelectItem>
-                    ) : (
-                      tiers.map((tier) => (
-                        <SelectItem key={tier.id} value={tier.tier_code}>
-                          {tier.tier_name} - {tier.discount_percentage}%
-                          discount
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-gray-500 mt-1">
-                  Tier levels are managed in the &quot;Manage Tiers&quot;
-                  section
-                </p>
               </div>
 
               {/* Professional Credentials - Read Only */}
