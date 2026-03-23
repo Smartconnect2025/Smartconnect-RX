@@ -129,9 +129,7 @@ export function ProviderFormDialog({
 
       if (response.ok) {
         toast.success(
-          formData.tierLevel
-            ? `Successfully created provider with ${formData.tierLevel} tier`
-            : "Successfully created provider account"
+          `Provider account created! Welcome email sent to ${formData.email} with login credentials.`
         );
         setFormData({
           email: "",
