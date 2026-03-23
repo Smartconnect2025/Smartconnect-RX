@@ -541,8 +541,6 @@ export default function PharmacyReportsPage() {
                 onClick={() => {
                   setViewMode("pharmacy-only");
                   setSelectedProvider("all");
-                  setSelectedGroup("all");
-                  setSelectedPlatformManager("all");
                 }}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
                   viewMode === "pharmacy-only"
@@ -668,8 +666,6 @@ export default function PharmacyReportsPage() {
                     onClick={() => {
                       setSelectedPharmacy("all");
                       setSelectedProvider("all");
-                      setSelectedGroup("all");
-                      setSelectedPlatformManager("all");
                       setStartDate("");
                       setEndDate("");
                       setSearchTerm("");
