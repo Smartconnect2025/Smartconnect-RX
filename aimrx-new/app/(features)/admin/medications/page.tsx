@@ -506,6 +506,62 @@ export default function MedicationManagementPage() {
           }
           className="space-y-8"
         >
+          {/* SECTION: Pharmacy Assignment */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">
+                Pharmacy Assignment <span className="text-red-500">*</span>
+              </h3>
+            </div>
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              {isPharmacyAdmin ? (
+                <div>
+                  <Label className="text-sm font-semibold text-gray-700">
+                    Pharmacy
+                  </Label>
+                  <div className="mt-2 w-full h-11 px-4 rounded-md border border-gray-300 bg-gray-50 flex items-center text-gray-700 font-medium">
+                    {pharmacies[0]?.name || "Loading pharmacy..."}
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <Label
+                    htmlFor="med-pharmacy"
+                    className="text-sm font-semibold text-gray-700"
+                  >
+                    Select Pharmacy <span className="text-red-500">*</span>
+                  </Label>
+                  <select
+                    id="med-pharmacy"
+                    value={medicationForm.pharmacy_id}
+                    onChange={(e) =>
+                      setMedicationForm({
+                        ...medicationForm,
+                        pharmacy_id: e.target.value,
+                      })
+                    }
+                    required
+                    className="mt-2 w-full h-11 px-4 rounded-md border border-gray-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
+                  >
+                    <option value="">
+                      {pharmacies.length === 0
+                        ? "Loading pharmacies..."
+                        : "Select a pharmacy..."}
+                    </option>
+                    {pharmacies.map((pharmacy) => (
+                      <option key={pharmacy.id} value={pharmacy.id}>
+                        {pharmacy.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-600 mt-2">
+                    This medication will be added to the selected pharmacy's catalog only
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* SECTION: Basic Information */}
           <div className="space-y-6">
             <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
@@ -515,48 +571,6 @@ export default function MedicationManagementPage() {
             </div>
 
             <div className="space-y-6">
-              {/* Pharmacy Selector - Show dropdown for platform admins, display name for pharmacy admins */}
-              {pharmacies.length > 0 && (
-                <div>
-                  <Label
-                    htmlFor="med-pharmacy"
-                    className="text-sm font-semibold text-gray-700"
-                  >
-                    Pharmacy
-                  </Label>
-                  {isPharmacyAdmin ? (
-                    <div className="mt-2 w-full h-11 px-4 rounded-md border border-gray-300 bg-gray-50 flex items-center text-gray-700">
-                      {pharmacies[0]?.name || "Your Pharmacy"}
-                    </div>
-                  ) : (
-                    <>
-                      <select
-                        id="med-pharmacy"
-                        value={medicationForm.pharmacy_id}
-                        onChange={(e) =>
-                          setMedicationForm({
-                            ...medicationForm,
-                            pharmacy_id: e.target.value,
-                          })
-                        }
-                        required
-                        className="mt-2 w-full h-11 px-4 rounded-md border border-gray-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none"
-                      >
-                        <option value="">Select a pharmacy...</option>
-                        {pharmacies.map((pharmacy) => (
-                          <option key={pharmacy.id} value={pharmacy.id}>
-                            {pharmacy.name}
-                          </option>
-                        ))}
-                      </select>
-                      <p className="text-xs text-gray-500 mt-2">
-                        Select which pharmacy will provide this medication
-                      </p>
-                    </>
-                  )}
-                </div>
-              )}
-
               <div>
                 <Label
                   htmlFor="med-name"
