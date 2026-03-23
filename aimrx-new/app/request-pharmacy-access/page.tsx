@@ -181,8 +181,8 @@ export default function RequestPharmacyAccessPage() {
             </Link>
 
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Apply to Join Our Network</h2>
-              <p className="text-sm text-gray-600">Fill out the form below and our team will review your application within 24-48 hours.</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Partner Your Pharmacy With SmartConnect</h2>
+              <p className="text-sm text-gray-600">Fill out the form below and our team will review your pharmacy&apos;s application within 24-48 hours.</p>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
