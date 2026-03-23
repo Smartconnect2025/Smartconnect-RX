@@ -71,7 +71,9 @@ export async function PUT(
       return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
 
-    const categoryPharmacyId = existingCat.pharmacy_id || scopedPharmacyId;
+    const effectivePharmacyId = isSuperAdmin
+      ? (body.pharmacy_id !== undefined ? body.pharmacy_id : existingCat.pharmacy_id)
+      : (scopedPharmacyId || existingCat.pharmacy_id);
 
     if (body.slug) {
       let slugQuery = supabase
@@ -80,8 +82,8 @@ export async function PUT(
         .eq("slug", body.slug)
         .neq("id", id);
 
-      if (categoryPharmacyId) {
-        slugQuery = slugQuery.eq("pharmacy_id", categoryPharmacyId);
+      if (effectivePharmacyId) {
+        slugQuery = slugQuery.eq("pharmacy_id", effectivePharmacyId);
       }
 
       const { data: existingCategory } = await slugQuery.single();
@@ -118,12 +120,12 @@ export async function PUT(
       .select()
       .single();
 
-    if (!error && oldCategoryName && body.name && categoryPharmacyId) {
+    if (!error && oldCategoryName && body.name && effectivePharmacyId) {
       const { error: cascadeError } = await supabase
         .from("pharmacy_medications")
         .update({ category: body.name })
         .eq("category", oldCategoryName)
-        .eq("pharmacy_id", categoryPharmacyId);
+        .eq("pharmacy_id", effectivePharmacyId);
 
       if (cascadeError) {
         console.error("Error cascading category name change to pharmacy_medications:", cascadeError);

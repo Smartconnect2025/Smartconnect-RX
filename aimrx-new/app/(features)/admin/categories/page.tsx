@@ -389,48 +389,40 @@ export default function CategoriesPage() {
       updates.slug = generateSlug(editingCategory.name);
     }
 
-    if (isSuperAdmin && editPharmacyIds.length > 0) {
-      const firstPharmId = editPharmacyIds[0];
-      if (firstPharmId !== original.pharmacy_id) {
-        updates.pharmacy_id = firstPharmId;
-      }
-    }
-
     if (Object.keys(updates).length > 0) {
       await handleUpdateCategory(original, updates);
     }
 
-    if (isSuperAdmin && editPharmacyIds.length > 1) {
-      const additionalPharmIds = editPharmacyIds.slice(1);
-      let failedCount = 0;
-      const failedErrors: string[] = [];
-      for (const pharmId of additionalPharmIds) {
-        const existsAlready = categories.some(
-          (c) => c.name === editingCategory.name && c.pharmacy_id === pharmId
-        );
-        if (existsAlready) continue;
-
-        const pharmacyName = pharmacies.find((p) => p.id === pharmId)?.name || pharmId;
-        const response = await fetch("/api/admin/categories", {
-          method: "POST",
-          credentials: "include",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: editingCategory.name,
-            slug: generateSlug(editingCategory.name),
-            description: editingCategory.description || null,
-            color: editingCategory.color || null,
-            pharmacy_id: pharmId,
-          }),
-        });
-        if (!response.ok) {
-          failedCount++;
-          const result = await response.json();
-          failedErrors.push(`${pharmacyName}: ${result.error || "Unknown error"}`);
+    if (isSuperAdmin) {
+      const additionalPharmIds = editPharmacyIds.filter(
+        (pid) => pid !== original.pharmacy_id
+      );
+      if (additionalPharmIds.length > 0) {
+        let failedCount = 0;
+        const failedErrors: string[] = [];
+        for (const pharmId of additionalPharmIds) {
+          const pharmacyName = pharmacies.find((p) => p.id === pharmId)?.name || pharmId;
+          const response = await fetch("/api/admin/categories", {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: editingCategory.name,
+              slug: generateSlug(editingCategory.name),
+              description: editingCategory.description || null,
+              color: editingCategory.color || null,
+              pharmacy_id: pharmId,
+            }),
+          });
+          if (!response.ok) {
+            failedCount++;
+            const result = await response.json();
+            failedErrors.push(`${pharmacyName}: ${result.error || "Unknown error"}`);
+          }
         }
-      }
-      if (failedCount > 0) {
-        alert(`Some pharmacies failed:\n${failedErrors.join("\n")}`);
+        if (failedCount > 0) {
+          alert(`Some pharmacies failed:\n${failedErrors.join("\n")}`);
+        }
       }
     }
 
