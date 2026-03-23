@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Users, Building2, Pill, FolderTree, UserCog, ShieldCheck, LayoutGrid } from "lucide-react";
+import { Users, Building2, Pill, ShieldCheck, LayoutGrid } from "lucide-react";
 
 export function AdminNavigationTabs() {
   const pathname = usePathname();
@@ -19,18 +19,6 @@ export function AdminNavigationTabs() {
       href: "/admin/pharmacy-management",
       icon: Building2,
       active: pathname?.startsWith("/admin/pharmacy-management"),
-    },
-    {
-      name: "Manage Groups",
-      href: "/admin/groups",
-      icon: FolderTree,
-      active: pathname?.startsWith("/admin/groups"),
-    },
-    {
-      name: "Platform Managers",
-      href: "/admin/platform-managers",
-      icon: UserCog,
-      active: pathname?.startsWith("/admin/platform-managers"),
     },
     {
       name: "Manage Categories",
