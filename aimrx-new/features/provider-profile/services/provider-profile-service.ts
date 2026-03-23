@@ -4,40 +4,26 @@ import { ProfessionalInfoValues } from "../components/professional-info/types";
 import { PracticeDetailsValues } from "../components/practice-details/types";
 import { toast } from "sonner";
 
-/**
- * Provider Profile Service
- * Handles all provider profile data operations using Supabase
- */
 export class ProviderProfileService {
   private supabase = createClient();
 
-  /**
-   * Get provider profile by user ID
-   */
   async getProviderProfile(userId: string) {
-    const { data, error } = await this.supabase
-      .from("providers")
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle(); // Use maybeSingle() to handle 0 rows
-
-    if (error) {
+    const response = await fetch("/api/provider/profile");
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      console.error("Failed to fetch provider profile:", err);
       toast.error("Failed to fetch provider profile");
       return null;
     }
-
-    return data;
+    const data = await response.json();
+    return data.provider || null;
   }
 
-  /**
-   * Change user password
-   */
   async changePassword(
     email: string,
     currentPassword: string,
     newPassword: string,
   ) {
-    // Verify current password by attempting to sign in
     const { error: signInError } = await this.supabase.auth.signInWithPassword({
       email,
       password: currentPassword,
@@ -47,7 +33,6 @@ export class ProviderProfileService {
       throw new Error("Current password is incorrect");
     }
 
-    // Update password
     const { error: updatePasswordError } = await this.supabase.auth.updateUser({
       password: newPassword,
     });
@@ -57,11 +42,7 @@ export class ProviderProfileService {
     }
   }
 
-  /**
-   * Update provider personal information
-   */
   async updatePersonalInfo(userId: string, data: ProfileFormValues) {
-    // Clean medical licenses data
     const medicalLicenses = (data.medicalLicenses || [])
       .filter(license => license.licenseNumber && license.state)
       .map(license => ({
@@ -69,10 +50,8 @@ export class ProviderProfileService {
         state: license.state,
       }));
 
-    // Extract licensed states for backward compatibility
     const licensedStates = medicalLicenses.map(l => l.state);
 
-    // Convert payment details to snake_case for database consistency
     const paymentDetails = data.paymentDetails ? {
       bank_name: data.paymentDetails.bankName || null,
       account_holder_name: data.paymentDetails.accountHolderName || null,
@@ -82,8 +61,6 @@ export class ProviderProfileService {
       swift_code: data.paymentDetails.swiftCode || null,
     } : null;
 
-    // Only save addresses if they have actual data (check for non-empty, non-USA-only values)
-    // If no data provided, we DON'T include the field in the update to preserve existing values
     const hasPhysicalAddressData = data.physicalAddress && (
       data.physicalAddress.street ||
       data.physicalAddress.city ||
@@ -97,25 +74,21 @@ export class ProviderProfileService {
       data.billingAddress.zipCode
     );
 
-    // Build update data, only including address fields if they have data
-    // This prevents overwriting existing addresses with null when saving from tabs that don't show address fields
     const updateData: Record<string, unknown> = {
+      _section: "personal",
       avatar_url: data.avatarUrl,
       signature_url: data.signatureUrl || null,
       npi_number: data.npiNumber || null,
       company_name: data.companyName || null,
       medical_licenses: medicalLicenses,
-      licensed_states: licensedStates, // Backward compatibility
+      licensed_states: licensedStates,
       tax_id: data.taxId || null,
       payment_method: data.paymentMethod || null,
       payment_schedule: data.paymentSchedule || null,
       payment_details: paymentDetails,
       default_shipping_fee: data.defaultShippingFee ?? null,
-      // Note: is_verified and is_active columns don't exist in the database schema yet
-      updated_at: new Date().toISOString(),
     };
 
-    // Only include address fields if they have actual data - otherwise preserve existing DB values
     if (hasPhysicalAddressData) {
       updateData.physical_address = data.physicalAddress;
     }
@@ -123,71 +96,42 @@ export class ProviderProfileService {
       updateData.billing_address = data.billingAddress;
     }
 
-    const exists = await this.profileExists(userId);
+    const response = await fetch("/api/provider/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updateData),
+    });
 
-    if (exists) {
-      const { data: result, error } = await this.supabase
-        .from("providers")
-        .update(updateData)
-        .eq("user_id", userId)
-        .select()
-        .single();
-
-      if (error) {
-        console.error("Error saving profile:", error);
-        const errorMsg = error?.message || error?.details || 'Unknown database error';
-        toast.error(`Failed to save profile: ${errorMsg}`);
-        throw error;
-      }
-
-      return result;
-    } else {
-      // Create new profile with personal info
-      const { data: result, error } = await this.supabase
-        .from("providers")
-        .insert({
-          user_id: userId,
-          ...updateData,
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) {
-        toast.error("Failed to create personal information");
-      }
-
-      return result;
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      const errorMsg = err?.details || err?.error || "Failed to save profile";
+      console.error("Error saving profile:", err);
+      toast.error(`Failed to save profile: ${errorMsg}`);
+      throw new Error(errorMsg);
     }
+
+    const result = await response.json();
+    return result.provider;
   }
 
-  /**
-   * Update provider avatar URL
-   */
   async updateAvatarUrl(userId: string, avatarUrl: string) {
-    const { data, error } = await this.supabase
-      .from("providers")
-      .update({
-        avatar_url: avatarUrl,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("user_id", userId)
-      .select()
-      .single();
+    const response = await fetch("/api/provider/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _section: "avatar", avatar_url: avatarUrl }),
+    });
 
-    if (error) {
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
       toast.error("Failed to update avatar");
-      throw error;
+      throw new Error(err?.error || "Failed to update avatar");
     }
 
-    return data;
+    const result = await response.json();
+    return result.provider;
   }
 
-  /**
-   * Update provider professional information
-   */
   async updateProfessionalInfo(userId: string, data: ProfessionalInfoValues) {
-    // Clean and structure the data for storage
     const specialties = data.specialties
       .filter((item) => item.specialty && item.specialty.trim() !== "")
       .map((item) => ({ specialty: item.specialty }));
@@ -219,6 +163,7 @@ export class ProviderProfileService {
       .map((assoc) => ({ association: assoc.association }));
 
     const updateData = {
+      _section: "professional",
       npi_number: data.npiNumber || null,
       dea_number: data.deaNumber || null,
       specialties: specialties,
@@ -229,53 +174,29 @@ export class ProviderProfileService {
       professional_associations: associations,
       years_of_experience: data.yearsOfExperience,
       professional_bio: data.professionalBio,
-      // Backward compatibility - set primary specialty
       specialty: specialties.length > 0 ? specialties[0].specialty : null,
-      // Set licensed states for backward compatibility
       licensed_states: licenses.map((l) => l.state).filter(Boolean),
-      updated_at: new Date().toISOString(),
     };
 
-    const exists = await this.profileExists(userId);
+    const response = await fetch("/api/provider/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updateData),
+    });
 
-    if (exists) {
-      const { data: result, error } = await this.supabase
-        .from("providers")
-        .update(updateData)
-        .eq("user_id", userId)
-        .select()
-        .single();
-
-      if (error) {
-        toast.error("Failed to update professional information");
-      }
-
-      return result;
-    } else {
-      // Create new profile with professional info
-      const { data: result, error } = await this.supabase
-        .from("providers")
-        .insert({
-          user_id: userId,
-          ...updateData,
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) {
-        toast.error("Failed to create professional information");
-      }
-
-      return result;
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      const errorMsg = err?.details || err?.error || "Failed to update professional information";
+      console.error("Error updating professional info:", err);
+      toast.error(`Failed to update professional information: ${errorMsg}`);
+      throw new Error(errorMsg);
     }
+
+    const result = await response.json();
+    return result.provider;
   }
 
-  /**
-   * Update provider practice details
-   */
   async updatePracticeDetails(userId: string, data: PracticeDetailsValues) {
-    // Clean and structure services, insurance, and affiliations
     const services = data.services
       .filter((service) => service.service && service.service.trim() !== "")
       .map((service) => ({ service: service.service }));
@@ -289,101 +210,66 @@ export class ProviderProfileService {
       .map((affil) => ({ affiliation: affil.affiliation }));
 
     const updateData = {
+      _section: "practice",
       services_offered: services,
       insurance_plans_accepted: insurancePlans,
       hospital_affiliations: affiliations,
-      // Backward compatibility
       service_types: services.map((s) => s.service),
       insurance_plans: insurancePlans.map((p) => p.insurancePlan),
-      updated_at: new Date().toISOString(),
     };
 
-    const exists = await this.profileExists(userId);
+    const response = await fetch("/api/provider/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updateData),
+    });
 
-    if (exists) {
-      const { data: result, error } = await this.supabase
-        .from("providers")
-        .update(updateData)
-        .eq("user_id", userId)
-        .select()
-        .single();
-
-      if (error) {
-        toast.error("Failed to update practice details");
-      }
-
-      return result;
-    } else {
-      // Create new profile with practice details
-      const { data: result, error } = await this.supabase
-        .from("providers")
-        .insert({
-          user_id: userId,
-          ...updateData,
-          created_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
-
-      if (error) {
-        toast.error("Failed to create practice details");
-      }
-
-      return result;
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
+      const errorMsg = err?.details || err?.error || "Failed to update practice details";
+      console.error("Error updating practice details:", err);
+      toast.error(`Failed to update practice details: ${errorMsg}`);
+      throw new Error(errorMsg);
     }
+
+    const result = await response.json();
+    return result.provider;
   }
 
-  /**
-   * Create a new provider profile
-   */
   async createProviderProfile(userId: string) {
-    const { data, error } = await this.supabase
-      .from("providers")
-      .insert({
-        user_id: userId,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      })
-      .select()
-      .single();
+    const response = await fetch("/api/provider/profile", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ _section: "create" }),
+    });
 
-    if (error) {
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({}));
       toast.error("Failed to create provider profile");
+      throw new Error(err?.error || "Failed to create provider profile");
     }
 
-    return data;
+    const result = await response.json();
+    return result.provider;
   }
 
-  /**
-   * Check if provider profile exists for user
-   */
   async profileExists(userId: string): Promise<boolean> {
-    const { data, error } = await this.supabase
-      .from("providers")
-      .select("id")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if (error) {
-      toast.error("Failed to check if profile exists");
-      return false;
-    }
-
-    return !!data;
+    const response = await fetch("/api/provider/profile");
+    if (!response.ok) return false;
+    const data = await response.json();
+    return !!data.provider;
   }
 
-  /**
-   * Get or create provider profile
-   */
   async getOrCreateProfile(userId: string) {
-    const exists = await this.profileExists(userId);
-
-    if (exists) {
-      return await this.getProviderProfile(userId);
-    } else {
-      // Profile doesn't exist, create it
+    const response = await fetch("/api/provider/profile");
+    if (!response.ok) {
       return await this.createProviderProfile(userId);
     }
+    const data = await response.json();
+    if (data.provider) {
+      return data.provider;
+    }
+    return await this.createProviderProfile(userId);
   }
 }
 

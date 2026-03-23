@@ -52,7 +52,6 @@ import {
   XCircle,
   AlertTriangle,
 } from "lucide-react";
-import { createClient } from "@core/supabase";
 import { toast } from "sonner";
 import { formatPhoneNumber } from "@/core/utils/phone";
 import { AdminNavigationTabs } from "@/components/layout/AdminNavigationTabs";
@@ -138,7 +137,6 @@ interface AccessRequest {
 }
 
 export default function ManageDoctorsPage() {
-  const supabase = createClient();
   const [doctors, setDoctors] = useState<Doctor[]>([]);
   const [filteredDoctors, setFilteredDoctors] = useState<Doctor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -543,7 +541,6 @@ export default function ManageDoctorsPage() {
     }
   };
 
-  // Edit doctor
   const handleEditDoctor = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingDoctor) return;
@@ -551,35 +548,20 @@ export default function ManageDoctorsPage() {
     setIsSubmitting(true);
 
     try {
-      // Update basic info in database
-      const { error } = await supabase
-        .from("providers")
-        .update({
+      const response = await fetch(`/api/admin/providers/${editingDoctor.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
           first_name: editFormData.firstName,
           last_name: editFormData.lastName,
           phone_number: editFormData.phone || null,
           company_name: editFormData.companyName || null,
-        })
-        .eq("id", editingDoctor.id);
+        }),
+      });
 
-      if (error) throw error;
-
-      // Fetch fresh data from database to update the modal
-      const { data: freshProviderData, error: fetchError } = await supabase
-        .from("providers")
-        .select("*")
-        .eq("id", editingDoctor.id)
-        .single();
-
-      if (!fetchError && freshProviderData) {
-        setEditingDoctor(freshProviderData);
-        setEditFormData({
-          firstName: freshProviderData.first_name || "",
-          lastName: freshProviderData.last_name || "",
-          email: freshProviderData.email || "",
-          phone: freshProviderData.phone_number || "",
-          companyName: freshProviderData.company_name || "",
-        });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to update provider");
       }
 
       toast.success("Provider updated successfully");
@@ -588,38 +570,24 @@ export default function ManageDoctorsPage() {
       setEditingDoctor(null);
     } catch (error) {
       console.error("Error updating provider:", error);
-      toast.error("Failed to update provider");
+      toast.error(error instanceof Error ? error.message : "Failed to update provider");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // Open edit modal - fetch fresh data from database
   const openEditModal = async (doctor: Doctor) => {
     try {
-      // Fetch fresh provider data from database
-      const providerResponse = await supabase.from("providers").select("*").eq("id", doctor.id).single();
-
-      if (providerResponse.error) {
-        console.error("Error fetching provider data:", providerResponse.error);
-        toast.error("Failed to load provider data");
-        return;
-      }
-
-      const freshData = providerResponse.data;
-
-      setEditingDoctor(freshData);
+      setEditingDoctor(doctor);
       setEditFormData({
-        firstName: freshData.first_name || "",
-        lastName: freshData.last_name || "",
-        email: freshData.email || "",
-        phone: freshData.phone_number || "",
-        companyName: freshData.company_name || "",
+        firstName: doctor.first_name || "",
+        lastName: doctor.last_name || "",
+        email: doctor.email || "",
+        phone: doctor.phone_number || "",
+        companyName: doctor.company_name || "",
       });
 
-      // Reset NPI verification status when opening modal
       setNpiVerificationStatus({ isVerifying: false, result: null });
-
       setIsEditModalOpen(true);
     } catch (error) {
       console.error("Error opening edit modal:", error);
@@ -748,17 +716,20 @@ export default function ManageDoctorsPage() {
     }
   };
 
-  // Confirm and execute the toggle
   const confirmToggleActive = async () => {
     if (!doctorToToggle) return;
 
     try {
-      const { error } = await supabase
-        .from("providers")
-        .update({ is_active: !doctorToToggle.is_active })
-        .eq("id", doctorToToggle.id);
+      const response = await fetch(`/api/admin/providers/${doctorToToggle.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: !doctorToToggle.is_active }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to update provider status");
+      }
 
       toast.success(
         `Provider ${!doctorToToggle.is_active ? "activated" : "deactivated"} successfully`,
@@ -766,7 +737,7 @@ export default function ManageDoctorsPage() {
       await loadDoctors(pharmacyFilter);
     } catch (error) {
       console.error("Error toggling provider status:", error);
-      toast.error("Failed to update provider status");
+      toast.error(error instanceof Error ? error.message : "Failed to update provider status");
     } finally {
       setIsActivationModalOpen(false);
       setDoctorToToggle(null);

@@ -127,6 +127,13 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 **Pharmacy-scoped routes** (fail-closed: 403 if pharmacyId is null): providers GET (filtered by pharmacy links), invite-doctor (auto-links to pharmacy), pharmacy-reports (forced pharmacyId), pharmacy-payment-config (forced pharmacyId), pharmacy-orders (forced pharmacyId), prescriptions (forced pharmacyId), medications GET/POST/PATCH/DELETE (scoped to pharmacy), medications/bulk-upload (forced pharmacyId), pharmacies-list/pharmacies/list (filtered to own pharmacy), upload (medication images scoped to pharmacy)
 **Accessible to all admins**: verify-npi (public NPI lookup), categories GET (read-only catalog), tags GET, resources GET, tiers GET
 
+### RLS (Row Level Security) Note
+- Supabase RLS blocks anon-key reads/writes on: `providers`, `user_roles`, `pharmacy_admins`
+- All provider profile writes MUST go through server-side API routes using `createAdminClient()` (service role key)
+- `provider-profile-service.ts` calls `/api/provider/profile` (server-side) — never writes directly via `createClient()` (anon key)
+- Admin writes on doctors page use `/api/admin/providers/[id]` PATCH — not client-side Supabase
+- The `/api/provider/profile` PUT route accepts a `_section` field: `"personal"`, `"professional"`, `"practice"`, `"avatar"`, `"create"`, or default (payment fields)
+
 ### Critical Files (DO NOT modify without understanding the auth system)
 - `core/supabase/middleware.ts` — session management
 - `core/routing/routes-config.ts` — route access rules
