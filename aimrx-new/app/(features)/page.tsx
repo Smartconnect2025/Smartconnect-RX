@@ -61,7 +61,7 @@ export default function Home() {
                 href="/request-pharmacy-access"
                 className="inline-flex items-center justify-center text-base px-8 py-4 bg-transparent border-2 border-white text-white hover:bg-white/20 font-semibold rounded transition-colors"
               >
-                Join Our Network
+                Partner Your Pharmacy
               </Link>
             </div>
           </div>
