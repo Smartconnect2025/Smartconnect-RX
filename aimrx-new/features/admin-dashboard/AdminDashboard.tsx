@@ -194,8 +194,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   <CardContent>
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-lg bg-[#1D4E89]/10 flex items-center justify-center flex-shrink-0">
-                          <Building2 className="h-5 w-5 text-[#1D4E89]" />
+                        <div className="h-12 w-12 rounded-xl bg-[#1D4E89]/10 flex items-center justify-center flex-shrink-0 border border-[#1D4E89]/20">
+                          <Building2 className="h-6 w-6 text-[#1D4E89]" />
                         </div>
                         <div>
                           <h3 className="font-semibold text-base">{pharmacy.name}</h3>
