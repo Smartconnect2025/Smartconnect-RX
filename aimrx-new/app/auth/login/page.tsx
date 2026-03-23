@@ -208,12 +208,13 @@ export default function LoginPage() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4" autoComplete="off">
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                  <Label htmlFor="login-email" className="text-sm font-medium">Email</Label>
                   <Input
-                    id="email"
+                    id="login-email"
+                    name="login-email"
                     type="email"
                     placeholder=""
                     value={email}
@@ -221,13 +222,15 @@ export default function LoginPage() {
                     required
                     disabled={isLoading}
                     className="h-11"
+                    autoComplete="off"
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label htmlFor="password" className="text-sm font-medium">Password</Label>
+                  <Label htmlFor="login-password" className="text-sm font-medium">Password</Label>
                   <div className="relative">
                     <Input
-                      id="password"
+                      id="login-password"
+                      name="login-password"
                       type={showPassword ? "text" : "password"}
                       placeholder="Enter your password"
                       value={password}
@@ -235,6 +238,7 @@ export default function LoginPage() {
                       required
                       disabled={isLoading}
                       className="h-11 pr-10"
+                      autoComplete="new-password"
                     />
                     <button
                       type="button"
