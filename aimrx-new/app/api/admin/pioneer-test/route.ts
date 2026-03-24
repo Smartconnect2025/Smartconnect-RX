@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       success: result.success,
       authenticated: result.authenticated,
       error: result.error,
+      details: result.details,
       base_url: backend.baseUrl,
     });
   } catch (error) {

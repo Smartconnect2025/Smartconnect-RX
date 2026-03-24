@@ -21,6 +21,7 @@ export interface ResolvedPharmacyBackend {
   baseUrl: string;
   storeId: string | null;
   locationId: string | null;
+  employeeId: string | null;
 }
 
 function decryptKey(encrypted: string): string {
@@ -41,17 +42,18 @@ function resolveRow(row: PharmacyBackendInfo): ResolvedPharmacyBackend {
 
   let apiKey = rawKey;
   let sharedSecret = "";
+  let employeeId: string | null = null;
 
   if (systemType === "PioneerRx") {
-    const pipeIndex = rawKey.indexOf("|");
-    if (pipeIndex > 0 && pipeIndex < rawKey.length - 1) {
-      apiKey = rawKey.substring(0, pipeIndex);
-      sharedSecret = rawKey.substring(pipeIndex + 1);
-    } else if (pipeIndex >= 0) {
-      console.error("[pharmacy-dispatcher] PioneerRx: INVALID api_key format — expected 'apiKey|sharedSecret' but got malformed value");
-      apiKey = rawKey.replace(/\|/g, "");
+    const parts = rawKey.split("|");
+    if (parts.length >= 2) {
+      apiKey = parts[0];
+      sharedSecret = parts[1];
+      if (parts.length >= 3) {
+        employeeId = parts[2];
+      }
     } else {
-      console.error("[pharmacy-dispatcher] PioneerRx: INVALID api_key format — expected 'apiKey|sharedSecret' but no pipe separator found. Auth will fail.");
+      console.error("[pharmacy-dispatcher] PioneerRx: INVALID api_key format — expected 'apiKey|sharedSecret' or 'apiKey|sharedSecret|employeeId'. Auth will fail.");
     }
   }
 
@@ -59,9 +61,10 @@ function resolveRow(row: PharmacyBackendInfo): ResolvedPharmacyBackend {
     systemType,
     apiKey,
     sharedSecret,
-    baseUrl: row.api_url || "",
+    baseUrl: (row.api_url || "").replace(/\/+$/, ""),
     storeId: row.store_id,
     locationId: row.location_id,
+    employeeId,
   };
 }
 

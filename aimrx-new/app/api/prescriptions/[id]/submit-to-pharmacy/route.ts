@@ -185,6 +185,7 @@ async function submitToPioneerRx(
       baseUrl: backend.baseUrl,
       storeId: backend.storeId,
       locationId: backend.locationId,
+      employeeId: backend.employeeId || null,
     },
     {
       patient: {

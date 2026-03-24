@@ -79,12 +79,24 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
   - `app/api/webhook/digitalrx/route.ts` — DigitalRx status webhooks
   - `app/api/webhook/pioneerrx/route.ts` — PioneerRx status webhooks
   - `app/api/admin/pioneer-test/route.ts` — test PioneerRx connection (admin only)
-- **PioneerRx auth**: API key stored as `api_key|shared_secret` in `api_key_encrypted` field (pipe-separated)
-- **PioneerRx signature**: SHA512 hash of (ISO timestamp + shared secret), UTF-16-LE encoded, base64 output
+- **PioneerRx API**: Enterprise API — all calls go to `POST /api/enterprise/method/process` with `{MethodName, Version, ParameterCollection}` body
+  - `RxAddOnHold` — submit new prescription (returns `rxTransactionID`, `rxID`, `rxNumber`)
+  - `GetRxTransaction` — check prescription status
+  - `PatientSearch` / `PrescriberSearch` / `ItemSearch` — lookup helpers
+  - `RefillQuery` — check refill eligibility
+  - `Test` — connection test (uses `/api/enterprise/method/test/process`)
+  - Auth check: `POST /api/enterprise/isAuthenticated`
+- **PioneerRx auth**: API key stored as `apiKey|sharedSecret|employeeId` (pipe-separated) in `api_key_encrypted` field
+- **PioneerRx signature**: SHA512 hash of (timestamp + shared secret), UTF-16-LE encoded, base64 output
+- **PioneerRx headers**: `prx-api-key`, `prx-timestamp`, `prx-signature`
+- **PioneerRx RxEvents webhook**: `POST /api/webhook/pioneerrx` — receives real-time prescription events from PioneerRx
+  - Supports Basic Auth (`PIONEERRX_WEBHOOK_USERNAME` / `PIONEERRX_WEBHOOK_PASSWORD`) or token auth (`PIONEERRX_WEBHOOK_SECRET`)
+  - Handles PioneerRx RxEvent format: `{MessageHeader: {InitiatingEventID, ...}, Body: {Rx: {...}, Patient: {...}, ...}}`
+  - Maps 12 PioneerRx event types (OnHold, RemovedFromInventory, CompleteRx, StatusChange, etc.) to internal statuses
 - **Admin UI**: Pharmacy management page has DigitalRx/PioneerRx selector with separate Shared Secret field for PioneerRx
-- **Integration Settings**: `/admin/settings` page with DigitalRx and Pioneer RX tabs — shows API configs, webhook URLs, connection tests, and endpoint reference
+- **Integration Settings**: `/admin/settings` page with DigitalRx and Pioneer RX tabs — shows API configs, webhook URLs, connection tests
   - `app/(features)/admin/settings/page.tsx` — tabbed integration settings UI
-  - `app/api/admin/test-pioneer-connection/route.ts` — tests Pioneer RX API connectivity using `/api/v1/Test/IsAvailableWithAuth`
+  - `app/api/admin/pioneer-test/route.ts` — tests PioneerRx connection via `isAuthenticated` + `Test` method
 
 ### Payment Processing (Dual Gateway: Authorize.Net + Stripe, Per-Pharmacy Config)
 - **Architecture**: Per-pharmacy payment gateway configuration. Each pharmacy sets its own Stripe or Authorize.Net credentials; payments go directly to that pharmacy's merchant account. Falls back to system-level env var credentials if no pharmacy config exists.

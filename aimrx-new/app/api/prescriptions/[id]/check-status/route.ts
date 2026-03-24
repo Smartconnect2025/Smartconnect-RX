@@ -87,6 +87,7 @@ export async function POST(
           baseUrl: backend.baseUrl,
           storeId: backend.storeId,
           locationId: backend.locationId,
+          employeeId: backend.employeeId || null,
         },
         prescription.queue_id,
       );
@@ -96,7 +97,6 @@ export async function POST(
           {
             success: false,
             error: apiResult.error,
-            ...(apiResult.errorText && { details: apiResult.errorText }),
             ...(apiResult.rawResponse && { details: apiResult.rawResponse }),
           },
           { status: 502 },
@@ -110,7 +110,7 @@ export async function POST(
       );
       newStatus = mapped.newStatus;
       trackingNumber = mapped.trackingNumber;
-      lastUpdated = apiResult.data.lastUpdated || apiResult.data.LastUpdated || new Date().toISOString();
+      lastUpdated = (apiResult.data.lastUpdated as string) || (apiResult.data.ChangedOnUTC as string) || new Date().toISOString();
     } else if (backend.systemType === "DigitalRx") {
       const digitalBackend = await resolvePharmacyBackend(supabaseAdmin, prescription.pharmacy_id);
 

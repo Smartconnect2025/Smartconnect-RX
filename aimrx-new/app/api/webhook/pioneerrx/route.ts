@@ -3,49 +3,57 @@ import { createAdminClient } from "@core/database/client";
 import { notifyPrescriptionStatusChange } from "@/features/notifications/services/serverNotificationService";
 import { ensureTrackerRegistered } from "@/app/api/prescriptions/_shared/tracking-sync";
 
+const PIONEERRX_WEBHOOK_USERNAME = process.env.PIONEERRX_WEBHOOK_USERNAME;
+const PIONEERRX_WEBHOOK_PASSWORD = process.env.PIONEERRX_WEBHOOK_PASSWORD;
 const PIONEERRX_WEBHOOK_SECRET = process.env.PIONEERRX_WEBHOOK_SECRET;
 
-const CANONICAL_STATUS_MAP: Record<string, string> = {
-  received: "submitted",
-  queued: "submitted",
-  pending: "submitted",
-  submitted: "submitted",
-  filled: "packed",
-  dispensed: "packed",
-  packed: "packed",
-  verified: "approved",
-  approved: "approved",
-  shipped: "picked_up",
-  "in transit": "picked_up",
-  "picked up": "picked_up",
-  picked_up: "picked_up",
-  delivered: "delivered",
-  complete: "delivered",
-  completed: "delivered",
-  cancelled: "cancelled",
-  canceled: "cancelled",
-  rejected: "cancelled",
+const EVENT_STATUS_MAP: Record<number, string> = {
+  1: "submitted",
+  2: "packed",
+  3: "cancelled",
+  5: "packed",
+  6: "delivered",
+  7: "submitted",
+  8: "approved",
+  9: "packed",
+  10: "submitted",
+  11: "packed",
+  12: "submitted",
 };
 
-function canonicalizeStatus(raw: string): string {
-  const normalized = raw.toLowerCase().trim();
-  return CANONICAL_STATUS_MAP[normalized] || normalized.replace(/\s+/g, "_");
-}
-
-function deriveStatus(body: Record<string, unknown>): string {
-  const rxStatus = body.status || body.Status || body.rxStatus || body.RxStatus;
-  if (rxStatus && typeof rxStatus === "string" && rxStatus.trim() !== "") {
-    return canonicalizeStatus(rxStatus);
-  }
-
-  if (body.deliveredDate || body.DeliveredDate) return "delivered";
-  if (body.trackingNumber || body.TrackingNumber) return "picked_up";
-  if (body.dispensedDate || body.DispensedDate) return "packed";
-  if (body.fillDate || body.FillDate) return "packed";
-  if (body.cancelledDate || body.CancelledDate) return "cancelled";
-
-  return "submitted";
-}
+const RX_STATUS_TEXT_MAP: Record<string, string> = {
+  "waiting for data entry": "submitted",
+  "data entry": "submitted",
+  "fill in progress": "submitted",
+  "fillable on hold": "submitted",
+  "on hold": "submitted",
+  "ready for pharmacist review": "packed",
+  "pharmacist review": "packed",
+  "verified": "approved",
+  "ready for pickup": "approved",
+  "ready for delivery": "approved",
+  "will call": "approved",
+  "out for delivery": "picked_up",
+  "in transit": "picked_up",
+  "shipped": "picked_up",
+  "picked up": "picked_up",
+  "completed": "delivered",
+  "complete": "delivered",
+  "delivered": "delivered",
+  "cancelled": "cancelled",
+  "canceled": "cancelled",
+  "rejected": "cancelled",
+  "voided": "cancelled",
+  "discontinued": "cancelled",
+  "reversed": "cancelled",
+  "received": "submitted",
+  "queued": "submitted",
+  "pending": "submitted",
+  "filled": "packed",
+  "dispensed": "packed",
+  "packed": "packed",
+  "approved": "approved",
+};
 
 function mapToOrderProgress(status: string): string {
   const s = status.toLowerCase().replace(/[\s_-]/g, "");
@@ -57,49 +65,184 @@ function mapToOrderProgress(status: string): string {
   return "submitted";
 }
 
-function validateToken(request: NextRequest): boolean {
-  if (!PIONEERRX_WEBHOOK_SECRET) {
-    console.error("[webhook/pioneerrx] PIONEERRX_WEBHOOK_SECRET not configured — rejecting request. Set PIONEERRX_WEBHOOK_SECRET env var.");
-    return false;
+function validateAuth(request: NextRequest): boolean {
+  const authHeader = request.headers.get("authorization");
+  if (authHeader && authHeader.startsWith("Basic ")) {
+    if (PIONEERRX_WEBHOOK_USERNAME && PIONEERRX_WEBHOOK_PASSWORD) {
+      const decoded = Buffer.from(authHeader.slice(6), "base64").toString("utf-8");
+      const [user, pass] = decoded.split(":");
+      if (user === PIONEERRX_WEBHOOK_USERNAME && pass === PIONEERRX_WEBHOOK_PASSWORD) {
+        return true;
+      }
+    }
   }
 
-  const urlToken = request.nextUrl.searchParams.get("token");
-  if (urlToken === PIONEERRX_WEBHOOK_SECRET) return true;
+  if (PIONEERRX_WEBHOOK_SECRET) {
+    const urlToken = request.nextUrl.searchParams.get("token");
+    if (urlToken === PIONEERRX_WEBHOOK_SECRET) return true;
 
-  const headerSecret = request.headers.get("x-webhook-secret");
-  if (headerSecret === PIONEERRX_WEBHOOK_SECRET) return true;
+    const headerSecret = request.headers.get("x-webhook-secret");
+    if (headerSecret === PIONEERRX_WEBHOOK_SECRET) return true;
+  }
+
+  if (!PIONEERRX_WEBHOOK_SECRET && !PIONEERRX_WEBHOOK_USERNAME) {
+    if (process.env.NODE_ENV === "production") {
+      console.error(
+        "[webhook/pioneerrx] SECURITY: No auth configured in production — rejecting request. Set PIONEERRX_WEBHOOK_USERNAME/PASSWORD or PIONEERRX_WEBHOOK_SECRET.",
+      );
+      return false;
+    }
+    console.warn(
+      "[webhook/pioneerrx] No auth configured — accepting request in development. Set PIONEERRX_WEBHOOK_USERNAME/PASSWORD or PIONEERRX_WEBHOOK_SECRET for production.",
+    );
+    return true;
+  }
 
   return false;
 }
 
+interface RxEventBody {
+  MessageHeader?: {
+    Version?: number;
+    MessageID?: string;
+    SentOnUTC?: string;
+    Workstation?: string;
+    InitiatingEventID?: string | number;
+    InitiatingEventText?: string;
+  };
+  Body?: {
+    Pharmacy?: Record<string, unknown>;
+    Patient?: Record<string, unknown>;
+    Rx?: {
+      RxNumber?: number;
+      RxPioneerRxID?: string;
+      RxFillTransactionPioneerRxID?: string;
+      CurrentRxStatusID?: number;
+      CurrentRxStatusText?: string;
+      CurrentRxTransactionStatusID?: number;
+      CurrentRxTransactionStatusText?: string;
+      CompletedDate?: string;
+      TrackingNumber?: string;
+      [key: string]: unknown;
+    };
+    Claims?: unknown;
+    [key: string]: unknown;
+  };
+  [key: string]: unknown;
+}
+
+function deriveStatusFromEvent(body: RxEventBody): {
+  newStatus: string;
+  queueId: string | null;
+  trackingNumber: string | null;
+  rxNumber: number | null;
+} {
+  let newStatus = "submitted";
+  let queueId: string | null = null;
+  let trackingNumber: string | null = null;
+  let rxNumber: number | null = null;
+
+  const rx = body.Body?.Rx;
+  if (rx) {
+    queueId = rx.RxFillTransactionPioneerRxID || rx.RxPioneerRxID || null;
+    rxNumber = rx.RxNumber || null;
+    trackingNumber = rx.TrackingNumber || null;
+
+    if (rx.CurrentRxTransactionStatusText) {
+      const normalized = rx.CurrentRxTransactionStatusText.toLowerCase().trim();
+      newStatus = RX_STATUS_TEXT_MAP[normalized] || newStatus;
+    } else if (rx.CurrentRxStatusText) {
+      const normalized = rx.CurrentRxStatusText.toLowerCase().trim();
+      newStatus = RX_STATUS_TEXT_MAP[normalized] || newStatus;
+    } else if (rx.CompletedDate) {
+      newStatus = "delivered";
+    }
+  }
+
+  const eventId = body.MessageHeader?.InitiatingEventID;
+  if (eventId && !rx?.CurrentRxTransactionStatusText && !rx?.CurrentRxStatusText) {
+    const eventNum = typeof eventId === "string" ? parseInt(eventId) : eventId;
+    if (EVENT_STATUS_MAP[eventNum]) {
+      newStatus = EVENT_STATUS_MAP[eventNum];
+    }
+  }
+
+  if (!queueId) {
+    queueId =
+      (body as Record<string, unknown>).rxTransactionID as string ||
+      (body as Record<string, unknown>).RxTransactionID as string ||
+      (body as Record<string, unknown>).QueueID as string ||
+      (body as Record<string, unknown>).queue_id as string ||
+      (body as Record<string, unknown>).id as string ||
+      null;
+
+    if (!queueId && !trackingNumber) {
+      trackingNumber =
+        (body as Record<string, unknown>).trackingNumber as string ||
+        (body as Record<string, unknown>).TrackingNumber as string ||
+        null;
+    }
+
+    const rawStatus =
+      (body as Record<string, unknown>).status as string ||
+      (body as Record<string, unknown>).Status as string ||
+      (body as Record<string, unknown>).new_status as string;
+
+    if (rawStatus) {
+      const normalized = rawStatus.toLowerCase().trim();
+      newStatus = RX_STATUS_TEXT_MAP[normalized] || normalized.replace(/\s+/g, "_");
+    }
+  }
+
+  return { newStatus, queueId, trackingNumber, rxNumber };
+}
+
+function buildSuccessResponse(): NextResponse {
+  return NextResponse.json(
+    {
+      Status: "OK",
+      Message: "Event received",
+      success: true,
+    },
+    { status: 200 },
+  );
+}
+
 export async function POST(request: NextRequest) {
   try {
-    if (!validateToken(request)) {
+    if (!validateAuth(request)) {
       console.error("[webhook/pioneerrx] Unauthorized webhook attempt");
       return NextResponse.json(
-        { success: false, error: "Unauthorized" },
+        { Status: "Error", Message: "Unauthorized", success: false },
         { status: 401 },
       );
     }
 
-    const body = await request.json();
+    const body: RxEventBody = await request.json();
 
-    const queueId: string | undefined =
-      body.rxTransactionID || body.RxTransactionID ||
-      body.QueueID || body.queue_id || body.id;
+    const eventText =
+      body.MessageHeader?.InitiatingEventText ||
+      body.MessageHeader?.InitiatingEventID ||
+      "unknown";
+    console.log(
+      `[webhook/pioneerrx] Received event: ${eventText}, messageId: ${body.MessageHeader?.MessageID || "none"}`,
+    );
+
+    const { newStatus, queueId, trackingNumber, rxNumber } = deriveStatusFromEvent(body);
 
     if (!queueId) {
-      return NextResponse.json(
-        { success: false, error: "Invalid payload — missing rxTransactionID or QueueID" },
-        { status: 400 },
-      );
+      console.warn("[webhook/pioneerrx] No queueId found in payload, logging and acknowledging");
+      const supabaseAdmin = createAdminClient();
+      await supabaseAdmin.from("system_logs").insert({
+        user_id: null,
+        user_email: "webhook@pioneerrx.com",
+        user_name: "PioneerRx Webhook",
+        action: "WEBHOOK_EVENT_RECEIVED",
+        details: `Event '${eventText}' received but no queueId found. RxNumber: ${rxNumber || "none"}`,
+        status: "warning",
+      });
+      return buildSuccessResponse();
     }
-
-    const trackingNumber: string | undefined =
-      body.trackingNumber || body.TrackingNumber || body.tracking_number || undefined;
-    const newStatus = body.new_status
-      ? canonicalizeStatus(String(body.new_status))
-      : deriveStatus(body);
 
     const supabaseAdmin = createAdminClient();
 
@@ -115,12 +258,12 @@ export async function POST(request: NextRequest) {
         user_email: "webhook@pioneerrx.com",
         user_name: "PioneerRx Webhook",
         action: "WEBHOOK_STATUS_UPDATE",
-        details: `Prescription not found for ID: ${queueId}`,
+        details: `Prescription not found for queueId: ${queueId}, event: ${eventText}`,
         queue_id: queueId,
         status: "error",
       });
       return NextResponse.json(
-        { success: false, error: "Not found" },
+        { Status: "Error", Message: "Not found", success: false },
         { status: 404 },
       );
     }
@@ -128,28 +271,31 @@ export async function POST(request: NextRequest) {
     const updateData: Record<string, unknown> = {
       status: newStatus,
       updated_at: new Date().toISOString(),
+      order_progress: mapToOrderProgress(newStatus),
     };
 
     if (trackingNumber) {
       updateData.tracking_number = trackingNumber;
     }
 
-    updateData.order_progress = mapToOrderProgress(newStatus);
-
-    if (body.patientCopay != null || body.PatCopay != null || body.PatPay != null) {
-      updateData.patient_copay = String(body.patientCopay ?? body.PatCopay ?? body.PatPay);
+    const rx = body.Body?.Rx;
+    if (rx) {
+      if (rx.CompletedDate) {
+        updateData.delivery_date = String(rx.CompletedDate);
+      }
     }
 
-    if (body.deliveryDate || body.DeliveryDate) {
-      updateData.delivery_date = String(body.deliveryDate || body.DeliveryDate);
+    const flatBody = body as Record<string, unknown>;
+    if (flatBody.patientCopay != null || flatBody.PatCopay != null || flatBody.PatPay != null) {
+      updateData.patient_copay = String(flatBody.patientCopay ?? flatBody.PatCopay ?? flatBody.PatPay);
     }
-
-    if (body.deliveredDate || body.DeliveredDate) {
-      updateData.delivery_date = String(body.deliveredDate || body.DeliveredDate);
+    if (flatBody.lotNumber || flatBody.LotNumber) {
+      updateData.lot_number = String(flatBody.lotNumber || flatBody.LotNumber);
     }
-
-    if (body.lotNumber || body.LotNumber) {
-      updateData.lot_number = String(body.lotNumber || body.LotNumber);
+    if (flatBody.deliveryDate || flatBody.DeliveryDate || flatBody.deliveredDate || flatBody.DeliveredDate) {
+      updateData.delivery_date = String(
+        flatBody.deliveryDate || flatBody.DeliveryDate || flatBody.deliveredDate || flatBody.DeliveredDate,
+      );
     }
 
     const { error: updateError } = await supabaseAdmin
@@ -169,7 +315,7 @@ export async function POST(request: NextRequest) {
         status: "error",
       });
       return NextResponse.json(
-        { success: false, error: "Update failed" },
+        { Status: "Error", Message: "Update failed", success: false },
         { status: 500 },
       );
     }
@@ -185,7 +331,7 @@ export async function POST(request: NextRequest) {
       user_email: "webhook@pioneerrx.com",
       user_name: "PioneerRx Webhook",
       action: "WEBHOOK_STATUS_UPDATE",
-      details: `Status updated from '${prescription.status}' to '${newStatus}'${trackingNumber ? ` with tracking ${trackingNumber}` : ""}`,
+      details: `Event '${eventText}': status updated from '${prescription.status}' to '${newStatus}'${trackingNumber ? ` with tracking ${trackingNumber}` : ""} (rxNumber: ${rxNumber || "none"})`,
       queue_id: queueId,
       status: "success",
     });
@@ -204,10 +350,7 @@ export async function POST(request: NextRequest) {
       ).catch((err) => console.error("[webhook/pioneerrx] Notification error:", err));
     }
 
-    return NextResponse.json(
-      { success: true, message: "Status updated" },
-      { status: 200 },
-    );
+    return buildSuccessResponse();
   } catch (error) {
     console.error("[webhook/pioneerrx] Webhook error:", error);
     try {
@@ -217,12 +360,12 @@ export async function POST(request: NextRequest) {
         user_email: "webhook@pioneerrx.com",
         user_name: "PioneerRx Webhook",
         action: "WEBHOOK_STATUS_UPDATE",
-        details: `Unexpected webhook error`,
+        details: "Unexpected webhook error",
         status: "error",
       });
     } catch { /* ignore */ }
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { Status: "Error", Message: "Internal server error", success: false },
       { status: 500 },
     );
   }

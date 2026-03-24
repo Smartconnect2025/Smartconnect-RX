@@ -99,6 +99,7 @@ async function processPrescription(
         baseUrl: unifiedBackend.baseUrl,
         storeId: unifiedBackend.storeId,
         locationId: unifiedBackend.locationId,
+        employeeId: unifiedBackend.employeeId || null,
       };
 
       const apiResult = await fetchPioneerRxStatus(prxBackend, prescription.queue_id);
