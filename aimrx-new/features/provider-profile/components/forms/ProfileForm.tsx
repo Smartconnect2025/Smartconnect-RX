@@ -26,6 +26,7 @@ import { Loader2 } from "lucide-react";
 import { useUser } from "@core/auth";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
 import { createClient } from "@core/supabase";
+import { toast } from "sonner";
 
 export function ProfileForm() {
   const { user } = useUser();
@@ -248,7 +249,13 @@ export function ProfileForm() {
         <Form {...form}>
           <form
             id="profile-form"
-            onSubmit={form.handleSubmit((data) => guardAction(() => onSubmit(data)))}
+            onSubmit={form.handleSubmit(
+              (data) => guardAction(() => onSubmit(data)),
+              (errors) => {
+                const fieldNames = Object.keys(errors);
+                toast.error(`Please fix the following fields: ${fieldNames.join(", ")}`);
+              }
+            )}
             className="p-6 space-y-6"
           >
             <PersonalInfoSection form={form} />

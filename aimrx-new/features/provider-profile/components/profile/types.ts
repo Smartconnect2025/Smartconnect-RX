@@ -15,12 +15,12 @@ export const profileFormValidationSchema = z.object({
     state: z.string().min(1, "State is required"),
   })).optional(),
   physicalAddress: z.object({
-    street: z.string().min(1, "Street is required"),
-    city: z.string().min(1, "City is required"),
-    state: z.string().min(1, "State is required"),
-    zipCode: z.string().min(5, "ZIP code is required"),
+    street: z.string().optional(),
+    city: z.string().optional(),
+    state: z.string().optional(),
+    zipCode: z.string().optional(),
     country: z.string().optional(),
-  }),
+  }).optional(),
   billingAddress: z.object({
     street: z.string().optional(),
     city: z.string().optional(),
