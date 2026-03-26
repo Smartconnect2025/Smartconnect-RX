@@ -1,0 +1,126 @@
+3 of 657
+SmartConnect // Westside Compounding System
+External
+Inbox
+AI Overview
+Jerry initiated project to build portal for Westside Compounding ordering/tracking.
+Prototype delivery delayed one week; Jerry shared high-level system flow chart.
+Trent sent requested medication inventory list, clarifying formula abbreviations.
+By Gemini; there may be mistakes. Learn more
+
+Jerry Horani
+Attachments
+Fri, Mar 13, 11:30 PM (13 days ago)
+to blaket, maddisons, Trent, Lutherg, me
+
+Hi Team,
+
+Thank you for meeting with me yesterday. We are excited to build a portal that will facilitate the ordering process and make fulfillment and logistics more efficient.
+
+Our mission is to eliminate the need for emailing prescriptions by providing clinics with a gateway to order, track, and manage refills, while increasing awareness of Westside’s offerings.
+
+I have CC’ed my Program Manager, Joseph, who will be leading this build-out with us.
+
+To keep us on track, please note the following:
+
+- Prototyping: We are currently prototyping the solution based on our discussion. At SmartConnect, we use an agile process to ensure you are engaged at every step.
+- Next Steps: Expect a draft prototype toward the end of next week for our review. Please note that this prototype is for workflow alignment and is not the final production-grade system.
+- Action Item: Attached is a template for you to complete. This will serve as the product inventory that we will integrate into the system once it is built.
+
+We look forward to delivering this project soon!
+
+Best regards,
+
+Jerry Horani
+ One attachment
+  •  Scanned by Gmail
+
+Jerry Horani
+Attachments
+Wed, Mar 18, 3:36 PM (8 days ago)
+to blaket, maddisons, Trent, Lutherg, me
+
+Hi Team,
+
+I wanted to provide a quick update on our progress:
+
+- PioneerRX Integration: We have successfully secured API access. Since we are already a connected vendor, our request was granted, though we received the documentation slightly later than anticipated.
+- Prototype Status: We are currently working on the prototype. To ensure its quality, we will need one additional week to complete it.
+- Workflow Alignment: Attached is a high-level flow chart of the system we are building. Please review it and provide any feedback or questions to ensure we are aligned.
+- Medication List: Could you please provide an update on the status of the medication list template?
+
+Best regards,
+
+Jerry Horani
+ One attachment
+  •  Scanned by Gmail
+
+Trent Hollensworth <trenth@westsidepharm.com>
+Wed, Mar 18, 3:39 PM (8 days ago)
+to Luther, Jerry, blaket, Maddison, me
+
+Good morning Jerry
+I will have an excel doc for compounds by end of day today. Thank you
+Trent
+
+Get Outlook for iOS
+From: Jerry Horani <jerry@smartconnects.com>
+Sent: Wednesday, March 18, 2026 7:36:10 AM
+To: blaket <blaket@westsidepharm.com>; Maddison Schuller <maddisons@westsidepharm.com>; Trent Hollensworth <trenth@westsidepharm.com>; Luther Gossage <lutherg@westsidepharm.com>
+Cc: Joseph Sughayer <joseph@smartconnects.com>
+Subject: Re: SmartConnect // Westside Compounding System
+
+Jerry Horani
+Wed, Mar 18, 3:48 PM (8 days ago)
+to Trent, blaket, Maddison, Luther, me
+
+Thanks, Trent - much appreciated. We’ll keep an eye out for it.
+
+Jerry Horani
+501-960-2387
+
+Trent Hollensworth <trenth@westsidepharm.com>
+Attachments
+Thu, Mar 19, 2:09 AM (7 days ago)
+to Jerry, blaket, Maddison, Luther, me
+
+Jerry
+
+Attached is a list of our active formulas
+*sCOMP* = sterile formulas (eye drops and injections)
+   *COMP*= non sterile formulas (capsules, suspension, solutions, NR=Capsules for Nasal Rinses, Topicals and Transdermals)
+I assume we can edit names at a later date, to help them make more sense to a prescriber? Some of the compound names are crazy long when listing out all the ingredients/strengths like we are supposed to do on the Rx labels....so we have abreviated them down. Ie. Lidocaine may be shown as lido. 
+
+Thanks
+Trent Hollensworth
+From: Jerry Horani <jerry@smartconnects.com>
+Sent: Wednesday, March 18, 2026 7:48 AM
+To: Trent Hollensworth <trenth@westsidepharm.com>; blaket <blaket@westsidepharm.com>; Maddison Schuller <maddisons@westsidepharm.com>; Luther Gossage <lutherg@westsidepharm.com>
+ One attachment
+  •  Scanned by Gmail
+
+Jerry Horani
+Thu, Mar 19, 3:07 PM (7 days ago)
+to Luther, Trent, blaket, Maddison, me
+
+Hi Trent,
+
+Thanks for sending the list over and for clarifying the abbreviations , i will call you this morning to discuss . 
+
+Jerry Horani
+501-960-2387
+
+Trent Hollensworth <trenth@westsidepharm.com>
+Attachments
+1:49 AM (10 hours ago)
+to Jerry, blaket, Maddison, Luther, me
+
+About 20 - 30 non sterile formulas and several sterile formulas (very bottom of doc)
+
+This is a long process sorry for the delay. 
+
+Trent
+From: Jerry Horani <jerry@smartconnects.com>
+Sent: Thursday, March 19, 2026 7:07 AM
+ One attachment
+  •  Scanned by Gmail
