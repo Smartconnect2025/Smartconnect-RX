@@ -1,0 +1,125 @@
+this is too long make me a list of things you need now so i can get it for you to do the testing
+
+Here's what to ask PioneerRx for:
+
+API Key + Shared Secret (for each pharmacy)
+API Base URL (test/sandbox and production)
+Store ID (for each pharmacy location)
+Sandbox/test environment credentials (so we can test without real patients)
+Webhook URL setup — tell them you need them to send status updates to your URL (you'll provide it)
+Their API documentation (PDF or link)
+That's it. Once you bring those back, I can run the full test end-to-end.
+
+the main question how are we going to connect the api to each pahrmcy do we connect to each pahrmcy this is the main quesiton now ask them this and ask for the
+
+Great question. Here's exactly what to ask them:
+
+"Does each pharmacy run its own PioneerRx server with its own API, or do all pharmacies connect through one central PioneerRx cloud API?"
+
+This matters because:
+
+If each pharmacy has its own server — you need a separate API URL, API Key, Shared Secret, and Store ID from every pharmacy. Your system is already built to handle this (each pharmacy stores its own credentials).
+
+If there's one central PioneerRx API — you'd get one set of credentials and use different Store IDs to route prescriptions to each pharmacy.
+
+Ask them to clarify which model they use, and your system will work either way.
+
+what do we ahve set up now
+
+Right now your system is set up to support each pharmacy having its own PioneerRx connection. Here's what's in place:
+
+Per pharmacy, you store:
+
+API Base URL (their server address)
+API Key + Shared Secret (encrypted)
+Store ID
+Location ID (optional)
+What the system can already do:
+
+Submit prescriptions to PioneerRx
+Check prescription status
+Receive webhook updates (status changes, tracking numbers)
+Test the connection from the admin panel
+Price check medications by NDC code
+How it works today:
+When a prescription is submitted, the system looks up which pharmacy is filling it, grabs that pharmacy's PioneerRx credentials from the database, and sends the order to that pharmacy's specific API. Each pharmacy is independent — they each have their own credentials and URL.
+
+What's missing:
+
+Actual credentials from PioneerRx (you have no real API keys yet)
+A live test against their sandbox to confirm everything works end-to-end
+So the system is fully built — it just needs real credentials to go live.
+
+Jerry we can't hear you at all by Hemal Desai
+Hemal Desai
+7:05 PM
+
+Jerry we can't hear you at all
+
+we can not hear you by Mitch Archer
+Mitch Archer
+7:06 PM
+
+we can not hear you
+
+We didn't hear anything you said other than... by Hemal Desai
+Hemal Desai
+7:06 PM
+
+We didn't hear anything you said other than a few words
+
+Link https://apitest.pioneerrx.com/api/ente... by Mitch Archer
+Mitch Archer
+7:12 PM
+
+https://apitest.pioneerrx.com/api/enterprise/isAuthenticated
+https://apitest.pioneerrx.com/api/enterprise/method/test/process
+
+ 
+
+ 
+
+TEST API KEY:    VendorTest-M8DX?XN@HD
+TEST SHARED SECRET:  39J9PU-NW9
+
+ 
+
+Use EmployeeID "2005" for your testing
+
+Link mitch.archer@pioneerrx.com by Mitch Archer
+Mitch Archer
+7:16 PM
+
+mitch.archer@pioneerrx.com
+
+Link https://support.pioneerrx.com/apidoc/P... by Mitch Archer
+Mitch Archer
+7:18 PM
+
+https://support.pioneerrx.com/apidoc/PioneerRxEnterpriseAPI/
+
+Link https://support.pioneerrx.com/apidoc/R... by Mitch Archer
+Mitch Archer
+7:18 PM
+
+https://support.pioneerrx.com/apidoc/RxEvents/
+
+yes please i need that please thanks for this and then we need to give them our somethgin so that they can intgegrate correct
+
+yes
+
+well thanks waht to do now
+
+You're welcome! Here's where things stand and what the natural next steps would be:
+
+PioneerRx integration is ready — the code is written and the test credentials are in the database. The next action there is on PioneerRx's side: once you deploy to Render, you give Mitch Archer your webhook URL and credentials, and they configure their end.
+
+Some things you might want to tackle next:
+
+Deploy to Render — do a "Clear build cache & deploy" so the new PioneerRx code is live, then test the connection from production where it can actually reach their servers.
+
+Set the webhook auth env vars on Render — pick a username/password for PIONEERRX_WEBHOOK_USERNAME and PIONEERRX_WEBHOOK_PASSWORD before giving them to PioneerRx.
+
+Work on other app features — if there are other parts of SmartConnect RX you've been wanting to build or fix, now's a good time while waiting on PioneerRx to set up their side.
+
+What would you like to do?
