@@ -1,12 +1,14 @@
 "use client";
 
-import { ProviderTabsNavigation, PaymentBillingForm } from "@/features/provider-profile";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function PaymentBillingPage() {
-  return (
-    <>
-      <ProviderTabsNavigation />
-      <PaymentBillingForm />
-    </>
-  );
+  const router = useRouter();
+
+  useEffect(() => {
+    router.replace("/provider/profile");
+  }, [router]);
+
+  return null;
 }

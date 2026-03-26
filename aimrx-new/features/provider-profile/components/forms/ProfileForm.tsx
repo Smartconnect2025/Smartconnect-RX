@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useFormPersistence } from "@/hooks/useFormPersistence";
 
-import { Form } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
 import { zodResolver } from "@hookform/resolvers/zod";
 
@@ -20,6 +20,7 @@ import { useProviderProfile } from "../../hooks/use-provider-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { PasswordChangeForm } from "./PasswordChangeForm";
 import { NotificationPreferences } from "../NotificationPreferences";
 import { Loader2 } from "lucide-react";
@@ -37,6 +38,7 @@ export function ProfileForm() {
     platform_manager_name: string | null;
   } | null>(null);
   const hasResetFromDbRef = useRef(false);
+  const [billingSameAsPhysical, setBillingSameAsPhysical] = useState(true);
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormValidationSchema),
@@ -80,18 +82,14 @@ export function ProfileForm() {
     mode: "onChange",
   });
 
-  // Persist form data to localStorage (excluding sensitive payment details and addresses)
-  // Addresses are excluded because they're managed in a separate tab and we don't want
-  // stale localStorage values to overwrite the DB values on form reload
   const { clearPersistedData } = useFormPersistence({
     storageKey: `provider-profile-${user?.id || "draft"}`,
     watch: form.watch,
     setValue: form.setValue,
-    excludeFields: ["paymentDetails", "physicalAddress", "billingAddress"] as (keyof ProfileFormValues)[],
+    excludeFields: ["paymentDetails"] as (keyof ProfileFormValues)[],
     disabled: !user?.id,
   });
 
-  // Fetch group info when profile loads
   useEffect(() => {
     async function fetchGroup() {
       if (!profile?.group_id) {
@@ -127,7 +125,6 @@ export function ProfileForm() {
     if (profile && !hasResetFromDbRef.current) {
       hasResetFromDbRef.current = true;
 
-      // Check for persisted localStorage data
       const storageKey = `provider-profile-${user?.id || "draft"}`;
       let persistedData: Partial<ProfileFormValues> = {};
       try {
@@ -139,7 +136,6 @@ export function ProfileForm() {
         console.error("Failed to parse persisted data:", e);
       }
 
-      // Parse medical licenses from database
       let medicalLicenses: Array<{ licenseNumber: string; state: string }> = [];
       if (profile.medical_licenses) {
         try {
@@ -153,7 +149,6 @@ export function ProfileForm() {
         }
       }
 
-      // Build DB values
       const dbValues: ProfileFormValues = {
         firstName: profile.first_name || "",
         lastName: profile.last_name || "",
@@ -214,28 +209,59 @@ export function ProfileForm() {
         })(),
       };
 
-      // Merge: localStorage values take priority over DB values (for draft data)
-      // EXCEPT for addresses and payment details which always come from DB
       const mergedValues: ProfileFormValues = {
         ...dbValues,
         ...persistedData,
-        // Always use DB values for addresses (they're managed in Payment & Billing tab)
-        physicalAddress: dbValues.physicalAddress,
-        billingAddress: dbValues.billingAddress,
-        // Always use DB for sensitive payment data
         paymentDetails: dbValues.paymentDetails,
       };
 
       form.reset(mergedValues);
+
+      const phys = mergedValues.physicalAddress;
+      const bill = mergedValues.billingAddress;
+      if (phys && bill &&
+        phys.street === bill.street &&
+        phys.city === bill.city &&
+        phys.state === bill.state &&
+        phys.zipCode === bill.zipCode &&
+        (phys.country || "USA") === (bill.country || "USA")) {
+        setBillingSameAsPhysical(true);
+      } else if (bill && (bill.street || bill.city || bill.state || bill.zipCode)) {
+        setBillingSameAsPhysical(false);
+      }
     }
   }, [profile, form, user?.id]);
+
+  const handleBillingSameAsPhysical = (checked: boolean) => {
+    setBillingSameAsPhysical(checked);
+    if (checked) {
+      const phys = form.getValues("physicalAddress");
+      if (phys) {
+        form.setValue("billingAddress", { ...phys });
+      }
+    }
+  };
+
+  const physicalAddress = form.watch("physicalAddress");
+  useEffect(() => {
+    if (billingSameAsPhysical && physicalAddress) {
+      const currentBilling = form.getValues("billingAddress");
+      if (!currentBilling ||
+        currentBilling.street !== physicalAddress.street ||
+        currentBilling.city !== physicalAddress.city ||
+        currentBilling.state !== physicalAddress.state ||
+        currentBilling.zipCode !== physicalAddress.zipCode ||
+        currentBilling.country !== physicalAddress.country) {
+        form.setValue("billingAddress", { ...physicalAddress });
+      }
+    }
+  }, [billingSameAsPhysical, physicalAddress, form]);
 
   async function onSubmit(data: ProfileFormValues) {
     const success = await updatePersonalInfo(data);
     if (success) {
       clearPersistedData();
       form.reset(form.getValues());
-
     }
   }
 
@@ -301,6 +327,204 @@ export function ProfileForm() {
             <Separator className="bg-gray-200" />
 
             <SignatureSection form={form} />
+
+            <Separator className="bg-gray-200" />
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Physical Address</CardTitle>
+                <CardDescription>Your primary practice or office location</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="physicalAddress.street"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Street Address</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ""} placeholder="123 Main St" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="physicalAddress.city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value || ""} placeholder="New York" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="physicalAddress.state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value || ""} placeholder="NY" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="physicalAddress.zipCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ZIP</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value || ""} placeholder="10001" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="physicalAddress.country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value || ""} placeholder="USA" />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Billing Address</CardTitle>
+                <CardDescription>Where you would like to receive payments</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center space-x-2 pb-2">
+                  <input
+                    type="checkbox"
+                    id="sameAsPhysical"
+                    checked={billingSameAsPhysical}
+                    onChange={(e) => handleBillingSameAsPhysical(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  <Label htmlFor="sameAsPhysical" className="text-sm font-normal cursor-pointer">
+                    Same as Physical Address
+                  </Label>
+                </div>
+                <FormField
+                  control={form.control}
+                  name="billingAddress.street"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Street Address</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          value={field.value || ""}
+                          placeholder="123 Main St"
+                          disabled={billingSameAsPhysical}
+                          className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+                        />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-4 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="billingAddress.city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            value={field.value || ""}
+                            placeholder="New York"
+                            disabled={billingSameAsPhysical}
+                            className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="billingAddress.state"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            value={field.value || ""}
+                            placeholder="NY"
+                            disabled={billingSameAsPhysical}
+                            className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="billingAddress.zipCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ZIP</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            value={field.value || ""}
+                            placeholder="10001"
+                            disabled={billingSameAsPhysical}
+                            className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="billingAddress.country"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country</FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            value={field.value || ""}
+                            placeholder="USA"
+                            disabled={billingSameAsPhysical}
+                            className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="taxId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tax ID / EIN</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ""} placeholder="XX-XXXXXXX" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </CardContent>
+            </Card>
 
             <Separator className="bg-gray-200" />
 

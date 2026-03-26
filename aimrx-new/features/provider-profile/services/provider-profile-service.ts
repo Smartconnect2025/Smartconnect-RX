@@ -61,19 +61,6 @@ export class ProviderProfileService {
       swift_code: data.paymentDetails.swiftCode || null,
     } : null;
 
-    const hasPhysicalAddressData = data.physicalAddress && (
-      data.physicalAddress.street ||
-      data.physicalAddress.city ||
-      data.physicalAddress.state ||
-      data.physicalAddress.zipCode
-    );
-    const hasBillingAddressData = data.billingAddress && (
-      data.billingAddress.street ||
-      data.billingAddress.city ||
-      data.billingAddress.state ||
-      data.billingAddress.zipCode
-    );
-
     const updateData: Record<string, unknown> = {
       _section: "personal",
       avatar_url: data.avatarUrl,
@@ -89,10 +76,10 @@ export class ProviderProfileService {
       default_shipping_fee: data.defaultShippingFee ?? null,
     };
 
-    if (hasPhysicalAddressData) {
+    if (data.physicalAddress) {
       updateData.physical_address = data.physicalAddress;
     }
-    if (hasBillingAddressData) {
+    if (data.billingAddress) {
       updateData.billing_address = data.billingAddress;
     }
 
