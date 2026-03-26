@@ -72,7 +72,7 @@ interface PharmacyBackend {
   system_type: string;
   api_url: string | null;
   api_key_encrypted: string;
-  store_id: string;
+  store_id: string | null;
   location_id: string | null;
   is_active: boolean;
   created_at: string;
@@ -2614,7 +2614,7 @@ export default function PharmacyManagementPage() {
 
                 <div className="grid grid-cols-2 gap-4 mt-4">
                   <div className="space-y-2">
-                    <Label htmlFor="approve-store-id">Store ID *</Label>
+                    <Label htmlFor="approve-store-id">Store ID</Label>
                     <Input
                       id="approve-store-id"
                       value={approvalForm.store_id}
@@ -2624,8 +2624,7 @@ export default function PharmacyManagementPage() {
                           store_id: e.target.value,
                         })
                       }
-                      placeholder="STORE123"
-                      required
+                      placeholder="STORE123 (optional)"
                     />
                   </div>
                   <div className="space-y-2">
