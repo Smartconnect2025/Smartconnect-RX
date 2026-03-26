@@ -81,8 +81,7 @@ export async function PUT(
       );
     }
 
-    // Update pharmacy basic info
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from("pharmacies")
       .update({
         name,
@@ -116,7 +115,7 @@ export async function PUT(
           .from("pharmacy_backends")
           .select("id, api_key_encrypted")
           .eq("pharmacy_id", pharmacyId)
-          .single();
+          .maybeSingle();
 
         let encryptedKey: string | null = null;
         if (api_key || (shared_secret && system_type === "PioneerRx")) {
