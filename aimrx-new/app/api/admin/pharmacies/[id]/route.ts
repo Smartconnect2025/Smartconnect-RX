@@ -11,12 +11,14 @@ import { getPharmacyAdminScope } from "@/core/auth/api-guards";
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createServerClient();
   const supabaseAdmin = createAdminClient();
 
   try {
+    const { id: pharmacyId } = await context.params;
+
     const {
       data: { user },
       error: userError,
@@ -29,7 +31,7 @@ export async function PUT(
       );
     }
 
-    const { data: userRole } = await supabase
+    const { data: userRole } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
@@ -49,8 +51,6 @@ export async function PUT(
         { status: 403 }
       );
     }
-
-    const pharmacyId = params.id;
 
     // Parse request body
     const body = await request.json();
@@ -229,11 +229,14 @@ export async function PUT(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createServerClient();
+  const supabaseAdmin = createAdminClient();
 
   try {
+    const { id: pharmacyId } = await context.params;
+
     const {
       data: { user },
       error: userError,
@@ -246,7 +249,7 @@ export async function PATCH(
       );
     }
 
-    const { data: userRole } = await supabase
+    const { data: userRole } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
@@ -261,8 +264,6 @@ export async function PATCH(
         { status: 403 }
       );
     }
-
-    const pharmacyId = (await params).id;
 
     if (scope.isPharmacyAdmin && !scope.pharmacyId) {
       return NextResponse.json(
@@ -359,7 +360,7 @@ export async function PATCH(
 
     updateData.updated_at = new Date().toISOString();
 
-    const { data: updated, error: updateError } = await supabase
+    const { data: updated, error: updateError } = await supabaseAdmin
       .from("pharmacies")
       .update(updateData)
       .eq("id", pharmacyId)
@@ -396,11 +397,14 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
   const supabase = await createServerClient();
+  const supabaseAdmin = createAdminClient();
 
   try {
+    const { id: pharmacyId } = await context.params;
+
     const {
       data: { user },
       error: userError,
@@ -413,7 +417,7 @@ export async function DELETE(
       );
     }
 
-    const { data: userRole } = await supabase
+    const { data: userRole } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
@@ -434,10 +438,7 @@ export async function DELETE(
       );
     }
 
-    const pharmacyId = params.id;
-
-    // Check if pharmacy exists
-    const { data: pharmacy, error: fetchError } = await supabase
+    const { data: pharmacy, error: fetchError } = await supabaseAdmin
       .from("pharmacies")
       .select("name")
       .eq("id", pharmacyId)
@@ -451,7 +452,7 @@ export async function DELETE(
     }
 
     // Soft delete: set is_active = false instead of removing the row
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from("pharmacies")
       .update({ is_active: false })
       .eq("id", pharmacyId);
@@ -468,8 +469,7 @@ export async function DELETE(
       );
     }
 
-    // Also deactivate the associated pharmacy_backend
-    const { error: backendError } = await supabase
+    const { error: backendError } = await supabaseAdmin
       .from("pharmacy_backends")
       .update({ is_active: false })
       .eq("pharmacy_id", pharmacyId);
