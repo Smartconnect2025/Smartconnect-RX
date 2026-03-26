@@ -1813,6 +1813,10 @@ export default function PharmacyManagementPage() {
                     <Label htmlFor="pharmacy-api-url">API URL</Label>
                     <Input
                       id="pharmacy-api-url"
+                      name="pharmacy-endpoint-url"
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
                       value={pharmacyForm.api_url}
                       onChange={(e) =>
                         setPharmacyForm({
@@ -1830,7 +1834,12 @@ export default function PharmacyManagementPage() {
                     </Label>
                     <Input
                       id="pharmacy-api-key"
-                      type="password"
+                      name="pharmacy-vendor-key"
+                      type="text"
+                      autoComplete="off"
+                      data-lpignore="true"
+                      data-1p-ignore="true"
+                      className="font-mono tracking-wider"
                       value={pharmacyForm.api_key}
                       onChange={(e) =>
                         setPharmacyForm({
@@ -1860,7 +1869,12 @@ export default function PharmacyManagementPage() {
                       </Label>
                       <Input
                         id="pharmacy-shared-secret"
-                        type="password"
+                        name="pharmacy-vendor-secret"
+                        type="text"
+                        autoComplete="off"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        className="font-mono tracking-wider"
                         value={pharmacyForm.shared_secret}
                         onChange={(e) =>
                           setPharmacyForm({
