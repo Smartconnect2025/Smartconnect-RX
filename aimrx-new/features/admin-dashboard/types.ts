@@ -110,6 +110,22 @@ export interface Provider {
     licenseNumber: string;
     state: string;
   }> | null;
+  company_name?: string | null;
+  physical_address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  } | null;
+  billing_address?: {
+    street?: string;
+    city?: string;
+    state?: string;
+    zipCode?: string;
+    country?: string;
+  } | null;
+  tax_id?: string | null;
   created_at: string;
   status: "active" | "inactive";
   role: string;
