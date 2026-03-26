@@ -1830,7 +1830,7 @@ export default function PharmacyManagementPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="pharmacy-api-key">
-                      API Key {editingPharmacy ? "" : "*"}
+                      API Key {editingPharmacy && backends.find((b) => b.pharmacy_id === editingPharmacy.id) ? "" : "*"}
                     </Label>
                     <Input
                       id="pharmacy-api-key"
@@ -1847,15 +1847,15 @@ export default function PharmacyManagementPage() {
                           api_key: e.target.value,
                         })
                       }
-                      placeholder={editingPharmacy ? "Leave blank to keep existing key" : "Enter API key"}
-                      required={!editingPharmacy}
+                      placeholder={editingPharmacy && backends.find((b) => b.pharmacy_id === editingPharmacy.id) ? "Leave blank to keep existing key" : "Enter API key"}
+                      required={!(editingPharmacy && backends.find((b) => b.pharmacy_id === editingPharmacy.id))}
                     />
-                    {editingPharmacy && (
+                    {editingPharmacy && backends.find((b) => b.pharmacy_id === editingPharmacy.id) && (
                       <p className="text-xs text-green-600 font-medium">
                         Existing key is saved and encrypted. Only fill this if you want to replace it.
                       </p>
                     )}
-                    {!editingPharmacy && (
+                    {(!editingPharmacy || !backends.find((b) => b.pharmacy_id === editingPharmacy.id)) && (
                       <p className="text-xs text-gray-500">
                         Will be encrypted when stored
                       </p>
@@ -1865,7 +1865,7 @@ export default function PharmacyManagementPage() {
                   {pharmacyForm.system_type === "PioneerRx" && (
                     <div className="space-y-2">
                       <Label htmlFor="pharmacy-shared-secret">
-                        Shared Secret {editingPharmacy ? "" : "*"}
+                        Shared Secret {editingPharmacy && backends.find((b) => b.pharmacy_id === editingPharmacy.id) ? "" : "*"}
                       </Label>
                       <Input
                         id="pharmacy-shared-secret"
@@ -1882,15 +1882,15 @@ export default function PharmacyManagementPage() {
                             shared_secret: e.target.value,
                           })
                         }
-                        placeholder={editingPharmacy ? "Leave blank to keep existing secret" : "Enter shared secret"}
-                        required={!editingPharmacy}
+                        placeholder={editingPharmacy && backends.find((b) => b.pharmacy_id === editingPharmacy.id) ? "Leave blank to keep existing secret" : "Enter shared secret"}
+                        required={!(editingPharmacy && backends.find((b) => b.pharmacy_id === editingPharmacy.id))}
                       />
-                      {editingPharmacy && (
+                      {editingPharmacy && backends.find((b) => b.pharmacy_id === editingPharmacy.id) && (
                         <p className="text-xs text-green-600 font-medium">
                           Existing secret is saved and encrypted. Only fill this if you want to replace it.
                         </p>
                       )}
-                      {!editingPharmacy && (
+                      {(!editingPharmacy || !backends.find((b) => b.pharmacy_id === editingPharmacy.id)) && (
                         <p className="text-xs text-gray-500">
                           Used to generate the SHA-512 signature for Pioneer RX authentication
                         </p>

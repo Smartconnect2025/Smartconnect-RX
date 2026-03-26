@@ -54,6 +54,16 @@ export async function PUT(
 
     // Parse request body
     const body = await request.json();
+    console.log(`[PUT /api/admin/pharmacies/${pharmacyId}] Received fields:`, {
+      name: body.name,
+      slug: body.slug,
+      system_type: body.system_type,
+      api_url: body.api_url,
+      api_key: body.api_key ? `[${body.api_key.length} chars]` : "(empty)",
+      shared_secret: body.shared_secret ? `[${body.shared_secret.length} chars]` : "(empty)",
+      store_id: body.store_id,
+      location_id: body.location_id,
+    });
     const {
       name,
       slug,
