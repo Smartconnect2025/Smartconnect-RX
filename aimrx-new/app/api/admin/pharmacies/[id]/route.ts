@@ -110,7 +110,7 @@ export async function PUT(
       );
     }
 
-    if (system_type && store_id) {
+    if (system_type) {
       try {
         const { data: existingBackend } = await supabaseAdmin
           .from("pharmacy_backends")
@@ -147,7 +147,7 @@ export async function PUT(
           const updateData: Record<string, unknown> = {
             system_type,
             api_url: api_url || null,
-            store_id,
+            store_id: store_id || null,
             location_id: location_id || null,
             updated_at: new Date().toISOString(),
           };
@@ -173,7 +173,7 @@ export async function PUT(
               system_type,
               api_url: api_url || null,
               api_key_encrypted: encryptedKey || ensureEncrypted(api_key),
-              store_id,
+              store_id: store_id || null,
               location_id: location_id || null,
               is_active: true,
             });

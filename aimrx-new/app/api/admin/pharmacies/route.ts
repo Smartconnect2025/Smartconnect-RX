@@ -55,10 +55,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate backend system fields
-    if (!system_type || !store_id || !api_key) {
+    if (!system_type || !api_key) {
       return NextResponse.json(
-        { success: false, error: "System type, store ID, and API key are required" },
+        { success: false, error: "System type and API key are required" },
         { status: 400 }
       );
     }
@@ -106,7 +105,7 @@ export async function POST(request: Request) {
           system_type,
           api_url: api_url || null,
           api_key_encrypted: encryptApiKey(credentialValue),
-          store_id,
+          store_id: store_id || null,
           location_id: location_id || null,
           is_active: true,
         });

@@ -431,7 +431,7 @@ export default function PharmacyManagementPage() {
           backend.system_type
             .toLowerCase()
             .includes(integrationSearchQuery.toLowerCase()) ||
-          backend.store_id
+          (backend.store_id || "")
             .toLowerCase()
             .includes(integrationSearchQuery.toLowerCase()),
       );
@@ -1540,7 +1540,7 @@ export default function PharmacyManagementPage() {
                             </TableCell>
                             <TableCell>
                               <code className="px-2 py-1 bg-gray-100 rounded text-sm">
-                                {backend.store_id}
+                                {backend.store_id || "—"}
                               </code>
                             </TableCell>
                             <TableCell className="text-sm text-blue-600">
@@ -1750,6 +1750,25 @@ export default function PharmacyManagementPage() {
                 </div>
               ) : wizardStep === 2 ? (
                 <div className="space-y-4">
+                  {editingPharmacy && (() => {
+                    const backend = backends.find((b) => b.pharmacy_id === editingPharmacy.id);
+                    if (!backend) return null;
+                    return (
+                      <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm">
+                        <p className="font-medium text-blue-800 mb-1">Currently saved integration:</p>
+                        <div className="text-blue-700 space-y-0.5">
+                          <p>System: <span className="font-medium">{backend.system_type}</span></p>
+                          {backend.api_url && <p>API URL: <span className="font-medium">{backend.api_url}</span></p>}
+                          {backend.store_id && <p>Store ID: <span className="font-medium">{backend.store_id}</span></p>}
+                          {backend.location_id && <p>Location ID: <span className="font-medium">{backend.location_id}</span></p>}
+                          <p>API Key: <span className="font-medium text-green-700">Saved & Encrypted</span></p>
+                        </div>
+                        <p className="text-xs text-blue-600 mt-1">
+                          Fields below are pre-filled with saved values. Only change what you need to update.
+                        </p>
+                      </div>
+                    );
+                  })()}
                   <div className="space-y-2">
                     <Label htmlFor="pharmacy-system">Pharmacy System *</Label>
                     <Select
@@ -1773,7 +1792,7 @@ export default function PharmacyManagementPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="pharmacy-store-id">Store ID *</Label>
+                    <Label htmlFor="pharmacy-store-id">Store ID</Label>
                     <Input
                       id="pharmacy-store-id"
                       value={pharmacyForm.store_id}
@@ -1784,8 +1803,10 @@ export default function PharmacyManagementPage() {
                         })
                       }
                       placeholder="e.g., STORE123"
-                      required
                     />
+                    <p className="text-xs text-gray-500">
+                      Can be added later once provided by the pharmacy system vendor
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -1804,7 +1825,9 @@ export default function PharmacyManagementPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="pharmacy-api-key">API Key *</Label>
+                    <Label htmlFor="pharmacy-api-key">
+                      API Key {editingPharmacy ? "" : "*"}
+                    </Label>
                     <Input
                       id="pharmacy-api-key"
                       type="password"
@@ -1815,19 +1838,26 @@ export default function PharmacyManagementPage() {
                           api_key: e.target.value,
                         })
                       }
-                      placeholder="Enter API key"
+                      placeholder={editingPharmacy ? "Leave blank to keep existing key" : "Enter API key"}
                       required={!editingPharmacy}
                     />
-                    <p className="text-xs text-gray-500">
-                      {editingPharmacy
-                        ? "Leave blank to keep existing key"
-                        : "Will be encrypted when stored"}
-                    </p>
+                    {editingPharmacy && (
+                      <p className="text-xs text-green-600 font-medium">
+                        Existing key is saved and encrypted. Only fill this if you want to replace it.
+                      </p>
+                    )}
+                    {!editingPharmacy && (
+                      <p className="text-xs text-gray-500">
+                        Will be encrypted when stored
+                      </p>
+                    )}
                   </div>
 
                   {pharmacyForm.system_type === "PioneerRx" && (
                     <div className="space-y-2">
-                      <Label htmlFor="pharmacy-shared-secret">Shared Secret *</Label>
+                      <Label htmlFor="pharmacy-shared-secret">
+                        Shared Secret {editingPharmacy ? "" : "*"}
+                      </Label>
                       <Input
                         id="pharmacy-shared-secret"
                         type="password"
@@ -1838,14 +1868,19 @@ export default function PharmacyManagementPage() {
                             shared_secret: e.target.value,
                           })
                         }
-                        placeholder="Enter shared secret for signature generation"
+                        placeholder={editingPharmacy ? "Leave blank to keep existing secret" : "Enter shared secret"}
                         required={!editingPharmacy}
                       />
-                      <p className="text-xs text-gray-500">
-                        {editingPharmacy
-                          ? "Leave blank to keep existing secret"
-                          : "Used to generate the SHA-512 signature for Pioneer RX authentication"}
-                      </p>
+                      {editingPharmacy && (
+                        <p className="text-xs text-green-600 font-medium">
+                          Existing secret is saved and encrypted. Only fill this if you want to replace it.
+                        </p>
+                      )}
+                      {!editingPharmacy && (
+                        <p className="text-xs text-gray-500">
+                          Used to generate the SHA-512 signature for Pioneer RX authentication
+                        </p>
+                      )}
                     </div>
                   )}
 
@@ -1880,10 +1915,6 @@ export default function PharmacyManagementPage() {
                         e.preventDefault();
                         if (!pharmacyForm.system_type) {
                           toast.error("Please select a Pharmacy System");
-                          return;
-                        }
-                        if (!pharmacyForm.store_id.trim()) {
-                          toast.error("Store ID is required");
                           return;
                         }
                         if (!editingPharmacy && !pharmacyForm.api_key.trim()) {
