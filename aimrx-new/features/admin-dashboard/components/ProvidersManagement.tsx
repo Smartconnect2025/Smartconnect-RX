@@ -458,32 +458,34 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
     });
   };
 
-  const handleToggleDemo = async (provider: Provider) => {
-    const newDemoStatus = !provider.is_demo;
-    try {
-      const response = await fetch(`/api/admin/users/${provider.user_id}/demo`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ is_demo: newDemoStatus }),
-      });
-      const data = await response.json();
-      if (data.success) {
-        setProviders((prev) =>
-          prev.map((p) =>
-            p.id === provider.id ? { ...p, is_demo: newDemoStatus } : p,
-          ),
-        );
-        toast.success(
-          newDemoStatus
-            ? `${provider.first_name} ${provider.last_name} is now a demo account`
-            : `Demo mode removed from ${provider.first_name} ${provider.last_name}`,
-        );
-      } else {
+  const handleToggleDemo = (provider: Provider) => {
+    guardAction(async () => {
+      const newDemoStatus = !provider.is_demo;
+      try {
+        const response = await fetch(`/api/admin/users/${provider.user_id}/demo`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ is_demo: newDemoStatus }),
+        });
+        const data = await response.json();
+        if (data.success) {
+          setProviders((prev) =>
+            prev.map((p) =>
+              p.id === provider.id ? { ...p, is_demo: newDemoStatus } : p,
+            ),
+          );
+          toast.success(
+            newDemoStatus
+              ? `${provider.first_name} ${provider.last_name} is now a demo account`
+              : `Demo mode removed from ${provider.first_name} ${provider.last_name}`,
+          );
+        } else {
+          toast.error("Failed to update demo status");
+        }
+      } catch {
         toast.error("Failed to update demo status");
       }
-    } catch {
-      toast.error("Failed to update demo status");
-    }
+    });
   };
 
   const handleDeleteProvider = async () => {

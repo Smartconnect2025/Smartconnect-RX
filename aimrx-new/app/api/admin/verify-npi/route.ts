@@ -4,11 +4,18 @@ import { getUser } from "@/core/auth/get-user";
 
 export async function GET(request: NextRequest) {
   try {
-    const { user } = await getUser();
+    const { user, userRole } = await getUser();
     if (!user) {
       return NextResponse.json(
         { error: "Authentication required" },
         { status: 401 },
+      );
+    }
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+      return NextResponse.json(
+        { error: "Admin access required" },
+        { status: 403 },
       );
     }
     const { searchParams } = new URL(request.url);

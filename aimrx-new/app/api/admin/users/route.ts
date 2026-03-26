@@ -9,11 +9,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createUserAccount } from "@core/services/account-management";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
-import { getPharmacyAdminScope } from "@/core/auth/api-guards";
+import { getPharmacyAdminScope, requireNonDemo, createGuardErrorResponse } from "@/core/auth/api-guards";
 import sgMail from "@sendgrid/mail";
 
 export async function POST(request: NextRequest) {
   try {
+    const demoCheck = await requireNonDemo();
+    if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
+
     const { user, userRole } = await getUser();
 
     if (!user) {
@@ -87,10 +90,18 @@ export async function POST(request: NextRequest) {
 
     if (linkPharmacyId && result.userId && role === "provider") {
       const supabase = createAdminClient();
-      await supabase.from("provider_pharmacy_links").upsert({
+      const { error: linkError } = await supabase.from("provider_pharmacy_links").upsert({
         provider_id: result.userId,
         pharmacy_id: linkPharmacyId,
       }, { onConflict: "provider_id,pharmacy_id" });
+
+      if (linkError) {
+        console.error("Failed to link provider to pharmacy:", linkError);
+        return NextResponse.json(
+          { error: "Account created but failed to link to pharmacy. Please link manually.", userId: result.userId },
+          { status: 207 },
+        );
+      }
 
       const { data: pharmacy } = await supabase
         .from("pharmacies")

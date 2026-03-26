@@ -45,8 +45,12 @@ export async function PATCH(
 
     const supabase = createAdminClient();
 
-    if (adminCheck.pharmacyScope?.isPharmacyAdmin && adminCheck.pharmacyScope.pharmacyId) {
-      const scopePharmacyId = adminCheck.pharmacyScope.pharmacyId;
+    const isPharmacyAdmin = adminCheck.pharmacyScope?.isPharmacyAdmin && adminCheck.pharmacyScope.pharmacyId;
+
+    if (isPharmacyAdmin) {
+      delete sanitized.group_id;
+
+      const scopePharmacyId = adminCheck.pharmacyScope!.pharmacyId;
       const { data: prov } = await supabase
         .from("providers")
         .select("user_id")
@@ -75,16 +79,29 @@ export async function PATCH(
       }
     }
 
-    const { error } = await supabase
+    if (Object.keys(sanitized).length === 0) {
+      return NextResponse.json({ success: true });
+    }
+
+    const { data: updated, error } = await supabase
       .from("providers")
       .update(sanitized)
-      .eq("id", id);
+      .eq("id", id)
+      .select("id")
+      .maybeSingle();
 
     if (error) {
       console.error("Error updating provider:", error);
       return NextResponse.json(
         { error: "Failed to update provider" },
         { status: 500 },
+      );
+    }
+
+    if (!updated) {
+      return NextResponse.json(
+        { error: "Provider not found" },
+        { status: 404 },
       );
     }
 
