@@ -47,10 +47,23 @@ export async function PATCH(
 
     if (adminCheck.pharmacyScope?.isPharmacyAdmin && adminCheck.pharmacyScope.pharmacyId) {
       const scopePharmacyId = adminCheck.pharmacyScope.pharmacyId;
+      const { data: prov } = await supabase
+        .from("providers")
+        .select("user_id")
+        .eq("id", id)
+        .single();
+
+      if (!prov) {
+        return NextResponse.json(
+          { error: "Provider not found" },
+          { status: 404 },
+        );
+      }
+
       const { data: link } = await supabase
         .from("provider_pharmacy_links")
-        .select("id")
-        .eq("provider_id", id)
+        .select("provider_id")
+        .eq("provider_id", prov.user_id)
         .eq("pharmacy_id", scopePharmacyId)
         .maybeSingle();
 

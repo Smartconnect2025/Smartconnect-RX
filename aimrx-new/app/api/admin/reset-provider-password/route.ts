@@ -45,8 +45,8 @@ export async function POST(request: Request) {
     if (adminCheck.pharmacyScope?.isPharmacyAdmin && adminCheck.pharmacyScope.pharmacyId) {
       const { data: link } = await supabaseAdmin
         .from("provider_pharmacy_links")
-        .select("id")
-        .eq("provider_id", provider.id)
+        .select("provider_id")
+        .eq("provider_id", provider.user_id)
         .eq("pharmacy_id", adminCheck.pharmacyScope.pharmacyId)
         .maybeSingle();
 
