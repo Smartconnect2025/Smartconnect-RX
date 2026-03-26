@@ -1,231 +1,53 @@
-# Workspace
+# SmartConnect RX Monorepo
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+SmartConnect RX is a pnpm workspace monorepo using TypeScript, designed to streamline prescription management, pharmacy integration, and payment processing. The primary application, SmartConnect RX, is a Next.js-based platform enabling robust prescription workflows, multi-pharmacy backend integration (DigitalRx, PioneerRx), and flexible payment gateway options (Authorize.Net, Stripe) configured per pharmacy. The system supports a tiered role hierarchy including platform administrators, pharmacy administrators, and providers, ensuring secure and scoped access to functionalities. The project aims to provide a scalable and customizable solution for pharmacies and healthcare providers.
 
-## SmartConnect RX (Main Application)
+## User Preferences
 
-**Location:** `/home/runner/workspace/aimrx-new/`
-**Run command:** `cd /home/runner/workspace/aimrx-new && PORT=5000 npx next dev -p 5000 -H 0.0.0.0`
+I prefer iterative development with clear, concise communication. Please ask before making major architectural changes or introducing new dependencies. Focus on delivering tested, functional code.
 
-### Stack
-- Next.js 15 with App Router (NOT Pages Router)
-- React 19, TypeScript
-- Tailwind CSS v4, ShadCN UI
-- Supabase (auth + database) via `@supabase/ssr` (NOT `@supabase/auth-helpers`)
-- Drizzle ORM
-- Node.js v20
+## System Architecture
 
-### TypeScript Path Aliases
-- `@/*` = `./`
-- `@core/*` = `./core/`
-- `@features/*` = `./features/`
+The core application, SmartConnect RX, is built with Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS v4, and ShadCN UI. Supabase is used for authentication and database management, integrated via `@supabase/ssr`, and Drizzle ORM for database interactions. Node.js v20 is the runtime environment.
 
-### Supabase Instance
-- URL: `https://pxehuvreezdpiusgwbct.supabase.co` (project ref: `pxehuvreezdpiusgwbct`)
-- Admin user ID: `c6e644ab-6ed4-4007-9184-7c27d5762ac6`
+**UI/UX Decisions:**
+The application utilizes Tailwind CSS and ShadCN UI for a modern, responsive, and consistent user interface. Pharmacy-branded elements are dynamically applied to emails and certain UI components based on pharmacy configurations, including logos, primary colors, and names.
 
-### Test Accounts
-- Admin: `joseph+200@smartconnects.com` / `Admin123!`
-- Provider: `joseph+201@smartconnects.com` / `Provider123!`
+**Technical Implementations:**
 
-### Required Secrets
-- `NEXT_PUBLIC_SUPABASE_URL` — Supabase project URL
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` — anon/publishable key
-- `SUPABASE_SERVICE_ROLE_KEY` — service role key (admin operations)
-- `SESSION_SECRET` — random string for session signing
-- `SENDGRID_API_KEY` — for MFA email codes (from noreply@aimrx.com)
-- `EASYPOST_TEST_API_KEY` — shipping API
+*   **Authentication & Authorization:** Supabase handles user authentication. A custom middleware (`core/supabase/middleware.ts`) manages sessions, MFA status, and route access based on roles. A critical role mapping (`core/auth/auth-utils.ts`) distinguishes between "super\_admin" (platform-level) and "admin" (pharmacy-scoped) roles. MFA is implemented via SendGrid for email OTPs, with a development bypass. Row Level Security (RLS) is extensively used in Supabase, requiring server-side API routes (`createAdminClient()`) for sensitive data writes (e.g., provider profiles).
+*   **Monorepo Structure:** The project is a pnpm workspace monorepo. It includes `aimrx-new` (the Next.js app), `artifacts` (deployable applications like `api-server` and `smartconnect-rx`), `lib` (shared libraries for API specs, generated clients, and database), and `scripts`.
+*   **Pharmacy Backend Integration:** A `pharmacy-dispatcher.ts` routes prescription requests to the correct pharmacy system (DigitalRx or PioneerRx) based on per-pharmacy configurations stored in the `pharmacy_backends` table. Dedicated helper files (e.g., `digitalrx-helpers.ts`, `pioneerrx-helpers.ts`) manage API calls and status mappings for each system. Webhooks are implemented for real-time status updates from DigitalRx and PioneerRx.
+*   **Payment Processing:** A dual-gateway payment system (Authorize.Net and Stripe) is implemented, allowing per-pharmacy configuration of credentials. Payments are processed directly through the pharmacy's merchant account, with fallbacks to system-level credentials. All sensitive credentials are encrypted at rest using AES-256-GCM. Post-payment flows include automatic prescription status updates, submission to the pharmacy backend, and branded confirmation emails.
+*   **Role Hierarchy:** A 3-tier role system includes Platform Admin (full access), Pharmacy Admin (scoped to their pharmacy), and Provider (manages patients/prescriptions). API guards (`core/auth/api-guards.ts`) enforce these access controls.
+*   **API Architecture:** An `api-server` (Express) acts as a proxy, forwarding all `/api/` traffic to the Next.js application. OpenAPI 3.1 specifications are used with Orval for API client, Zod schema, and React Query hook generation, ensuring type-safe and consistent API interactions.
+*   **Database:** PostgreSQL is used with Drizzle ORM for type-safe database access. Zod is integrated with Drizzle for schema validation.
+*   **Deployment & Environment:** The application is configured to run on Replit, with specific fixes for CORS and MFA in development mode.
 
-### Auth Pipeline
-1. `middleware.ts` (root) → handles CORS preflight, then calls `updateSession()`
-2. `core/supabase/middleware.ts` `updateSession()` → creates Supabase client from cookies, calls `supabase.auth.getUser()`, checks MFA status, checks route access
-3. Route access defined in `core/routing/routes-config.ts` — admin routes need admin role, provider routes need provider role
-4. Role fetched from `user_roles` table in database
+**Feature Specifications:**
 
-### Role Mapping (CRITICAL)
-- DB `user_role` enum does NOT include `super_admin` — only `admin`, `provider`, `user`, `pharmacy_admin`
-- `fetchUserRoleFromDatabase()` in `core/auth/auth-utils.ts` maps roles:
-  - `admin` in `user_roles` + NOT in `pharmacy_admins` → returns `"super_admin"` (platform admin)
-  - `admin` in `user_roles` + IS in `pharmacy_admins` → returns `"admin"` (pharmacy-scoped admin)
-- All role checks throughout the codebase MUST accept BOTH `"admin"` and `"super_admin"` for admin access
-- `getUser()` returns the mapped role; direct DB queries return raw `"admin"`
-- Dev mode: `get-user.ts` and `api-guards.ts` dev fallbacks return `"super_admin"`
-- `UserClient.tsx` preserves server-provided dev user when no real Supabase session exists
+*   **Prescription Workflow:** Supports creating, submitting, checking status, and managing prescriptions, integrated with pharmacy backends.
+*   **Catalog Management:** Pharmacy-specific catalogs of medications and categories are managed, including image uploads and bulk import capabilities (e.g., Westside Compounding data import).
+*   **Admin Panels:** Dedicated UI for platform admins (managing pharmacies, users, integrations) and pharmacy admins (managing their pharmacy's settings, payments, providers).
+*   **Reporting:** Basic reporting functionalities for both platform and pharmacy levels.
 
-### MFA Flow
-- Email OTP via SendGrid from `noreply@aimrx.com`
-- Codes stored in `mfa_codes` table, 10-minute expiry
-- Attempts limited (locks after too many failures)
-- **MFA is bypassed in development mode** (login page sets `totp_verified=true` cookie directly)
+## External Dependencies
 
-### Replit Environment Fixes Applied
-1. **CORS**: Root `middleware.ts` allows `*.replit.dev`, `*.repl.co`, `*.replit.app` origins
-2. **MFA bypass**: `app/auth/login/page.tsx` skips MFA in development mode
-3. **allowedDevOrigins**: `next.config.ts` includes Replit domains (spock, riker, picard)
-
-### Pharmacy Backend Integration (Multi-System Support)
-- **Supported systems**: DigitalRx, PioneerRx (QS1, Liberty, BestRx, Custom defined in enum but not yet implemented)
-- **Architecture**: `pharmacy_backends` table stores per-pharmacy credentials; `pharmacy-dispatcher.ts` auto-routes to correct system
-- **Key files**:
-  - `app/api/prescriptions/_shared/pharmacy-dispatcher.ts` — resolves which backend system a pharmacy uses
-  - `app/api/prescriptions/_shared/digitalrx-helpers.ts` — DigitalRx API calls, status mapping
-  - `app/api/prescriptions/_shared/pioneerrx-helpers.ts` — PioneerRx API calls (HMAC-SHA512 auth), status mapping, price check
-  - `app/api/prescriptions/[id]/submit-to-pharmacy/route.ts` — submits paid Rx (dispatches to DigitalRx or PioneerRx)
-  - `app/api/prescriptions/submit/route.ts` — creates Rx (pending payment)
-  - `app/api/prescriptions/[id]/check-status/route.ts` — checks status from correct backend
-  - `app/api/prescriptions/status-batch/route.ts` — batch status check (both systems)
-  - `app/api/webhook/digitalrx/route.ts` — DigitalRx status webhooks
-  - `app/api/webhook/pioneerrx/route.ts` — PioneerRx status webhooks
-  - `app/api/admin/pioneer-test/route.ts` — test PioneerRx connection (admin only)
-- **PioneerRx API**: Enterprise API — all calls go to `POST /api/enterprise/method/process` with `{MethodName, Version, ParameterCollection}` body
-  - `RxAddOnHold` — submit new prescription (returns `rxTransactionID`, `rxID`, `rxNumber`)
-  - `GetRxTransaction` — check prescription status
-  - `PatientSearch` / `PrescriberSearch` / `ItemSearch` — lookup helpers
-  - `RefillQuery` — check refill eligibility
-  - `Test` — connection test (uses `/api/enterprise/method/test/process`)
-  - Auth check: `POST /api/enterprise/isAuthenticated`
-- **PioneerRx auth**: API key stored as `apiKey|sharedSecret|employeeId` (pipe-separated) in `api_key_encrypted` field
-- **PioneerRx signature**: SHA512 hash of (timestamp + shared secret), UTF-16-LE encoded, base64 output
-- **PioneerRx headers**: `prx-api-key`, `prx-timestamp`, `prx-signature`
-- **PioneerRx RxEvents webhook**: `POST /api/webhook/pioneerrx` — receives real-time prescription events from PioneerRx
-  - Supports Basic Auth (`PIONEERRX_WEBHOOK_USERNAME` / `PIONEERRX_WEBHOOK_PASSWORD`) or token auth (`PIONEERRX_WEBHOOK_SECRET`)
-  - Handles PioneerRx RxEvent format: `{MessageHeader: {InitiatingEventID, ...}, Body: {Rx: {...}, Patient: {...}, ...}}`
-  - Maps 12 PioneerRx event types (OnHold, RemovedFromInventory, CompleteRx, StatusChange, etc.) to internal statuses
-- **Admin UI**: Pharmacy management page has DigitalRx/PioneerRx selector with separate Shared Secret field for PioneerRx
-- **Integration Settings**: `/admin/settings` page with DigitalRx and Pioneer RX tabs — shows API configs, webhook URLs, connection tests
-  - `app/(features)/admin/settings/page.tsx` — tabbed integration settings UI
-  - `app/api/admin/pioneer-test/route.ts` — tests PioneerRx connection via `isAuthenticated` + `Test` method
-
-### Payment Processing (Dual Gateway: Authorize.Net + Stripe, Per-Pharmacy Config)
-- **Architecture**: Per-pharmacy payment gateway configuration. Each pharmacy sets its own Stripe or Authorize.Net credentials; payments go directly to that pharmacy's merchant account. Falls back to system-level env var credentials if no pharmacy config exists.
-- **Gateway values**: `authorizenet` (default) or `stripe`
-- **Per-pharmacy config**:
-  - `pharmacy_payment_configs` table: stores encrypted credentials per pharmacy+gateway (unique constraint), with `is_active` flag, `environment` (sandbox/production)
-  - `payment_transactions.payment_config_id` FK links each transaction to the config used
-  - `core/services/pharmacyPaymentConfigService.ts` — CRUD, encrypt/decrypt, mask helpers
-  - `app/api/admin/pharmacy-payment-config/route.ts` — admin CRUD + test connection API (admin/pharmacy-admin only)
-  - `app/api/payments/pharmacy-gateway/route.ts` — lightweight gateway detection for providers (any authenticated user)
-  - `app/(features)/admin/pharmacy-payment-settings/page.tsx` — pharmacy admin UI for configuring payment credentials
-- **Key payment files**:
-  - `app/api/payments/generate-link/route.ts` — looks up pharmacy config, auto-selects gateway, stores `payment_config_id`
-  - `app/api/payments/get-hosted-token/route.ts` — uses pharmacy's AuthNet credentials (falls back to env vars)
-  - `app/api/payments/create-stripe-session/route.ts` — uses pharmacy's Stripe key (falls back to env vars)
-  - `app/api/webhooks/authnet/route.ts` — tries all pharmacy signature keys + system key for verification
-  - `app/api/webhooks/stripe/route.ts` — tries all pharmacy webhook secrets + system secret for verification
-  - `components/billing/BillPatientModal.tsx` — auto-detects gateway from pharmacy config, shows badge
-  - `app/api/payments/send-confirmation-email/route.ts` — branded emails with pharmacy name/logo
-- **DB columns**: `payment_gateway`, `payment_config_id`, `authnet_ref_id`, `authnet_transaction_id`, `stripe_payment_intent_id`, `stripe_session_id`
-- **Env vars (system fallback)**: `AUTHNET_API_LOGIN_ID`, `AUTHNET_TRANSACTION_KEY`, `AUTHNET_SIGNATURE_KEY`, `AUTHNET_ENVIRONMENT`, `STRIPE_SECRET_KEY`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_WEBHOOK_SECRET`
-- **Encryption**: All pharmacy credentials encrypted at rest using AES-256-GCM (`core/security/encryption.ts`), requires `ENCRYPTION_KEY` env var
-- **Post-payment flow**: Both webhooks auto-update prescription status → auto-submit to pharmacy → send branded confirmation email with pharmacy name/logo/color
-- **Pharmacy-branded emails**: Payment request and confirmation emails use pharmacy's `name`, `logo_url`, and `primary_color` for header gradient, accent colors, "from" name, and footer branding. Falls back to SmartConnect RX branding if no pharmacy data.
-- **Default shipping rate**: `pharmacies.default_shipping_rate_cents` (integer, default 0). Pharmacy admins set it via Payment Settings page. PATCH `/api/admin/pharmacies/[id]` with server-side validation (0-100000 cents).
-
-### Role Hierarchy (3-Tier)
-- **Platform Admin**: Full access to all features, pharmacies, users. Can create pharmacies, manage platform managers/super admins, view system logs, manage groups.
-- **Pharmacy Admin**: Same admin features but scoped to their own pharmacy only. Cannot create pharmacies, manage platform staff, view system logs, or manage groups. Stored in `pharmacy_admins` table (user_id + pharmacy_id).
-- **Provider**: Belongs to a pharmacy via `provider_pharmacy_links` table, manages patients/prescriptions.
-
-**Key guard functions** (`core/auth/api-guards.ts`):
-- `getPharmacyAdminScope(userId)` — returns `{isPharmacyAdmin, pharmacyId}`. Fails closed on errors.
-- `requirePlatformAdmin()` — blocks pharmacy admins from platform-only routes (returns 403).
-
-**Pharmacy admin nav** (AdminHeader.tsx): Prescriptions, Orders, Medications, Catalog, Providers, Reports, Payment Settings
-**Platform admin nav**: Dashboard, Incoming Queue, Reporting & Analytics, Manage Tiers, Refill Engine, API & Logs, Integration Settings
-
-**Platform-only routes** (403 for pharmacy admins): pharmacies POST/PUT/DELETE, pharmacy-admins, pharmacy-backends (including decrypt), users, platform-managers (including [id] PATCH/DELETE), super-admins (including PATCH), groups (including [id] PATCH/DELETE), system-logs, delete-user, delete-provider, reset-provider-password, trigger-cron, link-pharmacy-admin, all seed routes, patients (GET/PATCH), reset-mfa, reset-doctor-password, api-health, approve-existing-provider, group-metrics, providers/[id] PATCH, providers/tier-assignment, providers/revalidate, providers/[id]/tier, update-pharmacy-name, users/[id]/demo, verify-provider, all test routes (pioneer-test, test-pioneer-connection, test-prescription-status, test-provider-login), payment-credentials/test, stripe-credentials/test, categories POST/PUT/DELETE, tags POST/PUT/DELETE, resources POST/PUT/DELETE, tiers POST/PATCH/DELETE
-**Pharmacy-scoped routes** (fail-closed: 403 if pharmacyId is null): providers GET (filtered by pharmacy links), invite-doctor (auto-links to pharmacy), pharmacy-reports (forced pharmacyId), pharmacy-payment-config (forced pharmacyId), pharmacy-orders (forced pharmacyId), prescriptions (forced pharmacyId), medications GET/POST/PATCH/DELETE (scoped to pharmacy), medications/bulk-upload (forced pharmacyId), pharmacies-list/pharmacies/list (filtered to own pharmacy), upload (medication images scoped to pharmacy)
-**Accessible to all admins**: verify-npi (public NPI lookup), categories GET (read-only catalog), tags GET, resources GET, tiers GET
-
-### RLS (Row Level Security) Note
-- Supabase RLS blocks anon-key reads/writes on: `providers`, `user_roles`, `pharmacy_admins`
-- All provider profile writes MUST go through server-side API routes using `createAdminClient()` (service role key)
-- `provider-profile-service.ts` calls `/api/provider/profile` (server-side) — never writes directly via `createClient()` (anon key)
-- Admin writes on doctors page use `/api/admin/providers/[id]` PATCH — not client-side Supabase
-- The `/api/provider/profile` PUT route accepts a `_section` field: `"personal"`, `"professional"`, `"practice"`, `"avatar"`, `"create"`, or default (payment fields)
-
-### Critical Files (DO NOT modify without understanding the auth system)
-- `core/supabase/middleware.ts` — session management
-- `core/routing/routes-config.ts` — route access rules
-- `core/config/envConfig.ts` — environment configuration
-
-### Replit Routing Architecture
-- Port 80 (main proxy) → api-server artifact (port 8080, kind="api") handles `/api/` paths
-- smartconnect-rx artifact (kind="web") handles page routes
-- api-server now proxies everything to Next.js port 5000
-
-### GitHub Repository
-- `https://github.com/Smartconnect2025/Smartconnect-RX` (main branch)
-
-## Monorepo Stack
-
-- **Monorepo tool**: pnpm workspaces
-- **Node.js version**: 24
-- **Package manager**: pnpm
-- **TypeScript version**: 5.9
-- **API framework**: Express 5
-- **Database**: PostgreSQL + Drizzle ORM
-- **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
-
-## Structure
-
-```text
-artifacts-monorepo/
-├── aimrx-new/                 # SmartConnect RX Next.js app
-├── artifacts/                 # Deployable applications
-│   ├── api-server/            # Express proxy → Next.js port 5000
-│   └── smartconnect-rx/       # Web artifact (page routing)
-├── lib/                       # Shared libraries
-│   ├── api-spec/              # OpenAPI spec + Orval codegen config
-│   ├── api-client-react/      # Generated React Query hooks
-│   ├── api-zod/               # Generated Zod schemas from OpenAPI
-│   └── db/                    # Drizzle ORM schema + DB connection
-├── scripts/                   # Utility scripts
-├── pnpm-workspace.yaml        # pnpm workspace
-├── tsconfig.base.json         # Shared TS options
-├── tsconfig.json              # Root TS project references
-└── package.json               # Root package
-```
-
-## TypeScript & Composite Projects
-
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references.
-
-- **Always typecheck from the root** — run `pnpm run typecheck`
-- **`emitDeclarationOnly`** — only `.d.ts` files during typecheck
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array
-
-## Root Scripts
-
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly`
-
-## Packages
-
-### `artifacts/api-server` (`@workspace/api-server`)
-
-HTTP proxy forwarding all traffic to Next.js at localhost:5000. Listens on port 8080.
-
-### `lib/db` (`@workspace/db`)
-
-Database layer using Drizzle ORM with PostgreSQL.
-
-### `lib/api-spec` (`@workspace/api-spec`)
-
-OpenAPI 3.1 spec and Orval codegen config.
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from OpenAPI spec.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client.
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Run via `pnpm --filter @workspace/scripts run <script>`.
+*   **Database:** Supabase (PostgreSQL)
+*   **Authentication:** Supabase Auth
+*   **ORM:** Drizzle ORM
+*   **Styling:** Tailwind CSS, ShadCN UI
+*   **Email Service:** SendGrid (for MFA OTPs and branded emails)
+*   **Shipping API:** EasyPost (for shipping rate calculations, currently test API)
+*   **Pharmacy Integration:**
+    *   DigitalRx API
+    *   PioneerRx API (Enterprise API with HMAC-SHA512 authentication, RxEvents webhooks)
+*   **Payment Gateways:**
+    *   Authorize.Net API
+    *   Stripe API
+*   **API Specification:** OpenAPI 3.1
+*   **API Client Generation:** Orval
+*   **Validation:** Zod
+*   **Version Control:** GitHub
