@@ -1,10 +1,3 @@
-/**
- * Admin Providers API
- *
- * Endpoint for admin users to fetch provider data
- * Only accessible to users with admin role
- */
-
 import { NextResponse, NextRequest } from "next/server";
 import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
@@ -31,6 +24,8 @@ export async function GET(request: NextRequest) {
     const supabase = createAdminClient();
     const isSuperAdmin = userRole === "super_admin";
 
+    let scopePharmacyId: string | null = null;
+
     if (!isSuperAdmin) {
       const scope = await getPharmacyAdminScope(user.id);
 
@@ -42,51 +37,11 @@ export async function GET(request: NextRequest) {
       }
 
       if (scope.isPharmacyAdmin && scope.pharmacyId) {
-        const { data: linkedProviders, error: linkError } = await supabase
-          .from("provider_pharmacy_links")
-          .select("provider_id")
-          .eq("pharmacy_id", scope.pharmacyId);
-
-        if (linkError) {
-          return NextResponse.json({ error: "Failed to fetch providers" }, { status: 500 });
-        }
-
-        const linkedProviderIds = (linkedProviders || []).map((l: { provider_id: string }) => l.provider_id);
-        if (linkedProviderIds.length === 0) {
-          return NextResponse.json({ providers: [] });
-        }
-
-        const { data: providers, error } = await supabase
-          .from("providers")
-          .select("*")
-          .in("user_id", linkedProviderIds);
-
-        if (error) {
-          return NextResponse.json({ error: "Failed to fetch providers" }, { status: 500 });
-        }
-
-        const providerData = await Promise.all(
-          (providers || []).map(async (provider) => {
-            const { data: userData } = await supabase.auth.admin.getUserById(provider.user_id);
-            const { data: roleData } = await supabase
-              .from("user_roles")
-              .select("is_demo")
-              .eq("user_id", provider.user_id)
-              .single();
-            return {
-              ...provider,
-              email: userData?.user?.email || "Unknown",
-              is_demo: roleData?.is_demo || false,
-              pharmacy_names: [],
-            };
-          })
-        );
-
-        return NextResponse.json({ providers: providerData });
+        scopePharmacyId = scope.pharmacyId;
       }
     }
 
-    const filterPharmacyId = isSuperAdmin ? request.nextUrl.searchParams.get("pharmacyId") : null;
+    const filterPharmacyId = scopePharmacyId || (isSuperAdmin ? request.nextUrl.searchParams.get("pharmacyId") : null);
 
     let providerUserIds: string[];
 
@@ -118,6 +73,10 @@ export async function GET(request: NextRequest) {
         );
       }
       providerUserIds = providerUsers?.map((u) => u.user_id) || [];
+    }
+
+    if (providerUserIds.length === 0) {
+      return NextResponse.json({ providers: [], total: 0 });
     }
 
     const { data: demoRows } = await supabase
@@ -235,6 +194,7 @@ export async function GET(request: NextRequest) {
           payment_schedule: provider.payment_schedule || null,
           tax_id: provider.tax_id || null,
           medical_licenses: provider.medical_licenses || null,
+          company_name: provider.company_name || null,
           group_id: provider.group_id || null,
           group_name: provider.group_id ? (groupMap.get(provider.group_id)?.name || null) : null,
           platform_manager_name: provider.group_id
