@@ -129,8 +129,9 @@ export interface PharmacyAdminScope {
 
 export async function getPharmacyAdminScope(userId: string): Promise<PharmacyAdminScope> {
   try {
-    const supabase = await createServerClient();
-    const { data: adminLink } = await supabase
+    const { createAdminClient } = await import("@core/database/client");
+    const supabaseAdmin = createAdminClient();
+    const { data: adminLink } = await supabaseAdmin
       .from("pharmacy_admins")
       .select("pharmacy_id")
       .eq("user_id", userId)

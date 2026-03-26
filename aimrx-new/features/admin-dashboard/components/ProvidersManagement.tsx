@@ -33,7 +33,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { createClient } from "@core/supabase";
 import { useUser } from "@core/auth";
 
 interface GroupOption {
@@ -119,26 +118,18 @@ export const ProvidersManagement: React.FC = () => {
   useEffect(() => {
     const checkScope = async () => {
       if (!user?.id) return;
-      const supabase = createClient();
-
-      const { data: roleRow } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      if (roleRow?.role === "admin") {
-        const { data: pharmacyAdminData } = await supabase
-          .from("pharmacy_admins")
-          .select("pharmacy_id")
-          .eq("user_id", user.id)
-          .maybeSingle();
-
-        if (!pharmacyAdminData) {
-          setIsSuperAdmin(true);
-        } else if (pharmacyAdminData.pharmacy_id) {
-          setPharmacyId(pharmacyAdminData.pharmacy_id);
+      try {
+        const res = await fetch("/api/admin/scope");
+        if (res.ok) {
+          const data = await res.json();
+          if (data.isSuperAdmin) {
+            setIsSuperAdmin(true);
+          } else if (data.isPharmacyAdmin && data.pharmacyId) {
+            setPharmacyId(data.pharmacyId);
+          }
         }
+      } catch (error) {
+        console.error("Error checking admin scope:", error);
       }
       setScopeChecked(true);
     };

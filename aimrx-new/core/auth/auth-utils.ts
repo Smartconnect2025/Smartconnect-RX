@@ -39,7 +39,17 @@ export async function fetchUserRoleFromDatabase(
   supabase: SupabaseClient,
 ): Promise<{ role: string; isDemo: boolean }> {
   try {
-    const { data, error } = await supabase
+    let client = supabase;
+    if (typeof window === "undefined") {
+      try {
+        const { createAdminClient } = await import("@core/database/client");
+        client = createAdminClient();
+      } catch {
+        // Fallback to passed client if admin client unavailable
+      }
+    }
+
+    const { data, error } = await client
       .from("user_roles")
       .select("role, is_demo")
       .eq("user_id", userId)
@@ -47,7 +57,7 @@ export async function fetchUserRoleFromDatabase(
 
     if (!error && data?.role) {
       if (data.role === "admin") {
-        const { data: pharmAdmin } = await supabase
+        const { data: pharmAdmin } = await client
           .from("pharmacy_admins")
           .select("pharmacy_id")
           .eq("user_id", userId)
