@@ -400,6 +400,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
     setIsActivationModalOpen(true);
     setActivatingProvider(provider);
 
+    let usedFresh = false;
     try {
       const params = new URLSearchParams();
       if (pharmacyFilter && pharmacyFilter !== "all") {
@@ -411,11 +412,11 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
         const data = await response.json();
         const fresh = (data.providers || []).find((p: Provider) => p.id === provider.id);
         if (fresh) {
+          usedFresh = true;
           setActivatingProvider(fresh);
           setProviders((prev) => prev.map((p) => p.id === fresh.id ? fresh : p));
           if (!fresh.is_active && fresh.npi_number) {
             verifyNpiForActivation(fresh.npi_number);
-            return;
           }
         }
       }
@@ -423,7 +424,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
       // Fall back to existing data
     }
 
-    if (!provider.is_active && provider.npi_number) {
+    if (!usedFresh && !provider.is_active && provider.npi_number) {
       verifyNpiForActivation(provider.npi_number);
     }
   };
