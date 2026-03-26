@@ -1931,8 +1931,13 @@ export default function PharmacyManagementPage() {
                           toast.error("Please select a Pharmacy System");
                           return;
                         }
-                        if (!editingPharmacy && !pharmacyForm.api_key.trim()) {
+                        const hasExistingBackend = editingPharmacy && backends.find((b) => b.pharmacy_id === editingPharmacy.id);
+                        if (!hasExistingBackend && !pharmacyForm.api_key.trim()) {
                           toast.error("API Key is required");
+                          return;
+                        }
+                        if (!hasExistingBackend && pharmacyForm.system_type === "PioneerRx" && !pharmacyForm.shared_secret.trim()) {
+                          toast.error("Shared Secret is required for PioneerRx");
                           return;
                         }
                         setWizardStep(3);
