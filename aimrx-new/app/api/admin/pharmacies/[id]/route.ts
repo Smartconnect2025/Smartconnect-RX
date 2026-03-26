@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@core/supabase/server";
 import { createAdminClient } from "@core/database/client";
-import { ensureEncrypted, decryptApiKey } from "@/core/security/encryption";
+import { ensureEncrypted, encryptApiKey, decryptApiKey, isEncrypted } from "@/core/security/encryption";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 
@@ -124,22 +124,36 @@ export async function PUT(
             let existingApiKey = "";
             let existingSecret = "";
             if (existingBackend.api_key_encrypted) {
-              const decrypted = decryptApiKey(existingBackend.api_key_encrypted);
-              if (decrypted.includes("|")) {
-                [existingApiKey, existingSecret] = decrypted.split("|", 2);
-              } else {
-                existingApiKey = decrypted;
+              try {
+                const existingValue = existingBackend.api_key_encrypted;
+                let rawValue = existingValue;
+                if (isEncrypted(existingValue)) {
+                  rawValue = decryptApiKey(existingValue);
+                }
+                if (rawValue.includes("|")) {
+                  [existingApiKey, existingSecret] = rawValue.split("|", 2);
+                } else {
+                  existingApiKey = rawValue;
+                }
+              } catch (decryptErr) {
+                console.warn("Could not decrypt existing key, treating as raw:", decryptErr);
+                const rawValue = existingBackend.api_key_encrypted;
+                if (rawValue.includes("|")) {
+                  [existingApiKey, existingSecret] = rawValue.split("|", 2);
+                } else {
+                  existingApiKey = rawValue;
+                }
               }
             }
             const finalApiKey = api_key || existingApiKey;
             const finalSecret = shared_secret || existingSecret;
             if (finalApiKey && finalSecret) {
-              encryptedKey = ensureEncrypted(`${finalApiKey}|${finalSecret}`);
+              encryptedKey = encryptApiKey(`${finalApiKey}|${finalSecret}`);
             } else if (finalApiKey) {
-              encryptedKey = ensureEncrypted(finalApiKey);
+              encryptedKey = encryptApiKey(finalApiKey);
             }
           } else if (api_key) {
-            encryptedKey = ensureEncrypted(api_key);
+            encryptedKey = encryptApiKey(api_key);
           }
         }
 
