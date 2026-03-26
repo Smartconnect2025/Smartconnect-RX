@@ -393,6 +393,7 @@ export const ProvidersManagement: React.FC = () => {
           >
             <Eye className="h-4 w-4" />
           </Button>
+          {isSuperAdmin && (
           <Button
             variant={provider.is_demo ? "default" : "outline"}
             size="sm"
@@ -403,6 +404,7 @@ export const ProvidersManagement: React.FC = () => {
           >
             <UserCog className="h-4 w-4" />
           </Button>
+          )}
           <Button
             variant="outline"
             size="sm"
@@ -508,6 +510,7 @@ export const ProvidersManagement: React.FC = () => {
             </h2>
           </div>
           <div className="flex gap-2">
+            {isSuperAdmin && (
             <Button
               onClick={handleRevalidate}
               disabled={isRevalidating}
@@ -527,6 +530,7 @@ export const ProvidersManagement: React.FC = () => {
                 </>
               )}
             </Button>
+            )}
             <Button
               onClick={() => guardAction(() => setIsFormOpen(true))}
               className="bg-primary hover:bg-primary/90"
