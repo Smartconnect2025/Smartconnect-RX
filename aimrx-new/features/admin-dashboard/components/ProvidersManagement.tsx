@@ -395,10 +395,34 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
     });
   };
 
-  const openActivationModal = (provider: Provider) => {
-    setActivatingProvider(provider);
+  const openActivationModal = async (provider: Provider) => {
     setActivationNpiStatus({ isVerifying: false, result: null });
     setIsActivationModalOpen(true);
+    setActivatingProvider(provider);
+
+    try {
+      const params = new URLSearchParams();
+      if (pharmacyFilter && pharmacyFilter !== "all") {
+        params.set("pharmacyId", pharmacyFilter);
+      }
+      const url = `/api/admin/providers${params.toString() ? `?${params.toString()}` : ""}`;
+      const response = await fetch(url);
+      if (response.ok) {
+        const data = await response.json();
+        const fresh = (data.providers || []).find((p: Provider) => p.id === provider.id);
+        if (fresh) {
+          setActivatingProvider(fresh);
+          setProviders((prev) => prev.map((p) => p.id === fresh.id ? fresh : p));
+          if (!fresh.is_active && fresh.npi_number) {
+            verifyNpiForActivation(fresh.npi_number);
+            return;
+          }
+        }
+      }
+    } catch {
+      // Fall back to existing data
+    }
+
     if (!provider.is_active && provider.npi_number) {
       verifyNpiForActivation(provider.npi_number);
     }
