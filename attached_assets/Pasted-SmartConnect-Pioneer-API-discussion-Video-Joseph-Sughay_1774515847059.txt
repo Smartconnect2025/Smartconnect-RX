@@ -1,0 +1,193 @@
+SmartConnect / Pioneer API discussion
+Video
+Joseph Sughayer
++3
+Mar 24 2026, 7:00 PM
+English (Global)
+
+
+General Summary
+
+Refine Summary
+
+
+AI Skills
+API Testing and Access: Sandbox access established for testing; IP whitelisting takes four to five days for completion.
+Transaction Fees Outlined: Base fee is $40 per location monthly, minimum charge $2,000 for vendors; additional fees per prescription apply.
+Pharmacy Responsibility: Pharmacies will cover their own transaction fees; integration is treated as pharmacy-side.
+Patient Data Management: Must search for existing patients before adding new ones to avoid duplicates and maintain data integrity.
+Immediate Next Steps: Start sandbox testing once IP is whitelisted; focus on technical integration first before financial discussions.
+Positive Collaboration Emphasized: Optimism about project and partnership expressed, highlighting the importance of communication.
+Notes
+API Integration and Testing Setup
+The team agreed to start testing the API integration with sandbox credentials and IP whitelisting before discussing financials or contracts (14:39).
+
+Sandbox access and IP whitelisting established as first steps (14:39)
+
+Mitch provided sandbox API keys in the meeting chat for initial testing.
+Jerry and Joseph will provide Mitch the server IP address to whitelist access.
+Mitch noted that IP whitelisting takes about four to five days for IT to complete.
+Testing cannot start until IP whitelisting is complete, ensuring security and controlled access.
+Technical roles and credential management clarified (06:32)
+
+Jerry confirmed they act as the pharmacy’s programming staff, not as a vendor serving multiple pharmacies initially.
+Mitch explained each pharmacy must have unique API keys and credentials, issued only to the pharmacy itself.
+For future vendor models, one API key could cover multiple pharmacies, but that is not the current plan.
+Pharmacy assumes responsibility for credential security and transaction fees.
+VPN and network requirements for API calls detailed (22:23)
+
+Mitch emphasized API calls must come from inside the pharmacy’s network for security compliance.
+Joseph confirmed they can run the application on-premises within the pharmacy network or connect via VPN.
+Mitch clarified no installation is allowed on Pioneer servers; the app must run on a workstation within the network.
+This setup aligns with HIPAA compliance and ensures secure data exchange.
+Initial testing focus prioritized over financial discussions (12:07)
+
+Hemal instructed the team to defer payment and contract discussions to later calls.
+The priority is to get the technical integration validated first.
+This approach prevents delays and keeps the project moving forward efficiently.
+Payment and vendor agreements will be handled separately once functionality is confirmed.
+Financial and Vendor Model Clarifications
+Financial responsibility and vendor versus pharmacy integration models were discussed but deferred for later resolution (07:54).
+
+Transaction fees and billing models outlined by Mitch (12:56)
+
+There is a base monthly fee of $40 per location, with a minimum charge equivalent to $2,000 per month for vendors.
+Additional per-prescription fees will apply, estimated around 13 cents or less per prescription, but not finalized.
+Mitch clarified these fees apply differently depending on whether the integration is vendor or pharmacy based.
+Hemal and Jerry agreed to postpone detailed financial negotiations until after technical testing.
+Pharmacy assumes responsibility for transaction fees (08:18)
+
+Joseph stated pharmacies will cover their own transaction expenses; Smart Connect will not pay fees.
+This confirms the integration is treated as pharmacy-side, not vendor-side, for billing purposes.
+Mitch reinforced the distinction that only one model (vendor or pharmacy) can be built at a time.
+The team agreed to focus on the pharmacy integration model for now.
+Contractual and NDA requirements for production access (10:48)
+
+Mitch stated sandbox access does not require contracts or NDAs, allowing early testing without legal delay.
+However, store or production-level API access requires signed contracts and agreements.
+Hemal confirmed they will manage contracts and vendor onboarding separately from technical discussions.
+This separation streamlines initial development while keeping compliance intact.
+Responsibility for training and support costs left open (08:42)
+
+Mitch questioned who would pay for API training—pharmacy or Smart Connect.
+Joseph deferred the question to Jerry and Jenny, indicating internal discussion needed.
+Hemal reassured Mitch they would sort out payment logistics later.
+This reflects an understanding that operational costs must be clarified before full deployment.
+API Functionality and Data Flow
+Key technical details on prescription submission, event tracking, and inventory syncing were discussed to clarify system capabilities (16:25).
+
+One API call per prescription item required (16:25)
+
+Mitch confirmed that each prescription item requires a separate API call, even if for the same patient.
+Jerry and Hemal acknowledged this as a design constraint to plan for in the app.
+This approach ensures discrete handling and tracking of each prescription.
+Developers must build the app to handle multiple calls for multiple items per patient.
+Real-time prescription event tracking available via webhooks (16:59)
+
+Mitch shared documentation for RX Events, a JSON feed providing updates like fulfillment and shipping tracking.
+This requires pharmacies to use Pioneer’s shipping integration to generate event data.
+Jerry understood that without using Pioneer’s shipping system, tracking data will not be available.
+This feature enables prescriber portals to get real-time status updates on scripts.
+Inventory synchronization via API currently not supported (18:28)
+
+Mitch explained there is no current API to add or sync compounding medication items back into Pioneer inventory.
+New items must be manually created by pharmacy staff after receiving prescription images.
+This manual step is a safeguard against unauthorized data or patient info entering the system.
+Mitch plans to consider adding this capability but cautions about the risks of uncontrolled data entry.
+Patient data handling requires search before adding new patients (21:04)
+
+Mitch stressed the need to search for existing patients to avoid duplication before adding new patients via API.
+New scripts must be tied to a valid patient record, requiring sequential API calls.
+This process protects data integrity and helps pharmacies manage patient records correctly.
+Joseph confirmed understanding and planned to implement this logic in the app.
+Project Coordination and Next Steps
+The group aligned on immediate next steps to advance development and testing quickly (14:39).
+
+Immediate goal is to start sandbox testing as soon as IP is whitelisted (14:39)
+
+Joseph will email Mitch the IP address for whitelisting.
+Mitch emphasized the IT team needs four to five days to whitelist the IP.
+Testing will commence once sandbox access is fully enabled and credentials are confirmed.
+This sets a clear timeline and dependencies for initial integration validation.
+Focus on technical integration before financial or contractual issues (12:07)
+
+Hemal repeatedly redirected discussion away from fees and contracts to technical questions.
+This keeps the project focused on solving core integration challenges first.
+Financial and vendor onboarding will be addressed in separate meetings.
+This staged approach minimizes blockers and speeds up progress.
+Clear roles and responsibilities established for API usage and support (06:32)
+
+Jerry and Joseph clarified their role as pharmacy programming staff with direct control over integration.
+Mitch outlined vendor versus pharmacy distinctions for credential issuance and billing.
+The team agreed to treat this as a pharmacy integration initially with potential to expand.
+This clarity helps avoid confusion and aligns expectations among all parties.
+Positive tone and commitment to partnership expressed (23:24)
+
+Joseph expressed optimism about the project’s future and mutual business benefits.
+Hemal and Mitch acknowledged the importance of collaboration and open communication.
+The meeting ended on a constructive note with clear next steps.
+This sets a good foundation for ongoing cooperation and problem-solving.
+Action items
+Jerry Horani
+Provide Mitch Archer with the IP address(es) of the server accessing the sandbox for whitelisting (12:29)
+Joseph
+Send Mitch an email to initiate sandbox testing and request API credentials (15:14)
+Hemal Desai
+Share Mitch Archer’s email address with Jerry and Joseph for communication about IP whitelisting (16:03)
+Mitch Archer
+Provide sandbox API credentials to Smart Connect team via chat and email (12:16)
+Whitelist IP address(es) after receipt for sandbox testing (15:36)
+Did you like the summary?
+Popular Topics
+Fireflies
+What are the top 5 most discussed topics in my meetings. Topics should be concise bullet points in 3-4 words max. Share summary of each topic in 25 ... Read more
+API credentials & sandbox access Summary: Obtaining sandbox API keys, environment credentials and server IP for whitelisting to begin testing integrations between SmartConnect and Pioneer.
+Mitch provided sandbox credentials in chat for testing.
+Need to supply SmartConnect server IP to Mitch for whitelist (4–5 day processing).
+Distinction between sandbox endpoints and private production endpoints noted.
+NDA/contract may be required before production/store access.
+Authentication model & keys Summary: Whether each pharmacy has unique API keys vs. a vendor/shared-key model and how credentials/shared secrets are issued and managed.
+Each pharmacy can have its own API credentials and shared secret.
+Vendor model uses one vendor key plus unique shared secret per location.
+Security and breach liability remain with the pharmacy owning credentials.
+Decision affects implementation approach and billing model.
+Network & deployment (VPN / on‑prem) Summary: Requirement to be on the pharmacy network (VPN or on‑prem workstation) for production API calls; options for hosting application accordingly.
+Production APIs are private and require network presence to be reachable.
+Recommended solutions: site-to-site VPN or on‑prem application running on a workstation.
+Pioneer does not allow installs on their server; must run on pharmacy hardware.
+HIPAA compliance and secure connectivity emphasized.
+Prescription workflow & RX Events Summary: How prescriptions are submitted (one API call per prescription), and using RX Events/webhooks to receive status updates and tracking information.
+API accepts one prescription per call; multiple items require multiple calls.
+RX Events provide real‑time JSON/webhook notifications (status, shipments, tracking).
+Events only available if the pharmacy uses Pioneer’s shipping integration.
+Minimum required data: patient plus image; more data reduces pharmacy manual entry.
+Commercial terms & billing Summary: Fees, billing models and onboarding costs for vendor vs pharmacy integrations, including minimum/location fees and per‑prescription transaction charges.
+Vendor model has a $2,000 monthly minimum or per‑location pricing (e.g., $40/location) depending on terms.
+Transactional per‑prescription fee expected (~$0.13 or less), not finalized.
+Training/implementation costs and who pays (pharmacy vs SmartConnect) must be decided.
+Contracts, NDAs and vendor onboarding required before store/production access.
+Did you like the above output?
+Daily Digest
+Fireflies
+⏺ # Executive Summary Generator You are an executive assistant preparing a daily/weekly digest for this user from meeting transcripts. Surface the ... Read more
+Domain: Software engineering — pharmacy API integration (Pioneer API, sandbox, VPN, RX events)
+Identified user: Jerry Horani (SmartConnects) — focus on items assigned to Jerry.
+ACTION ITEMS
+[Sandbox Integration (obtain credentials + whitelist IP)]
+🔴 Send Pioneer sandbox server IP to Mitch Archer by 2026-03-25 (provide IP for whitelist) [Source: Meeting 2026-03-24]
+🟡 Confirm receipt of sandbox credentials in email to Mitch and begin sandbox testing once whitelisted (coordinate with Joseph) [Source: Meeting 2026-03-24]
+[On‑prem / Network Setup (VPN or workstation deployment)]
+🟡 Decide and schedule where SmartConnects will host on‑prem connector (VPN endpoint or workstation) and notify Mitch (provide contact for IT) by 2026-03-27 [Source: Meeting 2026-03-24]
+FYIs
+[API access model & billing]
+Pioneer issues unique credentials per pharmacy; vendor flow uses one vendor key plus per‑location shared secrets; transaction pricing: $0.13 or less per prescription (final amount TBD) **[Source: Meeting 2026-03-24]
+[Sandbox access & restrictions]
+Mitch can enable sandbox access without NDA/contract; production access requires contracts; sandbox contains no PHI; sandbox endpoints differ from production and require whitelist of caller IP [Source: Meeting 2026-03-24]
+[RX Events webhook]
+Pioneer offers RX Events real‑time JSON webhook for status updates and shipping/tracking numbers when store uses Pioneer shipping integration [Source: Meeting 2026-03-24]
+BLOCKERS
+Sandbox testing blocked: Mitch requires SmartConnects server IP whitelist before sandbox will accept calls → cannot test until Mitch’s IT whitelists IP (whitelist turnaround ~4–5 days). Owner: Jerry to provide IP [Source: Meeting 2026-03-24]
+OPEN QUESTIONS
+Billing model: Who pays API training and transaction fees (pharmacy vs SmartConnects)? Owner: Jerry/Jenny to confirm contract terms [Source: Meeting 2026-03-24]
+Production deployment architecture: Will SmartConnects use VPN to pharmacy network or on‑prem workstation deployment? Owner: Jerry to decide and notify Mitch [Source: Meeting 2026-03-24]
+Sources: Meeting transcript — SmartConnect / Pioneer API discussion (attendees: Jerry Horani, Hemal Desai, Joseph, Mitch Archer) — 2026-03-24.
