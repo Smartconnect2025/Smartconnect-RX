@@ -35,10 +35,16 @@ export async function POST(request: NextRequest) {
       pharmacyScope = await getPharmacyAdminScope(user.id);
     }
 
+    if (pharmacyScope.isPharmacyAdmin && !pharmacyScope.pharmacyId) {
+      return NextResponse.json(
+        { error: "Unable to determine pharmacy scope" },
+        { status: 403 },
+      );
+    }
+
     const body = await request.json();
     const { email, password, role, firstName, lastName, phone, tierLevel, groupId, pharmacyId: explicitPharmacyId } = body;
 
-    // Validate required fields
     if (!email || !password || !role) {
       return NextResponse.json(
         { error: "Missing required fields: email, password, role" },
@@ -46,7 +52,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate role
     if (!["admin", "provider"].includes(role)) {
       return NextResponse.json(
         { error: "Invalid role. Must be 'admin' or 'provider'" },
@@ -61,7 +66,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create the user account
     const result = await createUserAccount({
       email,
       password,
@@ -79,7 +83,7 @@ export async function POST(request: NextRequest) {
     let pharmacyName: string | null = null;
     const linkPharmacyId = pharmacyScope.isPharmacyAdmin && pharmacyScope.pharmacyId
       ? pharmacyScope.pharmacyId
-      : explicitPharmacyId || null;
+      : (!pharmacyScope.isPharmacyAdmin ? explicitPharmacyId : null) || null;
 
     if (linkPharmacyId && result.userId && role === "provider") {
       const supabase = createAdminClient();
