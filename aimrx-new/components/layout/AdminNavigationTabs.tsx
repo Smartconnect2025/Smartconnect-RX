@@ -10,9 +10,9 @@ export function AdminNavigationTabs() {
   const tabs = [
     {
       name: "Manage Providers",
-      href: "/admin/doctors",
+      href: "/admin/providers",
       icon: Users,
-      active: pathname?.startsWith("/admin/doctors"),
+      active: pathname?.startsWith("/admin/providers") || pathname?.startsWith("/admin/doctors"),
     },
     {
       name: "Manage Pharmacies",

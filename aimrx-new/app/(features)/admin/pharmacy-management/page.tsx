@@ -40,6 +40,7 @@ import {
   Trash2,
   RefreshCw,
   CreditCard,
+  Users,
 } from "lucide-react";
 import { toast } from "sonner";
 import { AdminNavigationTabs } from "@/components/layout/AdminNavigationTabs";
@@ -1164,6 +1165,15 @@ export default function PharmacyManagementPage() {
                                     title="View Details"
                                   >
                                     <Info className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => router.push(`/admin/providers?pharmacy=${pharmacy.id}`)}
+                                    className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 p-2"
+                                    title="Manage Providers"
+                                  >
+                                    <Users className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     variant="ghost"

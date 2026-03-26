@@ -53,7 +53,11 @@ interface NpiStatus {
   message?: string;
 }
 
-export const ProvidersManagement: React.FC = () => {
+interface ProvidersManagementProps {
+  initialPharmacyFilter?: string;
+}
+
+export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initialPharmacyFilter }) => {
   const { guardAction } = useDemoGuard();
   const { user } = useUser();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
@@ -64,7 +68,7 @@ export const ProvidersManagement: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter] = useState<string>("all");
   const [groupFilter, setGroupFilter] = useState<string>("all");
-  const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
+  const [pharmacyFilter, setPharmacyFilter] = useState<string>(initialPharmacyFilter || "all");
   const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([]);
   const [deletingProvider, setDeletingProvider] = useState<Provider | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -1248,7 +1252,7 @@ export const ProvidersManagement: React.FC = () => {
         open={isFormOpen}
         onOpenChange={setIsFormOpen}
         onSuccess={fetchProviders}
-        pharmacyId={pharmacyId}
+        pharmacyId={isSuperAdmin && pharmacyFilter !== "all" ? pharmacyFilter : pharmacyId}
         isSuperAdmin={isSuperAdmin}
       />
     </>
