@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/select";
 
 import type { Provider } from "../types";
-import { ProviderDetailView } from "./ProviderDetailView";
 import { ProviderFormDialog } from "./ProviderFormDialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -67,7 +66,6 @@ export const ProvidersManagement: React.FC = () => {
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [pharmacyFilter, setPharmacyFilter] = useState<string>("all");
   const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([]);
-  const [selectedProvider, setSelectedProvider] = useState<Provider | null>(null);
   const [deletingProvider, setDeletingProvider] = useState<Provider | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [groups, setGroups] = useState<GroupOption[]>([]);
@@ -96,6 +94,8 @@ export const ProvidersManagement: React.FC = () => {
   const [activatingProvider, setActivatingProvider] = useState<Provider | null>(null);
   const [isActivationModalOpen, setIsActivationModalOpen] = useState(false);
   const [activationNpiStatus, setActivationNpiStatus] = useState<NpiStatus>({ isVerifying: false, result: null });
+  const npiVerifyRef = useRef<string | null>(null);
+  const activationNpiVerifyRef = useRef<string | null>(null);
 
   const fetchGroups = async () => {
     try {
@@ -314,10 +314,13 @@ export const ProvidersManagement: React.FC = () => {
       setNpiVerificationStatus({ isVerifying: false, result: "invalid", message: "NPI must be exactly 10 digits" });
       return;
     }
+    const requestId = `${npiNumber}-${Date.now()}`;
+    npiVerifyRef.current = requestId;
     setNpiVerificationStatus({ isVerifying: true, result: null });
     try {
       const response = await fetch(`/api/admin/verify-npi?npi=${npiNumber}`);
       const data = await response.json();
+      if (npiVerifyRef.current !== requestId) return;
       if (!response.ok) throw new Error(data.error || "Failed to verify NPI");
       if (data.valid) {
         setNpiVerificationStatus({ isVerifying: false, result: "valid", providerName: data.providerName, message: data.message });
@@ -326,6 +329,7 @@ export const ProvidersManagement: React.FC = () => {
         setNpiVerificationStatus({ isVerifying: false, result: "invalid", message: data.message || "NPI not found in CMS registry" });
       }
     } catch (error) {
+      if (npiVerifyRef.current !== requestId) return;
       console.error("Error verifying NPI:", error);
       setNpiVerificationStatus({ isVerifying: false, result: "invalid", message: "Failed to verify NPI" });
     }
@@ -401,10 +405,13 @@ export const ProvidersManagement: React.FC = () => {
       setActivationNpiStatus({ isVerifying: false, result: "invalid", message: "NPI must be exactly 10 digits" });
       return;
     }
+    const requestId = `${npiNumber}-${Date.now()}`;
+    activationNpiVerifyRef.current = requestId;
     setActivationNpiStatus({ isVerifying: true, result: null });
     try {
       const response = await fetch(`/api/admin/verify-npi?npi=${npiNumber}`);
       const data = await response.json();
+      if (activationNpiVerifyRef.current !== requestId) return;
       if (!response.ok) throw new Error(data.error || "Failed to verify NPI");
       setActivationNpiStatus({
         isVerifying: false,
@@ -413,6 +420,7 @@ export const ProvidersManagement: React.FC = () => {
         message: data.message,
       });
     } catch (error) {
+      if (activationNpiVerifyRef.current !== requestId) return;
       console.error("Error verifying NPI for activation:", error);
       setActivationNpiStatus({ isVerifying: false, result: "invalid", message: "Failed to verify NPI" });
     }
@@ -433,15 +441,15 @@ export const ProvidersManagement: React.FC = () => {
         throw new Error(data.error || "Failed to update provider status");
       }
       toast.success(`Provider ${!activatingProvider.is_active ? "activated" : "deactivated"} successfully`);
+      setIsActivationModalOpen(false);
+      setActivatingProvider(null);
+      setActivationNpiStatus({ isVerifying: false, result: null });
       fetchProviders();
     } catch (error) {
       console.error("Error toggling provider status:", error);
       toast.error(error instanceof Error ? error.message : "Failed to update provider status");
     } finally {
       setIsSubmitting(false);
-      setIsActivationModalOpen(false);
-      setActivatingProvider(null);
-      setActivationNpiStatus({ isVerifying: false, result: null });
     }
     });
   };
@@ -850,21 +858,6 @@ export const ProvidersManagement: React.FC = () => {
           emptyStateMessage="No providers found"
         />
       </div>
-
-      {/* Provider Detail View */}
-      <Dialog
-        open={!!selectedProvider}
-        onOpenChange={() => setSelectedProvider(null)}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] p-0 bg-transparent border-none">
-          {selectedProvider && (
-            <ProviderDetailView
-              provider={selectedProvider as Provider}
-              onClose={() => setSelectedProvider(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Provider Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>

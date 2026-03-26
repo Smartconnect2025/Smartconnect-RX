@@ -1,14 +1,15 @@
-/**
- * Admin Provider Update API
- *
- * Endpoint for admin users to update provider data
- * Only accessible to users with admin role
- */
-
 import { NextRequest, NextResponse } from "next/server";
-import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
 import { requireNonDemo, createGuardErrorResponse, requireAnyAdmin } from "@core/auth/api-guards";
+
+const ALLOWED_FIELDS = new Set([
+  "first_name",
+  "last_name",
+  "phone_number",
+  "company_name",
+  "group_id",
+  "is_active",
+]);
 
 export async function PATCH(
   request: NextRequest,
@@ -18,38 +19,52 @@ export async function PATCH(
   if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
 
   try {
-    // Check if the current user is an admin
-    const { user, userRole } = await getUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 },
-      );
-    }
-
-    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
-      return NextResponse.json(
-        { error: "Admin access required" },
-        { status: 403 },
-      );
-    }
-
     const demoCheck = await requireNonDemo();
     if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
 
     const { id } = await params;
     const body = await request.json();
 
-    if (body.group_id === "") {
-      body.group_id = null;
+    const sanitized: Record<string, unknown> = {};
+    for (const key of Object.keys(body)) {
+      if (ALLOWED_FIELDS.has(key)) {
+        sanitized[key] = body[key];
+      }
+    }
+
+    if (Object.keys(sanitized).length === 0) {
+      return NextResponse.json(
+        { error: "No valid fields to update" },
+        { status: 400 },
+      );
+    }
+
+    if (sanitized.group_id === "") {
+      sanitized.group_id = null;
     }
 
     const supabase = createAdminClient();
 
+    if (adminCheck.pharmacyScope?.isPharmacyAdmin && adminCheck.pharmacyScope.pharmacyId) {
+      const scopePharmacyId = adminCheck.pharmacyScope.pharmacyId;
+      const { data: link } = await supabase
+        .from("provider_pharmacy_links")
+        .select("id")
+        .eq("provider_id", id)
+        .eq("pharmacy_id", scopePharmacyId)
+        .maybeSingle();
+
+      if (!link) {
+        return NextResponse.json(
+          { error: "Provider not found within your pharmacy" },
+          { status: 403 },
+        );
+      }
+    }
+
     const { error } = await supabase
       .from("providers")
-      .update(body)
+      .update(sanitized)
       .eq("id", id);
 
     if (error) {

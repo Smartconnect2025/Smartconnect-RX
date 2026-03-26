@@ -1,25 +1,14 @@
 import { NextResponse } from "next/server";
-import { getUser } from "@core/auth";
 import { createAdminClient } from "@core/database/client";
-import { requireAnyAdmin, createGuardErrorResponse } from "@/core/auth/api-guards";
+import { requireAnyAdmin, requireNonDemo, createGuardErrorResponse } from "@/core/auth/api-guards";
 
-/**
- * Delete a provider by email (any admin)
- * DELETE /api/admin/delete-provider?email=provider@example.com
- */
 export async function DELETE(request: Request) {
   try {
     const adminCheck = await requireAnyAdmin();
     if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
 
-    const { user, userRole } = await getUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Not authenticated" },
-        { status: 401 }
-      );
-    }
+    const demoCheck = await requireNonDemo();
+    if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
 
     const { searchParams } = new URL(request.url);
     const emailToDelete = searchParams.get("email");
@@ -45,6 +34,22 @@ export async function DELETE(request: Request) {
         { success: false, error: `Provider with email ${emailToDelete} not found`, details: providerError?.message },
         { status: 404 }
       );
+    }
+
+    if (adminCheck.pharmacyScope?.isPharmacyAdmin && adminCheck.pharmacyScope.pharmacyId) {
+      const { data: link } = await supabase
+        .from("provider_pharmacy_links")
+        .select("id")
+        .eq("provider_id", provider.id)
+        .eq("pharmacy_id", adminCheck.pharmacyScope.pharmacyId)
+        .maybeSingle();
+
+      if (!link) {
+        return NextResponse.json(
+          { success: false, error: "Provider not found within your pharmacy" },
+          { status: 403 }
+        );
+      }
     }
 
     const userIdToDelete = provider.user_id;

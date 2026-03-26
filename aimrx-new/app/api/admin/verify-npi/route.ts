@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { envConfig } from "@core/config/envConfig";
 import { getUser } from "@/core/auth/get-user";
-import { getPharmacyAdminScope } from "@core/auth/api-guards"; // used for guard scan marker
 
 export async function GET(request: NextRequest) {
   try {
@@ -28,7 +27,6 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Call CMS NPI Registry API from server-side (no CORS issues)
     const response = await fetch(
       `${envConfig.NPI_REGISTRY_API_URL}&number=${npiNumber}`,
       {

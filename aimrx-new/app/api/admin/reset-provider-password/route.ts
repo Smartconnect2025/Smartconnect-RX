@@ -1,30 +1,17 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
-import { getUser } from "@core/auth";
-import { requireAnyAdmin, createGuardErrorResponse } from "@/core/auth/api-guards";
+import { requireAnyAdmin, requireNonDemo, createGuardErrorResponse } from "@/core/auth/api-guards";
 
-/**
- * Reset a provider's password (any admin)
- * POST /api/admin/reset-provider-password
- * Body: { email: string, newPassword: string }
- */
 export async function POST(request: Request) {
   const adminCheck = await requireAnyAdmin();
   if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
 
+  const demoCheck = await requireNonDemo();
+  if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
+
   const supabaseAdmin = createAdminClient();
 
   try {
-    const { user, userRole } = await getUser();
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Not authenticated" },
-        { status: 401 }
-      );
-    }
-
-    // Parse request body
     const body = await request.json();
     const { email: providerEmail, newPassword } = body;
 
@@ -35,7 +22,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate password length
     if (newPassword.length < 6) {
       return NextResponse.json(
         { success: false, error: "Password must be at least 6 characters" },
@@ -43,10 +29,9 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find the provider by email to get their user_id
     const { data: provider, error: providerError } = await supabaseAdmin
       .from("providers")
-      .select("user_id, first_name, last_name")
+      .select("id, user_id, first_name, last_name")
       .eq("email", providerEmail)
       .single();
 
@@ -57,9 +42,24 @@ export async function POST(request: Request) {
       );
     }
 
+    if (adminCheck.pharmacyScope?.isPharmacyAdmin && adminCheck.pharmacyScope.pharmacyId) {
+      const { data: link } = await supabaseAdmin
+        .from("provider_pharmacy_links")
+        .select("id")
+        .eq("provider_id", provider.id)
+        .eq("pharmacy_id", adminCheck.pharmacyScope.pharmacyId)
+        .maybeSingle();
+
+      if (!link) {
+        return NextResponse.json(
+          { success: false, error: "Provider not found within your pharmacy" },
+          { status: 403 }
+        );
+      }
+    }
+
     const userIdToUpdate = provider.user_id;
 
-    // Update the user's password using admin client
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       userIdToUpdate,
       { password: newPassword }
@@ -72,7 +72,6 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
-
 
     return NextResponse.json({
       success: true,
