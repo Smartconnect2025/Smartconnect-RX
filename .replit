@@ -61,6 +61,7 @@ expertMode = true
   NEXT_PUBLIC_VENDOR_NAME = "SmartConnect RX"
   SENDGRID_FROM_EMAIL = "noreply@aimrx.com"
   SENDGRID_FROM_NAME = "SmartConnect RX"
+RENDER_API_KEY = "rnd_pRL9b2T9xUbI9E3r5A9OFKmmNhSc"
 
   [nix]
   channel = "stable-25_05"
