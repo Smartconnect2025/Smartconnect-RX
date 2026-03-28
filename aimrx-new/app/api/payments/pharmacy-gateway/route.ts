@@ -27,16 +27,31 @@ export async function GET(request: NextRequest) {
       .eq("user_id", user.id)
       .single();
 
-    if (userRole?.role !== "admin") {
-      const { data: pharmacyAdmin } = await supabase
-        .from("pharmacy_admins")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("pharmacy_id", pharmacyId)
-        .single();
+    const role = userRole?.role;
 
-      if (!pharmacyAdmin) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (role !== "admin") {
+      if (role === "provider") {
+        const { data: providerLink } = await supabase
+          .from("provider_pharmacy_links")
+          .select("provider_id")
+          .eq("provider_id", user.id)
+          .eq("pharmacy_id", pharmacyId)
+          .single();
+
+        if (!providerLink) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+      } else {
+        const { data: pharmacyAdmin } = await supabase
+          .from("pharmacy_admins")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("pharmacy_id", pharmacyId)
+          .single();
+
+        if (!pharmacyAdmin) {
+          return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
       }
     }
 

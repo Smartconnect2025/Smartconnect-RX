@@ -512,19 +512,16 @@ export default function PrescriptionStep3Page() {
         }
       }
 
-      // Big success toast with demo mode indicator
-      toast.success("Prescription submitted successfully!", {
-        duration: 6000,
+      toast.success("Prescription created! Now collect payment.", {
+        duration: 4000,
         icon: <CheckCircle2 className="h-5 w-5" />,
       });
 
-      // Clear ALL session storage
       clearPrescriptionSession();
 
       setSubmitting(false);
 
-      // Redirect to prescriptions list with refresh flag
-      router.push("/prescriptions?refresh=true");
+      router.push(`/prescriptions/new/step4?prescriptionId=${prescriptionId}`);
     } catch (error) {
       setSubmitting(false);
       const errorMessage =
@@ -549,7 +546,7 @@ export default function PrescriptionStep3Page() {
           <div className="bg-white rounded-lg p-8 shadow-2xl flex flex-col items-center gap-4">
             <Loader2 className="h-12 w-12 animate-spin text-primary" />
             <p className="text-lg font-semibold text-foreground">
-              Submitting prescription to pharmacy...
+              Creating prescription...
             </p>
             <p className="text-sm text-muted-foreground">
               Please wait while we process your request
