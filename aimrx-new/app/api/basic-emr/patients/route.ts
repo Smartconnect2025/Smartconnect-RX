@@ -79,8 +79,11 @@ export async function POST(request: NextRequest) {
 
     const patientData: CreatePatientData = await request.json();
 
-    // Get provider ID from the current user
-    const { data: providerData, error: providerError } = await supabase
+    // Create admin client for operations that need to bypass RLS
+    const adminClient = createAdminClient();
+
+    // Get provider ID from the current user (use adminClient to bypass RLS)
+    const { data: providerData, error: providerError } = await adminClient
       .from("providers")
       .select("id")
       .eq("user_id", user.id)
@@ -98,9 +101,6 @@ export async function POST(request: NextRequest) {
         { status: 403 },
       );
     }
-
-    // Create admin client for operations that need to bypass RLS
-    const adminClient = createAdminClient();
 
     // Check if a patient with this email already exists (use adminClient to bypass RLS)
     const { data: existingPatient } = await adminClient
@@ -207,8 +207,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create provider-patient mapping
-    const { error: mappingError } = await supabase
+    // Create provider-patient mapping (use adminClient to bypass RLS)
+    const { error: mappingError } = await adminClient
       .from("provider_patient_mappings")
       .insert({
         provider_id: providerData.id,
@@ -217,7 +217,7 @@ export async function POST(request: NextRequest) {
 
     if (mappingError) {
       // If mapping fails, clean up both patient and auth user
-      await supabase.from("patients").delete().eq("id", patient.id);
+      await adminClient.from("patients").delete().eq("id", patient.id);
       await adminClient.auth.admin.deleteUser(authUserId);
       return NextResponse.json(
         {
