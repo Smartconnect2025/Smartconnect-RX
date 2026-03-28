@@ -15,9 +15,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    if (!userRole || !["admin", "super_admin"].includes(userRole)) {
+    if (!userRole || !["provider", "admin", "super_admin"].includes(userRole)) {
       return NextResponse.json(
-        { error: "Admin access required" },
+        { error: "Access required" },
         { status: 403 },
       );
     }
@@ -25,7 +25,9 @@ export async function GET(request: NextRequest) {
     const isSuperAdmin = userRole === "super_admin";
     let pharmacyId: string | null = null;
 
-    if (!isSuperAdmin) {
+    if (userRole === "provider") {
+      pharmacyId = request.nextUrl.searchParams.get("pharmacyId") || null;
+    } else if (!isSuperAdmin) {
       const scope = await getPharmacyAdminScope(user.id);
       if (!scope.isPharmacyAdmin || !scope.pharmacyId) {
         return NextResponse.json(
