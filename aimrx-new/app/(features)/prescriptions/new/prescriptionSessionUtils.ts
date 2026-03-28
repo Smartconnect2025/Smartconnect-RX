@@ -7,22 +7,20 @@ const PRESCRIPTION_SESSION_KEYS = [
   "prescriptionPdfName",
 ] as const;
 
-// Legacy keys that may still exist from older sessions
 const LEGACY_KEYS = ["prescriptionData", "prescriptionDraft"] as const;
 
-/**
- * Clears all prescription wizard session storage.
- * Use `preserveEncounterContext: true` when entering step1 from an encounter flow
- * to keep encounterId/appointmentId.
- */
 export function clearPrescriptionSession(options?: {
   preserveEncounterContext?: boolean;
+  preserveFormData?: boolean;
 }) {
   for (const key of PRESCRIPTION_SESSION_KEYS) {
     if (
       options?.preserveEncounterContext &&
       (key === "encounterId" || key === "appointmentId")
     ) {
+      continue;
+    }
+    if (options?.preserveFormData && key === "prescriptionFormData") {
       continue;
     }
     sessionStorage.removeItem(key);

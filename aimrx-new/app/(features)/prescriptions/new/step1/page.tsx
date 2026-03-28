@@ -49,11 +49,12 @@ export default function PrescriptionStep1Page() {
   const appointmentId = searchParams.get("appointmentId");
   const preselectedPatientId = searchParams.get("patientId");
 
-  // Clear all prescription wizard state on mount (ensures fresh start)
   useEffect(() => {
     const preserveEncounter = !!(preselectedPatientId && encounterId);
+    const hasFormData = !!sessionStorage.getItem("prescriptionFormData");
     clearPrescriptionSession({
       preserveEncounterContext: preserveEncounter,
+      preserveFormData: hasFormData,
     });
   }, [preselectedPatientId, encounterId]);
 
