@@ -1186,7 +1186,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
               disabled={
                 isSubmitting ||
                 (!activatingProvider?.is_active &&
-                (!activatingProvider?.npi_number || activationNpiStatus.isVerifying || activationNpiStatus.result === "invalid"))
+                (!activatingProvider?.npi_number || activationNpiStatus.isVerifying))
               }
               className={activatingProvider?.is_active ? "bg-yellow-600 hover:bg-yellow-700" : "bg-green-600 hover:bg-green-700"}
             >
