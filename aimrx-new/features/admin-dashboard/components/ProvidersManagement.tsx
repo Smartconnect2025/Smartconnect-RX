@@ -6,10 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
-import { Eye, EyeOff, Trash2, UserPlus, Search, RefreshCw, CheckCircle2, XCircle, FolderTree, UserCog, Building2, Edit, Key, Power, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import {
+  Eye, EyeOff, Trash2, Search, RefreshCw, CheckCircle2, XCircle, FolderTree,
+  UserCog, Building2, Edit, Key, Power, Loader2, CheckCircle, AlertTriangle,
+  MoreHorizontal, Copy, UserPlus, Calendar, Mail, Phone, Shield,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BaseTableManagement } from "./BaseTableManagement";
 import { getOptimizedAvatarUrl } from "@core/services/storage/avatarStorage";
 import { formatPhoneNumber } from "@/core/utils/phone";
 import {
@@ -19,6 +22,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 import type { Provider } from "../types";
 import { ProviderFormDialog } from "./ProviderFormDialog";
@@ -66,7 +85,6 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
   const [isRevalidating, setIsRevalidating] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter] = useState<string>("all");
   const [groupFilter, setGroupFilter] = useState<string>("all");
   const [pharmacyFilter, setPharmacyFilter] = useState<string>(initialPharmacyFilter || "all");
   const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([]);
@@ -77,6 +95,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
   const [selectedGroupId, setSelectedGroupId] = useState<string>("");
   const [isAssigning, setIsAssigning] = useState(false);
   const [scopeChecked, setScopeChecked] = useState(false);
+  const [activeTab, setActiveTab] = useState("providers");
 
   const [editingProvider, setEditingProvider] = useState<Provider | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -192,38 +211,22 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
       provider.specialty?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       provider.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       provider.group_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || provider.status === statusFilter;
     const matchesGroup =
       groupFilter === "all" ||
       (groupFilter === "unassigned" ? !provider.group_id : provider.group_id === groupFilter);
-    return matchesSearch && matchesStatus && matchesGroup;
+    return matchesSearch && matchesGroup;
   });
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return (
-          <Badge
-            variant="default"
-            className="bg-green-100 text-green-800 border border-border"
-            data-testid="badge-status-active"
-          >
-            Active
-          </Badge>
-        );
-      case "inactive":
-        return (
-          <Badge
-            variant="secondary"
-            className="bg-gray-100 text-gray-800 border border-border"
-            data-testid="badge-status-inactive"
-          >
-            Inactive
-          </Badge>
-        );
-      default:
-        return <Badge variant="outline">{status}</Badge>;
+  const activeProviders = filteredProviders.filter((p) => p.status === "active");
+  const pendingProviders = filteredProviders.filter((p) => p.status === "inactive");
+
+  const displayedProviders = activeTab === "providers" ? activeProviders : pendingProviders;
+
+  const formatDate = (dateStr: string) => {
+    try {
+      return new Date(dateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    } catch {
+      return "—";
     }
   };
 
@@ -395,64 +398,10 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
     });
   };
 
-  const openActivationModal = async (provider: Provider) => {
+  const openActivationModal = (provider: Provider) => {
     setActivationNpiStatus({ isVerifying: false, result: null });
     setIsActivationModalOpen(true);
     setActivatingProvider(provider);
-
-    let usedFresh = false;
-    try {
-      const params = new URLSearchParams();
-      if (pharmacyFilter && pharmacyFilter !== "all") {
-        params.set("pharmacyId", pharmacyFilter);
-      }
-      const url = `/api/admin/providers${params.toString() ? `?${params.toString()}` : ""}`;
-      const response = await fetch(url);
-      if (response.ok) {
-        const data = await response.json();
-        const fresh = (data.providers || []).find((p: Provider) => p.id === provider.id);
-        if (fresh) {
-          usedFresh = true;
-          setActivatingProvider(fresh);
-          setProviders((prev) => prev.map((p) => p.id === fresh.id ? fresh : p));
-          if (!fresh.is_active && fresh.npi_number) {
-            verifyNpiForActivation(fresh.npi_number);
-          }
-        }
-      }
-    } catch {
-      // Fall back to existing data
-    }
-
-    if (!usedFresh && !provider.is_active && provider.npi_number) {
-      verifyNpiForActivation(provider.npi_number);
-    }
-  };
-
-  const verifyNpiForActivation = async (npiNumber: string) => {
-    if (!npiNumber || npiNumber.length !== 10) {
-      setActivationNpiStatus({ isVerifying: false, result: "invalid", message: "NPI must be exactly 10 digits" });
-      return;
-    }
-    const requestId = `${npiNumber}-${Date.now()}`;
-    activationNpiVerifyRef.current = requestId;
-    setActivationNpiStatus({ isVerifying: true, result: null });
-    try {
-      const response = await fetch(`/api/admin/verify-npi?npi=${npiNumber}`);
-      const data = await response.json();
-      if (activationNpiVerifyRef.current !== requestId) return;
-      if (!response.ok) throw new Error(data.error || "Failed to verify NPI");
-      setActivationNpiStatus({
-        isVerifying: false,
-        result: data.valid ? "valid" : "invalid",
-        providerName: data.providerName,
-        message: data.message,
-      });
-    } catch (error) {
-      if (activationNpiVerifyRef.current !== requestId) return;
-      console.error("Error verifying NPI for activation:", error);
-      setActivationNpiStatus({ isVerifying: false, result: "invalid", message: "Failed to verify NPI" });
-    }
   };
 
   const confirmToggleActive = async () => {
@@ -562,299 +511,235 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
     });
   };
 
-  const renderTableHeaders = () => (
-    <>
-      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-        Provider
-      </th>
-      {isSuperAdmin && (
-      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-        Pharmacy
-      </th>
-      )}
-      {isSuperAdmin && (
-      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-        Group
-      </th>
-      )}
-      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-        Contact
-      </th>
-      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-        NPI Number
-      </th>
-      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-        Verified
-      </th>
-      <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">
-        Status
-      </th>
-      <th className="h-12 px-4 text-right align-middle font-medium text-muted-foreground">
-        Actions
-      </th>
-    </>
-  );
+  const handleCopyInviteLink = (provider: Provider) => {
+    const link = `${window.location.origin}/auth/login`;
+    navigator.clipboard.writeText(link).then(() => {
+      toast.success(`Login link copied for ${provider.first_name} ${provider.last_name}`);
+    }).catch(() => {
+      toast.error("Failed to copy link");
+    });
+  };
 
-  const renderTableRow = (provider: Provider) => (
-    <>
-      <td className="p-4 align-middle">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage
-              src={
-                provider.avatar_url
-                  ? getOptimizedAvatarUrl(provider.avatar_url, 40)
-                  : ""
-              }
-              alt={`${provider.first_name || ""} ${provider.last_name || ""}`}
-            />
-            <AvatarFallback className="text-sm">
-              {provider.first_name && provider.last_name
-                ? `${provider.first_name[0]}${provider.last_name[0]}`.toUpperCase()
-                : "P"}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex flex-col">
-            <div className="font-medium flex items-center gap-2">
-              {provider.first_name && provider.last_name
-                ? `${provider.first_name} ${provider.last_name}`
-                : ""}
-              {provider.is_demo && (
-                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] px-1.5 py-0">
-                  DEMO
-                </Badge>
-              )}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {provider.email || ""}
-            </div>
-          </div>
-        </div>
-      </td>
-      {isSuperAdmin && (
-      <td className="p-4 align-middle">
-        {provider.pharmacy_names && provider.pharmacy_names.length > 0 ? (
-          <div className="flex flex-col gap-0.5">
-            {provider.pharmacy_names.map((name, i) => (
-              <Badge
-                key={i}
-                variant="outline"
-                className="bg-blue-50 text-blue-700 border-blue-200 text-xs w-fit"
-              >
-                <Building2 className="h-3 w-3 mr-1" />
-                {name}
-              </Badge>
-            ))}
-          </div>
-        ) : (
-          <span className="text-muted-foreground text-xs">Not linked</span>
-        )}
-      </td>
-      )}
-      {isSuperAdmin && (
-      <td className="p-4 align-middle">
-        {provider.group_name ? (
-          <div className="flex flex-col gap-0.5">
-            <Badge
-              variant="outline"
-              className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs w-fit cursor-pointer hover:bg-indigo-100"
-              data-testid={`badge-group-${provider.id}`}
-              onClick={() => {
-                setAssigningProvider(provider);
-                setSelectedGroupId(provider.group_id || "none");
-              }}
-            >
-              <FolderTree className="h-3 w-3 mr-1" />
-              {provider.group_name}
-            </Badge>
-            {provider.platform_manager_name && (
-              <span className="text-xs text-muted-foreground pl-0.5">
-                {provider.platform_manager_name}
-              </span>
+  const renderProviderTable = (data: Provider[]) => (
+    <div className="border border-gray-200 rounded-xl overflow-hidden bg-white">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-gray-50/80 hover:bg-gray-50/80">
+            <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Doctor Name</TableHead>
+            <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</TableHead>
+            <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</TableHead>
+            {isSuperAdmin && (
+              <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Group</TableHead>
             )}
-          </div>
-        ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-xs text-muted-foreground hover:text-indigo-600 h-7 px-2"
-            data-testid={`button-assign-group-${provider.id}`}
-            onClick={() => {
-              setAssigningProvider(provider);
-              setSelectedGroupId("none");
-            }}
-          >
-            + Assign Group
-          </Button>
-        )}
-      </td>
-      )}
-      <td className="p-4 align-middle">
-        {provider.phone_number ? (
-          <span className="text-sm">{provider.phone_number}</span>
-        ) : (
-          <span className="text-muted-foreground">No phone</span>
-        )}
-      </td>
-      <td className="p-4 align-middle">
-        {provider.npi_number ? (
-          <span className="text-sm font-mono">{provider.npi_number}</span>
-        ) : (
-          <span className="text-muted-foreground">Not provided</span>
-        )}
-      </td>
-      <td className="p-4 align-middle">
-        {provider.is_verified ? (
-          <div className="flex items-center gap-1.5 text-green-600">
-            <CheckCircle2 className="h-4 w-4" />
-            <span className="text-sm font-medium">Verified</span>
-          </div>
-        ) : (
-          <div className="flex items-center gap-1.5 text-gray-400">
-            <XCircle className="h-4 w-4" />
-            <span className="text-sm">Not Verified</span>
-          </div>
-        )}
-      </td>
-      <td className="p-4 align-middle">{getStatusBadge(provider.status)}</td>
-      <td className="p-4 align-middle text-right">
-        <div className="flex items-center gap-1 justify-end">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => openEditModal(provider)}
-            className="border border-border"
-            title="Edit provider"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => openResetPasswordDialog(provider)}
-            className="border border-border"
-            title="Reset password"
-          >
-            <Key className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => openActivationModal(provider)}
-            className="border border-border"
-            title={provider.is_active ? "Deactivate provider" : "Activate provider"}
-          >
-            <Power className="h-4 w-4" />
-          </Button>
-          {isSuperAdmin && (
-          <Button
-            variant={provider.is_demo ? "default" : "outline"}
-            size="sm"
-            onClick={() => handleToggleDemo(provider)}
-            className={provider.is_demo ? "bg-amber-500 hover:bg-amber-600 text-white" : "border border-border"}
-            title={provider.is_demo ? "Demo account — click to remove demo mode" : "Make this a demo account"}
-            data-testid={`button-toggle-demo-${provider.id}`}
-          >
-            <UserCog className="h-4 w-4" />
-          </Button>
+            <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Added</TableHead>
+            <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</TableHead>
+            <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {isLoading ? (
+            <TableRow>
+              <TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-32">
+                <div className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                  <span className="text-sm text-gray-500">Loading providers...</span>
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : data.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-32">
+                <div className="flex flex-col items-center justify-center py-8">
+                  <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
+                    <UserPlus className="h-6 w-6 text-gray-400" />
+                  </div>
+                  <h3 className="text-sm font-medium text-gray-900 mb-1">No providers found</h3>
+                  <p className="text-sm text-gray-500">
+                    {searchTerm ? "Try adjusting your search" : "Invite a new provider to get started"}
+                  </p>
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : (
+            data.map((provider) => (
+              <TableRow key={provider.id} className="hover:bg-gray-50/50 border-b border-gray-100">
+                <TableCell className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <Avatar className="h-9 w-9 border border-gray-200">
+                      <AvatarImage
+                        src={provider.avatar_url ? getOptimizedAvatarUrl(provider.avatar_url, 36) : ""}
+                        alt={`${provider.first_name || ""} ${provider.last_name || ""}`}
+                      />
+                      <AvatarFallback className="text-xs font-medium bg-blue-50 text-blue-700">
+                        {provider.first_name && provider.last_name
+                          ? `${provider.first_name[0]}${provider.last_name[0]}`.toUpperCase()
+                          : "P"}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-medium text-sm text-gray-900 flex items-center gap-1.5">
+                        {provider.first_name && provider.last_name
+                          ? `Dr. ${provider.first_name} ${provider.last_name}`
+                          : "—"}
+                        {provider.is_demo && (
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-300 text-[10px] px-1.5 py-0 font-medium">
+                            DEMO
+                          </Badge>
+                        )}
+                      </div>
+                      {provider.npi_number && (
+                        <span className="text-xs text-gray-400 font-mono">NPI: {provider.npi_number}</span>
+                      )}
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="px-4 py-3">
+                  <span className="text-sm text-gray-600">{provider.email || "—"}</span>
+                </TableCell>
+                <TableCell className="px-4 py-3">
+                  <span className="text-sm text-gray-600">{provider.phone_number || "—"}</span>
+                </TableCell>
+                {isSuperAdmin && (
+                  <TableCell className="px-4 py-3">
+                    {provider.group_name ? (
+                      <Badge
+                        variant="outline"
+                        className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs cursor-pointer hover:bg-indigo-100"
+                        onClick={() => {
+                          setAssigningProvider(provider);
+                          setSelectedGroupId(provider.group_id || "none");
+                        }}
+                      >
+                        {provider.group_name}
+                      </Badge>
+                    ) : (
+                      <button
+                        className="text-xs text-gray-400 hover:text-indigo-600 transition-colors"
+                        onClick={() => {
+                          setAssigningProvider(provider);
+                          setSelectedGroupId("none");
+                        }}
+                      >
+                        + Assign
+                      </button>
+                    )}
+                  </TableCell>
+                )}
+                <TableCell className="px-4 py-3">
+                  <span className="text-sm text-gray-600">{formatDate(provider.created_at)}</span>
+                </TableCell>
+                <TableCell className="px-4 py-3">
+                  {provider.status === "active" ? (
+                    <Badge className="bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-50 font-medium text-xs px-2.5 py-0.5">
+                      Active
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-100 font-medium text-xs px-2.5 py-0.5">
+                      Inactive
+                    </Badge>
+                  )}
+                </TableCell>
+                <TableCell className="px-4 py-3 text-right">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-100">
+                        <MoreHorizontal className="h-4 w-4 text-gray-500" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 bg-white">
+                      <DropdownMenuItem onClick={() => openEditModal(provider)} className="cursor-pointer">
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => openResetPasswordDialog(provider)} className="cursor-pointer">
+                        <Key className="h-4 w-4 mr-2" />
+                        Reset Password
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleCopyInviteLink(provider)} className="cursor-pointer">
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy Link
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => openActivationModal(provider)} className="cursor-pointer">
+                        <Power className="h-4 w-4 mr-2" />
+                        {provider.is_active ? "Deactivate" : "Activate"}
+                      </DropdownMenuItem>
+                      {isSuperAdmin && (
+                        <DropdownMenuItem onClick={() => handleToggleDemo(provider)} className="cursor-pointer">
+                          <UserCog className="h-4 w-4 mr-2" />
+                          {provider.is_demo ? "Remove Demo" : "Make Demo"}
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => setDeletingProvider(provider)}
+                        className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Delete
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))
           )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setDeletingProvider(provider)}
-            className="border border-border text-red-600 hover:text-red-700 hover:bg-red-50"
-            title="Delete provider"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </td>
-    </>
+        </TableBody>
+      </Table>
+    </div>
   );
 
   return (
     <>
-      <div className="container max-w-7xl mx-auto py-6 space-y-6 px-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="container max-w-7xl mx-auto py-8 space-y-6 px-4">
+        <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-bold tracking-tight">
-              Provider Management
-            </h2>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Provider Management</h1>
+            <p className="text-sm text-gray-500 mt-1">Manage and monitor all providers in the system</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex items-center gap-3">
             {isSuperAdmin && (
-            <Button
-              onClick={handleRevalidate}
-              disabled={isRevalidating}
-              variant="outline"
-              className="border border-border"
-              data-testid="button-revalidate"
-            >
-              {isRevalidating ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Revalidating...
-                </>
-              ) : (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Revalidate All
-                </>
-              )}
-            </Button>
+              <Button
+                onClick={handleRevalidate}
+                disabled={isRevalidating}
+                variant="outline"
+                size="sm"
+                className="h-9 border-gray-200"
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isRevalidating ? "animate-spin" : ""}`} />
+                {isRevalidating ? "Revalidating..." : "Revalidate"}
+              </Button>
             )}
             <Button
               onClick={() => guardAction(() => setIsFormOpen(true))}
-              className="bg-primary hover:bg-primary/90"
-              data-testid="button-add-provider"
+              className="h-9 bg-blue-600 hover:bg-blue-700 text-white"
             >
               <UserPlus className="h-4 w-4 mr-2" />
-              Add Provider
+              Invite New Provider
             </Button>
           </div>
         </div>
 
         {isSuperAdmin && (
-          <div className="mb-1">
-            <div className="space-y-1.5">
-              <Label htmlFor="pharmacy-filter" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Pharmacy</Label>
-              <Select value={pharmacyFilter} onValueChange={setPharmacyFilter}>
-                <SelectTrigger id="pharmacy-filter" className="w-[260px] bg-white" data-testid="select-pharmacy-filter">
-                  <SelectValue placeholder="Select pharmacy" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Pharmacies</SelectItem>
-                  {pharmacies.map((pharmacy) => (
-                    <SelectItem key={pharmacy.id} value={pharmacy.id}>
-                      {pharmacy.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        )}
-
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-row gap-4">
-            <div className="relative flex-1">
-              <Search
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={18}
-              />
-              <Input
-                placeholder="Search by name, email, specialty, group..."
-                className="pl-12 h-11 rounded-lg border-gray-200 bg-white"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                data-testid="input-search-providers"
-              />
-            </div>
-
-            {isSuperAdmin && (
+          <div className="flex items-center gap-3">
+            <Select value={pharmacyFilter} onValueChange={setPharmacyFilter}>
+              <SelectTrigger className="w-[220px] h-9 bg-white border-gray-200 text-sm">
+                <Building2 className="h-4 w-4 mr-2 text-gray-400" />
+                <SelectValue placeholder="All Pharmacies" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Pharmacies</SelectItem>
+                {pharmacies.map((pharmacy) => (
+                  <SelectItem key={pharmacy.id} value={pharmacy.id}>
+                    {pharmacy.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={groupFilter} onValueChange={setGroupFilter}>
-              <SelectTrigger className="w-[200px] h-11 border-gray-200 bg-white" data-testid="select-group-filter">
-                <SelectValue placeholder="Filter by group" />
+              <SelectTrigger className="w-[180px] h-9 bg-white border-gray-200 text-sm">
+                <FolderTree className="h-4 w-4 mr-2 text-gray-400" />
+                <SelectValue placeholder="All Groups" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Groups</SelectItem>
@@ -866,28 +751,59 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
                 ))}
               </SelectContent>
             </Select>
-            )}
+          </div>
+        )}
 
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => fetchProviders()}
-              className="h-11 w-11 border-gray-200 bg-white hover:bg-gray-50"
-              data-testid="button-refresh-providers"
-            >
-              <RefreshCw className="h-4 w-4" />
-            </Button>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="flex items-center justify-between">
+            <TabsList className="bg-gray-100/80 p-1 rounded-lg">
+              <TabsTrigger
+                value="providers"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 py-1.5 rounded-md text-sm font-medium"
+              >
+                Providers ({activeProviders.length})
+              </TabsTrigger>
+              <TabsTrigger
+                value="pending"
+                className="data-[state=active]:bg-white data-[state=active]:shadow-sm px-4 py-1.5 rounded-md text-sm font-medium"
+              >
+                Pending Approval ({pendingProviders.length})
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="relative w-72">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Input
+                placeholder="Search providers..."
+                className="pl-10 h-9 bg-white border-gray-200 text-sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <TabsContent value="providers" className="mt-4">
+            {renderProviderTable(activeProviders)}
+          </TabsContent>
+
+          <TabsContent value="pending" className="mt-4">
+            {renderProviderTable(pendingProviders)}
+          </TabsContent>
+        </Tabs>
+
+        <div className="flex items-center justify-between text-xs text-gray-500 pt-1">
+          <span>Showing {displayedProviders.length} of {filteredProviders.length} providers</span>
+          <div className="flex gap-4">
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
+              Active: {activeProviders.length}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full bg-gray-400"></span>
+              Inactive: {pendingProviders.length}
+            </span>
           </div>
         </div>
-
-        <BaseTableManagement
-          data={filteredProviders}
-          isLoading={isLoading}
-          renderTableHeaders={renderTableHeaders}
-          renderTableRow={renderTableRow}
-          getItemKey={(provider) => provider.id}
-          emptyStateMessage="No providers found"
-        />
       </div>
 
       {/* Edit Provider Modal */}
@@ -1165,7 +1081,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
       >
         <AlertDialogContent className="bg-white border border-border">
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Doctor</AlertDialogTitle>
+            <AlertDialogTitle>Delete Provider</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to delete Dr. {deletingProvider?.first_name}{" "}
               {deletingProvider?.last_name}? This action cannot be undone.
