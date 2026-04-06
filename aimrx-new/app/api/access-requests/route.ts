@@ -57,7 +57,7 @@ async function sendConfirmationEmailToApplicant(
   const msg = {
     to: email,
     from: {
-      email: process.env.SENDGRID_FROM_EMAIL || "noreply@smartconnectrx.com",
+      email: process.env.SENDGRID_FROM_EMAIL || "support@aimrx.com",
       name: process.env.SENDGRID_FROM_NAME || "SmartConnect RX",
     },
     subject: confirmationSubject,
@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
       const adminMsg = {
         to: "support@smartconnectrx.com",
         from: {
-          email: process.env.SENDGRID_FROM_EMAIL || "noreply@smartconnectrx.com",
+          email: process.env.SENDGRID_FROM_EMAIL || "support@aimrx.com",
           name: process.env.SENDGRID_FROM_NAME || "SmartConnect RX"
         },
         subject: emailSubject,

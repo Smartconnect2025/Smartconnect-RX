@@ -211,7 +211,7 @@ export async function POST(request: Request) {
         const msg = {
           to: email,
           from: {
-            email: process.env.SENDGRID_FROM_EMAIL || "noreply@smartconnectrx.com",
+            email: process.env.SENDGRID_FROM_EMAIL || "support@aimrx.com",
             name: process.env.SENDGRID_FROM_NAME || "SmartConnect RX",
           },
           subject: "Welcome to SmartConnect RX - Super Admin Account Created",

@@ -35,7 +35,7 @@ export const envConfig = {
 
   // SendGrid (Optional)
   SENDGRID_API_KEY: process.env.SENDGRID_API_KEY ?? "",
-  SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL ?? "noreply@aimrx.com",
+  SENDGRID_FROM_EMAIL: process.env.SENDGRID_FROM_EMAIL ?? "support@aimrx.com",
   SENDGRID_FROM_NAME: process.env.SENDGRID_FROM_NAME ?? "AIM Medical",
 
   // Authorize.Net Integration
