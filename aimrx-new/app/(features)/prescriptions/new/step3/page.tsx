@@ -327,10 +327,10 @@ export default function PrescriptionStep3Page() {
     const encounterId = sessionStorage.getItem("encounterId");
     const appointmentId = sessionStorage.getItem("appointmentId");
 
-    const strength = "strength" in item ? item.strength : `${item.dosageAmount}${item.dosageUnit}`;
-    const medId = "selectedMedicationId" in item ? item.selectedMedicationId : undefined;
-    const pharmacyId = "selectedPharmacyId" in item ? item.selectedPharmacyId : undefined;
-    const refillFreq = "refillFrequencyDays" in item ? item.refillFrequencyDays : undefined;
+    const strength = item.strength || `${(item as CartItem).dosageAmount || ""}${(item as CartItem).dosageUnit || ""}`;
+    const medId = "selectedMedicationId" in item ? (item as CartItem).selectedMedicationId : undefined;
+    const pharmacyId = "selectedPharmacyId" in item ? (item as CartItem).selectedPharmacyId : undefined;
+    const refillFreq = "refillFrequencyDays" in item ? (item as CartItem).refillFrequencyDays : undefined;
 
     return {
       prescriber_id: user!.id,
@@ -390,7 +390,7 @@ export default function PrescriptionStep3Page() {
         ? customAddress
         : selectedPatient!.physicalAddress;
 
-      const strength = "strength" in item ? item.strength : `${item.dosageAmount}${item.dosageUnit}`;
+      const strength = item.strength || `${(item as CartItem).dosageAmount || ""}${(item as CartItem).dosageUnit || ""}`;
       const dateWritten = new Date().toISOString().split("T")[0];
 
       const { blob, filename } = await generatePrescriptionPdf({

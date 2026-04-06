@@ -198,14 +198,16 @@ export async function POST(
     }
 
     if (anySubmitFailed) {
-      await supabaseAdmin.from("system_logs").insert({
-        user_id: user.id,
-        user_email: user.email || "unknown",
-        user_name: "System",
-        action: "PHARMACY_SUBMISSION_FAILED",
-        details: `Some prescriptions in order ${paymentTransactionId} failed to submit to pharmacy after mark-paid. Manual submission may be required.`,
-        status: "error",
-      }).catch(() => {});
+      try {
+        await supabaseAdmin.from("system_logs").insert({
+          user_id: user.id,
+          user_email: user.email || "unknown",
+          user_name: "System",
+          action: "PHARMACY_SUBMISSION_FAILED",
+          details: `Some prescriptions in order ${paymentTransactionId} failed to submit to pharmacy after mark-paid. Manual submission may be required.`,
+          status: "error",
+        });
+      } catch (_) {}
 
       return NextResponse.json({
         success: true,
