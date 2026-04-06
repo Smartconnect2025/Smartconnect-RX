@@ -1,0 +1,35 @@
+How Multiple Orders Work Today
+Core concept: A provider creates multiple prescriptions for the same patient in a single session. They are grouped together for one combined payment, but each prescription is submitted individually to the pharmacy.
+
+The flow in detail:
+
+Step 2 (Medication + Cart):
+
+The provider fills out the medication form for one drug (name, dosage, form, quantity, SIG, price, etc.)
+Instead of going straight to review, they click "Add to Cart"
+The form resets, and a green-bordered Cart Panel appears showing the item
+They fill in another medication and click "Add to Cart" again — the panel updates with 2 items
+They can repeat this as many times as needed
+Shipping and oversight fees are entered once — they're shared across all items, not per-item
+When done, they click "Review N Prescriptions" to move to Step 3
+Step 3 (Review & Submit):
+
+All cart items are displayed for review along with the patient info
+The submission loops through each cart item one at a time, calling POST /api/prescriptions/submit for each
+Only the first item gets the shipping fee, oversight fees, and consultation reason attached — the rest get zeroes (this avoids double-charging)
+A PDF is generated (or the uploaded one is used) and uploaded for each prescription individually
+All the resulting prescription IDs are collected into an array
+Step 4 (Collect Payment):
+
+The URL contains all IDs: ?prescriptionIds=id1,id2,id3
+The page loads all prescriptions from the database and shows an itemized order summary (each medication with its price, plus shared shipping/oversight totals)
+The total cost is the sum of all medication prices + shipping + oversight
+The provider chooses one payment method (Send Link or Charge Now) — the BillPatientModal receives all prescription IDs at once
+One payment covers everything — the patient pays once for all medications
+Key points:
+
+Each prescription is its own database record with its own status, PDF, pharmacy assignment
+Prescriptions can go to different pharmacies (each medication card in the cart stores its pharmacy info)
+The cart lives entirely in sessionStorage (browser-side) — nothing is saved to the database until Step 3 submits
+After payment, each prescription follows its own lifecycle (pharmacy submission, shipping tracking, etc.) independently
+If you have a separate spec document for how you want multiple orders to work differently, feel free to send it and I can compare it against what's currently built and identify any gaps or changes needed.
