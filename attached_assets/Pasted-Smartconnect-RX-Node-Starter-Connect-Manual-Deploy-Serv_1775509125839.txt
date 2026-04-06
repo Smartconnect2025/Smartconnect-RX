@@ -1,0 +1,69 @@
+Smartconnect-RX
+Node
+Starter
+
+Connect
+
+Manual Deploy
+Service ID:
+srv-d6sdcnndiees73cao140
+
+Smartconnect2025 / Smartconnect-RX
+main
+https://smartconnect-rx.onrender.com
+
+April 6, 2026 at 11:38 PM
+failed
+1cec359
+Fix crowded tables: Financial Dashboard and Prescriptions list - Add table-fixed layout with proper column widths - Add text truncation on long medication names, SIG, patient names - Add hover tooltips for truncated content - Reduce column widths on non-critical columns for better spacing
+
+Rollback
+Exited with status 1 while building your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Apr 6, 11:37 PM - 11:41 PM
+GMT+3
+
+
+
+ ⚠ Installing TypeScript as it was not found while loading "next.config.ts".
+Installing devDependencies (npm):
+- typescript
+added 311 packages, and audited 859 packages in 5s
+312 packages are looking for funding
+  run `npm fund` for details
+17 vulnerabilities (1 low, 8 moderate, 7 high, 1 critical)
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+Some issues need review, and may require choosing
+a different dependency.
+Run `npm audit` for details.
+ ⚠ Warning: Found multiple lockfiles. Selecting /opt/render/project/src/pnpm-lock.yaml.
+   Consider removing the lockfiles at:
+   * /opt/render/project/src/aimrx-new/package-lock.json
+   ▲ Next.js 15.4.10
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 22.0s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+./app/(features)/prescriptions/new/step3/page.tsx:330:67
+Menu
+Type error: Property 'dosageAmount' does not exist on type 'never'.
+  328 |     const appointmentId = sessionStorage.getItem("appointmentId");
+  329 |
+> 330 |     const strength = "strength" in item ? item.strength : `${item.dosageAmount}${item.dosageUnit}`;
+      |                                                                   ^
+  331 |     const medId = "selectedMedicationId" in item ? item.selectedMedicationId : undefined;
+  332 |     const pharmacyId = "selectedPharmacyId" in item ? item.selectedPharmacyId : undefined;
+  333 |     const refillFreq = "refillFrequencyDays" in item ? item.refillFrequencyDays : undefined;
+Next.js build worker exited with code: 1 and signal: null
+==> Build failed 😞
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+Need better ways to work with logs? Try theRender CLI, Render MCP Server, or set up a
