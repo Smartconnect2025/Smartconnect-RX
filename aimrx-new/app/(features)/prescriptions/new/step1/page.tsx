@@ -43,6 +43,7 @@ export default function PrescriptionStep1Page() {
   const [currentPage] = useState(1);
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [prescriptionPdf, setPrescriptionPdf] = useState<File | null>(null);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   // Check if coming from encounter (patient already selected)
   const encounterId = searchParams.get("encounterId");
@@ -154,8 +155,9 @@ export default function PrescriptionStep1Page() {
       return;
     }
 
+    setIsNavigating(true);
+
     if (prescriptionPdf) {
-      // Convert PDF to data URL and store in sessionStorage
       const reader = new FileReader();
       reader.onloadend = () => {
         const dataUrl = reader.result as string;
@@ -167,10 +169,10 @@ export default function PrescriptionStep1Page() {
       };
       reader.onerror = (error) => {
         console.error("📄 [Step1] Error reading PDF file:", error);
+        setIsNavigating(false);
       };
       reader.readAsDataURL(prescriptionPdf);
     } else {
-      // No PDF uploaded, clear any previous PDF data and continue
       sessionStorage.removeItem("prescriptionPdfData");
       sessionStorage.removeItem("prescriptionPdfName");
       router.push(`/prescriptions/new/step2?patientId=${selectedPatient.id}`);
@@ -399,9 +401,19 @@ export default function PrescriptionStep1Page() {
               <Button
                 onClick={handleContinueToStep2}
                 size="lg"
+                disabled={isNavigating}
               >
-                Continue to Prescription Details
-                <ArrowRight className="ml-2 h-4 w-4" />
+                {isNavigating ? (
+                  <>
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent mr-2" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    Continue to Prescription Details
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </>
+                )}
               </Button>
             </div>
           </div>

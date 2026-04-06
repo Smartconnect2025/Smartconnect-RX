@@ -438,6 +438,7 @@ export default function ProviderCatalogPage() {
   const [expandedProduct, setExpandedProduct] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [dbCategoryImages, setDbCategoryImages] = useState<Record<string, string>>({});
+  const [prescribingMedId, setPrescribingMedId] = useState<string | null>(null);
 
   const setSelectedCategory = useCallback((category: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -559,6 +560,7 @@ export default function ProviderCatalogPage() {
 
   const handlePrescribe = useCallback(
     (med: PharmacyMedication) => {
+      setPrescribingMedId(med.id);
       const prescriptionData = {
         medication: med.name,
         vialSize: med.vial_size || med.strength || "",
@@ -984,13 +986,22 @@ export default function ProviderCatalogPage() {
                         </button>
                         <Button
                           onClick={() => handlePrescribe(med)}
-                          disabled={med.in_stock === false}
+                          disabled={med.in_stock === false || prescribingMedId === med.id}
                           variant="outline"
                           className="flex-1 h-10 rounded-xl text-sm gap-1.5 border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white"
                           data-testid={`button-prescribe-${med.id}`}
                         >
-                          Prescribe
-                          <ArrowRight className="h-4 w-4" />
+                          {prescribingMedId === med.id ? (
+                            <>
+                              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                              Loading...
+                            </>
+                          ) : (
+                            <>
+                              Prescribe
+                              <ArrowRight className="h-4 w-4" />
+                            </>
+                          )}
                         </Button>
                       </div>
                     </div>
@@ -1080,13 +1091,22 @@ export default function ProviderCatalogPage() {
 
                           <Button
                             onClick={() => handlePrescribe(med)}
-                            disabled={med.in_stock === false}
+                            disabled={med.in_stock === false || prescribingMedId === med.id}
                             size="sm"
                             className="rounded-xl bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 gap-1.5"
                             data-testid={`button-list-prescribe-${med.id}`}
                           >
-                            Prescribe
-                            <ArrowRight className="h-4 w-4" />
+                            {prescribingMedId === med.id ? (
+                              <>
+                                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                Loading...
+                              </>
+                            ) : (
+                              <>
+                                Prescribe
+                                <ArrowRight className="h-4 w-4" />
+                              </>
+                            )}
                           </Button>
                         </div>
                       </div>
