@@ -23,6 +23,7 @@ interface UpdatePrescriptionRequest {
   shippingFeeCents?: number;
   profitCents?: number;
   consultationReason?: string;
+  refillFrequencyDays?: number | null;
 }
 
 export async function PATCH(
@@ -129,6 +130,9 @@ export async function PATCH(
     }
     if (body.consultationReason !== undefined) {
       updateData.consultation_reason = body.consultationReason;
+    }
+    if (body.refillFrequencyDays !== undefined) {
+      updateData.refill_frequency_days = body.refillFrequencyDays;
     }
 
     const { error: updateError } = await supabaseAdmin

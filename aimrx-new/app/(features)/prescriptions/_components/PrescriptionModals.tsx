@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { BillPatientModal } from "@/components/billing/BillPatientModal";
 import { EditPrescriptionModal } from "./EditPrescriptionModal";
 import { PrescriptionProgressTracker } from "./PrescriptionProgressTracker";
+import { PrintProgressTracker } from "./PrintProgressTracker";
 
 interface Prescription {
   id: string;
@@ -149,6 +150,8 @@ const printReceipt = () => {
         .h-16 { height: 1.75rem; }
         .rounded-full { border-radius: 9999px; }
         a { color: #00AEEF; text-decoration: none; }
+        .print-hide-tracker { display: none !important; }
+        [data-print-only="true"] { display: block !important; }
         @media print {
           body { padding: 6px; }
           @page { margin: 7mm; }
@@ -349,12 +352,13 @@ export function PrescriptionModals({
 
               {/* Progress Tracker - print-only static version */}
               <div className="hidden print-section print-production" data-print-only="true">
-                <PrescriptionProgressTracker
+                <PrintProgressTracker
                   status={selectedPrescription.status}
                   trackingNumber={selectedPrescription.trackingNumber}
                   pharmacyName={selectedPrescription.pharmacyName}
                   billingStatus={selectedPrescription.paymentStatus}
                   patientCopay={selectedPrescription.patientPrice}
+                  trackingCarrier={selectedPrescription.carrierStatus}
                 />
               </div>
 

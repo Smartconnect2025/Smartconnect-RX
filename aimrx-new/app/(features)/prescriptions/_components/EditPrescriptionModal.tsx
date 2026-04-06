@@ -68,6 +68,7 @@ interface Prescription {
   shippingFeeCents?: number;
   profitCents?: number;
   consultationReason?: string;
+  refillFrequencyDays?: number | null;
 }
 
 interface EditPrescriptionModalProps {
@@ -88,6 +89,7 @@ interface EditPrescriptionModalProps {
     shippingFeeCents: number;
     profitCents: number;
     consultationReason: string;
+    refillFrequencyDays: number | null;
   }) => void;
 }
 
@@ -110,6 +112,9 @@ function buildFormData(prescription: Prescription) {
       ? String(prescription.profitCents / 100)
       : "",
     consultationReason: prescription.consultationReason || "",
+    refillFrequencyDays: prescription.refillFrequencyDays
+      ? String(prescription.refillFrequencyDays)
+      : "",
   };
 }
 
@@ -143,6 +148,14 @@ export function EditPrescriptionModal({
       toast.error("SIG (directions) is required");
       return;
     }
+    if (
+      parseInt(formData.refills) > 0 &&
+      (!formData.refillFrequencyDays ||
+        parseInt(formData.refillFrequencyDays) <= 0)
+    ) {
+      toast.error("Refill frequency is required when refills > 0");
+      return;
+    }
 
     const profitCents = formData.profitFee
       ? Math.round(parseFloat(formData.profitFee) * 100)
@@ -171,6 +184,9 @@ export function EditPrescriptionModal({
               : 0,
             profitCents,
             consultationReason: formData.consultationReason,
+            refillFrequencyDays: formData.refillFrequencyDays
+              ? parseInt(formData.refillFrequencyDays)
+              : null,
           }),
         },
       );
@@ -194,6 +210,9 @@ export function EditPrescriptionModal({
             : 0,
           profitCents,
           consultationReason: formData.consultationReason,
+          refillFrequencyDays: formData.refillFrequencyDays
+            ? parseInt(formData.refillFrequencyDays)
+            : null,
         });
       } else {
         toast.error(data.error || "Failed to update prescription");
@@ -318,14 +337,48 @@ export function EditPrescriptionModal({
                 id="refills"
                 type="number"
                 value={formData.refills}
-                onChange={(e) =>
-                  setFormData({ ...formData, refills: e.target.value })
-                }
+                onChange={(e) => {
+                  const newRefills = e.target.value;
+                  const count = parseInt(newRefills) || 0;
+                  const prevCount = parseInt(formData.refills) || 0;
+                  setFormData({
+                    ...formData,
+                    refills: newRefills,
+                    refillFrequencyDays:
+                      count > 0 && prevCount === 0 && !formData.refillFrequencyDays
+                        ? "30"
+                        : count === 0
+                          ? ""
+                          : formData.refillFrequencyDays,
+                  });
+                }}
                 min="0"
                 max="12"
               />
             </div>
           </div>
+
+          {/* Refill Frequency (conditional) */}
+          {parseInt(formData.refills) > 0 && (
+            <div>
+              <Label htmlFor="refillFrequencyDays">
+                Refill Frequency (days) *
+              </Label>
+              <Input
+                id="refillFrequencyDays"
+                type="number"
+                value={formData.refillFrequencyDays}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    refillFrequencyDays: e.target.value,
+                  })
+                }
+                min="1"
+                placeholder="e.g., 30"
+              />
+            </div>
+          )}
 
           {/* SIG */}
           <div>

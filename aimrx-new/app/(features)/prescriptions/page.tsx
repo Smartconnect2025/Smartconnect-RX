@@ -412,6 +412,7 @@ export default function PrescriptionsPage() {
       )
       .eq("prescriber_id", user.id)
       .eq("prescription_type", "prescription")
+      .neq("status", "cancelled")
       .order("submitted_at", { ascending: false });
 
     if (error) {

@@ -199,7 +199,7 @@ function getTrackingUrl(trackingNumber: string, carrier?: string): string {
     case "dhlexpress":
       return `https://www.dhl.com/en/express/tracking.html?AWB=${tn}`;
     default:
-      return `https://www.fedex.com/fedextrack/?trknbr=${tn}`;
+      return `https://parcelsapp.com/en/tracking/${tn}`;
   }
 }
 
