@@ -52,6 +52,9 @@ interface Prescription {
   pdfStoragePath?: string;
   consultationReason?: string;
   refillFrequencyDays?: number | null;
+  carrierStatus?: string;
+  trackingCarrier?: string;
+  estimatedDelivery?: string;
 }
 
 const CONSULTATION_REASON_LABELS: Record<string, string> = {
@@ -347,6 +350,9 @@ export function PrescriptionModals({
                   pharmacyName={selectedPrescription.pharmacyName}
                   billingStatus={selectedPrescription.paymentStatus}
                   patientCopay={selectedPrescription.patientPrice}
+                  carrierStatus={selectedPrescription.carrierStatus}
+                  trackingCarrier={selectedPrescription.trackingCarrier}
+                  estimatedDelivery={selectedPrescription.estimatedDelivery}
                 />
               </div>
 
@@ -358,7 +364,7 @@ export function PrescriptionModals({
                   pharmacyName={selectedPrescription.pharmacyName}
                   billingStatus={selectedPrescription.paymentStatus}
                   patientCopay={selectedPrescription.patientPrice}
-                  trackingCarrier={selectedPrescription.carrierStatus}
+                  trackingCarrier={selectedPrescription.trackingCarrier}
                 />
               </div>
 
