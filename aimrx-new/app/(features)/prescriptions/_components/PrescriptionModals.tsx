@@ -104,7 +104,7 @@ const printReceipt = () => {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>SmartConnect RX Receipt</title>
+      <title>AIM Receipt</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; padding: 12px; color: #333; font-size: 0.86rem; }
@@ -228,7 +228,7 @@ export function PrescriptionModals({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto print:max-w-full">
           {selectedPrescription && (
-            <div className="space-y-6 print-container" id="rx-receipt">
+            <div className="space-y-6 print-container" id="aim-receipt">
               {/* SmartConnect Logo */}
               <div className="text-center pt-4">
                 <img
@@ -241,10 +241,10 @@ export function PrescriptionModals({
               {/* Letterhead */}
               <div className="text-center text-sm text-gray-600 border-b pb-4 print-letterhead">
                 <p className="font-semibold text-gray-900">
-                  SmartConnect RX
+                  AIM Medical Technologies
                 </p>
                 <p>106 E 6th St, Suite 900 · Austin, TX 78701</p>
-                <p>(512) 377-9898 · Mon–Fri 9AM–6PM CST</p>
+                <p>(769) 304-1830 · Mon–Fri 9AM–6PM CST</p>
               </div>
 
               {/* Success Checkmark & Headline */}
@@ -335,8 +335,19 @@ export function PrescriptionModals({
                 </div>
               </div>
 
-              {/* Progress Tracker */}
-              <div className="print-section print-production">
+              {/* Progress Tracker - screen version (hidden in print) */}
+              <div className="print-section print-production print-hide-tracker">
+                <PrescriptionProgressTracker
+                  status={selectedPrescription.status}
+                  trackingNumber={selectedPrescription.trackingNumber}
+                  pharmacyName={selectedPrescription.pharmacyName}
+                  billingStatus={selectedPrescription.paymentStatus}
+                  patientCopay={selectedPrescription.patientPrice}
+                />
+              </div>
+
+              {/* Progress Tracker - print-only static version */}
+              <div className="hidden print-section print-production" data-print-only="true">
                 <PrescriptionProgressTracker
                   status={selectedPrescription.status}
                   trackingNumber={selectedPrescription.trackingNumber}
@@ -528,7 +539,7 @@ export function PrescriptionModals({
               {/* Notes from Pharmacy - Always show */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 print-section print-notes">
                 <p className="font-semibold text-sm text-gray-700 mb-2 print-text">
-                  📋 Important Notes from Pharmacy:
+                  📋 Important Notes from AIM Pharmacy:
                 </p>
                 <div className="text-sm text-gray-900 space-y-1">
                   {(
@@ -562,10 +573,10 @@ export function PrescriptionModals({
                       className="font-semibold text-lg mb-2"
                       style={{ color: "#00AEEF" }}
                     >
-                      Pickup Location
+                      Fulfilling Pharmacy
                     </h3>
                     <p className="font-semibold text-gray-900 print-text">
-                      SmartConnect RX
+                      {selectedPrescription.pharmacyName || "AIM Medical Technologies"}
                     </p>
                     <a
                       href="https://maps.google.com/?q=106+E+6th+St+Suite+900+Austin+TX+78701"
