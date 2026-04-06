@@ -12,7 +12,6 @@ import {
   DollarSign,
   FileText,
   Pencil,
-  BadgeDollarSign,
 } from "lucide-react";
 import { toast } from "sonner";
 import { BillPatientModal } from "@/components/billing/BillPatientModal";
@@ -204,30 +203,6 @@ export function PrescriptionModals({
   hideEdit,
 }: PrescriptionModalsProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isMarkingPaid, setIsMarkingPaid] = useState(false);
-
-  const handleMarkAsPaid = async () => {
-    if (!selectedPrescription) return;
-    setIsMarkingPaid(true);
-    try {
-      const response = await fetch(
-        `/api/prescriptions/${selectedPrescription.id}/mark-paid`,
-        { method: "POST" },
-      );
-      const data = await response.json();
-      if (data.success) {
-        toast.success("Prescription marked as paid");
-        setIsDialogOpen(false);
-        onPrescriptionUpdated?.();
-      } else {
-        toast.error(data.error || "Failed to mark as paid");
-      }
-    } catch {
-      toast.error("Failed to mark as paid");
-    } finally {
-      setIsMarkingPaid(false);
-    }
-  };
 
   return (
     <>
@@ -604,36 +579,18 @@ export function PrescriptionModals({
 
               {/* Action Buttons */}
               <div className="pt-4 space-y-3 print-hide">
-                {/* Edit Prescription + Mark as Paid - only when pending_payment */}
-                {selectedPrescription.status === "pending_payment" && (
-                  <>
-                    {!hideEdit && (
-                      <Button
-                        onClick={() => setIsEditModalOpen(true)}
-                        variant="outline"
-                        className="w-full text-lg py-6 border-[#1E3A8A]/60 text-[#1E3A8A]/80 hover:bg-[#1E3A8A]/5"
-                      >
-                        <Pencil className="h-5 w-5 mr-2" />
-                        Edit Prescription
-                      </Button>
-                    )}
+                {/* Edit Prescription - only when pending_payment */}
+                {selectedPrescription.status === "pending_payment" &&
+                  !hideEdit && (
                     <Button
-                      onClick={handleMarkAsPaid}
-                      disabled={isMarkingPaid}
+                      onClick={() => setIsEditModalOpen(true)}
                       variant="outline"
                       className="w-full text-lg py-6 border-[#1E3A8A]/60 text-[#1E3A8A]/80 hover:bg-[#1E3A8A]/5"
                     >
-                      {isMarkingPaid ? (
-                        "Marking as Paid..."
-                      ) : (
-                        <>
-                          <BadgeDollarSign className="h-5 w-5 mr-2" />
-                          Mark as Paid
-                        </>
-                      )}
+                      <Pencil className="h-5 w-5 mr-2" />
+                      Edit Prescription
                     </Button>
-                  </>
-                )}
+                  )}
 
                 {/* Bill Patient Button - varies based on payment_status */}
                 {selectedPrescription.paymentStatus === "paid" ? (
