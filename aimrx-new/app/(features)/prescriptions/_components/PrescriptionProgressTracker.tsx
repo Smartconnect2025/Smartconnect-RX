@@ -87,7 +87,7 @@ function getStepIndex(status: string, billingStatus?: string): number {
   )
     return 3;
 
-  if (normalized === "submitted" && billingStatus !== "pending") return 2;
+  if (normalized === "submitted" && billing !== "pending") return 2;
 
   if (
     normalized === "paymentreceived" ||
