@@ -43,6 +43,16 @@ const printStyles = `
     display: none !important;
   }
 
+  /* Hide interactive progress tracker in print */
+  .print-hide-tracker {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  [data-print-only="true"] {
+    display: block !important;
+  }
+
   /* Hide Radix overlay/backdrop but keep dialog */
   [data-radix-dialog-overlay] {
     display: none !important;
@@ -247,6 +257,7 @@ interface Prescription {
   paymentStatus?: string;
   pdfStoragePath?: string;
   consultationReason?: string;
+  refillFrequencyDays?: number | null;
   carrierStatus?: string;
   trackingCarrier?: string;
   estimatedDelivery?: string;
@@ -384,6 +395,7 @@ export default function PrescriptionsPage() {
         patient_price,
         profit_cents,
         consultation_reason,
+        refill_frequency_days,
         shipping_fee_cents,
         total_paid_cents,
         status,
@@ -457,6 +469,7 @@ export default function PrescriptionsPage() {
           pharmacyColor: pharmacy?.primary_color,
           profitCents: rx.profit_cents,
           consultationReason: rx.consultation_reason as string | undefined,
+          refillFrequencyDays: rx.refill_frequency_days ?? null,
           shippingFeeCents: rx.shipping_fee_cents,
           totalPaidCents: rx.total_paid_cents,
           paymentStatus: rx.payment_status,

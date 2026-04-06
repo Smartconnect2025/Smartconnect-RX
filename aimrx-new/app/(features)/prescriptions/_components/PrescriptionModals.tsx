@@ -50,6 +50,7 @@ interface Prescription {
   paymentStatus?: string;
   pdfStoragePath?: string;
   consultationReason?: string;
+  refillFrequencyDays?: number | null;
 }
 
 const CONSULTATION_REASON_LABELS: Record<string, string> = {
@@ -74,7 +75,7 @@ const formatDateTime = (dateTime: string) => {
 
 // Function to print receipt using iframe (avoids CSS color compatibility issues)
 const printReceipt = () => {
-  const element = document.getElementById("aim-receipt");
+  const element = document.getElementById("rx-receipt");
   if (!element) {
     toast.error("Could not find receipt content");
     return;
@@ -104,7 +105,7 @@ const printReceipt = () => {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>AIM Receipt</title>
+      <title>SmartConnect RX Receipt</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; padding: 12px; color: #333; font-size: 0.86rem; }
@@ -228,7 +229,7 @@ export function PrescriptionModals({
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto print:max-w-full">
           {selectedPrescription && (
-            <div className="space-y-6 print-container" id="aim-receipt">
+            <div className="space-y-6 print-container" id="rx-receipt">
               {/* SmartConnect Logo */}
               <div className="text-center pt-4">
                 <img
