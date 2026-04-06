@@ -298,14 +298,17 @@ const formatStatusLabel = (status: string) => {
 
 const formatDateTime = (dateTime: string) => {
   const date = new Date(dateTime);
-  return date.toLocaleString("en-US", {
+  const datePart = date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+  });
+  const timePart = date.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
   });
+  return { datePart, timePart };
 };
 
 interface DigitalRxStatusData {
@@ -930,7 +933,9 @@ export default function PrescriptionsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPrescriptions.map((prescription) => (
+                  {filteredPrescriptions.map((prescription) => {
+                    const { datePart, timePart } = formatDateTime(prescription.dateTime);
+                    return (
                     <TableRow
                       key={prescription.id}
                       className="hover:bg-gray-50"
@@ -938,8 +943,9 @@ export default function PrescriptionsPage() {
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {prescription.id.slice(-4).toUpperCase()}
                       </TableCell>
-                      <TableCell className="text-sm whitespace-nowrap">
-                        {formatDateTime(prescription.dateTime)}
+                      <TableCell className="text-sm">
+                        <div>{datePart}</div>
+                        <div className="text-xs text-muted-foreground">{timePart}</div>
                       </TableCell>
                       <TableCell className="font-medium text-sm truncate" title={prescription.patientName}>
                         {prescription.patientName}
@@ -1005,7 +1011,8 @@ export default function PrescriptionsPage() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

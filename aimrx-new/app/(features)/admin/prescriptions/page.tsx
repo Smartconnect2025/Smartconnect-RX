@@ -96,14 +96,17 @@ const getStatusColor = (status: string) => {
 
 const formatDateTime = (dateTime: string) => {
   const date = new Date(dateTime);
-  return date.toLocaleString("en-US", {
+  const datePart = date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
+  });
+  const timePart = date.toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
     hour12: true,
   });
+  return { datePart, timePart };
 };
 
 interface PharmacyOption {
@@ -384,15 +387,18 @@ export default function AdminPrescriptionsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPrescriptions.map((prescription, idx) => (
+                filteredPrescriptions.map((prescription, idx) => {
+                  const { datePart, timePart } = formatDateTime(prescription.submittedAt);
+                  return (
                   <TableRow
                     key={prescription.id}
                     className={`cursor-pointer transition-colors hover:bg-blue-50/50 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/40"}`}
                     onClick={() => setSelectedPrescription(prescription)}
                     data-testid={`row-prescription-${prescription.id}`}
                   >
-                    <TableCell className="whitespace-nowrap text-sm">
-                      {formatDateTime(prescription.submittedAt)}
+                    <TableCell className="text-sm">
+                      <div>{datePart}</div>
+                      <div className="text-xs text-muted-foreground">{timePart}</div>
                     </TableCell>
                     <TableCell className="font-medium">
                       {prescription.providerName}
@@ -447,7 +453,8 @@ export default function AdminPrescriptionsPage() {
                       </Badge>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -485,7 +492,7 @@ export default function AdminPrescriptionsPage() {
                     <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="text-xs font-medium text-muted-foreground">Submitted</p>
-                      <p className="text-sm font-semibold" data-testid="text-submitted-date">{formatDateTime(selectedPrescription.submittedAt)}</p>
+                      <p className="text-sm font-semibold" data-testid="text-submitted-date">{formatDateTime(selectedPrescription.submittedAt).datePart} {formatDateTime(selectedPrescription.submittedAt).timePart}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
