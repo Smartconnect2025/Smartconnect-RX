@@ -126,6 +126,7 @@ export default function Step4PaymentPage() {
       const response = await fetch(`/api/prescriptions/${allIds[0]}/mark-paid`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prescriptionIds: allIds }),
       });
       const result = await response.json();
       if (!response.ok || result.error) {
