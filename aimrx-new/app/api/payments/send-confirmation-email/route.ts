@@ -115,7 +115,7 @@ Questions? Contact your provider or reply to this email.
 
 Keep this email for your records.
 
-\u00a9 ${new Date().getFullYear()} ${brandName}
+\u00a9 ${new Date().getFullYear()} ${FROM_NAME}
       `,
       html: paymentConfirmationEmailHtml({
         patientName: safePatientName || "there",
