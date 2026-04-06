@@ -1,5 +1,6 @@
 import { createAdminClient } from "@core/database/client";
 import sgMail from "@sendgrid/mail";
+import { mfaEmailHtml } from "@core/services/email/emailTemplates";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "support@aimrx.com";
@@ -60,17 +61,7 @@ export async function sendMFACode(
       },
       subject: "Your Verification Code",
       text: `Your verification code is: ${code}\n\nThis code will expire in ${MFA_CODE_EXPIRY_MINUTES} minutes.\n\nIf you didn't request this code, please ignore this email.`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #333;">Your Verification Code</h2>
-          <p style="font-size: 16px; color: #666;">Enter this code to complete your login:</p>
-          <div style="background: #f5f5f5; padding: 20px; text-align: center; margin: 20px 0; border-radius: 8px;">
-            <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #333;">${code}</span>
-          </div>
-          <p style="font-size: 14px; color: #999;">This code will expire in ${MFA_CODE_EXPIRY_MINUTES} minutes.</p>
-          <p style="font-size: 14px; color: #999;">If you didn't request this code, please ignore this email.</p>
-        </div>
-      `,
+      html: mfaEmailHtml(code),
     };
 
     await sgMail.send(msg);

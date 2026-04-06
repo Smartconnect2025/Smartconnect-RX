@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import sgMail from "@sendgrid/mail";
 import { createAdminClient } from "@core/database/client";
 import { createServerClient } from "@core/supabase/server";
+import { accessRequestConfirmationHtml, adminAccessRequestHtml, adminDetailCard } from "@core/services/email/emailTemplates";
 
 async function sendConfirmationEmailToApplicant(
   email: string,
@@ -9,50 +10,7 @@ async function sendConfirmationEmailToApplicant(
 ) {
   const confirmationSubject =
     "Thank you for your interest in SmartConnect RX Marketplace";
-  const confirmationHtml = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-      <div style="background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #00AEEF 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-        <img src="https://smartconnectrx.com/logo-header.png" alt="SmartConnect RX" style="height: 80px; margin-bottom: 15px;" />
-        <h1 style="color: white; margin: 0; font-size: 24px;">Request Received</h1>
-      </div>
-
-      <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
-        <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-          Hello ${firstName},
-        </p>
-
-        <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-          Thank you for reaching out to join the SmartConnect RX Marketplace. We've received your request for access and are excited to have you join our network of providers.
-        </p>
-
-        <div style="background: #DBEAFE; border-left: 4px solid #2563EB; padding: 15px; margin: 20px 0; border-radius: 4px;">
-          <p style="margin: 0 0 10px 0; font-size: 14px; color: #1E3A8A;">
-            <strong>What's next?</strong>
-          </p>
-          <p style="margin: 0; font-size: 14px; color: #1E3A8A;">
-            Our team is currently reviewing your application and finalizing your account setup. We want to ensure you have a smooth experience from the moment you first log in.
-          </p>
-        </div>
-
-        <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-          You can expect to receive an update from us within <strong>24 to 48 hours</strong>. Once your account is ready, we will send you a follow-up email with your login credentials and a quick guide to help you get started.
-        </p>
-
-        <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-          We look forward to working with you and supporting your practice.
-        </p>
-
-        <p style="font-size: 16px; line-height: 1.6; margin-top: 30px;">
-          Best regards,<br>
-          <strong>SmartConnect RX Team</strong>
-        </p>
-      </div>
-
-      <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
-        <p style="margin: 5px 0;">© ${new Date().getFullYear()} SmartConnect RX. All rights reserved.</p>
-      </div>
-    </div>
-  `;
+  const confirmationHtml = accessRequestConfirmationHtml(firstName);
 
   const msg = {
     to: email,
@@ -127,95 +85,86 @@ export async function POST(request: NextRequest) {
         ? ` (via ${formData.referringPharmacyName})`
         : "";
       emailSubject = `New Provider Access Request - ${formData.firstName} ${formData.lastName}${pharmacyRef}`;
-      emailContent = `
-        <h2>New Provider Access Request</h2>
 
-        ${formData.referringPharmacyName ? `
-        <div style="background: #DBEAFE; border-left: 4px solid #2563EB; padding: 12px 16px; margin: 0 0 20px 0; border-radius: 4px;">
-          <strong style="color: #1E3A8A;">Referred by Pharmacy:</strong>
-          <span style="color: #1E3A8A; margin-left: 8px;">${formData.referringPharmacyName}</span>
-          <br/><small style="color: #3B82F6;">This provider should be linked to this pharmacy upon approval.</small>
-        </div>
-        ` : ""}
+      const personalFields = [
+        { label: "Name", value: `${formData.firstName} ${formData.lastName}` },
+        { label: "Email", value: formData.email },
+        { label: "Phone", value: formData.phone },
+      ];
+      if (formData.companyName) personalFields.push({ label: "Company Name", value: formData.companyName });
+      if (formData.referringPharmacyName) personalFields.push({ label: "Referred by Pharmacy", value: formData.referringPharmacyName });
 
-        <h3>Personal Information</h3>
-        <ul>
-          <li><strong>Name:</strong> ${formData.firstName} ${formData.lastName}</li>
-          <li><strong>Email:</strong> ${formData.email}</li>
-          <li><strong>Phone:</strong> ${formData.phone}</li>
-          ${formData.companyName ? `<li><strong>Company Name:</strong> ${formData.companyName}</li>` : ""}
-        </ul>
+      const credFields = [
+        { label: "NPI Number", value: formData.npiNumber },
+        { label: "Medical License", value: formData.medicalLicense },
+        { label: "License State", value: formData.licenseState },
+        { label: "Specialty", value: formData.specialty },
+      ];
 
-        <h3>Medical Credentials</h3>
-        <ul>
-          <li><strong>NPI Number:</strong> ${formData.npiNumber}</li>
-          <li><strong>Medical License:</strong> ${formData.medicalLicense}</li>
-          <li><strong>License State:</strong> ${formData.licenseState}</li>
-          <li><strong>Specialty:</strong> ${formData.specialty}</li>
-        </ul>
+      const practiceFields = [
+        { label: "Address", value: `${formData.practiceAddress}, ${formData.city}, ${formData.state} ${formData.zipCode}` },
+        { label: "Years in Practice", value: formData.yearsInPractice },
+      ];
 
-        <h3>Practice Information</h3>
-        <ul>
-          <li><strong>Address:</strong> ${formData.practiceAddress}, ${formData.city}, ${formData.state} ${formData.zipCode}</li>
-          <li><strong>Years in Practice:</strong> ${formData.yearsInPractice}</li>
-        </ul>
+      const additionalFields: { label: string; value: string }[] = [];
+      if (formData.patientsPerMonth) additionalFields.push({ label: "Patients Per Month", value: formData.patientsPerMonth });
+      if (formData.interestedIn) additionalFields.push({ label: "Interested In", value: formData.interestedIn });
+      if (formData.hearAboutUs) additionalFields.push({ label: "How They Heard About Us", value: formData.hearAboutUs });
+      if (formData.additionalInfo) additionalFields.push({ label: "Additional Info", value: formData.additionalInfo });
 
-        <h3>Additional Information</h3>
-        <ul>
-          ${formData.patientsPerMonth ? `<li><strong>Patients Per Month:</strong> ${formData.patientsPerMonth}</li>` : ""}
-          ${formData.interestedIn ? `<li><strong>Interested In:</strong> ${formData.interestedIn}</li>` : ""}
-          ${formData.hearAboutUs ? `<li><strong>How They Heard About Us:</strong> ${formData.hearAboutUs}</li>` : ""}
-          ${formData.additionalInfo ? `<li><strong>Additional Info:</strong> ${formData.additionalInfo}</li>` : ""}
-        </ul>
-      `;
+      emailContent = adminAccessRequestHtml({
+        heading: "New Provider Access Request",
+        detailCards:
+          adminDetailCard("Personal Information", personalFields) +
+          adminDetailCard("Medical Credentials", credFields) +
+          adminDetailCard("Practice Information", practiceFields) +
+          (additionalFields.length > 0 ? adminDetailCard("Additional Information", additionalFields) : ""),
+      });
     } else if (type === "pharmacy") {
       emailSubject = `New Pharmacy Network Application - ${formData.pharmacyName}`;
-      emailContent = `
-        <h2>New Pharmacy Network Application</h2>
 
-        <h3>Pharmacy Information</h3>
-        <ul>
-          <li><strong>Pharmacy Name:</strong> ${formData.pharmacyName}</li>
-          <li><strong>Owner/Director:</strong> ${formData.ownerName}</li>
-          <li><strong>Email:</strong> ${formData.email}</li>
-          <li><strong>Phone:</strong> ${formData.phone}</li>
-        </ul>
+      const pharmacyFields = [
+        { label: "Pharmacy Name", value: formData.pharmacyName },
+        { label: "Owner/Director", value: formData.ownerName },
+        { label: "Email", value: formData.email },
+        { label: "Phone", value: formData.phone },
+      ];
 
-        <h3>Licensing & Credentials</h3>
-        <ul>
-          <li><strong>License Number:</strong> ${formData.licenseNumber}</li>
-          <li><strong>License State:</strong> ${formData.licenseState}</li>
-          <li><strong>DEA Number:</strong> ${formData.deaNumber}</li>
-          ${formData.ncpdpNumber ? `<li><strong>NCPDP Number:</strong> ${formData.ncpdpNumber}</li>` : ""}
-          ${formData.accreditations ? `<li><strong>Accreditations:</strong> ${formData.accreditations}</li>` : ""}
-        </ul>
+      const licenseFields = [
+        { label: "License Number", value: formData.licenseNumber },
+        { label: "License State", value: formData.licenseState },
+        { label: "DEA Number", value: formData.deaNumber },
+      ];
+      if (formData.ncpdpNumber) licenseFields.push({ label: "NCPDP Number", value: formData.ncpdpNumber });
+      if (formData.accreditations) licenseFields.push({ label: "Accreditations", value: formData.accreditations });
 
-        <h3>Location Information</h3>
-        <ul>
-          <li><strong>Address:</strong> ${formData.pharmacyAddress}, ${formData.city}, ${formData.state} ${formData.zipCode}</li>
-        </ul>
+      const compoundingFields = [
+        { label: "Years in Business", value: formData.yearsInBusiness },
+        { label: "Compounding Experience", value: `${formData.compoundingExperience} years` },
+        { label: "Specializations", value: formData.specializations },
+      ];
+      if (formData.monthlyCapacity) compoundingFields.push({ label: "Monthly Capacity", value: formData.monthlyCapacity });
 
-        <h3>Compounding Capabilities</h3>
-        <ul>
-          <li><strong>Years in Business:</strong> ${formData.yearsInBusiness}</li>
-          <li><strong>Compounding Experience:</strong> ${formData.compoundingExperience} years</li>
-          ${formData.monthlyCapacity ? `<li><strong>Monthly Capacity:</strong> ${formData.monthlyCapacity}</li>` : ""}
-          <li><strong>Specializations:</strong> ${formData.specializations}</li>
-        </ul>
+      const systemFields = [
+        { label: "Current System", value: formData.currentSystem },
+      ];
+      if (formData.systemVersion) systemFields.push({ label: "System Version", value: formData.systemVersion });
+      if (formData.integrationType) systemFields.push({ label: "Preferred Integration", value: formData.integrationType });
 
-        <h3>System & Integration</h3>
-        <ul>
-          <li><strong>Current System:</strong> ${formData.currentSystem}</li>
-          ${formData.systemVersion ? `<li><strong>System Version:</strong> ${formData.systemVersion}</li>` : ""}
-          ${formData.integrationType ? `<li><strong>Preferred Integration:</strong> ${formData.integrationType}</li>` : ""}
-        </ul>
+      const additionalFields: { label: string; value: string }[] = [];
+      if (formData.hearAboutUs) additionalFields.push({ label: "How They Heard About Us", value: formData.hearAboutUs });
+      if (formData.additionalInfo) additionalFields.push({ label: "Additional Info", value: formData.additionalInfo });
 
-        <h3>Additional Information</h3>
-        <ul>
-          ${formData.hearAboutUs ? `<li><strong>How They Heard About Us:</strong> ${formData.hearAboutUs}</li>` : ""}
-          ${formData.additionalInfo ? `<li><strong>Additional Info:</strong> ${formData.additionalInfo}</li>` : ""}
-        </ul>
-      `;
+      emailContent = adminAccessRequestHtml({
+        heading: "New Pharmacy Network Application",
+        detailCards:
+          adminDetailCard("Pharmacy Information", pharmacyFields) +
+          adminDetailCard("Licensing & Credentials", licenseFields) +
+          adminDetailCard("Location", [{ label: "Address", value: `${formData.pharmacyAddress}, ${formData.city}, ${formData.state} ${formData.zipCode}` }]) +
+          adminDetailCard("Compounding Capabilities", compoundingFields) +
+          adminDetailCard("System & Integration", systemFields) +
+          (additionalFields.length > 0 ? adminDetailCard("Additional Information", additionalFields) : ""),
+      });
     } else {
       return NextResponse.json(
         { success: false, error: "Invalid request type" },

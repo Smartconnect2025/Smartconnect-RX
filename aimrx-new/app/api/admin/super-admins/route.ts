@@ -4,6 +4,7 @@ import { getUser } from "@core/auth";
 import sgMail from "@sendgrid/mail";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 import { insertUserRole } from "@core/database/insert-user-role";
+import { welcomeEmailHtml, calloutBox } from "@core/services/email/emailTemplates";
 
 export async function GET() {
   const { user, userRole } = await getUser();
@@ -160,53 +161,13 @@ export async function POST(request: Request) {
           }
         }
 
-        const emailHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; color: #333;">
-            <div style="background: linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #00AEEF 100%); padding: 30px; border-radius: 10px 10px 0 0; text-align: center;">
-              <img src="https://smartconnectrx.com/logo-header.png" alt="SmartConnect RX" style="height: 80px; margin-bottom: 15px;" />
-              <h1 style="color: white; margin: 0; font-size: 24px;">Welcome to SmartConnect RX</h1>
-            </div>
-            <div style="background: #f9fafb; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 10px 10px;">
-              <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                Hello ${displayName},
-              </p>
-              <p style="font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
-                Your <strong>Platform Super Admin</strong> account has been created! You now have full access to manage ${pharmacyNames}, providers, medications, and platform settings.
-              </p>
-              <div style="background: white; border: 2px solid #1E3A8A; border-radius: 8px; padding: 20px; margin: 25px 0;">
-                <h2 style="color: #1E3A8A; margin-top: 0; font-size: 18px;">Your Login Credentials</h2>
-                <p style="margin: 10px 0;"><strong>Portal URL:</strong> <a href="${appUrl}" style="color: #00AEEF;">${appUrl}</a></p>
-                <p style="margin: 10px 0;"><strong>Username (Email):</strong> ${email}</p>
-                <p style="margin: 10px 0;"><strong>Password:</strong> <code style="background: #f3f4f6; padding: 5px 10px; border-radius: 4px; font-size: 14px;">${password}</code></p>
-              </div>
-              <div style="background: #DBEAFE; border-left: 4px solid #2563EB; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                <p style="margin: 0; font-size: 14px; color: #1E3A8A;">
-                  <strong>Your Access Level:</strong> Platform Super Admin — you can manage all pharmacies, invite providers, view all prescriptions and orders, and create other admin accounts.
-                </p>
-              </div>
-              <div style="background: #FEF3C7; border-left: 4px solid #F59E0B; padding: 15px; margin: 20px 0; border-radius: 4px;">
-                <p style="margin: 0; font-size: 14px; color: #92400E;">
-                  <strong>Security Notice:</strong> Please keep these credentials secure. We recommend changing your password after your first login by going to Settings.
-                </p>
-              </div>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${appUrl}" style="display: inline-block; background: #1E3A8A; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-                  Log In to Portal
-                </a>
-              </div>
-              <p style="font-size: 14px; line-height: 1.6; color: #6b7280; margin-top: 30px;">
-                If you have any questions, contact support at <a href="mailto:support@smartconnectrx.com" style="color: #00AEEF;">support@smartconnectrx.com</a>.
-              </p>
-              <p style="font-size: 16px; line-height: 1.6; margin-top: 20px;">
-                Best regards,<br>
-                <strong>SmartConnect RX Team</strong>
-              </p>
-            </div>
-            <div style="text-align: center; padding: 20px; color: #6b7280; font-size: 12px;">
-              <p style="margin: 5px 0;">&copy; ${new Date().getFullYear()} SmartConnect RX. All rights reserved.</p>
-            </div>
-          </div>
-        `;
+        const emailHtml = welcomeEmailHtml({
+          greeting: `Hello ${displayName},`,
+          message: `Your <strong>Platform Super Admin</strong> account has been created! You now have full access to manage ${pharmacyNames}, providers, medications, and platform settings.`,
+          email,
+          tempPassword: password,
+          extraContent: calloutBox(`<p style="margin: 0; font-size: 14px; color: #1E3A8A;"><strong>Your Access Level:</strong> Platform Super Admin — you can manage all pharmacies, invite providers, view all prescriptions and orders, and create other admin accounts.</p>`),
+        });
 
         const msg = {
           to: email,
