@@ -56,6 +56,8 @@ export async function POST(
       );
     }
 
+    const firstPatientId = rxList[0].patient_id;
+
     for (const rx of rxList) {
       if (rx.prescriber_id !== user.id) {
         return NextResponse.json(
@@ -69,6 +71,12 @@ export async function POST(
             success: false,
             error: `Cannot mark prescription ${rx.id} as paid — status is not pending_payment`,
           },
+          { status: 400 },
+        );
+      }
+      if (rx.patient_id !== firstPatientId) {
+        return NextResponse.json(
+          { success: false, error: "All prescriptions must belong to the same patient" },
           { status: 400 },
         );
       }
