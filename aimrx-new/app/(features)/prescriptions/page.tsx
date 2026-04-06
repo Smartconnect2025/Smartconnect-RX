@@ -912,19 +912,19 @@ export default function PrescriptionsPage() {
                 <TableHeader>
                   <TableRow className="bg-gray-50">
                     <TableHead className="font-semibold w-[50px]">Ref</TableHead>
-                    <TableHead className="font-semibold w-[140px]">Date & Time</TableHead>
-                    <TableHead className="font-semibold w-[120px]">
+                    <TableHead className="font-semibold w-[130px]">Date & Time</TableHead>
+                    <TableHead className="font-semibold w-[110px]">
                       Patient Name
                     </TableHead>
                     <TableHead className="font-semibold">
                       Medication + Strength/Dosage
                     </TableHead>
-                    <TableHead className="font-semibold w-[100px]">
-                      Quantity / Refills
+                    <TableHead className="font-semibold w-[80px]">
+                      Qty / Refills
                     </TableHead>
-                    <TableHead className="font-semibold w-[130px]">Pharmacy</TableHead>
-                    <TableHead className="font-semibold w-[120px]">Status</TableHead>
-                    <TableHead className="font-semibold text-right w-[70px]">
+                    <TableHead className="font-semibold w-[100px]">Pharmacy</TableHead>
+                    <TableHead className="font-semibold w-[110px]">Status</TableHead>
+                    <TableHead className="font-semibold text-right w-[65px]">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -938,31 +938,31 @@ export default function PrescriptionsPage() {
                       <TableCell className="font-mono text-xs text-muted-foreground">
                         {prescription.id.slice(-4).toUpperCase()}
                       </TableCell>
-                      <TableCell className="whitespace-nowrap">
+                      <TableCell className="text-sm whitespace-nowrap">
                         {formatDateTime(prescription.dateTime)}
                       </TableCell>
-                      <TableCell className="font-medium truncate">
+                      <TableCell className="font-medium text-sm truncate" title={prescription.patientName}>
                         {prescription.patientName}
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-col min-w-0">
-                          <span className="font-medium truncate">
+                          <span className="text-sm font-medium truncate" title={prescription.medication}>
                             {prescription.medication}
                           </span>
-                          <span className="text-sm text-muted-foreground truncate">
+                          <span className="text-xs text-muted-foreground truncate" title={prescription.strength}>
                             {prescription.strength}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col">
+                        <div className="flex flex-col text-sm">
                           <span>Qty: {prescription.quantity}</span>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-xs text-muted-foreground">
                             Refills: {prescription.refills}
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell className="truncate">
+                      <TableCell className="truncate text-sm" title={prescription.pharmacyName || ""}>
                         {prescription.pharmacyName ? (
                           <span
                             className="font-medium"
@@ -973,7 +973,7 @@ export default function PrescriptionsPage() {
                             {prescription.pharmacyName}
                           </span>
                         ) : (
-                          <span className="text-muted-foreground text-sm">
+                          <span className="text-muted-foreground text-xs">
                             Not specified
                           </span>
                         )}

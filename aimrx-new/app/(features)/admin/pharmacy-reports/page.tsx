@@ -759,19 +759,19 @@ export default function PharmacyReportsPage() {
                       </CardHeader>
                       <CardContent className="p-0">
                         <div className="overflow-x-auto">
-                          <Table>
+                          <Table className="table-fixed w-full">
                             <TableHeader>
                               <TableRow className="bg-gray-50/60 hover:bg-gray-50/60">
-                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Date</TableHead>
-                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Queue ID</TableHead>
-                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Patient</TableHead>
+                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[85px]">Date</TableHead>
+                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[70px]">Queue ID</TableHead>
+                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[110px]">Patient</TableHead>
                                 <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Medication</TableHead>
-                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Qty/Ref</TableHead>
-                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">SIG</TableHead>
-                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Med Price</TableHead>
-                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Provider Fees</TableHead>
-                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Total</TableHead>
-                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status</TableHead>
+                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[60px]">Qty/Ref</TableHead>
+                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[100px]">SIG</TableHead>
+                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right w-[75px]">Med Price</TableHead>
+                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right w-[80px]">Provider Fees</TableHead>
+                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right w-[70px]">Total</TableHead>
+                                <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[90px]">Status</TableHead>
                               </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -780,15 +780,15 @@ export default function PharmacyReportsPage() {
                                   <TableCell className="whitespace-nowrap text-sm text-gray-600">
                                     {new Date(order.date).toLocaleDateString()}
                                   </TableCell>
-                                  <TableCell className="font-mono text-xs text-gray-400">
+                                  <TableCell className="font-mono text-xs text-gray-400 truncate">
                                     {order.queue_id || "N/A"}
                                   </TableCell>
-                                  <TableCell className="text-sm font-medium text-gray-700">{order.patient}</TableCell>
-                                  <TableCell className="text-sm text-gray-600">{order.medication}</TableCell>
+                                  <TableCell className="text-sm font-medium text-gray-700 truncate">{order.patient}</TableCell>
+                                  <TableCell className="text-sm text-gray-600 truncate" title={order.medication}>{order.medication}</TableCell>
                                   <TableCell className="whitespace-nowrap text-sm text-gray-500">
                                     {order.quantity} / {order.refills}
                                   </TableCell>
-                                  <TableCell className="max-w-[200px] truncate text-sm text-gray-500">
+                                  <TableCell className="truncate text-sm text-gray-500" title={order.sig || "N/A"}>
                                     {order.sig || "N/A"}
                                   </TableCell>
                                   <TableCell className="whitespace-nowrap text-sm text-gray-600 text-right">${order.medicationPrice.toFixed(2)}</TableCell>
@@ -860,19 +860,19 @@ export default function PharmacyReportsPage() {
                           </div>
 
                           <div className="overflow-x-auto rounded-xl border border-gray-100">
-                            <Table>
+                            <Table className="table-fixed w-full">
                               <TableHeader>
                                 <TableRow className="bg-gray-50/60 hover:bg-gray-50/60">
-                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Date</TableHead>
-                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Queue ID</TableHead>
-                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Patient</TableHead>
+                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[85px]">Date</TableHead>
+                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[70px]">Queue ID</TableHead>
+                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[110px]">Patient</TableHead>
                                   <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Medication</TableHead>
-                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Qty/Ref</TableHead>
-                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">SIG</TableHead>
-                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Med Price</TableHead>
-                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Provider Fees</TableHead>
-                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right">Total</TableHead>
-                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">Status</TableHead>
+                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[60px]">Qty/Ref</TableHead>
+                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[100px]">SIG</TableHead>
+                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right w-[75px]">Med Price</TableHead>
+                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right w-[80px]">Provider Fees</TableHead>
+                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider text-right w-[70px]">Total</TableHead>
+                                  <TableHead className="text-[11px] font-bold text-gray-500 uppercase tracking-wider w-[90px]">Status</TableHead>
                                 </TableRow>
                               </TableHeader>
                               <TableBody>
@@ -881,15 +881,15 @@ export default function PharmacyReportsPage() {
                                     <TableCell className="whitespace-nowrap text-sm text-gray-600">
                                       {new Date(order.date).toLocaleDateString()}
                                     </TableCell>
-                                    <TableCell className="font-mono text-xs text-gray-400">
+                                    <TableCell className="font-mono text-xs text-gray-400 truncate">
                                       {order.queue_id || "N/A"}
                                     </TableCell>
-                                    <TableCell className="text-sm font-medium text-gray-700">{order.patient}</TableCell>
-                                    <TableCell className="text-sm text-gray-600">{order.medication}</TableCell>
+                                    <TableCell className="text-sm font-medium text-gray-700 truncate">{order.patient}</TableCell>
+                                    <TableCell className="text-sm text-gray-600 truncate" title={order.medication}>{order.medication}</TableCell>
                                     <TableCell className="whitespace-nowrap text-sm text-gray-500">
                                       {order.quantity} / {order.refills}
                                     </TableCell>
-                                    <TableCell className="max-w-[200px] truncate text-sm text-gray-500">
+                                    <TableCell className="truncate text-sm text-gray-500" title={order.sig || "N/A"}>
                                       {order.sig || "N/A"}
                                     </TableCell>
                                     <TableCell className="whitespace-nowrap text-sm text-gray-600 text-right">${order.medicationPrice.toFixed(2)}</TableCell>
