@@ -123,15 +123,13 @@ export default function Step4PaymentPage() {
     if (allIds.length === 0) return;
     setMarkingPaid(true);
     try {
-      for (const id of allIds) {
-        const response = await fetch(`/api/prescriptions/${id}/mark-paid`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-        });
-        const result = await response.json();
-        if (!response.ok || result.error) {
-          throw new Error(result.error || "Failed to mark as paid");
-        }
+      const response = await fetch(`/api/prescriptions/${allIds[0]}/mark-paid`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const result = await response.json();
+      if (!response.ok || result.error) {
+        throw new Error(result.error || "Failed to mark as paid");
       }
       setPaymentComplete(true);
       toast.success(

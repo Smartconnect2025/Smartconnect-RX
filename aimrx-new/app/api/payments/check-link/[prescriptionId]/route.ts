@@ -185,19 +185,31 @@ export async function DELETE(
       );
     }
 
-    // Delete pending payment transaction
-    const { error: deleteError } = await supabase
+    const { data: pendingTx } = await supabase
       .from("payment_transactions")
-      .delete()
+      .select("id")
       .eq("prescription_id", prescriptionId)
-      .eq("payment_status", "pending");
+      .eq("payment_status", "pending")
+      .single();
 
-    if (deleteError) {
-      console.error("[PAYMENT:delete] Error:", deleteError);
-      return NextResponse.json(
-        { error: "Failed to delete payment link" },
-        { status: 500 }
-      );
+    if (pendingTx) {
+      await supabase
+        .from("prescriptions")
+        .update({ payment_transaction_id: null, payment_status: "pending" })
+        .eq("payment_transaction_id", pendingTx.id);
+
+      const { error: deleteError } = await supabase
+        .from("payment_transactions")
+        .delete()
+        .eq("id", pendingTx.id);
+
+      if (deleteError) {
+        console.error("[PAYMENT:delete] Error:", deleteError);
+        return NextResponse.json(
+          { error: "Failed to delete payment link" },
+          { status: 500 }
+        );
+      }
     }
 
     return NextResponse.json({ success: true });

@@ -79,31 +79,71 @@ export async function POST(
       ? prescription.total_paid_cents
       : medicationCostCents + profitCents + shippingFeeCents;
 
-    if (paymentTransactionId) {
-      const { error: ptError } = await supabaseAdmin
-        .from("payment_transactions")
-        .update({
-          payment_status: "completed",
-          order_progress: "payment_received",
-          paid_at: now,
-          card_type: "manual-payment",
-          updated_at: now,
-          total_amount_cents: totalAmountCents,
-          medication_cost_cents: medicationCostCents,
-          consultation_fee_cents: profitCents,
-          shipping_fee_cents: shippingFeeCents,
-        })
-        .eq("id", paymentTransactionId);
+    let allLinkedRxIds: string[] = [prescriptionId];
 
-      if (ptError) {
-        console.error("Error updating payment_transaction:", ptError);
-        return NextResponse.json(
-          { success: false, error: "Failed to update payment transaction" },
-          { status: 500 },
-        );
+    if (paymentTransactionId) {
+      const { data: linkedRxList } = await supabaseAdmin
+        .from("prescriptions")
+        .select("id, patient_price, profit_cents, shipping_fee_cents, total_paid_cents")
+        .eq("payment_transaction_id", paymentTransactionId);
+
+      if (linkedRxList && linkedRxList.length > 0) {
+        allLinkedRxIds = linkedRxList.map((rx: { id: string }) => rx.id);
+        const combinedMedCents = linkedRxList.reduce((sum: number, rx: { patient_price?: string | null }) => {
+          const p = rx.patient_price ? parseFloat(rx.patient_price as string) : 0;
+          return sum + (Number.isFinite(p) ? Math.round(p * 100) : 0);
+        }, 0);
+        const combinedProfitCents = linkedRxList.reduce((sum: number, rx: { profit_cents?: number | null }) => sum + (rx.profit_cents || 0), 0);
+        const combinedShippingCents = linkedRxList.reduce((sum: number, rx: { shipping_fee_cents?: number | null }) => sum + (rx.shipping_fee_cents || 0), 0);
+        const combinedTotal = combinedMedCents + combinedProfitCents + combinedShippingCents;
+
+        const { error: ptError } = await supabaseAdmin
+          .from("payment_transactions")
+          .update({
+            payment_status: "completed",
+            order_progress: "payment_received",
+            paid_at: now,
+            card_type: "manual-payment",
+            updated_at: now,
+            total_amount_cents: combinedTotal,
+            medication_cost_cents: combinedMedCents,
+            consultation_fee_cents: combinedProfitCents,
+            shipping_fee_cents: combinedShippingCents,
+          })
+          .eq("id", paymentTransactionId);
+
+        if (ptError) {
+          console.error("Error updating payment_transaction:", ptError);
+          return NextResponse.json(
+            { success: false, error: "Failed to update payment transaction" },
+            { status: 500 },
+          );
+        }
+      } else {
+        const { error: ptError } = await supabaseAdmin
+          .from("payment_transactions")
+          .update({
+            payment_status: "completed",
+            order_progress: "payment_received",
+            paid_at: now,
+            card_type: "manual-payment",
+            updated_at: now,
+            total_amount_cents: totalAmountCents,
+            medication_cost_cents: medicationCostCents,
+            consultation_fee_cents: profitCents,
+            shipping_fee_cents: shippingFeeCents,
+          })
+          .eq("id", paymentTransactionId);
+
+        if (ptError) {
+          console.error("Error updating payment_transaction:", ptError);
+          return NextResponse.json(
+            { success: false, error: "Failed to update payment transaction" },
+            { status: 500 },
+          );
+        }
       }
     } else {
-
       const { data: newTransaction, error: createError } = await supabaseAdmin
         .from("payment_transactions")
         .insert({
@@ -133,7 +173,6 @@ export async function POST(
       paymentTransactionId = newTransaction.id;
     }
 
-    // Update prescription status
     const { error: rxError } = await supabaseAdmin
       .from("prescriptions")
       .update({
@@ -143,73 +182,57 @@ export async function POST(
         payment_transaction_id: paymentTransactionId,
         updated_at: now,
       })
-      .eq("id", prescriptionId);
+      .in("id", allLinkedRxIds);
 
     if (rxError) {
-      console.error("Error updating prescription:", rxError);
+      console.error("Error updating prescriptions:", rxError);
       return NextResponse.json(
-        { success: false, error: "Failed to update prescription" },
+        { success: false, error: "Failed to update prescriptions" },
         { status: 500 },
       );
     }
 
-    // Submit to pharmacy automatically after marking as paid
-    // Use internal API call with secret header
-    try {
-      const submitResponse = await fetch(
-        `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"}/api/prescriptions/${prescriptionId}/submit-to-pharmacy`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-internal-secret": process.env.INTERNAL_API_SECRET || "",
-          },
-        }
-      );
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const internalSecret = process.env.INTERNAL_API_SECRET || "";
+    let anySubmitFailed = false;
 
-      if (!submitResponse.ok) {
-        const errorData = await submitResponse.json().catch(() => ({}));
-        console.error(
-          "⚠️ [mark-paid] Failed to submit to pharmacy:",
-          submitResponse.status,
-          errorData
+    for (const rxId of allLinkedRxIds) {
+      try {
+        const submitResponse = await fetch(
+          `${siteUrl}/api/prescriptions/${rxId}/submit-to-pharmacy`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-internal-secret": internalSecret,
+            },
+          }
         );
 
-        await supabaseAdmin.from("system_logs").insert({
-          user_id: user.id,
-          user_email: user.email || "unknown",
-          user_name: "System",
-          action: "PHARMACY_SUBMISSION_FAILED",
-          details: `Prescription ${prescriptionId} was marked as paid but failed to submit to pharmacy. Error: ${errorData.error || "Unknown error"}. Status: ${submitResponse.status}. Manual submission required.`,
-          status: "error",
-        }).then(({ error: logErr }) => {
-          if (logErr) console.error("Failed to log pharmacy submission failure:", logErr);
-        });
-
-        return NextResponse.json({
-          success: true,
-          warning: "Marked as paid but failed to submit to pharmacy. Please submit manually.",
-          pharmacyError: errorData.error || "Unknown error",
-        });
+        if (!submitResponse.ok) {
+          const errorData = await submitResponse.json().catch(() => ({}));
+          console.error(
+            `⚠️ [mark-paid] Failed to submit ${rxId} to pharmacy:`,
+            submitResponse.status,
+            errorData
+          );
+          anySubmitFailed = true;
+        } else {
+          console.log(`✅ [mark-paid] Prescription ${rxId} submitted to pharmacy`);
+        }
+      } catch (submitError) {
+        console.error(`⚠️ [mark-paid] Error submitting ${rxId}:`, submitError);
+        anySubmitFailed = true;
       }
+    }
 
-      const submitData = await submitResponse.json();
-      console.log("✅ [mark-paid] Prescription submitted to pharmacy:", submitData);
-
-      return NextResponse.json({
-        success: true,
-        queue_id: submitData.queue_id,
-        message: "Prescription marked as paid and submitted to pharmacy",
-      });
-    } catch (submitError) {
-      console.error("⚠️ [mark-paid] Error calling submit-to-pharmacy:", submitError);
-
+    if (anySubmitFailed) {
       await supabaseAdmin.from("system_logs").insert({
         user_id: user.id,
         user_email: user.email || "unknown",
         user_name: "System",
         action: "PHARMACY_SUBMISSION_FAILED",
-        details: `Prescription ${prescriptionId} was marked as paid but pharmacy submission threw an error: ${submitError instanceof Error ? submitError.message : String(submitError)}. Manual submission required.`,
+        details: `Some prescriptions in order ${paymentTransactionId} failed to submit to pharmacy after mark-paid. Manual submission may be required.`,
         status: "error",
       }).then(({ error: logErr }) => {
         if (logErr) console.error("Failed to log pharmacy submission failure:", logErr);
@@ -217,9 +240,16 @@ export async function POST(
 
       return NextResponse.json({
         success: true,
-        warning: "Marked as paid but failed to submit to pharmacy. Please submit manually.",
+        warning: "Marked as paid but some prescriptions failed to submit to pharmacy.",
       });
     }
+
+    return NextResponse.json({
+      success: true,
+      message: allLinkedRxIds.length > 1
+        ? `${allLinkedRxIds.length} prescriptions marked as paid and submitted to pharmacy`
+        : "Prescription marked as paid and submitted to pharmacy",
+    });
   } catch (error) {
     console.error("Unexpected error marking prescription as paid:", error);
     return NextResponse.json(

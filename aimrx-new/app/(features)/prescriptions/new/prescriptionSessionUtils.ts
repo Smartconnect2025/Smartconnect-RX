@@ -7,6 +7,7 @@ const PRESCRIPTION_SESSION_KEYS = [
   "appointmentId",
   "prescriptionPdfData",
   "prescriptionPdfName",
+  "submittedPrescriptionIds",
 ] as const;
 
 const LEGACY_KEYS = ["prescriptionData", "prescriptionDraft"] as const;
