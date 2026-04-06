@@ -147,7 +147,6 @@ export async function POST(request: Request) {
       if (sendGridApiKey) {
         sgMail.setApiKey(sendGridApiKey);
 
-        const appUrl = "https://app.smartconnectrx.com/auth/login";
         const displayName = full_name || email.split("@")[0];
 
         let pharmacyNames = "all pharmacies";

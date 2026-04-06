@@ -13,20 +13,6 @@ function escHtml(str: string | undefined | null): string {
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
 
-function sanitizeColor(color: string | undefined | null): string {
-  if (!color) return "#10B981";
-  return /^#[0-9A-Fa-f]{3,8}$/.test(color) ? color : "#10B981";
-}
-
-function sanitizeUrl(url: string | undefined | null): string {
-  if (!url) return "";
-  try {
-    const parsed = new URL(url);
-    return ["http:", "https:"].includes(parsed.protocol) ? url : "";
-  } catch {
-    return "";
-  }
-}
 
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
@@ -52,8 +38,6 @@ export async function POST(request: NextRequest) {
       transactionId,
       deliveryMethod,
       pharmacyName,
-      pharmacyLogoUrl,
-      pharmacyColor,
     } = body;
 
     if (!patientEmail || !transactionId) {
@@ -86,21 +70,13 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const brandColor = sanitizeColor(pharmacyColor);
-    const accentColor = brandColor;
-    const brandName = escHtml(pharmacyName) || "SmartConnect RX";
     const safeName = escHtml(pharmacyName);
     const fromName = pharmacyName ? `${pharmacyName} via SmartConnect RX` : FROM_NAME;
-    const safeLogoUrl = sanitizeUrl(pharmacyLogoUrl);
     const safePatientName = escHtml(patientName);
     const safeProviderName = escHtml(providerName);
     const safeMedication = escHtml(medication);
     const safeTotalAmount = escHtml(totalAmount);
     const safeTransactionId = escHtml(transactionId);
-
-    const logoHtml = safeLogoUrl
-      ? `<img src="${safeLogoUrl}" alt="${brandName}" style="max-height: 48px; max-width: 200px; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />`
-      : "";
 
     const msg = {
       to: patientEmail,

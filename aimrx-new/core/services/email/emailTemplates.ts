@@ -4,8 +4,13 @@ const LOGIN_URL = `${APP_URL}/auth/login`;
 const LOGO_URL = `${APP_URL}/logo-header.png`;
 const SUPPORT_PHONE = "+(769) 304-1830";
 const SUPPORT_HOURS = "Mon–Fri 9AM–6PM CST";
-const SUPPORT_EMAIL = "support@smartconnects.com";
+const SUPPORT_EMAIL = "support@smartconnectrx.com";
 const CURRENT_YEAR = new Date().getFullYear();
+
+function escHtml(str: string | undefined | null): string {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 
 export const GRADIENTS = {
   navyCyan: "linear-gradient(135deg, #1E3A8A 0%, #00AEEF 100%)",
@@ -394,8 +399,8 @@ export function adminAccessRequestHtml(options: {
 export function adminDetailCard(title: string, fields: { label: string; value: string }[]): string {
   const rows = fields.map(f =>
     `<div style="padding: 8px 0; border-bottom: 1px solid #f1f5f9;">
-      <span style="font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${f.label}</span><br>
-      <span style="font-size: 14px; color: #1e293b; font-weight: 500;">${f.value || "—"}</span>
+      <span style="font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">${escHtml(f.label)}</span><br>
+      <span style="font-size: 14px; color: #1e293b; font-weight: 500;">${escHtml(f.value) || "—"}</span>
     </div>`
   ).join("");
 
