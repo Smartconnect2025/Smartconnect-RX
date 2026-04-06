@@ -135,7 +135,7 @@ export function ProviderFinancialDashboard() {
       </div>
 
       {/* Prescriptions Table */}
-      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-x-auto">
+      <div className="bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center text-gray-500">Loading...</div>
         ) : error ? (
@@ -146,21 +146,24 @@ export function ProviderFinancialDashboard() {
             {monthFilter.year}.
           </div>
         ) : (
-          <Table>
+          <Table className="table-fixed w-full">
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Patient</TableHead>
+                <TableHead className="w-[110px]">Date</TableHead>
+                <TableHead className="w-[120px]">Patient</TableHead>
                 <TableHead>Medication</TableHead>
-                <TableHead>Payment Status</TableHead>
-                <TableHead className="text-right">Medication Price</TableHead>
-                <TableHead className="text-right">Oversight Fee</TableHead>
+                <TableHead className="w-[120px]">Payment Status</TableHead>
+                <TableHead className="text-right w-[130px]">Medication Price</TableHead>
+                <TableHead className="text-right w-[110px]">Oversight Fee</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {prescriptions.map((rx) => {
                 const basePrice =
                   rx.medication_data?.aimrx_site_pricing_cents ?? null;
+                const patientName = rx.patient
+                  ? `${rx.patient.first_name} ${rx.patient.last_name}`
+                  : "—";
 
                 return (
                   <TableRow key={rx.id}>
@@ -171,12 +174,12 @@ export function ProviderFinancialDashboard() {
                         year: "numeric",
                       })}
                     </TableCell>
-                    <TableCell className="font-medium">
-                      {rx.patient
-                        ? `${rx.patient.first_name} ${rx.patient.last_name}`
-                        : "—"}
+                    <TableCell className="font-medium truncate" title={patientName}>
+                      {patientName}
                     </TableCell>
-                    <TableCell>{rx.medication}</TableCell>
+                    <TableCell className="truncate" title={rx.medication}>
+                      {rx.medication}
+                    </TableCell>
                     <TableCell>
                       <Badge
                         variant="outline"

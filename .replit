@@ -65,4 +65,12 @@ RENDER_API_KEY = "rnd_pRL9b2T9xUbI9E3r5A9OFKmmNhSc"
 
   [nix]
   channel = "stable-25_05"
+
+[[ports]]
+localPort = 8080
+externalPort = 8080
+
+[[ports]]
+localPort = 26196
+externalPort = 80
   
