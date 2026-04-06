@@ -908,23 +908,23 @@ export default function PrescriptionsPage() {
         ) : (
           <div className="bg-white border border-border rounded-lg overflow-hidden">
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="table-fixed w-full">
                 <TableHeader>
                   <TableRow className="bg-gray-50">
-                    <TableHead className="font-semibold">Ref</TableHead>
-                    <TableHead className="font-semibold">Date & Time</TableHead>
-                    <TableHead className="font-semibold">
+                    <TableHead className="font-semibold w-[50px]">Ref</TableHead>
+                    <TableHead className="font-semibold w-[140px]">Date & Time</TableHead>
+                    <TableHead className="font-semibold w-[120px]">
                       Patient Name
                     </TableHead>
                     <TableHead className="font-semibold">
                       Medication + Strength/Dosage
                     </TableHead>
-                    <TableHead className="font-semibold">
+                    <TableHead className="font-semibold w-[100px]">
                       Quantity / Refills
                     </TableHead>
-                    <TableHead className="font-semibold">Pharmacy</TableHead>
-                    <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold text-right">
+                    <TableHead className="font-semibold w-[130px]">Pharmacy</TableHead>
+                    <TableHead className="font-semibold w-[120px]">Status</TableHead>
+                    <TableHead className="font-semibold text-right w-[70px]">
                       Actions
                     </TableHead>
                   </TableRow>
@@ -941,15 +941,15 @@ export default function PrescriptionsPage() {
                       <TableCell className="whitespace-nowrap">
                         {formatDateTime(prescription.dateTime)}
                       </TableCell>
-                      <TableCell className="font-medium">
+                      <TableCell className="font-medium truncate">
                         {prescription.patientName}
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium">
+                        <div className="flex flex-col min-w-0">
+                          <span className="font-medium truncate">
                             {prescription.medication}
                           </span>
-                          <span className="text-sm text-muted-foreground">
+                          <span className="text-sm text-muted-foreground truncate">
                             {prescription.strength}
                           </span>
                         </div>
@@ -962,7 +962,7 @@ export default function PrescriptionsPage() {
                           </span>
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="truncate">
                         {prescription.pharmacyName ? (
                           <span
                             className="font-medium"
