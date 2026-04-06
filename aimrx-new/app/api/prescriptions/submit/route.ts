@@ -467,10 +467,11 @@ export async function POST(request: NextRequest) {
         consultation_reason: body.consultation_reason || null, // Reason for the consultation fee
         shipping_fee_cents: body.shipping_fee_cents || 0, // Shipping fee
         total_paid_cents: totalPaidCents, // Medication price in cents
-        refill_frequency_days: body.refill_frequency_days || null,
-        next_refill_date: body.refill_frequency_days
-          ? new Date(Date.now() + body.refill_frequency_days * 86400000).toISOString()
-          : null,
+        refill_frequency_days:
+          (body.refills > 0 && (body.refill_frequency_days ?? 0) > 0)
+            ? body.refill_frequency_days!
+            : null,
+        next_refill_date: null,
         has_custom_address: body.has_custom_address || false,
         custom_address: body.custom_address || null,
         queue_id: queueId,

@@ -416,6 +416,11 @@ export async function POST(
       );
     }
 
+    const nextRefillDate =
+      prescription.refill_frequency_days && prescription.refills > 0
+        ? new Date(Date.now() + prescription.refill_frequency_days * 86400000).toISOString()
+        : null;
+
     const { error: updateError } = await supabaseAdmin
       .from("prescriptions")
       .update({
@@ -424,6 +429,7 @@ export async function POST(
         rx_number: result.rxNumber,
         order_progress: "pharmacy_processing",
         submitted_to_pharmacy_at: new Date().toISOString(),
+        ...(nextRefillDate ? { next_refill_date: nextRefillDate } : {}),
       })
       .eq("id", prescriptionId);
 

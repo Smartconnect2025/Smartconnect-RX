@@ -47,7 +47,20 @@ export async function checkRefills() {
     for (const rx of eligible) {
       console.log(`[refill-check] Processing rx ${rx.id} — ${rx.medication} (refill ${(rx.total_refills_to_date || 0) + 1}/${rx.refills})`);
 
-      // Update original prescription counters
+      // Duplicate guard: skip if there's already an active refill in progress
+      const { data: existingRefills } = await supabase
+        .from("prescriptions")
+        .select("id, status")
+        .eq("parent_prescription_id", rx.id)
+        .eq("prescription_type", "refill")
+        .in("status", ["pending_payment", "pending", "submitted", "processing"]);
+
+      if (existingRefills && existingRefills.length > 0) {
+        console.log(`[refill-check] Skipping rx ${rx.id} — active refill already exists (${existingRefills[0].id}, status: ${existingRefills[0].status})`);
+        continue;
+      }
+
+      // Update original prescription counters with optimistic locking
       const newTotalRefills = (rx.total_refills_to_date || 0) + 1;
       const isLastRefill = newTotalRefills >= (rx.refills ?? 0);
       const newRefillDate = isLastRefill
@@ -57,18 +70,25 @@ export async function checkRefills() {
               (rx.refill_frequency_days ?? 0) * 86400000,
           ).toISOString();
 
-      const { error: updateError } = await supabase
+      const { data: updatedRows, error: updateError } = await supabase
         .from("prescriptions")
         .update({
           total_refills_to_date: newTotalRefills,
           next_refill_date: newRefillDate,
         })
-        .eq("id", rx.id);
+        .eq("id", rx.id)
+        .eq("total_refills_to_date", rx.total_refills_to_date ?? 0)
+        .select("id");
 
       if (updateError) {
         console.error(`[refill-check] Failed to update original rx ${rx.id}:`, updateError.message);
-        run.trackFailure({ rxId: rx.id, step: "update_original", error: updateError.message });
-        continue; // Don't create refill if counters weren't bumped — would cause duplicate on next run
+        run.trackFailure({ rxId: rx.id, step: "update_parent", error: updateError.message });
+        continue;
+      }
+
+      if (!updatedRows || updatedRows.length === 0) {
+        console.log(`[refill-check] Skipping rx ${rx.id} — optimistic lock failed (already processed by another instance)`);
+        continue;
       }
 
       console.log(`[refill-check] Updated original rx ${rx.id} — next_refill_date: ${newRefillDate}`);
@@ -116,6 +136,18 @@ export async function checkRefills() {
       if (insertError) {
         console.error(`[refill-check] Failed to create refill for rx ${rx.id}:`, insertError.message);
         run.trackFailure({ rxId: rx.id, step: "insert", error: insertError.message });
+
+        // Rollback parent counters since the refill row wasn't created
+        await supabase
+          .from("prescriptions")
+          .update({
+            total_refills_to_date: rx.total_refills_to_date ?? 0,
+            next_refill_date: rx.next_refill_date,
+          })
+          .eq("id", rx.id)
+          .eq("total_refills_to_date", newTotalRefills);
+
+        console.log(`[refill-check] Rolled back parent counters for rx ${rx.id}`);
         continue;
       }
 
