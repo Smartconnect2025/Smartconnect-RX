@@ -383,6 +383,7 @@ interface BillPatientModalProps {
   isOpen: boolean;
   onClose: () => void;
   prescriptionId: string;
+  prescriptionIds?: string[];
   pharmacyId?: string;
   patientName: string;
   patientEmail?: string;
@@ -397,6 +398,7 @@ export function BillPatientModal({
   isOpen,
   onClose,
   prescriptionId,
+  prescriptionIds,
   pharmacyId,
   patientName,
   patientEmail: initialPatientEmail,
@@ -405,6 +407,9 @@ export function BillPatientModal({
   profitCents = 0,
   shippingFeeCents = 0,
 }: BillPatientModalProps) {
+  const allPrescriptionIds = prescriptionIds && prescriptionIds.length > 0
+    ? prescriptionIds
+    : [prescriptionId];
   // Form state
   const [paymentMethod, setPaymentMethod] = useState<
     "send-link" | "charge-now"
@@ -577,6 +582,7 @@ export function BillPatientModal({
         credentials: "include",
         body: JSON.stringify({
           prescriptionId,
+          prescriptionIds: allPrescriptionIds,
           consultationFeeCents: Math.round(consultationFee * 100),
           medicationCostCents: Math.round(medicationCost * 100),
           shippingFeeCents: Math.round(shippingFee * 100),
@@ -636,13 +642,13 @@ export function BillPatientModal({
 
       const shippingFee = parseFloat(shippingFeeDollars) || 0;
 
-      // Step 1: Create payment transaction
       const generateResponse = await fetch("/api/payments/generate-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           prescriptionId,
+          prescriptionIds: allPrescriptionIds,
           consultationFeeCents: Math.round(consultationFee * 100),
           medicationCostCents: Math.round(medicationCost * 100),
           shippingFeeCents: Math.round(shippingFee * 100),

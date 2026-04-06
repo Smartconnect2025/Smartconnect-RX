@@ -199,13 +199,17 @@ async function handleCheckoutCompleted(
 
   console.log(`[STRIPE-WEBHOOK] Payment ${paymentTransaction.id} marked as completed`);
 
-  if (paymentTransaction.prescription_id) {
-    const { data: rxData } = await supabase
-      .from("prescriptions")
-      .select("id, queue_id, prescriber_id, patients(first_name, last_name)")
-      .eq("id", paymentTransaction.prescription_id)
-      .single();
+  const { data: linkedRxList } = await supabase
+    .from("prescriptions")
+    .select("id")
+    .eq("payment_transaction_id", paymentTransaction.id);
 
+  const rxIdsToUpdate = linkedRxList?.map((rx: { id: string }) => rx.id) || [];
+  if (rxIdsToUpdate.length === 0 && paymentTransaction.prescription_id) {
+    rxIdsToUpdate.push(paymentTransaction.prescription_id);
+  }
+
+  if (rxIdsToUpdate.length > 0) {
     const { error: rxUpdateError } = await supabase
       .from("prescriptions")
       .update({
@@ -213,11 +217,17 @@ async function handleCheckoutCompleted(
         order_progress: "payment_received",
         status: "payment_received",
       })
-      .eq("id", paymentTransaction.prescription_id);
+      .in("id", rxIdsToUpdate);
 
     if (rxUpdateError) {
-      console.error(`[STRIPE-WEBHOOK] Failed to update prescription ${paymentTransaction.prescription_id}:`, rxUpdateError.message);
+      console.error(`[STRIPE-WEBHOOK] Failed to update prescriptions:`, rxUpdateError.message);
     }
+
+    const { data: rxData } = await supabase
+      .from("prescriptions")
+      .select("id, queue_id, prescriber_id, patients(first_name, last_name)")
+      .eq("id", rxIdsToUpdate[0])
+      .single();
 
     if (rxData?.prescriber_id) {
       const patient = rxData.patients as { first_name?: string; last_name?: string } | null;
@@ -229,38 +239,45 @@ async function handleCheckoutCompleted(
         rxData.queue_id || rxData.id,
         patientName,
         "payment_received",
-        paymentTransaction.prescription_id,
+        rxIdsToUpdate[0],
       ).catch((err) => console.error("[STRIPE-WEBHOOK] Notification error:", err));
     }
 
-    try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-      const internalSecret = process.env.INTERNAL_API_SECRET || "";
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const internalSecret = process.env.INTERNAL_API_SECRET || "";
+    let anySubmitted = false;
 
-      console.log(`[STRIPE-WEBHOOK] Auto-submitting prescription ${paymentTransaction.prescription_id} to pharmacy...`);
-      const submitResponse = await fetch(
-        `${siteUrl}/api/prescriptions/${paymentTransaction.prescription_id}/submit-to-pharmacy`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-internal-secret": internalSecret,
+    for (const rxId of rxIdsToUpdate) {
+      try {
+        console.log(`[STRIPE-WEBHOOK] Auto-submitting prescription ${rxId} to pharmacy...`);
+        const submitResponse = await fetch(
+          `${siteUrl}/api/prescriptions/${rxId}/submit-to-pharmacy`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-internal-secret": internalSecret,
+            },
           },
-        },
-      );
+        );
 
-      if (submitResponse.ok) {
-        await supabase
-          .from("payment_transactions")
-          .update({ order_progress: "pharmacy_processing" })
-          .eq("id", paymentTransaction.id);
-        console.log(`[STRIPE-WEBHOOK] Prescription ${paymentTransaction.prescription_id} submitted to pharmacy`);
-      } else {
-        const errorBody = await submitResponse.text().catch(() => "unable to read response");
-        console.error(`[STRIPE-WEBHOOK] Pharmacy submission failed: HTTP ${submitResponse.status} — ${errorBody}`);
+        if (submitResponse.ok) {
+          console.log(`[STRIPE-WEBHOOK] Prescription ${rxId} submitted to pharmacy`);
+          anySubmitted = true;
+        } else {
+          const errorBody = await submitResponse.text().catch(() => "unable to read response");
+          console.error(`[STRIPE-WEBHOOK] Pharmacy submission failed for ${rxId}: HTTP ${submitResponse.status} — ${errorBody}`);
+        }
+      } catch (err) {
+        console.error(`[STRIPE-WEBHOOK] Pharmacy submission error for ${rxId}:`, err instanceof Error ? err.message : "Unknown");
       }
-    } catch (err) {
-      console.error(`[STRIPE-WEBHOOK] Pharmacy submission error:`, err instanceof Error ? err.message : "Unknown");
+    }
+
+    if (anySubmitted) {
+      await supabase
+        .from("payment_transactions")
+        .update({ order_progress: "pharmacy_processing" })
+        .eq("id", paymentTransaction.id);
     }
   }
 

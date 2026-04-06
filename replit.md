@@ -28,6 +28,7 @@ The application utilizes Tailwind CSS and ShadCN UI for a modern, responsive, an
 
 **Feature Specifications:**
 
+*   **Multi-Order Cart System:** Providers can add multiple prescriptions to a cart in Step 2, review all items in Step 3, and submit them as a batch. Step 4 shows an itemized order summary with combined totals. A single payment covers all prescriptions — the `generate-link` API creates one `payment_transaction` and links all prescriptions via `payment_transaction_id`. On payment completion (Stripe webhook or verify-and-complete), all linked prescriptions are marked as paid and submitted to pharmacy. Session keys: `prescriptionCart` (CartItem[]), `prescriptionSharedFees` (SharedFees). Shared fees (shipping $25 default, oversight fees) are attached to the first prescription only.
 *   **Prescription Workflow:** Supports creating, submitting, checking status, and managing prescriptions, integrated with pharmacy backends.
 *   **Catalog Management:** Pharmacy-specific catalogs of medications and categories are managed, including image uploads and bulk import capabilities (e.g., Westside Compounding data import).
 *   **Admin Panels:** Dedicated UI for platform admins (managing pharmacies, users, integrations) and pharmacy admins (managing their pharmacy's settings, payments, providers).

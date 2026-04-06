@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       prescriptionId,
+      prescriptionIds,
       consultationFeeCents,
       medicationCostCents,
       shippingFeeCents,
@@ -47,7 +48,10 @@ export async function POST(request: NextRequest) {
       sendEmail,
     } = body;
 
-    // Validate required fields
+    const allPrescriptionIds: string[] = Array.isArray(prescriptionIds) && prescriptionIds.length > 0
+      ? prescriptionIds
+      : [prescriptionId];
+
     if (
       !prescriptionId ||
       consultationFeeCents === undefined ||
@@ -60,6 +64,10 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 },
       );
+    }
+
+    if (!allPrescriptionIds.includes(prescriptionId)) {
+      allPrescriptionIds.unshift(prescriptionId);
     }
 
     const parsedConsultation = Number(consultationFeeCents);
@@ -112,12 +120,53 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the provider owns this prescription (skip for internal calls)
     if (!isInternalCall && prescription.prescriber_id !== userId) {
       return NextResponse.json(
         { error: "You do not have permission to bill for this prescription" },
         { status: 403 },
       );
+    }
+
+    if (allPrescriptionIds.length > 1) {
+      const { data: otherRxList, error: otherRxError } = await supabase
+        .from("prescriptions")
+        .select("id, prescriber_id, patient_id, payment_status")
+        .in("id", allPrescriptionIds);
+
+      if (otherRxError || !otherRxList) {
+        return NextResponse.json(
+          { error: "Failed to validate prescription IDs" },
+          { status: 400 },
+        );
+      }
+
+      if (otherRxList.length !== allPrescriptionIds.length) {
+        return NextResponse.json(
+          { error: "One or more prescription IDs are invalid" },
+          { status: 400 },
+        );
+      }
+
+      for (const rx of otherRxList) {
+        if (!isInternalCall && rx.prescriber_id !== userId) {
+          return NextResponse.json(
+            { error: `You do not have permission to bill for prescription ${rx.id}` },
+            { status: 403 },
+          );
+        }
+        if (rx.patient_id !== prescription.patient_id) {
+          return NextResponse.json(
+            { error: "All prescriptions must belong to the same patient" },
+            { status: 400 },
+          );
+        }
+        if (rx.payment_status === "paid") {
+          return NextResponse.json(
+            { error: `Prescription ${rx.id} has already been paid` },
+            { status: 400 },
+          );
+        }
+      }
     }
 
     // CHECK 2: Look for existing payment_transaction for this prescription
@@ -308,8 +357,10 @@ export async function POST(request: NextRequest) {
         order_progress: "payment_pending",
         description:
           description ||
-          `Payment for ${prescription.medication} - ${patient?.first_name} ${patient?.last_name}`,
-        payment_link_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          (allPrescriptionIds.length > 1
+            ? `Payment for ${allPrescriptionIds.length} medications - ${patient?.first_name} ${patient?.last_name}`
+            : `Payment for ${prescription.medication} - ${patient?.first_name} ${patient?.last_name}`),
+        payment_link_expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       })
       .select()
       .single();
@@ -321,12 +372,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use the hosted payment flow - redirect to our payment overview page
-    // which will then redirect to Authorize.Net's hosted payment page
     const appUrl = envConfig.NEXT_PUBLIC_SITE_URL || "https://localhost:3000";
     const fullPaymentUrl = `${appUrl}/payment/${paymentToken}`;
 
-    // Update payment transaction with the payment URL
     await supabase
       .from("payment_transactions")
       .update({
@@ -334,14 +382,15 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", paymentTransaction.id);
 
-    // Update prescription payment status
-    await supabase
-      .from("prescriptions")
-      .update({
-        payment_status: "pending",
-        payment_transaction_id: paymentTransaction.id,
-      })
-      .eq("id", prescriptionId);
+    for (const rxId of allPrescriptionIds) {
+      await supabase
+        .from("prescriptions")
+        .update({
+          payment_status: "pending",
+          payment_transaction_id: paymentTransaction.id,
+        })
+        .eq("id", rxId);
+    }
 
     // Send email to patient if requested
     let emailSent = false;

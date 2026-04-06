@@ -317,7 +317,17 @@ export async function POST(request: NextRequest) {
     let pharmacySubmitted = false;
     let pharmacyError: string | null = null;
 
-    if (transaction.prescription_id) {
+    const { data: linkedRx } = await supabase
+      .from("prescriptions")
+      .select("id")
+      .eq("payment_transaction_id", transaction.id);
+
+    const rxIdsToUpdate = linkedRx?.map((rx: { id: string }) => rx.id) || [];
+    if (rxIdsToUpdate.length === 0 && transaction.prescription_id) {
+      rxIdsToUpdate.push(transaction.prescription_id);
+    }
+
+    if (rxIdsToUpdate.length > 0) {
       const { error: rxError } = await supabase
         .from("prescriptions")
         .update({
@@ -326,53 +336,57 @@ export async function POST(request: NextRequest) {
           status: "payment_received",
           updated_at: now,
         })
-        .eq("id", transaction.prescription_id);
+        .in("id", rxIdsToUpdate);
 
       if (rxError) {
-        console.error("[VERIFY] Failed to update prescription:", rxError.message);
+        console.error("[VERIFY] Failed to update prescriptions:", rxError.message);
         return NextResponse.json({
           success: false,
-          error: "Payment verified but failed to update prescription. Contact support.",
+          error: "Payment verified but failed to update prescriptions. Contact support.",
           transactionId: matchedTransaction.transId,
         }, { status: 500 });
       }
 
       prescriptionUpdated = true;
 
-      try {
-        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-        const internalSecret = process.env.INTERNAL_API_SECRET || "";
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      const internalSecret = process.env.INTERNAL_API_SECRET || "";
 
-        console.log(`[VERIFY] Auto-submitting prescription ${transaction.prescription_id} to pharmacy...`);
-        const submitResponse = await fetch(
-          `${siteUrl}/api/prescriptions/${transaction.prescription_id}/submit-to-pharmacy`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "x-internal-secret": internalSecret,
+      for (const rxId of rxIdsToUpdate) {
+        try {
+          console.log(`[VERIFY] Auto-submitting prescription ${rxId} to pharmacy...`);
+          const submitResponse = await fetch(
+            `${siteUrl}/api/prescriptions/${rxId}/submit-to-pharmacy`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-internal-secret": internalSecret,
+              },
             },
-          },
-        );
+          );
 
-        if (submitResponse.ok) {
-          const submitData = await submitResponse.json();
-          console.log(`[VERIFY] Prescription submitted to pharmacy successfully:`, submitData);
-          pharmacySubmitted = true;
-
-          await supabase
-            .from("payment_transactions")
-            .update({ order_progress: "pharmacy_processing" })
-            .eq("id", transaction.id);
-        } else {
-          const errorBody = await submitResponse.text().catch(() => "unable to read");
-          console.error(`[VERIFY] Pharmacy submission failed: HTTP ${submitResponse.status} — ${errorBody}`);
-          pharmacyError = `Pharmacy submission failed (HTTP ${submitResponse.status})`;
+          if (submitResponse.ok) {
+            const submitData = await submitResponse.json();
+            console.log(`[VERIFY] Prescription ${rxId} submitted to pharmacy:`, submitData);
+            pharmacySubmitted = true;
+          } else {
+            const errorBody = await submitResponse.text().catch(() => "unable to read");
+            console.error(`[VERIFY] Pharmacy submission failed for ${rxId}: HTTP ${submitResponse.status} — ${errorBody}`);
+            pharmacyError = `Pharmacy submission failed for some prescriptions`;
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : "Unknown";
+          console.error(`[VERIFY] Pharmacy submission error for ${rxId}:`, msg);
+          pharmacyError = `Pharmacy submission error: ${msg}`;
         }
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : "Unknown";
-        console.error("[VERIFY] Pharmacy submission error:", msg);
-        pharmacyError = `Pharmacy submission error: ${msg}`;
+      }
+
+      if (pharmacySubmitted) {
+        await supabase
+          .from("payment_transactions")
+          .update({ order_progress: "pharmacy_processing" })
+          .eq("id", transaction.id);
       }
     }
 

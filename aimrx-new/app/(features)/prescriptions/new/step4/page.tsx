@@ -41,22 +41,29 @@ interface PrescriptionDetails {
 export default function Step4PaymentPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const prescriptionId = searchParams.get("prescriptionId");
   const { user } = useUser();
   const supabase = createClient();
 
-  const [prescription, setPrescription] = useState<PrescriptionDetails | null>(null);
+  const prescriptionIdsParam = searchParams.get("prescriptionIds");
+  const singleIdParam = searchParams.get("prescriptionId");
+  const allIds: string[] = prescriptionIdsParam
+    ? prescriptionIdsParam.split(",").filter(Boolean)
+    : singleIdParam
+      ? [singleIdParam]
+      : [];
+
+  const [prescriptions, setPrescriptions] = useState<PrescriptionDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [showBillModal, setShowBillModal] = useState(false);
   const [initialPaymentMethod, setInitialPaymentMethod] = useState<"send-link" | "charge-now">("send-link");
   const [markingPaid, setMarkingPaid] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
 
-  const loadPrescription = useCallback(async () => {
-    if (!prescriptionId) return;
+  const loadPrescriptions = useCallback(async () => {
+    if (allIds.length === 0) return;
     setLoading(true);
     try {
-      const { data: rx, error } = await supabase
+      const { data: rxList, error } = await supabase
         .from("prescriptions")
         .select(`
           id, medication, dosage, quantity, refills, sig,
@@ -65,64 +72,73 @@ export default function Step4PaymentPage() {
           patients!inner(first_name, last_name, email),
           pharmacies!inner(name)
         `)
-        .eq("id", prescriptionId)
-        .single();
+        .in("id", allIds);
 
-      if (error || !rx) {
+      if (error || !rxList || rxList.length === 0) {
         toast.error("Could not load prescription details");
         router.push("/prescriptions");
         return;
       }
 
-      const patients = rx.patients as unknown as { first_name: string; last_name: string; email: string };
-      const pharmacies = rx.pharmacies as unknown as { name: string };
-
-      setPrescription({
-        id: rx.id,
-        medication: rx.medication,
-        dosage: rx.dosage,
-        quantity: rx.quantity,
-        refills: rx.refills,
-        sig: rx.sig,
-        patient_price: rx.patient_price || 0,
-        profit_cents: rx.profit_cents || 0,
-        shipping_fee_cents: rx.shipping_fee_cents || 0,
-        status: rx.status,
-        pharmacy_id: rx.pharmacy_id,
-        patient_id: rx.patient_id,
-        patientName: `${patients.first_name} ${patients.last_name}`,
-        patientEmail: patients.email || "",
-        pharmacyName: pharmacies.name,
+      const mapped = rxList.map((rx) => {
+        const patients = rx.patients as unknown as { first_name: string; last_name: string; email: string };
+        const pharmacies = rx.pharmacies as unknown as { name: string };
+        return {
+          id: rx.id,
+          medication: rx.medication,
+          dosage: rx.dosage,
+          quantity: rx.quantity,
+          refills: rx.refills,
+          sig: rx.sig,
+          patient_price: rx.patient_price || 0,
+          profit_cents: rx.profit_cents || 0,
+          shipping_fee_cents: rx.shipping_fee_cents || 0,
+          status: rx.status,
+          pharmacy_id: rx.pharmacy_id,
+          patient_id: rx.patient_id,
+          patientName: `${patients.first_name} ${patients.last_name}`,
+          patientEmail: patients.email || "",
+          pharmacyName: pharmacies.name,
+        };
       });
 
-      if (rx.status === "payment_received" || rx.status === "submitted") {
+      const orderedList = allIds.map((id) => mapped.find((p) => p.id === id)).filter(Boolean) as PrescriptionDetails[];
+      setPrescriptions(orderedList);
+
+      if (orderedList.every((rx) => rx.status === "payment_received" || rx.status === "submitted")) {
         setPaymentComplete(true);
       }
     } catch {
-      toast.error("Error loading prescription");
+      toast.error("Error loading prescriptions");
     } finally {
       setLoading(false);
     }
-  }, [prescriptionId, supabase, router]);
+  }, [allIds.join(","), supabase, router]);
 
   useEffect(() => {
-    loadPrescription();
-  }, [loadPrescription]);
+    loadPrescriptions();
+  }, [loadPrescriptions]);
 
   const handleMarkPaid = async () => {
-    if (!prescriptionId) return;
+    if (allIds.length === 0) return;
     setMarkingPaid(true);
     try {
-      const response = await fetch(`/api/prescriptions/${prescriptionId}/mark-paid`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      });
-      const result = await response.json();
-      if (!response.ok || result.error) {
-        throw new Error(result.error || "Failed to mark as paid");
+      for (const id of allIds) {
+        const response = await fetch(`/api/prescriptions/${id}/mark-paid`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        const result = await response.json();
+        if (!response.ok || result.error) {
+          throw new Error(result.error || "Failed to mark as paid");
+        }
       }
       setPaymentComplete(true);
-      toast.success("Prescription marked as paid and submitted to pharmacy!");
+      toast.success(
+        allIds.length > 1
+          ? "All prescriptions marked as paid and submitted to pharmacy!"
+          : "Prescription marked as paid and submitted to pharmacy!",
+      );
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Failed to mark as paid");
     } finally {
@@ -132,7 +148,7 @@ export default function Step4PaymentPage() {
 
   const handlePaymentSuccess = () => {
     setPaymentComplete(true);
-    toast.success("Payment received! Prescription submitted to pharmacy.");
+    toast.success("Payment received! Prescriptions submitted to pharmacy.");
   };
 
   const handleOpenBillModal = (method: "send-link" | "charge-now") => {
@@ -140,12 +156,14 @@ export default function Step4PaymentPage() {
     setShowBillModal(true);
   };
 
-  const medicationCostCents = Math.round((prescription?.patient_price || 0) * 100);
-  const profitCents = prescription?.profit_cents || 0;
-  const shippingCents = prescription?.shipping_fee_cents || 0;
-  const totalCents = medicationCostCents + profitCents + shippingCents;
+  const totalMedicationCents = prescriptions.reduce((sum, rx) => sum + Math.round((rx.patient_price || 0) * 100), 0);
+  const totalProfitCents = prescriptions.reduce((sum, rx) => sum + (rx.profit_cents || 0), 0);
+  const totalShippingCents = prescriptions.reduce((sum, rx) => sum + (rx.shipping_fee_cents || 0), 0);
+  const totalCents = totalMedicationCents + totalProfitCents + totalShippingCents;
+  const isMultiOrder = prescriptions.length > 1;
+  const primaryRx = prescriptions[0];
 
-  if (!prescriptionId) {
+  if (allIds.length === 0) {
     return (
       <DefaultLayout>
         <div className="container mx-auto max-w-3xl py-12 px-4 text-center">
@@ -176,34 +194,35 @@ export default function Step4PaymentPage() {
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Complete</h2>
             <p className="text-gray-600 mb-6">
-              The prescription has been submitted to the pharmacy for processing.
+              {isMultiOrder
+                ? `All ${prescriptions.length} prescriptions have been submitted to the pharmacy for processing.`
+                : "The prescription has been submitted to the pharmacy for processing."}
             </p>
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-8 max-w-md mx-auto">
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Patient</span>
-                  <span className="font-medium">{prescription?.patientName}</span>
+                  <span className="font-medium">{primaryRx?.patientName}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Medication</span>
-                  <span className="font-medium">{prescription?.medication}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Pharmacy</span>
-                  <span className="font-medium">{prescription?.pharmacyName}</span>
-                </div>
+                {prescriptions.map((rx) => (
+                  <div key={rx.id} className="flex justify-between">
+                    <span className="text-gray-600">Medication</span>
+                    <span className="font-medium">{rx.medication}</span>
+                  </div>
+                ))}
+                {primaryRx && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Pharmacy</span>
+                    <span className="font-medium">{primaryRx.pharmacyName}</span>
+                  </div>
+                )}
               </div>
             </div>
             <div className="flex gap-3 justify-center">
-              <Button
-                variant="outline"
-                onClick={() => router.push("/prescriptions")}
-              >
+              <Button variant="outline" onClick={() => router.push("/prescriptions")}>
                 View All Prescriptions
               </Button>
-              <Button
-                onClick={() => router.push("/prescriptions/new/step1")}
-              >
+              <Button onClick={() => router.push("/prescriptions/new/step1")}>
                 New Prescription
               </Button>
             </div>
@@ -260,47 +279,83 @@ export default function Step4PaymentPage() {
           <div>
             <p className="text-sm font-semibold text-amber-800">Payment required before pharmacy submission</p>
             <p className="text-sm text-amber-700 mt-1">
-              The prescription will be submitted to {prescription?.pharmacyName} once payment is collected.
+              {isMultiOrder
+                ? `${prescriptions.length} prescriptions will be submitted to the pharmacy once payment is collected.`
+                : `The prescription will be submitted to ${primaryRx?.pharmacyName} once payment is collected.`}
             </p>
           </div>
         </div>
 
         <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Prescription Summary</h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <span className="text-sm text-gray-500">Patient</span>
-              <p className="font-medium text-gray-900">{prescription?.patientName}</p>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            {isMultiOrder ? "Order Summary" : "Prescription Summary"}
+          </h3>
+
+          {!isMultiOrder && primaryRx && (
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <span className="text-sm text-gray-500">Patient</span>
+                <p className="font-medium text-gray-900">{primaryRx.patientName}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Pharmacy</span>
+                <p className="font-medium text-gray-900">{primaryRx.pharmacyName}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Medication</span>
+                <p className="font-medium text-gray-900">{primaryRx.medication}</p>
+              </div>
+              <div>
+                <span className="text-sm text-gray-500">Quantity</span>
+                <p className="font-medium text-gray-900">{primaryRx.quantity}</p>
+              </div>
             </div>
-            <div>
-              <span className="text-sm text-gray-500">Pharmacy</span>
-              <p className="font-medium text-gray-900">{prescription?.pharmacyName}</p>
+          )}
+
+          {isMultiOrder && (
+            <div className="space-y-3 mb-4">
+              <div className="grid grid-cols-2 gap-4 mb-3">
+                <div>
+                  <span className="text-sm text-gray-500">Patient</span>
+                  <p className="font-medium text-gray-900">{primaryRx?.patientName}</p>
+                </div>
+                <div>
+                  <span className="text-sm text-gray-500">Items</span>
+                  <p className="font-medium text-gray-900">{prescriptions.length} medications</p>
+                </div>
+              </div>
+              {prescriptions.map((rx, i) => (
+                <div key={rx.id} className="flex justify-between items-center bg-gray-50 rounded-lg p-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-5 h-5 rounded-full bg-blue-600 text-white text-xs flex items-center justify-center font-bold">
+                      {i + 1}
+                    </span>
+                    <div>
+                      <p className="font-medium text-sm text-gray-900">{rx.medication}</p>
+                      <p className="text-xs text-gray-500">{rx.pharmacyName} | Qty: {rx.quantity}</p>
+                    </div>
+                  </div>
+                  <span className="font-medium text-sm">${(Math.round((rx.patient_price || 0) * 100) / 100).toFixed(2)}</span>
+                </div>
+              ))}
             </div>
-            <div>
-              <span className="text-sm text-gray-500">Medication</span>
-              <p className="font-medium text-gray-900">{prescription?.medication}</p>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500">Quantity</span>
-              <p className="font-medium text-gray-900">{prescription?.quantity}</p>
-            </div>
-          </div>
+          )}
 
           <div className="border-t mt-4 pt-4 space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Medication Cost</span>
-              <span className="font-medium">${(medicationCostCents / 100).toFixed(2)}</span>
+              <span className="font-medium">${(totalMedicationCents / 100).toFixed(2)}</span>
             </div>
-            {profitCents > 0 && (
+            {totalProfitCents > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Consultation Fee</span>
-                <span className="font-medium">${(profitCents / 100).toFixed(2)}</span>
+                <span className="font-medium">${(totalProfitCents / 100).toFixed(2)}</span>
               </div>
             )}
-            {shippingCents > 0 && (
+            {totalShippingCents > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Shipping Fee</span>
-                <span className="font-medium">${(shippingCents / 100).toFixed(2)}</span>
+                <span className="font-medium">${(totalShippingCents / 100).toFixed(2)}</span>
               </div>
             )}
             <div className="border-t pt-2 flex justify-between items-center">
@@ -388,26 +443,31 @@ export default function Step4PaymentPage() {
             <ArrowLeft className="h-4 w-4 mr-2" />
             Skip for now
           </Button>
-          <p className="text-xs text-gray-400">Prescription stays as pending until payment is collected</p>
+          <p className="text-xs text-gray-400">
+            {isMultiOrder
+              ? "Prescriptions stay as pending until payment is collected"
+              : "Prescription stays as pending until payment is collected"}
+          </p>
         </div>
       </div>
 
-      {prescription && (
+      {primaryRx && (
         <BillPatientModal
           isOpen={showBillModal}
           onClose={() => {
             setShowBillModal(false);
-            loadPrescription();
+            loadPrescriptions();
           }}
-          prescriptionId={prescription.id}
-          pharmacyId={prescription.pharmacy_id}
-          patientName={prescription.patientName}
-          patientEmail={prescription.patientEmail}
-          medication={prescription.medication}
-          medicationCostCents={medicationCostCents}
-          profitCents={profitCents}
-          shippingFeeCents={shippingCents}
-          paymentStatus={prescription.status}
+          prescriptionId={primaryRx.id}
+          prescriptionIds={allIds}
+          pharmacyId={primaryRx.pharmacy_id}
+          patientName={primaryRx.patientName}
+          patientEmail={primaryRx.patientEmail}
+          medication={isMultiOrder ? `${prescriptions.length} medications` : primaryRx.medication}
+          medicationCostCents={totalMedicationCents}
+          profitCents={totalProfitCents}
+          shippingFeeCents={totalShippingCents}
+          paymentStatus={primaryRx.status}
         />
       )}
     </DefaultLayout>

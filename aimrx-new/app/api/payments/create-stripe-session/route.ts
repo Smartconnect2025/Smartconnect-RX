@@ -91,6 +91,14 @@ export async function POST(request: NextRequest) {
 
     const siteUrl = envConfig.NEXT_PUBLIC_SITE_URL || "https://localhost:3000";
 
+    const { data: linkedPrescriptions } = await supabase
+      .from("prescriptions")
+      .select("id")
+      .eq("payment_transaction_id", transaction.id);
+
+    const mappedIds = linkedPrescriptions?.map((rx: { id: string }) => rx.id) || [];
+    const allRxIds = mappedIds.length > 0 ? mappedIds : (transaction.prescription_id ? [transaction.prescription_id] : []);
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -112,6 +120,7 @@ export async function POST(request: NextRequest) {
         payment_token: paymentToken,
         transaction_id: transaction.id,
         prescription_id: transaction.prescription_id || "",
+        prescription_ids: allRxIds.join(","),
       },
       success_url: `${siteUrl}/payment/success/${paymentToken}?from=${from || "patient-link"}`,
       cancel_url: `${siteUrl}/payment/cancelled/${paymentToken}`,

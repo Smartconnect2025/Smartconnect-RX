@@ -16,10 +16,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, ArrowRight, Search, Plus, Info } from "lucide-react";
+import { ArrowLeft, ArrowRight, Search, Plus, Info, ShoppingCart, X, Trash2 } from "lucide-react";
 import { createClient } from "@core/supabase";
 import { useUser } from "@core/auth";
-import { clearPrescriptionSession } from "../prescriptionSessionUtils";
+import { clearPrescriptionSession, getCart, saveCart, getSharedFees, saveSharedFees } from "../prescriptionSessionUtils";
+import type { CartItem } from "../prescriptionSessionUtils";
 
 const MEDICATION_FORMS = [
   "Tablet",
@@ -119,9 +120,10 @@ export default function PrescriptionStep2Page() {
   );
   const [selectedMedicationDetails, setSelectedMedicationDetails] =
     useState<PharmacyMedication | null>(null);
-  const [shippingFee, setShippingFee] = useState<string>("");
+  const [shippingFee, setShippingFee] = useState<string>("25.00");
+  const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Fetch provider's default shipping fee
+  // Fetch provider's default shipping fee (fallback to $25)
   useEffect(() => {
     const fetchDefaultShippingFee = async () => {
       if (!user?.id) return;
@@ -136,6 +138,17 @@ export default function PrescriptionStep2Page() {
     };
     fetchDefaultShippingFee();
   }, [user?.id]);
+
+  // Load cart from sessionStorage on mount
+  useEffect(() => {
+    const savedCart = getCart();
+    if (savedCart.length > 0) {
+      setCart(savedCart);
+    }
+    const savedFees = getSharedFees();
+    if (savedFees.shippingFee) setShippingFee(savedFees.shippingFee);
+    if (savedFees.oversightFees?.length > 0) setOversightFees(savedFees.oversightFees);
+  }, []);
 
   // Get unique pharmacies from loaded medications
   useEffect(() => {
@@ -380,8 +393,77 @@ export default function PrescriptionStep2Page() {
     );
   };
 
+  const handleAddToCart = () => {
+    if (!validateForm()) return;
+
+    const newItem: CartItem = {
+      medication: formData.medication,
+      vialSize: formData.vialSize,
+      dosageAmount: formData.dosageAmount,
+      dosageUnit: formData.dosageUnit,
+      form: formData.form,
+      quantity: formData.quantity,
+      refills: formData.refills,
+      sig: formData.sig,
+      dispenseAsWritten: formData.dispenseAsWritten,
+      pharmacyNotes: formData.pharmacyNotes,
+      patientPrice: formData.patientPrice,
+      strength: `${formData.dosageAmount}${formData.dosageUnit}`,
+      selectedPharmacyId: formData.selectedPharmacyId,
+      selectedPharmacyName: formData.selectedPharmacyName,
+      selectedPharmacyColor: formData.selectedPharmacyColor,
+      selectedMedicationId: formData.selectedMedicationId,
+      refillFrequencyDays: formData.refillFrequencyDays,
+    };
+
+    const updatedCart = [...cart, newItem];
+    setCart(updatedCart);
+    saveCart(updatedCart);
+    saveSharedFees({ shippingFee, oversightFees });
+
+    setFormData({
+      medication: "",
+      vialSize: "",
+      dosageAmount: "",
+      dosageUnit: "mg",
+      form: "",
+      quantity: "",
+      refills: "0",
+      sig: "",
+      dispenseAsWritten: false,
+      pharmacyNotes: "",
+      patientPrice: "",
+      strength: "",
+      selectedPharmacyId: "",
+      selectedPharmacyName: "",
+      selectedPharmacyColor: "",
+      selectedMedicationId: "",
+      refillFrequencyDays: "",
+    });
+    setSelectedMedicationDetails(null);
+    setErrors({});
+  };
+
+  const handleRemoveFromCart = (index: number) => {
+    const updatedCart = cart.filter((_, i) => i !== index);
+    setCart(updatedCart);
+    saveCart(updatedCart);
+  };
+
+  const handleReviewPrescriptions = () => {
+    saveSharedFees({ shippingFee, oversightFees });
+    saveCart(cart);
+    sessionStorage.setItem("selectedPatientId", patientId);
+    sessionStorage.removeItem("prescriptionFormData");
+    router.push(`/prescriptions/new/step3?patientId=${patientId}`);
+  };
+
   const handleNext = () => {
     if (validateForm()) {
+      if (cart.length > 0) {
+        handleAddToCart();
+        return;
+      }
       saveFormToSession();
       sessionStorage.setItem("selectedPatientId", patientId);
       router.push(`/prescriptions/new/step3?patientId=${patientId}`);
@@ -390,6 +472,7 @@ export default function PrescriptionStep2Page() {
 
   const handleBack = () => {
     saveFormToSession();
+    saveSharedFees({ shippingFee, oversightFees });
     router.push("/prescriptions/new/step1");
   };
 
@@ -1489,17 +1572,89 @@ export default function PrescriptionStep2Page() {
             </div>
           </div>
 
+          {/* Cart Panel */}
+          {cart.length > 0 && (
+            <div className="bg-white border-2 border-green-400 rounded-lg p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShoppingCart className="h-5 w-5 text-green-600" />
+                  <h2 className="text-lg font-semibold text-green-800">
+                    Prescription Cart ({cart.length} {cart.length === 1 ? "item" : "items"})
+                  </h2>
+                </div>
+                <span className="text-sm text-green-600 font-medium">
+                  Total: ${cart.reduce((sum, item) => sum + (parseFloat(item.patientPrice) || 0), 0).toFixed(2)}
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {cart.map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between bg-green-50 rounded-lg p-4 border border-green-200"
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="font-semibold text-gray-900">{item.medication}</p>
+                        {item.selectedPharmacyName && (
+                          <span
+                            className="text-xs px-2 py-0.5 rounded-full text-white"
+                            style={{ backgroundColor: item.selectedPharmacyColor || "#1E3A8A" }}
+                          >
+                            {item.selectedPharmacyName}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        {item.strength} {item.form} | Qty: {item.quantity} | {item.sig}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-semibold text-gray-900">
+                        ${parseFloat(item.patientPrice || "0").toFixed(2)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveFromCart(index)}
+                        className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Navigation Buttons */}
           <div className="bg-white border border-gray-200 rounded-[4px] p-6">
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center gap-3">
               <Button variant="outline" onClick={handleBack}>
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Patient Selection
               </Button>
-              <Button onClick={handleNext} size="lg">
-                Continue to Review
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={handleAddToCart}
+                  className="border-green-400 text-green-700 hover:bg-green-50"
+                >
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Add to Cart
+                </Button>
+                {cart.length > 0 ? (
+                  <Button onClick={handleReviewPrescriptions} size="lg" className="bg-green-600 hover:bg-green-700">
+                    Review {cart.length} {cart.length === 1 ? "Prescription" : "Prescriptions"}
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                ) : (
+                  <Button onClick={handleNext} size="lg">
+                    Continue to Review
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </div>
