@@ -57,6 +57,16 @@ export async function GET() {
     const isSuperAdmin = roleRow.role === "super_admin" || (roleRow.role === "admin" && !pharmacyAdminData);
     const isPharmacyAdmin = roleRow.role === "admin" && !!pharmacyAdminData;
 
+    let pharmacyName: string | null = null;
+    if (isPharmacyAdmin && pharmacyAdminData?.pharmacy_id) {
+      const { data: pharmacy } = await supabaseAdmin
+        .from("pharmacies")
+        .select("name")
+        .eq("id", pharmacyAdminData.pharmacy_id)
+        .single();
+      pharmacyName = pharmacy?.name || null;
+    }
+
     return NextResponse.json({
       success: true,
       userId: user.id,
@@ -64,6 +74,7 @@ export async function GET() {
       isSuperAdmin,
       isPharmacyAdmin,
       pharmacyId: pharmacyAdminData?.pharmacy_id || null,
+      pharmacyName,
       isDemo: roleRow.is_demo || false,
     });
   } catch (error) {

@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Eye, EyeOff, RefreshCw, Building2 } from "lucide-react";
 import { formatPhoneNumber } from "@/core/utils/phone";
 import {
   Select,
@@ -32,6 +32,7 @@ interface ProviderFormDialogProps {
   onOpenChange: (open: boolean) => void;
   onSuccess?: () => void;
   pharmacyId?: string | null;
+  pharmacyName?: string | null;
   isSuperAdmin?: boolean;
 }
 
@@ -40,6 +41,7 @@ export function ProviderFormDialog({
   onOpenChange,
   onSuccess,
   pharmacyId,
+  pharmacyName,
   isSuperAdmin = false,
 }: ProviderFormDialogProps) {
   const [isCreating, setIsCreating] = useState(false);
@@ -190,9 +192,13 @@ export function ProviderFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg bg-white border border-border">
         <DialogHeader>
-          <DialogTitle>Invite New Provider</DialogTitle>
+          <DialogTitle>
+            {isSuperAdmin ? "Invite New Provider" : `Invite Provider to ${pharmacyName || "Your Pharmacy"}`}
+          </DialogTitle>
           <DialogDescription>
-            Add a new provider to the platform. They will receive login credentials via email.
+            {isSuperAdmin
+              ? "Add a new provider to the platform. They will receive login credentials via email."
+              : `Invite a provider to join ${pharmacyName || "your pharmacy"}. They will receive login credentials via email.`}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -320,18 +326,17 @@ export function ProviderFormDialog({
             </div>
           </div>
 
-          {isSuperAdmin && (
+          {isSuperAdmin ? (
             <div className="space-y-2">
-              <Label htmlFor="pharmacySelect">Assign to Pharmacy</Label>
+              <Label htmlFor="pharmacySelect">Assign to Pharmacy *</Label>
               <Select
                 value={formData.selectedPharmacyId}
                 onValueChange={(val) => handleInputChange("selectedPharmacyId", val === "none" ? "" : val)}
               >
                 <SelectTrigger id="pharmacySelect">
-                  <SelectValue placeholder="-- Select a pharmacy (optional) --" />
+                  <SelectValue placeholder="-- Select a pharmacy --" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">No pharmacy assignment</SelectItem>
                   {pharmacies.map((pharmacy) => (
                     <SelectItem key={pharmacy.id} value={pharmacy.id}>
                       {pharmacy.name}
@@ -339,9 +344,18 @@ export function ProviderFormDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-gray-500">Optionally link this provider to a specific pharmacy</p>
+              <p className="text-xs text-gray-500">Select which pharmacy this provider will be linked to</p>
             </div>
-          )}
+          ) : pharmacyName ? (
+            <div className="space-y-2">
+              <Label>Pharmacy</Label>
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-md">
+                <Building2 className="h-4 w-4 text-blue-600" />
+                <span className="text-sm font-medium text-gray-800">{pharmacyName}</span>
+              </div>
+              <p className="text-xs text-gray-500">This provider will be linked to your pharmacy</p>
+            </div>
+          ) : null}
 
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
             <p className="text-sm text-amber-800">

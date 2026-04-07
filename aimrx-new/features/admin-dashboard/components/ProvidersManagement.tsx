@@ -75,6 +75,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
   const { user } = useUser();
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [pharmacyId, setPharmacyId] = useState<string | null>(null);
+  const [pharmacyName, setPharmacyName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -161,6 +162,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
             setIsSuperAdmin(true);
           } else if (data.isPharmacyAdmin && data.pharmacyId) {
             setPharmacyId(data.pharmacyId);
+            setPharmacyName(data.pharmacyName || null);
           }
         }
       } catch (error) {
@@ -1161,6 +1163,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
         onOpenChange={setIsFormOpen}
         onSuccess={fetchProviders}
         pharmacyId={isSuperAdmin && pharmacyFilter !== "all" ? pharmacyFilter : pharmacyId}
+        pharmacyName={pharmacyName}
         isSuperAdmin={isSuperAdmin}
       />
     </>
