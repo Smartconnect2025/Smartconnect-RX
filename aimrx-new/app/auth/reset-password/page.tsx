@@ -26,89 +26,46 @@ export default function ResetPasswordPage() {
   // Get password validation state
   const passwordValidation = validatePassword(password);
 
-  // Process the recovery token from URL hash on mount
   useEffect(() => {
-    const processRecoveryToken = async () => {
-      // Check if there's a hash fragment with token
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        setIsVerifying(false);
+        return;
+      }
+
       const hash = window.location.hash;
+      if (hash) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get("access_token");
+        const refreshToken = params.get("refresh_token");
 
-      if (!hash) {
-        // No hash - check if there's already a session
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          setIsVerifying(false);
-          return;
-        }
-        setVerificationError("No reset token found. Please use the link from your email.");
-        setIsVerifying(false);
-        return;
-      }
-
-      // Parse hash fragment: #access_token=xxx&refresh_token=xxx&type=recovery&...
-      const params = new URLSearchParams(hash.substring(1));
-      const accessToken = params.get("access_token");
-      const refreshToken = params.get("refresh_token");
-
-      if (!accessToken) {
-        setVerificationError("Invalid reset link. Please request a new one.");
-        setIsVerifying(false);
-        return;
-      }
-
-      try {
-        // First, give Supabase a moment to auto-process the hash
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Check if session was already established by Supabase auto-processing
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (session) {
-          setIsVerifying(false);
-          // Clear hash from URL for cleaner UX
-          window.history.replaceState(null, "", window.location.pathname);
-          return;
-        }
-
-        // If no session yet, try to set it manually using the tokens from hash
         if (accessToken && refreshToken) {
-          const { error: setError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
+          try {
+            const { error: setError } = await supabase.auth.setSession({
+              access_token: accessToken,
+              refresh_token: refreshToken,
+            });
 
-          if (setError) {
-            console.error("Failed to set session:", setError);
-            setVerificationError("Your reset link has expired. Please request a new one.");
-          } else {
-            // Clear hash from URL
-            window.history.replaceState(null, "", window.location.pathname);
+            if (setError) {
+              setVerificationError("Your reset link has expired. Please request a new one.");
+            } else {
+              window.history.replaceState(null, "", window.location.pathname);
+            }
+          } catch {
+            setVerificationError("Failed to verify reset link. Please try again.");
           }
-        } else if (accessToken && !refreshToken) {
-          // Some invite links may only have access_token
-          // Try to use it anyway
-          const { error: setError } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: "", // Empty refresh token
-          });
 
-          if (setError) {
-            console.error("Failed to set session with access_token only:", setError);
-            setVerificationError("Your reset link has expired or is invalid. Please request a new one.");
-          } else {
-            window.history.replaceState(null, "", window.location.pathname);
-          }
-        } else {
-          setVerificationError("Invalid reset link. Please request a new one.");
+          setIsVerifying(false);
+          return;
         }
-      } catch (error) {
-        console.error("Error processing recovery token:", error);
-        setVerificationError("Failed to verify reset link. Please try again.");
       }
 
+      setVerificationError("No active session. Please use the reset link from your email.");
       setIsVerifying(false);
     };
 
-    processRecoveryToken();
+    checkSession();
   }, [supabase.auth]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
