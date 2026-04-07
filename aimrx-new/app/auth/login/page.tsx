@@ -147,11 +147,11 @@ export default function LoginPage() {
           <div className="flex items-center justify-between max-w-7xl mx-auto">
             {/* Logo - Left side */}
             <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
-              <div className="bg-white/95 rounded-lg px-3 py-1.5 shadow-md">
+              <div className="bg-white rounded-xl px-4 py-2 shadow-lg">
                 <img
                   src="/logo-header.png"
                   alt="SmartConnect RX"
-                  className="h-8 w-auto object-contain"
+                  className="h-10 w-auto object-contain"
                 />
               </div>
             </Link>
