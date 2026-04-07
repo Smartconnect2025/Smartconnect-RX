@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { firstName, lastName, email, phone, password, tierLevel, groupId, companyName, physicalAddress, billingAddress, accessRequestId } = body;
     let { npiNumber, medicalLicense, licenseState, referringPharmacyId } = body;
+    const { pharmacyId } = body;
 
     // Validate required fields
     if (!firstName || !lastName || !email || !password) {
@@ -165,6 +166,16 @@ export async function POST(request: NextRequest) {
 
       if (inviterScope.isPharmacyAdmin && inviterScope.pharmacyId) {
         pharmacyIdToLink = inviterScope.pharmacyId;
+      } else if (pharmacyId) {
+        const { data: directPharmacy } = await supabaseAdmin
+          .from("pharmacies")
+          .select("id")
+          .eq("id", pharmacyId)
+          .eq("is_active", true)
+          .single();
+        if (directPharmacy) {
+          pharmacyIdToLink = directPharmacy.id;
+        }
       } else if (referringPharmacyId) {
         const { data: refPharmacy } = await supabaseAdmin
           .from("pharmacies")
