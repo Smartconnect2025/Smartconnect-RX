@@ -166,49 +166,97 @@ export async function POST(request: NextRequest) {
 
       if (inviterScope.isPharmacyAdmin && inviterScope.pharmacyId) {
         pharmacyIdToLink = inviterScope.pharmacyId;
-      } else if (pharmacyId) {
-        const { data: directPharmacy } = await supabaseAdmin
-          .from("pharmacies")
-          .select("id")
-          .eq("id", pharmacyId)
-          .eq("is_active", true)
-          .single();
-        if (directPharmacy) {
-          pharmacyIdToLink = directPharmacy.id;
-        }
-      } else if (referringPharmacyId) {
-        const { data: refPharmacy } = await supabaseAdmin
-          .from("pharmacies")
-          .select("id")
-          .eq("id", referringPharmacyId)
-          .eq("is_active", true)
-          .single();
-        if (refPharmacy) {
-          pharmacyIdToLink = refPharmacy.id;
-        }
-      }
-
-      if (!pharmacyIdToLink) {
-        console.warn(`Provider ${authUser.user.id} created without pharmacy link — no pharmacyId resolved`);
-      }
-
-      if (pharmacyIdToLink) {
-        const { error: linkError } = await supabaseAdmin
-          .from("provider_pharmacy_links")
-          .upsert({
-            provider_id: authUser.user.id,
-            pharmacy_id: pharmacyIdToLink,
-          }, { onConflict: "provider_id,pharmacy_id" });
-
-        if (linkError) {
-          console.error("Failed to link provider to pharmacy:", linkError);
+      } else {
+        const resolvedId = pharmacyId || referringPharmacyId;
+        if (!resolvedId) {
+          console.error("Super admin invite missing pharmacyId");
           await supabaseAdmin.from("providers").delete().eq("id", providerData.id);
           await supabaseAdmin.from("user_roles").delete().eq("user_id", authUser.user.id);
           await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
           return NextResponse.json(
-            { error: "Failed to link provider to pharmacy. Provider was not created." },
-            { status: 500 }
+            { error: "Pharmacy selection is required" },
+            { status: 400 }
           );
+        }
+
+        const { data: validPharmacy } = await supabaseAdmin
+          .from("pharmacies")
+          .select("id")
+          .eq("id", resolvedId)
+          .eq("is_active", true)
+          .single();
+
+        if (validPharmacy) {
+          pharmacyIdToLink = validPharmacy.id;
+        } else {
+          console.error("Invalid pharmacy ID:", resolvedId);
+          await supabaseAdmin.from("providers").delete().eq("id", providerData.id);
+          await supabaseAdmin.from("user_roles").delete().eq("user_id", authUser.user.id);
+          await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+          return NextResponse.json(
+            { error: "Selected pharmacy not found or inactive" },
+            { status: 400 }
+          );
+        }
+      }
+
+      const { error: linkError } = await supabaseAdmin
+        .from("provider_pharmacy_links")
+        .upsert({
+          provider_id: authUser.user.id,
+          pharmacy_id: pharmacyIdToLink,
+        }, { onConflict: "provider_id,pharmacy_id" });
+
+      if (linkError) {
+        console.error("Failed to link provider to pharmacy:", linkError);
+        await supabaseAdmin.from("providers").delete().eq("id", providerData.id);
+        await supabaseAdmin.from("user_roles").delete().eq("user_id", authUser.user.id);
+        await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+        return NextResponse.json(
+          { error: "Failed to link provider to pharmacy. Provider was not created." },
+          { status: 500 }
+        );
+      }
+
+      if (companyName && pharmacyIdToLink) {
+        try {
+          const { data: pharmacyLinks } = await supabaseAdmin
+            .from("provider_pharmacy_links")
+            .select("provider_id")
+            .eq("pharmacy_id", pharmacyIdToLink);
+
+          const pharmacyUserIds = (pharmacyLinks || []).map((l: { provider_id: string }) => l.provider_id);
+
+          if (pharmacyUserIds.length > 0) {
+            const { data: companyProviders } = await supabaseAdmin
+              .from("providers")
+              .select("id")
+              .eq("company_name", companyName)
+              .neq("id", providerData.id)
+              .in("user_id", pharmacyUserIds);
+
+            if (companyProviders && companyProviders.length > 0) {
+              const companyProviderIds = companyProviders.map((p: { id: string }) => p.id);
+
+              const { data: companyPatients } = await supabaseAdmin
+                .from("patients")
+                .select("id")
+                .in("provider_id", companyProviderIds);
+
+              if (companyPatients && companyPatients.length > 0) {
+                const newMappings = companyPatients.map((p: { id: string }) => ({
+                  provider_id: providerData.id,
+                  patient_id: p.id,
+                }));
+
+                await supabaseAdmin
+                  .from("provider_patient_mappings")
+                  .upsert(newMappings, { onConflict: "provider_id,patient_id" });
+              }
+            }
+          }
+        } catch (syncError) {
+          console.error("Non-fatal: Error syncing company patients on invite:", syncError);
         }
       }
     }

@@ -1,0 +1,43 @@
+Here are two prompts you can paste into the other project:
+
+PROMPT 1: Fix Cross-Pharmacy Patient Access Breach — Scope Company Sync to Pharmacy
+
+When a pharmacy admin changes a provider's company name, the system calls RPCs (sync_provider_to_group_patients and remove_non_owned_patient_mappings) to update patient mappings. Currently these RPCs operate across ALL pharmacies, meaning a pharmacy admin at Pharmacy A could trigger a sync that pulls in patients from Pharmacy B. This is a data access breach.
+
+What to fix:
+
+In app/api/admin/providers/[id]/route.ts (the PATCH endpoint):
+
+After authenticating the user, look up the caller's pharmacy_id from their admin profile
+If userRole === "admin" (pharmacy admin), their pharmacy_id is required — reject the request if it's missing
+Pass the caller's pharmacy_id to both RPC calls as a new parameter p_pharmacy_id
+If userRole === "super_admin", pass NULL for p_pharmacy_id (they have global access)
+In Supabase, update both RPC functions:
+
+sync_provider_to_group_patients — add an optional parameter p_pharmacy_id UUID DEFAULT NULL. When provided, only sync patients where patients.pharmacy_id = p_pharmacy_id. When NULL, sync across all pharmacies (super admin behavior).
+remove_non_owned_patient_mappings — same change. When p_pharmacy_id is provided, only remove mappings for patients within that pharmacy.
+Also verify that the PATCH endpoint confirms the provider being edited belongs to the admin's pharmacy before allowing any update — not just the sync. A pharmacy admin should never be able to edit a provider from another pharmacy.
+
+The principle: Pharmacy admins can only read and write data within their own pharmacy. The pharmacy_id must be enforced server-side, never trusted from the frontend.
+
+PROMPT 2: Enforce Pharmacy Assignment When Inviting a Provider
+
+When a super admin invites a new provider (doctor), the system does not require a pharmacy to be selected. This means providers can be created with no pharmacy association, which breaks the data model and access control.
+
+What to fix:
+
+In app/api/admin/invite-doctor/route.ts (the POST endpoint):
+
+Add pharmacyId to the destructured request body
+If userRole === "super_admin", validate that pharmacyId is present — return a 400 error ("Pharmacy selection is required") if missing
+If userRole === "admin" (pharmacy admin), ignore whatever pharmacyId was sent in the body — look up the admin's own pharmacy_id from their profile and use that instead (never trust the frontend for pharmacy admins)
+Include pharmacy_id in the providers table insert
+On the frontend invite form:
+
+For super admins: add a required pharmacy dropdown. Fetch the list from the pharmacies table. The form should not submit without a pharmacy selected.
+For pharmacy admins: either hide the pharmacy field entirely, or show it as a read-only field displaying their pharmacy name. Their pharmacy is assigned automatically on the backend.
+Add the same pharmacy enforcement to the company patient sync that runs after invite (sync_provider_to_group_patients) — pass the pharmacy_id so it only syncs patients within that pharmacy, using the same fix from Prompt 1.
+
+The principle: Every provider must belong to a pharmacy. Super admins choose which one. Pharmacy admins are automatically scoped to their own. This is enforced on the API, not just the UI.
+
+Paste both into the other project and they'll have everything they need to implement both fixe
