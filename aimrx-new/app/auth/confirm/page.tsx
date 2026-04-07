@@ -17,7 +17,7 @@ function ConfirmContent() {
 
   const [isVerifying, setIsVerifying] = useState(false);
   const [error, setError] = useState<string | null>(
-    !tokenHash || !type ? "Invalid or missing reset link. Please request a new one." : null
+    !tokenHash || type !== "recovery" ? "Invalid or missing reset link. Please request a new one." : null
   );
 
   const handleVerify = async () => {
