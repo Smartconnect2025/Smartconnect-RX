@@ -188,6 +188,10 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      if (!pharmacyIdToLink) {
+        console.warn(`Provider ${authUser.user.id} created without pharmacy link — no pharmacyId resolved`);
+      }
+
       if (pharmacyIdToLink) {
         const { error: linkError } = await supabaseAdmin
           .from("provider_pharmacy_links")

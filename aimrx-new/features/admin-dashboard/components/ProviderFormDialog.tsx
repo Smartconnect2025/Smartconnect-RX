@@ -134,11 +134,16 @@ export function ProviderFormDialog({
       return;
     }
 
+    if (isSuperAdmin && !formData.selectedPharmacyId) {
+      toast.error("Please select a pharmacy to assign this provider to");
+      return;
+    }
+
     setIsCreating(true);
 
     try {
       const resolvedPharmacyId = isSuperAdmin
-        ? (formData.selectedPharmacyId || undefined)
+        ? formData.selectedPharmacyId
         : (pharmacyId || undefined);
 
       const payload = {

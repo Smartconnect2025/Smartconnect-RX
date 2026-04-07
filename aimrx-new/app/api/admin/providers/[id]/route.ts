@@ -133,11 +133,28 @@ export async function PATCH(
         }
 
         if (newCompanyName) {
-          const { data: companyProviders } = await supabase
+          let companyProviderQuery = supabase
             .from("providers")
-            .select("id")
+            .select("id, user_id")
             .eq("company_name", newCompanyName)
             .neq("id", currentProvider.id);
+
+          if (isPharmacyAdmin) {
+            const scopePharmacyId = adminCheck.pharmacyScope!.pharmacyId;
+            const { data: pharmacyLinks } = await supabase
+              .from("provider_pharmacy_links")
+              .select("provider_id")
+              .eq("pharmacy_id", scopePharmacyId);
+
+            const pharmacyUserIds = (pharmacyLinks || []).map((l) => l.provider_id);
+            if (pharmacyUserIds.length > 0) {
+              companyProviderQuery = companyProviderQuery.in("user_id", pharmacyUserIds);
+            } else {
+              companyProviderQuery = companyProviderQuery.in("user_id", ["__none__"]);
+            }
+          }
+
+          const { data: companyProviders } = await companyProviderQuery;
 
           if (companyProviders && companyProviders.length > 0) {
             const companyProviderIds = companyProviders.map((p) => p.id);
