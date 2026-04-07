@@ -41,6 +41,7 @@ import {
 
 import type { Provider } from "../types";
 import { ProviderFormDialog } from "./ProviderFormDialog";
+import { CompanyManagementDialog } from "./CompanyManagementDialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -83,6 +84,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
   const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([]);
   const [deletingProvider, setDeletingProvider] = useState<Provider | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isCompanyDialogOpen, setIsCompanyDialogOpen] = useState(false);
   const [assigningCompanyProvider, setAssigningCompanyProvider] = useState<Provider | null>(null);
   const [companyInputMode, setCompanyInputMode] = useState<"select" | "new">("select");
   const [selectedCompanyName, setSelectedCompanyName] = useState<string>("");
@@ -658,6 +660,14 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
           </div>
           <div className="flex items-center gap-3">
             <Button
+              variant="outline"
+              onClick={() => guardAction(() => setIsCompanyDialogOpen(true))}
+              className="h-9 border-gray-200"
+            >
+              <Building2 className="h-4 w-4 mr-2" />
+              Manage Companies
+            </Button>
+            <Button
               onClick={() => guardAction(() => setIsFormOpen(true))}
               className="h-9 bg-blue-600 hover:bg-blue-700 text-white"
             >
@@ -1165,6 +1175,15 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
         pharmacyId={isSuperAdmin && pharmacyFilter !== "all" ? pharmacyFilter : pharmacyId}
         pharmacyName={pharmacyName}
         isSuperAdmin={isSuperAdmin}
+      />
+
+      {/* Company Management */}
+      <CompanyManagementDialog
+        open={isCompanyDialogOpen}
+        onOpenChange={setIsCompanyDialogOpen}
+        onCompaniesChanged={fetchProviders}
+        isSuperAdmin={isSuperAdmin}
+        pharmacyName={pharmacyName}
       />
     </>
   );
