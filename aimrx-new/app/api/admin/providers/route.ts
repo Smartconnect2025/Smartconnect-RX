@@ -128,16 +128,6 @@ export async function GET(request: NextRequest) {
     const { data: tiers } = await supabase.from("tiers").select("*");
     const tierMap = new Map(tiers?.map((t) => [t.tier_code, t]) || []);
 
-    const { data: groups } = await supabase.from("groups").select("*");
-    const groupMap = new Map((groups || []).map((g) => [g.id, g]));
-
-    const pmIds = [...new Set((groups || []).map((g) => g.platform_manager_id).filter(Boolean))];
-    let pmMap = new Map<string, string>();
-    if (pmIds.length > 0) {
-      const { data: pms } = await supabase.from("platform_managers").select("id, name").in("id", pmIds);
-      pmMap = new Map((pms || []).map((pm) => [pm.id, pm.name]));
-    }
-
     const transformedProviders =
       providers?.map((provider) => {
         const tierCode = provider.tier_level;
@@ -195,11 +185,6 @@ export async function GET(request: NextRequest) {
           tax_id: provider.tax_id || null,
           medical_licenses: provider.medical_licenses || null,
           company_name: provider.company_name || null,
-          group_id: provider.group_id || null,
-          group_name: provider.group_id ? (groupMap.get(provider.group_id)?.name || null) : null,
-          platform_manager_name: provider.group_id
-            ? (pmMap.get(groupMap.get(provider.group_id)?.platform_manager_id || "") || null)
-            : null,
           pharmacy_names: pharmacyLinksMap.get(provider.user_id) || [],
         };
       }) || [];

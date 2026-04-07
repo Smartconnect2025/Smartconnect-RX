@@ -7,7 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
 import {
-  Eye, EyeOff, Trash2, Search, RefreshCw, CheckCircle2, XCircle, FolderTree,
+  Eye, EyeOff, Trash2, Search, RefreshCw, CheckCircle2, XCircle,
   UserCog, Building2, Edit, Key, Power, Loader2, CheckCircle, AlertTriangle,
   MoreHorizontal, Copy, UserPlus, Calendar, Mail, Phone, Shield,
 } from "lucide-react";
@@ -54,12 +54,6 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useUser } from "@core/auth";
 
-interface GroupOption {
-  id: string;
-  name: string;
-  platform_manager_name: string | null;
-}
-
 interface PharmacyOption {
   id: string;
   name: string;
@@ -82,18 +76,17 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [pharmacyId, setPharmacyId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [isRevalidating, setIsRevalidating] = useState(false);
   const [providers, setProviders] = useState<Provider[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [groupFilter, setGroupFilter] = useState<string>("all");
   const [pharmacyFilter, setPharmacyFilter] = useState<string>(initialPharmacyFilter || "all");
   const [pharmacies, setPharmacies] = useState<PharmacyOption[]>([]);
   const [deletingProvider, setDeletingProvider] = useState<Provider | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [groups, setGroups] = useState<GroupOption[]>([]);
-  const [assigningProvider, setAssigningProvider] = useState<Provider | null>(null);
-  const [selectedGroupId, setSelectedGroupId] = useState<string>("");
-  const [isAssigning, setIsAssigning] = useState(false);
+  const [assigningCompanyProvider, setAssigningCompanyProvider] = useState<Provider | null>(null);
+  const [companyInputMode, setCompanyInputMode] = useState<"select" | "new">("select");
+  const [selectedCompanyName, setSelectedCompanyName] = useState<string>("");
+  const [newCompanyName, setNewCompanyName] = useState<string>("");
+  const [isAssigningCompany, setIsAssigningCompany] = useState(false);
   const [scopeChecked, setScopeChecked] = useState(false);
   const [activeTab, setActiveTab] = useState("providers");
 
@@ -120,17 +113,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
   const npiVerifyRef = useRef<string | null>(null);
   const activationNpiVerifyRef = useRef<string | null>(null);
 
-  const fetchGroups = async () => {
-    try {
-      const response = await fetch("/api/admin/groups");
-      if (response.ok) {
-        const data = await response.json();
-        setGroups(data.groups || []);
-      }
-    } catch (error) {
-      console.error("Error fetching groups:", error);
-    }
-  };
+  const existingCompanies = [...new Set(providers.map((p) => p.company_name).filter(Boolean))] as string[];
 
   const fetchPharmacies = async () => {
     try {
@@ -191,7 +174,6 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
   useEffect(() => {
     if (!scopeChecked) return;
     if (isSuperAdmin) {
-      fetchGroups();
       fetchPharmacies();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -210,11 +192,8 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
       fullName.includes(searchTerm.toLowerCase()) ||
       provider.specialty?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       provider.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      provider.group_name?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesGroup =
-      groupFilter === "all" ||
-      (groupFilter === "unassigned" ? !provider.group_id : provider.group_id === groupFilter);
-    return matchesSearch && matchesGroup;
+      provider.company_name?.toLowerCase().includes(searchTerm.toLowerCase());
+    return matchesSearch;
   });
 
   const activeProviders = filteredProviders.filter((p) => p.status === "active");
@@ -230,35 +209,39 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
     }
   };
 
-  const handleAssignGroup = async () => {
-    if (!assigningProvider) return;
+  const handleAssignCompany = async () => {
+    if (!assigningCompanyProvider) return;
     guardAction(async () => {
-    setIsAssigning(true);
+    setIsAssigningCompany(true);
     try {
-      const groupValue = (!selectedGroupId || selectedGroupId === "none") ? null : selectedGroupId;
-      const response = await fetch(`/api/admin/providers/${assigningProvider.id}`, {
+      const companyValue = companyInputMode === "new"
+        ? (newCompanyName.trim() || null)
+        : (selectedCompanyName === "none" ? null : selectedCompanyName || null);
+      const response = await fetch(`/api/admin/providers/${assigningCompanyProvider.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ group_id: groupValue }),
+        body: JSON.stringify({ company_name: companyValue }),
       });
 
       if (response.ok) {
         toast.success(
-          selectedGroupId === "none"
-            ? "Provider removed from group"
-            : "Provider assigned to group"
+          !companyValue
+            ? "Company removed from provider"
+            : `Provider assigned to ${companyValue}`
         );
-        setAssigningProvider(null);
-        setSelectedGroupId("");
+        setAssigningCompanyProvider(null);
+        setSelectedCompanyName("");
+        setNewCompanyName("");
+        setCompanyInputMode("select");
         fetchProviders();
       } else {
-        toast.error("Failed to update group assignment");
+        toast.error("Failed to update company assignment");
       }
     } catch (error) {
-      console.error("Error assigning group:", error);
-      toast.error("Failed to update group assignment");
+      console.error("Error assigning company:", error);
+      toast.error("Failed to update company assignment");
     } finally {
-      setIsAssigning(false);
+      setIsAssigningCompany(false);
     }
     });
   };
@@ -487,30 +470,6 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
     });
   };
 
-  const handleRevalidate = async () => {
-    guardAction(async () => {
-    setIsRevalidating(true);
-    try {
-      const response = await fetch("/api/admin/providers/revalidate", {
-        method: "POST",
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        toast.success(result.message);
-        fetchProviders();
-      } else {
-        toast.error("Failed to revalidate providers");
-      }
-    } catch (error) {
-      console.error("Error revalidating providers:", error);
-      toast.error("Failed to revalidate providers");
-    } finally {
-      setIsRevalidating(false);
-    }
-    });
-  };
-
   const handleCopyInviteLink = (provider: Provider) => {
     const link = `${window.location.origin}/auth/login`;
     navigator.clipboard.writeText(link).then(() => {
@@ -528,9 +487,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
             <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Doctor Name</TableHead>
             <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</TableHead>
             <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Phone</TableHead>
-            {isSuperAdmin && (
-              <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Group</TableHead>
-            )}
+            <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Company</TableHead>
             <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Added</TableHead>
             <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</TableHead>
             <TableHead className="h-11 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Actions</TableHead>
@@ -539,7 +496,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
         <TableBody>
           {isLoading ? (
             <TableRow>
-              <TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-32">
+              <TableCell colSpan={7} className="h-32">
                 <div className="flex items-center justify-center gap-2">
                   <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
                   <span className="text-sm text-gray-500">Loading providers...</span>
@@ -548,7 +505,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
             </TableRow>
           ) : data.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={isSuperAdmin ? 7 : 6} className="h-32">
+              <TableCell colSpan={7} className="h-32">
                 <div className="flex flex-col items-center justify-center py-8">
                   <div className="h-12 w-12 rounded-full bg-gray-100 flex items-center justify-center mb-3">
                     <UserPlus className="h-6 w-6 text-gray-400" />
@@ -599,32 +556,32 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
                 <TableCell className="px-4 py-3">
                   <span className="text-sm text-gray-600">{provider.phone_number || "—"}</span>
                 </TableCell>
-                {isSuperAdmin && (
-                  <TableCell className="px-4 py-3">
-                    {provider.group_name ? (
-                      <Badge
-                        variant="outline"
-                        className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs cursor-pointer hover:bg-indigo-100"
-                        onClick={() => {
-                          setAssigningProvider(provider);
-                          setSelectedGroupId(provider.group_id || "none");
-                        }}
-                      >
-                        {provider.group_name}
-                      </Badge>
-                    ) : (
-                      <button
-                        className="text-xs text-gray-400 hover:text-indigo-600 transition-colors"
-                        onClick={() => {
-                          setAssigningProvider(provider);
-                          setSelectedGroupId("none");
-                        }}
-                      >
-                        + Assign
-                      </button>
-                    )}
-                  </TableCell>
-                )}
+                <TableCell className="px-4 py-3">
+                  {provider.company_name ? (
+                    <Badge
+                      variant="outline"
+                      className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs cursor-pointer hover:bg-indigo-100"
+                      onClick={() => {
+                        setAssigningCompanyProvider(provider);
+                        setSelectedCompanyName(provider.company_name || "none");
+                        setCompanyInputMode("select");
+                      }}
+                    >
+                      {provider.company_name}
+                    </Badge>
+                  ) : (
+                    <button
+                      className="text-xs text-gray-400 hover:text-indigo-600 transition-colors"
+                      onClick={() => {
+                        setAssigningCompanyProvider(provider);
+                        setSelectedCompanyName("none");
+                        setCompanyInputMode("select");
+                      }}
+                    >
+                      + Assign
+                    </button>
+                  )}
+                </TableCell>
                 <TableCell className="px-4 py-3">
                   <span className="text-sm text-gray-600">{formatDate(provider.created_at)}</span>
                 </TableCell>
@@ -698,18 +655,6 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
             <p className="text-sm text-gray-500 mt-1">Manage and monitor all providers in the system</p>
           </div>
           <div className="flex items-center gap-3">
-            {isSuperAdmin && (
-              <Button
-                onClick={handleRevalidate}
-                disabled={isRevalidating}
-                variant="outline"
-                size="sm"
-                className="h-9 border-gray-200"
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${isRevalidating ? "animate-spin" : ""}`} />
-                {isRevalidating ? "Revalidating..." : "Revalidate"}
-              </Button>
-            )}
             <Button
               onClick={() => guardAction(() => setIsFormOpen(true))}
               className="h-9 bg-blue-600 hover:bg-blue-700 text-white"
@@ -732,21 +677,6 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
                 {pharmacies.map((pharmacy) => (
                   <SelectItem key={pharmacy.id} value={pharmacy.id}>
                     {pharmacy.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={groupFilter} onValueChange={setGroupFilter}>
-              <SelectTrigger className="w-[180px] h-9 bg-white border-gray-200 text-sm">
-                <FolderTree className="h-4 w-4 mr-2 text-gray-400" />
-                <SelectValue placeholder="All Groups" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Groups</SelectItem>
-                <SelectItem value="unassigned">Unassigned</SelectItem>
-                {groups.map((group) => (
-                  <SelectItem key={group.id} value={group.id}>
-                    {group.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -865,12 +795,53 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
             </div>
             <div>
               <Label htmlFor="editCompanyName">Company Name</Label>
-              <Input
-                id="editCompanyName"
-                value={editFormData.companyName}
-                onChange={(e) => setEditFormData({ ...editFormData, companyName: e.target.value })}
-                placeholder="Enter company name"
-              />
+              <div className="flex items-center gap-2 mb-2">
+                <Button
+                  type="button"
+                  variant={!editFormData.companyName || existingCompanies.includes(editFormData.companyName) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    const match = existingCompanies.find((c) => c === editFormData.companyName);
+                    setEditFormData({ ...editFormData, companyName: match || "" });
+                  }}
+                  className="text-xs h-7"
+                >
+                  Select
+                </Button>
+                <Button
+                  type="button"
+                  variant={editFormData.companyName && !existingCompanies.includes(editFormData.companyName) ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setEditFormData({ ...editFormData, companyName: "" })}
+                  className="text-xs h-7"
+                >
+                  New
+                </Button>
+              </div>
+              {existingCompanies.includes(editFormData.companyName) || !editFormData.companyName ? (
+                <Select
+                  value={editFormData.companyName || "none"}
+                  onValueChange={(val) => setEditFormData({ ...editFormData, companyName: val === "none" ? "" : val })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a company" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">No Company</SelectItem>
+                    {existingCompanies.map((name) => (
+                      <SelectItem key={name} value={name}>{name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="editCompanyName"
+                  value={editFormData.companyName}
+                  onChange={(e) => setEditFormData({ ...editFormData, companyName: e.target.value })}
+                  placeholder="Enter new company name"
+                />
+              )}
+              <p className="text-xs text-gray-500 mt-1">Providers in the same company share patient access</p>
             </div>
 
             {editingProvider && (
@@ -1099,53 +1070,85 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Group Assignment Dialog */}
+      {/* Company Assignment Dialog */}
       <Dialog
-        open={!!assigningProvider}
+        open={!!assigningCompanyProvider}
         onOpenChange={() => {
-          setAssigningProvider(null);
-          setSelectedGroupId("");
+          setAssigningCompanyProvider(null);
+          setSelectedCompanyName("");
+          setNewCompanyName("");
+          setCompanyInputMode("select");
         }}
       >
         <DialogContent className="max-w-sm bg-white border border-border">
           <DialogHeader>
-            <DialogTitle>Assign Group</DialogTitle>
+            <DialogTitle>Assign Company</DialogTitle>
+            <DialogDescription>
+              Assign <span className="font-medium text-foreground">{assigningCompanyProvider?.first_name} {assigningCompanyProvider?.last_name}</span> to a company. Providers in the same company share patient access.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Assign <span className="font-medium text-foreground">{assigningProvider?.first_name} {assigningProvider?.last_name}</span> to a group.
-            </p>
-            <Select value={selectedGroupId} onValueChange={setSelectedGroupId}>
-              <SelectTrigger data-testid="select-assign-group">
-                <SelectValue placeholder="Select a group" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">No Group (Unassigned)</SelectItem>
-                {groups.map((group) => (
-                  <SelectItem key={group.id} value={group.id}>
-                    {group.name}
-                    {group.platform_manager_name ? ` — ${group.platform_manager_name}` : ""}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant={companyInputMode === "select" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCompanyInputMode("select")}
+                className="text-xs h-7"
+              >
+                Select Existing
+              </Button>
+              <Button
+                type="button"
+                variant={companyInputMode === "new" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCompanyInputMode("new")}
+                className="text-xs h-7"
+              >
+                New Company
+              </Button>
+            </div>
+
+            {companyInputMode === "select" ? (
+              <Select value={selectedCompanyName} onValueChange={setSelectedCompanyName}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a company" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Company (Unassigned)</SelectItem>
+                  {existingCompanies.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : (
+              <Input
+                placeholder="Enter new company name"
+                value={newCompanyName}
+                onChange={(e) => setNewCompanyName(e.target.value)}
+              />
+            )}
+
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => {
-                  setAssigningProvider(null);
-                  setSelectedGroupId("");
+                  setAssigningCompanyProvider(null);
+                  setSelectedCompanyName("");
+                  setNewCompanyName("");
+                  setCompanyInputMode("select");
                 }}
                 className="border border-border"
               >
                 Cancel
               </Button>
               <Button
-                onClick={handleAssignGroup}
-                disabled={isAssigning}
-                data-testid="button-confirm-assign"
+                onClick={handleAssignCompany}
+                disabled={isAssigningCompany}
               >
-                {isAssigning ? "Saving..." : "Save"}
+                {isAssigningCompany ? "Saving..." : "Save"}
               </Button>
             </div>
           </div>
