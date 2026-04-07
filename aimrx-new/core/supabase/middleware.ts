@@ -91,6 +91,8 @@ export async function updateSession(request: NextRequest) {
       "/auth/mfa-verify",
       "/auth/logout",
       "/auth/login",
+      "/auth/reset-password",
+      "/auth/confirm",
       "/api/mfa/",
       "/api/auth/logout",
     ];

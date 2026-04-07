@@ -93,9 +93,10 @@ export default function ResetPasswordPage() {
 
       if (error) throw error;
 
-      toast.success("Your password has been updated successfully.");
+      await supabase.auth.signOut();
+      toast.success("Your password has been updated successfully. Please log in with your new password.");
 
-      router.push("/auth");
+      router.push("/auth/login");
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "An error occurred";
