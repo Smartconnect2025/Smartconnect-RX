@@ -58,3 +58,14 @@ The application utilizes Tailwind CSS and ShadCN UI for a modern, responsive, an
 *   **API Client Generation:** Orval
 *   **Validation:** Zod
 *   **Version Control:** GitHub
+
+## API Health Monitoring System
+
+The platform includes a dynamic API health monitoring system (`core/services/health/`) that checks the status of all integrated services:
+
+*   **Checks:** Supabase Database, Stripe Payments, DigitalRx (per pharmacy), PioneerRx (per pharmacy)
+*   **Runner** (`runner.ts`): Auto-discovers active pharmacy backends, runs checks via `Promise.allSettled` with timeouts, persists results to `api_health_snapshots` table (direct postgres connection via `DATABASE_URL`), and prunes stale entries
+*   **DB Layer** (`db.ts`): Uses `postgres` (postgres.js) for direct database access since PostgREST schema cache may not immediately reflect new tables. Handles upsert, read, and prune operations
+*   **Cron Jobs** (`core/cron/`): Health checks run every 10 minutes, prescription status sync every 5 minutes, tracking reconciliation every 30 minutes, refill checks daily at 6AM UTC. Manual trigger via `/api/admin/trigger-cron`
+*   **API Route** (`/api/admin/api-health`): GET reads cached/snapshot data (<1s), `?runNow=true` triggers live checks. Admin-only
+*   **Frontend** (`admin/api-logs/page.tsx`): Groups checks into "Global Services" (Supabase, Stripe) and "Per-Pharmacy Backends" with individual pharmacy sections. Shows status badges, response times, consecutive failures, and error details

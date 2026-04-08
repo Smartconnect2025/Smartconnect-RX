@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
-import { getHealthChecks } from "@/core/services/health/runner";
+import { getHealthChecks, runAllHealthChecks } from "@/core/services/health/runner";
 
 export async function GET(request: NextRequest) {
   const platformCheck = await requirePlatformAdmin();
@@ -8,7 +8,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const runNow = request.nextUrl.searchParams.get("runNow") === "true";
-    const result = await getHealthChecks(runNow);
+
+    const result = runNow
+      ? await runAllHealthChecks()
+      : await getHealthChecks(false);
 
     return NextResponse.json({
       success: true,

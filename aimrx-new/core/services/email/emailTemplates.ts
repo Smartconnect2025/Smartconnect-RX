@@ -411,4 +411,118 @@ export function adminDetailCard(title: string, fields: { label: string; value: s
     </div>`;
 }
 
+interface StatusEmailConfig {
+  subject: string;
+  heading: string;
+  headerGradient: string;
+  message: string;
+  nextSteps: string;
+  progressSteps: { label: string; done: boolean; current?: boolean }[];
+}
+
+const STATUS_CONFIGS: Record<string, StatusEmailConfig> = {
+  pharmacy_processing: {
+    subject: "Your Prescription is Being Prepared",
+    heading: "Pharmacy Processing",
+    headerGradient: GRADIENTS.navyBlue,
+    message: "Great news! Your prescription is now being prepared by the pharmacy.",
+    nextSteps: "The pharmacy is currently processing your order. We'll notify you once it's ready for shipping or pickup.",
+    progressSteps: [
+      { label: "Prescription Received", done: true },
+      { label: "Payment Confirmed", done: true },
+      { label: "Pharmacy Processing", done: true, current: true },
+      { label: "Shipped / Ready", done: false },
+      { label: "Delivered", done: false },
+    ],
+  },
+  shipped: {
+    subject: "Your Prescription Has Shipped!",
+    heading: "Prescription Shipped",
+    headerGradient: GRADIENTS.navyCyan,
+    message: "Your prescription has been shipped and is on its way to you!",
+    nextSteps: "You will receive tracking updates as your package moves through delivery.",
+    progressSteps: [
+      { label: "Prescription Received", done: true },
+      { label: "Payment Confirmed", done: true },
+      { label: "Pharmacy Processing", done: true },
+      { label: "Shipped", done: true, current: true },
+      { label: "Delivered", done: false },
+    ],
+  },
+  delivered: {
+    subject: "Your Prescription Has Been Delivered",
+    heading: "Prescription Delivered",
+    headerGradient: GRADIENTS.greenSuccess,
+    message: "Your prescription has been delivered successfully!",
+    nextSteps: "If you have any questions about your medication, please contact your provider.",
+    progressSteps: [
+      { label: "Prescription Received", done: true },
+      { label: "Payment Confirmed", done: true },
+      { label: "Pharmacy Processing", done: true },
+      { label: "Shipped", done: true },
+      { label: "Delivered", done: true, current: true },
+    ],
+  },
+  ready_for_pickup: {
+    subject: "Your Prescription is Ready for Pickup",
+    heading: "Ready for Pickup",
+    headerGradient: GRADIENTS.greenSuccess,
+    message: "Your prescription is ready and waiting for you at the pharmacy!",
+    nextSteps: "Please visit the pharmacy during operating hours to pick up your medication. Bring a valid photo ID.",
+    progressSteps: [
+      { label: "Prescription Received", done: true },
+      { label: "Payment Confirmed", done: true },
+      { label: "Pharmacy Processing", done: true },
+      { label: "Ready for Pickup", done: true, current: true },
+    ],
+  },
+};
+
+export function prescriptionStatusEmailHtml(options: {
+  patientName: string;
+  medication: string;
+  providerName: string;
+  statusType: string;
+  trackingNumber?: string;
+  trackingUrl?: string;
+  pharmacyName?: string;
+}): { subject: string; html: string } {
+  const config = STATUS_CONFIGS[options.statusType] || STATUS_CONFIGS.pharmacy_processing;
+
+  let trackingSection = "";
+  if (options.trackingNumber) {
+    const trackingLink = options.trackingUrl
+      ? `<a href="${options.trackingUrl}" style="color: #2563EB; font-weight: 600;">Track Package →</a>`
+      : "";
+    trackingSection = detailsCard("Tracking Information",
+      detailRow("Tracking Number", `<code style="font-family: monospace; font-weight: 600;">${escHtml(options.trackingNumber)}</code>`) +
+      (trackingLink ? `<tr><td colspan="2" style="padding: 10px 16px; text-align: center;">${trackingLink}</td></tr>` : "")
+    );
+  }
+
+  const subject = `${config.subject}${options.pharmacyName ? ` - ${options.pharmacyName}` : ""}`;
+
+  const html = emailWrapper(
+    emailHeader({
+      gradient: config.headerGradient,
+      heading: config.heading,
+    }) +
+    contentSection(`
+      <p style="font-size: 16px; color: #334155; margin: 0 0 8px;">Hi ${options.patientName},</p>
+      <p style="font-size: 16px; color: #334155; margin: 0 0 20px;">${config.message}</p>
+      ${detailsCard("Prescription Details",
+        detailRow("Medication", options.medication) +
+        detailRow("Prescribing Clinician", `<strong style="color: #1E3A8A;">${options.providerName}</strong>`, "#1E3A8A") +
+        (options.pharmacyName ? detailRow("Pharmacy", options.pharmacyName) : "")
+      )}
+      ${trackingSection}
+      ${infoBox(`<p style="margin: 0; font-size: 14px; color: #334155;"><strong>What's Next</strong></p><p style="margin: 8px 0 0; font-size: 13px; color: #475569;">${config.nextSteps}</p>`)}
+      ${progressTracker(config.progressSteps)}
+    `) +
+    emailFooterWithSupport()
+  );
+
+  return { subject, html };
+}
+
 export { APP_NAME, APP_URL, LOGIN_URL, LOGO_URL, SUPPORT_PHONE, SUPPORT_EMAIL, SUPPORT_HOURS };
