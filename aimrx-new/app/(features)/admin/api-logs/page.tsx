@@ -922,7 +922,7 @@ export default function APILogsPage() {
                   )}
                   {(api.consecutive_failures ?? 0) > 0 && (
                     <span className="text-red-600 font-medium">
-                      {api.consecutive_failures} consecutive failure{api.consecutive_failures > 1 ? "s" : ""}
+                      {api.consecutive_failures} consecutive failure{(api.consecutive_failures ?? 0) > 1 ? "s" : ""}
                     </span>
                   )}
                 </div>

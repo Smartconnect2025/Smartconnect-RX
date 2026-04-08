@@ -169,14 +169,17 @@ Keep this email for your records.
   } catch (error) {
     const supabaseErr = createAdminClient();
     const body = await request.clone().json().catch(() => ({}));
-    await supabaseErr.from("system_logs").insert({
-      action: "PATIENT_NOTIFICATION_FAILED",
-      details: `Payment Confirmation Email | To: ${body.patientEmail || "unknown"} | Error: ${error instanceof Error ? error.message : "Unknown"}`,
-      user_email: body.patientEmail || "",
-      user_name: body.patientName || "Patient",
-      status: "error",
-      error_message: error instanceof Error ? error.message : "Unknown error",
-    }).catch(() => {});
+    try {
+      await supabaseErr.from("system_logs").insert({
+        action: "PATIENT_NOTIFICATION_FAILED",
+        details: `Payment Confirmation Email | To: ${body.patientEmail || "unknown"} | Error: ${error instanceof Error ? error.message : "Unknown"}`,
+        user_email: body.patientEmail || "",
+        user_name: body.patientName || "Patient",
+        status: "error",
+        error_message: error instanceof Error ? error.message : "Unknown error",
+      });
+    } catch {
+    }
 
     console.error("[CONFIRM-EMAIL] Error:", error instanceof Error ? error.message : "Unknown");
     return NextResponse.json(
