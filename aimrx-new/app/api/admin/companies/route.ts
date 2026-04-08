@@ -9,8 +9,33 @@ export async function GET() {
   try {
     const supabase = createAdminClient();
     const isPharmacyAdmin = adminCheck.pharmacyScope?.isPharmacyAdmin && adminCheck.pharmacyScope.pharmacyId;
+    const pharmacyId = adminCheck.pharmacyScope?.pharmacyId;
 
-    let query = supabase
+    const { data: settingsRows, error: settingsError } = await supabase
+      .from("app_settings")
+      .select("id, key, value")
+      .eq("category", "provider_companies");
+
+    if (settingsError) {
+      console.error("Error fetching company settings:", settingsError);
+      return NextResponse.json({ error: "Failed to fetch companies" }, { status: 500 });
+    }
+
+    let companyEntries: { id: string; name: string; pharmacyId: string | null }[] = [];
+    for (const row of settingsRows || []) {
+      try {
+        const parsed = JSON.parse(row.value);
+        companyEntries.push({ id: row.id, name: parsed.name, pharmacyId: parsed.pharmacy_id || null });
+      } catch {
+        continue;
+      }
+    }
+
+    if (isPharmacyAdmin) {
+      companyEntries = companyEntries.filter(c => c.pharmacyId === pharmacyId || c.pharmacyId === null);
+    }
+
+    let providerQuery = supabase
       .from("providers")
       .select("id, company_name, user_id, first_name, last_name");
 
@@ -18,46 +43,97 @@ export async function GET() {
       const { data: links } = await supabase
         .from("provider_pharmacy_links")
         .select("provider_id")
-        .eq("pharmacy_id", adminCheck.pharmacyScope!.pharmacyId);
+        .eq("pharmacy_id", pharmacyId);
 
-      const providerUserIds = (links || []).map((l) => l.provider_id);
-      if (providerUserIds.length === 0) {
-        return NextResponse.json({ companies: [] });
+      const providerUserIds = (links || []).map((l: { provider_id: string }) => l.provider_id);
+      if (providerUserIds.length > 0) {
+        providerQuery = providerQuery.in("user_id", providerUserIds);
+      } else {
+        providerQuery = providerQuery.eq("user_id", "00000000-0000-0000-0000-000000000000");
       }
-      query = query.in("user_id", providerUserIds);
     }
 
-    const { data: providers, error } = await query;
+    const { data: providers } = await providerQuery;
 
-    if (error) {
-      console.error("Error fetching providers for companies:", error);
-      return NextResponse.json({ error: "Failed to fetch companies" }, { status: 500 });
-    }
-
-    const companyMap = new Map<string, { name: string; providerCount: number; providers: { id: string; name: string }[] }>();
-
+    const providersByCompany = new Map<string, { id: string; name: string }[]>();
     for (const p of providers || []) {
-      const companyName = p.company_name || null;
-      if (!companyName) continue;
-
-      if (!companyMap.has(companyName)) {
-        companyMap.set(companyName, { name: companyName, providerCount: 0, providers: [] });
+      if (!p.company_name) continue;
+      if (!providersByCompany.has(p.company_name)) {
+        providersByCompany.set(p.company_name, []);
       }
-      const entry = companyMap.get(companyName)!;
-      entry.providerCount++;
-      entry.providers.push({
+      providersByCompany.get(p.company_name)!.push({
         id: p.id,
         name: `${p.first_name || ""} ${p.last_name || ""}`.trim() || "Unknown",
       });
     }
 
-    const companies = Array.from(companyMap.values()).sort((a, b) =>
-      a.name.localeCompare(b.name)
-    );
+    const companies = companyEntries.map(c => ({
+      id: c.id,
+      name: c.name,
+      providerCount: providersByCompany.get(c.name)?.length || 0,
+      providers: providersByCompany.get(c.name) || [],
+    })).sort((a, b) => a.name.localeCompare(b.name));
 
     return NextResponse.json({ companies });
   } catch (error) {
     console.error("Error in companies GET:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
+}
+
+export async function POST(request: NextRequest) {
+  const adminCheck = await requireAnyAdmin();
+  if (!adminCheck.success) return createGuardErrorResponse(adminCheck);
+
+  const demoCheck = await requireNonDemo();
+  if (!demoCheck.success) return createGuardErrorResponse(demoCheck);
+
+  try {
+    const { name, pharmacyId: requestedPharmacyId } = await request.json();
+
+    if (!name || !name.trim()) {
+      return NextResponse.json({ error: "Company name is required" }, { status: 400 });
+    }
+
+    const trimmedName = name.trim();
+    const supabase = createAdminClient();
+
+    const isPharmacyAdmin = adminCheck.pharmacyScope?.isPharmacyAdmin && adminCheck.pharmacyScope.pharmacyId;
+    const resolvedPharmacyId = isPharmacyAdmin
+      ? adminCheck.pharmacyScope!.pharmacyId
+      : (requestedPharmacyId || null);
+
+    const settingsKey = `company_${trimmedName.toLowerCase().replace(/\s+/g, "_")}_${resolvedPharmacyId || "global"}`;
+
+    const { data: existing } = await supabase
+      .from("app_settings")
+      .select("id")
+      .eq("key", settingsKey)
+      .maybeSingle();
+
+    if (existing) {
+      return NextResponse.json({ error: "Company already exists" }, { status: 409 });
+    }
+
+    const { data: inserted, error } = await supabase
+      .from("app_settings")
+      .insert({
+        key: settingsKey,
+        value: JSON.stringify({ name: trimmedName, pharmacy_id: resolvedPharmacyId }),
+        description: `Provider company: ${trimmedName}`,
+        category: "provider_companies",
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      console.error("Error creating company:", error);
+      return NextResponse.json({ error: "Failed to create company" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, company: { id: inserted.id, name: trimmedName } });
+  } catch (error) {
+    console.error("Error in companies POST:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
@@ -86,6 +162,38 @@ export async function PATCH(request: NextRequest) {
     const supabase = createAdminClient();
     const isPharmacyAdmin = adminCheck.pharmacyScope?.isPharmacyAdmin && adminCheck.pharmacyScope.pharmacyId;
 
+    const { data: settingsRows } = await supabase
+      .from("app_settings")
+      .select("id, key, value")
+      .eq("category", "provider_companies");
+
+    const matchingRow = (settingsRows || []).find(row => {
+      try {
+        const parsed = JSON.parse(row.value);
+        if (parsed.name !== trimmedOld) return false;
+        if (isPharmacyAdmin) {
+          return parsed.pharmacy_id === adminCheck.pharmacyScope!.pharmacyId || parsed.pharmacy_id === null;
+        }
+        return true;
+      } catch { return false; }
+    });
+
+    if (!matchingRow) {
+      return NextResponse.json({ error: "Company not found" }, { status: 404 });
+    }
+
+    const parsed = JSON.parse(matchingRow.value);
+    const newKey = `company_${trimmedNew.toLowerCase().replace(/\s+/g, "_")}_${parsed.pharmacy_id || "global"}`;
+
+    await supabase
+      .from("app_settings")
+      .update({
+        key: newKey,
+        value: JSON.stringify({ ...parsed, name: trimmedNew }),
+        description: `Provider company: ${trimmedNew}`,
+      })
+      .eq("id", matchingRow.id);
+
     let providerIds: string[] | null = null;
 
     if (isPharmacyAdmin) {
@@ -94,7 +202,7 @@ export async function PATCH(request: NextRequest) {
         .select("provider_id")
         .eq("pharmacy_id", adminCheck.pharmacyScope!.pharmacyId);
 
-      const providerUserIds = (links || []).map((l) => l.provider_id);
+      const providerUserIds = (links || []).map((l: { provider_id: string }) => l.provider_id);
       if (providerUserIds.length === 0) {
         return NextResponse.json({ error: "No providers found in your pharmacy" }, { status: 404 });
       }
@@ -105,10 +213,7 @@ export async function PATCH(request: NextRequest) {
         .eq("company_name", trimmedOld)
         .in("user_id", providerUserIds);
 
-      providerIds = (pharmacyProviders || []).map((p) => p.id);
-      if (providerIds.length === 0) {
-        return NextResponse.json({ error: "Company not found within your pharmacy" }, { status: 404 });
-      }
+      providerIds = (pharmacyProviders || []).map((p: { id: string }) => p.id);
     }
 
     let updateQuery = supabase
@@ -152,6 +257,31 @@ export async function DELETE(request: NextRequest) {
     const supabase = createAdminClient();
     const isPharmacyAdmin = adminCheck.pharmacyScope?.isPharmacyAdmin && adminCheck.pharmacyScope.pharmacyId;
 
+    const { data: settingsRows } = await supabase
+      .from("app_settings")
+      .select("id, key, value")
+      .eq("category", "provider_companies");
+
+    const matchingRow = (settingsRows || []).find(row => {
+      try {
+        const parsed = JSON.parse(row.value);
+        if (parsed.name !== trimmedName) return false;
+        if (isPharmacyAdmin) {
+          return parsed.pharmacy_id === adminCheck.pharmacyScope!.pharmacyId || parsed.pharmacy_id === null;
+        }
+        return true;
+      } catch { return false; }
+    });
+
+    if (!matchingRow) {
+      return NextResponse.json({ error: "Company not found" }, { status: 404 });
+    }
+
+    await supabase
+      .from("app_settings")
+      .delete()
+      .eq("id", matchingRow.id);
+
     let affectedProviderIds: string[] = [];
 
     if (isPharmacyAdmin) {
@@ -160,7 +290,7 @@ export async function DELETE(request: NextRequest) {
         .select("provider_id")
         .eq("pharmacy_id", adminCheck.pharmacyScope!.pharmacyId);
 
-      const providerUserIds = (links || []).map((l) => l.provider_id);
+      const providerUserIds = (links || []).map((l: { provider_id: string }) => l.provider_id);
 
       const { data: pharmacyProviders } = await supabase
         .from("providers")
@@ -168,17 +298,14 @@ export async function DELETE(request: NextRequest) {
         .eq("company_name", trimmedName)
         .in("user_id", providerUserIds);
 
-      affectedProviderIds = (pharmacyProviders || []).map((p) => p.id);
-      if (affectedProviderIds.length === 0) {
-        return NextResponse.json({ error: "Company not found within your pharmacy" }, { status: 404 });
-      }
+      affectedProviderIds = (pharmacyProviders || []).map((p: { id: string }) => p.id);
     } else {
       const { data: allProviders } = await supabase
         .from("providers")
         .select("id")
         .eq("company_name", trimmedName);
 
-      affectedProviderIds = (allProviders || []).map((p) => p.id);
+      affectedProviderIds = (allProviders || []).map((p: { id: string }) => p.id);
     }
 
     for (const providerId of affectedProviderIds) {
@@ -187,7 +314,7 @@ export async function DELETE(request: NextRequest) {
         .select("id")
         .eq("provider_id", providerId);
 
-      const ownedIds = new Set((ownedPatientIds || []).map((p) => p.id));
+      const ownedIds = new Set((ownedPatientIds || []).map((p: { id: string }) => p.id));
 
       const { data: allMappings } = await supabase
         .from("provider_patient_mappings")
@@ -195,8 +322,8 @@ export async function DELETE(request: NextRequest) {
         .eq("provider_id", providerId);
 
       const mappingsToRemove = (allMappings || [])
-        .filter((m) => !ownedIds.has(m.patient_id))
-        .map((m) => m.patient_id);
+        .filter((m: { patient_id: string }) => !ownedIds.has(m.patient_id))
+        .map((m: { patient_id: string }) => m.patient_id);
 
       if (mappingsToRemove.length > 0) {
         await supabase
@@ -216,16 +343,11 @@ export async function DELETE(request: NextRequest) {
       clearQuery = clearQuery.in("id", affectedProviderIds);
     }
 
-    const { error } = await clearQuery;
-
-    if (error) {
-      console.error("Error deleting company:", error);
-      return NextResponse.json({ error: "Failed to delete company" }, { status: 500 });
-    }
+    await clearQuery;
 
     return NextResponse.json({
       success: true,
-      message: `Company "${trimmedName}" removed from ${affectedProviderIds.length} provider(s)`,
+      message: `Company "${trimmedName}" deleted and removed from ${affectedProviderIds.length} provider(s)`,
       affectedCount: affectedProviderIds.length,
     });
   } catch (error) {

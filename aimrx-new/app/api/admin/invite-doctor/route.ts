@@ -220,6 +220,15 @@ export async function POST(request: NextRequest) {
 
       if (companyName && pharmacyIdToLink) {
         try {
+          const companyKey = `company_${companyName.toLowerCase().replace(/\s+/g, "_")}_${pharmacyIdToLink}`;
+          await supabaseAdmin.from("app_settings").upsert({
+            key: companyKey,
+            value: JSON.stringify({ name: companyName, pharmacy_id: pharmacyIdToLink }),
+            description: `Provider company: ${companyName}`,
+            category: "provider_companies",
+          }, { onConflict: "key" }).then(() => {});
+        } catch {}
+        try {
           const { data: pharmacyLinks } = await supabaseAdmin
             .from("provider_pharmacy_links")
             .select("provider_id")

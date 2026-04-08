@@ -9,7 +9,7 @@ import { useDemoGuard } from "@/hooks/use-demo-guard";
 import {
   Eye, EyeOff, Trash2, Search, RefreshCw, CheckCircle2, XCircle,
   UserCog, Building2, Edit, Key, Power, Loader2, CheckCircle, AlertTriangle,
-  MoreHorizontal, Copy, UserPlus, Calendar, Mail, Phone, Shield,
+  MoreHorizontal, Copy, UserPlus, Calendar, Mail, Phone, Shield, Plus,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -90,6 +90,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
   const [selectedCompanyName, setSelectedCompanyName] = useState<string>("");
   const [newCompanyName, setNewCompanyName] = useState<string>("");
   const [isAssigningCompany, setIsAssigningCompany] = useState(false);
+  const [isAddingCompany, setIsAddingCompany] = useState(false);
   const [scopeChecked, setScopeChecked] = useState(false);
   const [activeTab, setActiveTab] = useState("providers");
 
@@ -102,6 +103,8 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
     phone: "",
     companyName: "",
   });
+  const [editCompanyMode, setEditCompanyMode] = useState<"select" | "new">("select");
+  const [editNewCompanyName, setEditNewCompanyName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [npiVerificationStatus, setNpiVerificationStatus] = useState<NpiStatus>({ isVerifying: false, result: null });
 
@@ -116,7 +119,25 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
   const npiVerifyRef = useRef<string | null>(null);
   const activationNpiVerifyRef = useRef<string | null>(null);
 
-  const existingCompanies = [...new Set(providers.map((p) => p.company_name).filter(Boolean))] as string[];
+  const [companyList, setCompanyList] = useState<{ id: string; name: string; providerCount: number }[]>([]);
+
+  const fetchCompanyList = async () => {
+    try {
+      const res = await fetch("/api/admin/companies");
+      if (res.ok) {
+        const data = await res.json();
+        setCompanyList((data.companies || []).map((c: { id: string; name: string; providerCount: number }) => ({
+          id: c.id,
+          name: c.name,
+          providerCount: c.providerCount,
+        })));
+      }
+    } catch (error) {
+      console.error("Error fetching companies:", error);
+    }
+  };
+
+  const existingCompanies = companyList.map(c => c.name);
 
   const fetchPharmacies = async () => {
     try {
@@ -186,6 +207,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
   useEffect(() => {
     if (!scopeChecked) return;
     fetchProviders();
+    fetchCompanyList();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scopeChecked, pharmacyFilter]);
 
@@ -213,14 +235,39 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
     }
   };
 
+  const handleAddCompanyInline = async (companyName: string, onDone: (name: string) => void) => {
+    if (!companyName.trim()) {
+      toast.error("Please enter a company name");
+      return;
+    }
+    setIsAddingCompany(true);
+    try {
+      const res = await fetch("/api/admin/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: companyName.trim() }),
+      });
+      if (res.ok) {
+        toast.success(`Company "${companyName.trim()}" added`);
+        await fetchCompanyList();
+        onDone(companyName.trim());
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Failed to add company");
+      }
+    } catch {
+      toast.error("Failed to add company");
+    } finally {
+      setIsAddingCompany(false);
+    }
+  };
+
   const handleAssignCompany = async () => {
     if (!assigningCompanyProvider) return;
     guardAction(async () => {
     setIsAssigningCompany(true);
     try {
-      const companyValue = companyInputMode === "new"
-        ? (newCompanyName.trim() || null)
-        : (selectedCompanyName === "none" ? null : selectedCompanyName || null);
+      const companyValue = selectedCompanyName === "none" ? null : selectedCompanyName || null;
       const response = await fetch(`/api/admin/providers/${assigningCompanyProvider.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -259,7 +306,10 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
       phone: provider.phone_number || "",
       companyName: provider.company_name || "",
     });
+    setEditCompanyMode("select");
+    setEditNewCompanyName("");
     setNpiVerificationStatus({ isVerifying: false, result: null });
+    fetchCompanyList();
     setIsEditModalOpen(true);
   };
 
@@ -807,30 +857,30 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
             </div>
             <div>
               <Label htmlFor="editCompanyName">Company Name</Label>
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-1 mb-2">
                 <Button
                   type="button"
-                  variant={!editFormData.companyName || existingCompanies.includes(editFormData.companyName) ? "default" : "outline"}
+                  variant={editCompanyMode === "select" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setEditCompanyMode("select")}
+                  className="text-xs h-7 px-3"
+                >
+                  Select Existing
+                </Button>
+                <Button
+                  type="button"
+                  variant={editCompanyMode === "new" ? "default" : "outline"}
                   size="sm"
                   onClick={() => {
-                    const match = existingCompanies.find((c) => c === editFormData.companyName);
-                    setEditFormData({ ...editFormData, companyName: match || "" });
+                    setEditCompanyMode("new");
+                    setEditNewCompanyName("");
                   }}
-                  className="text-xs h-7"
+                  className="text-xs h-7 px-3"
                 >
-                  Select
-                </Button>
-                <Button
-                  type="button"
-                  variant={editFormData.companyName && !existingCompanies.includes(editFormData.companyName) ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setEditFormData({ ...editFormData, companyName: "" })}
-                  className="text-xs h-7"
-                >
-                  New
+                  New Company
                 </Button>
               </div>
-              {existingCompanies.includes(editFormData.companyName) || !editFormData.companyName ? (
+              {editCompanyMode === "select" ? (
                 <Select
                   value={editFormData.companyName || "none"}
                   onValueChange={(val) => setEditFormData({ ...editFormData, companyName: val === "none" ? "" : val })}
@@ -846,14 +896,39 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
                   </SelectContent>
                 </Select>
               ) : (
-                <Input
-                  id="editCompanyName"
-                  value={editFormData.companyName}
-                  onChange={(e) => setEditFormData({ ...editFormData, companyName: e.target.value })}
-                  placeholder="Enter new company name"
-                />
+                <div className="flex gap-2">
+                  <Input
+                    value={editNewCompanyName}
+                    onChange={(e) => setEditNewCompanyName(e.target.value)}
+                    placeholder="Enter new company name"
+                    className="flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddCompanyInline(editNewCompanyName, (name) => {
+                          setEditFormData({ ...editFormData, companyName: name });
+                          setEditCompanyMode("select");
+                          setEditNewCompanyName("");
+                        });
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => handleAddCompanyInline(editNewCompanyName, (name) => {
+                      setEditFormData({ ...editFormData, companyName: name });
+                      setEditCompanyMode("select");
+                      setEditNewCompanyName("");
+                    })}
+                    disabled={isAddingCompany || !editNewCompanyName.trim()}
+                    size="sm"
+                    className="h-9 bg-blue-600 hover:bg-blue-700 text-white px-3"
+                  >
+                    {isAddingCompany ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  </Button>
+                </div>
               )}
-              <p className="text-xs text-gray-500 mt-1">Providers in the same company share patient access</p>
+              <p className="text-xs text-blue-600 mt-1">Providers in the same company share patient access</p>
             </div>
 
             {editingProvider && (
@@ -1136,11 +1211,37 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
                 </SelectContent>
               </Select>
             ) : (
-              <Input
-                placeholder="Enter new company name"
-                value={newCompanyName}
-                onChange={(e) => setNewCompanyName(e.target.value)}
-              />
+              <div className="flex gap-2">
+                <Input
+                  placeholder="Enter new company name"
+                  value={newCompanyName}
+                  onChange={(e) => setNewCompanyName(e.target.value)}
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddCompanyInline(newCompanyName, (name) => {
+                        setSelectedCompanyName(name);
+                        setCompanyInputMode("select");
+                        setNewCompanyName("");
+                      });
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  onClick={() => handleAddCompanyInline(newCompanyName, (name) => {
+                    setSelectedCompanyName(name);
+                    setCompanyInputMode("select");
+                    setNewCompanyName("");
+                  })}
+                  disabled={isAddingCompany || !newCompanyName.trim()}
+                  size="sm"
+                  className="h-9 bg-blue-600 hover:bg-blue-700 text-white px-3"
+                >
+                  {isAddingCompany ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                </Button>
+              </div>
             )}
 
             <div className="flex justify-end gap-2">
@@ -1181,7 +1282,7 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
       <CompanyManagementDialog
         open={isCompanyDialogOpen}
         onOpenChange={setIsCompanyDialogOpen}
-        onCompaniesChanged={fetchProviders}
+        onCompaniesChanged={() => { fetchProviders(); fetchCompanyList(); }}
         isSuperAdmin={isSuperAdmin}
         pharmacyName={pharmacyName}
       />

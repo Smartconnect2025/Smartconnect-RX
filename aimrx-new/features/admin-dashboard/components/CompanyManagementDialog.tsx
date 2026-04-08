@@ -63,6 +63,38 @@ export function CompanyManagementDialog({
   const [deleteTarget, setDeleteTarget] = useState<CompanyInfo | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [expandedCompany, setExpandedCompany] = useState<string | null>(null);
+  const [newCompanyName, setNewCompanyName] = useState("");
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreateCompany = async () => {
+    if (!newCompanyName.trim()) return;
+    const existing = companies.find(c => c.name.toLowerCase() === newCompanyName.trim().toLowerCase());
+    if (existing) {
+      toast.error("This company already exists");
+      return;
+    }
+    setIsCreating(true);
+    try {
+      const res = await fetch("/api/admin/companies", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: newCompanyName.trim() }),
+      });
+      if (res.ok) {
+        toast.success(`Company "${newCompanyName.trim()}" created`);
+        setNewCompanyName("");
+        fetchCompanies();
+        onCompaniesChanged?.();
+      } else {
+        const data = await res.json();
+        toast.error(data.error || "Failed to create company");
+      }
+    } catch {
+      toast.error("Failed to create company");
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const fetchCompanies = async () => {
     setIsLoading(true);
@@ -195,14 +227,39 @@ export function CompanyManagementDialog({
             </DialogDescription>
           </DialogHeader>
 
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search companies..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-2">
             <Input
-              placeholder="Search companies..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9"
+              placeholder="Add new company..."
+              value={newCompanyName}
+              onChange={(e) => setNewCompanyName(e.target.value)}
+              className="flex-1"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleCreateCompany();
+                }
+              }}
             />
+            <Button
+              onClick={handleCreateCompany}
+              disabled={isCreating || !newCompanyName.trim()}
+              size="sm"
+              className="h-9 bg-blue-600 hover:bg-blue-700 text-white px-3"
+            >
+              {isCreating ? <Loader2 className="h-4 w-4 animate-spin" /> : "Add"}
+            </Button>
           </div>
 
           <div className="flex-1 overflow-y-auto min-h-0 -mx-1 px-1">
@@ -218,7 +275,7 @@ export function CompanyManagementDialog({
                   {searchTerm ? "No companies match your search" : "No companies created yet"}
                 </p>
                 <p className="text-xs text-gray-400 mt-1">
-                  Companies are created when you assign one to a provider
+                  Use the field above to add a new company
                 </p>
               </div>
             ) : (
