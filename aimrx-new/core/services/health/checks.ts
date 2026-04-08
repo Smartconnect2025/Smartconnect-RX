@@ -10,7 +10,9 @@ export interface HealthCheckResult {
   status: "operational" | "degraded" | "error" | "unknown";
   severity: "info" | "warning" | "critical";
   response_time_ms: number | null;
+  consecutive_failures: number;
   last_error: string | null;
+  checked_at: string;
   metadata: Record<string, unknown> | null;
 }
 
@@ -21,11 +23,14 @@ function classifySeverity(status: string): "info" | "warning" | "critical" {
 }
 
 export async function checkSupabase(
-  supabase: { from: (table: string) => { select: (cols: string) => Promise<{ error: { message: string } | null }> } },
+  supabase: { from: (table: string) => { select: (cols: string, opts?: { head: boolean; count: string }) => Promise<{ error: { message: string } | null; count: number | null }> } },
 ): Promise<HealthCheckResult> {
+  const now = new Date().toISOString();
   const startTime = Date.now();
   try {
-    const { error } = await supabase.from("pharmacies").select("count");
+    const { error } = await supabase
+      .from("pharmacies")
+      .select("id", { head: true, count: "exact" } as unknown as undefined);
     const responseTime = Date.now() - startTime;
     const status = error ? "error" : responseTime > 3000 ? "degraded" : "operational";
     return {
@@ -37,7 +42,9 @@ export async function checkSupabase(
       status,
       severity: classifySeverity(status),
       response_time_ms: responseTime,
+      consecutive_failures: 0,
       last_error: error?.message || null,
+      checked_at: now,
       metadata: null,
     };
   } catch (err) {
@@ -50,13 +57,16 @@ export async function checkSupabase(
       status: "error",
       severity: "critical",
       response_time_ms: Date.now() - startTime,
+      consecutive_failures: 0,
       last_error: err instanceof Error ? err.message : "Unknown error",
+      checked_at: now,
       metadata: null,
     };
   }
 }
 
 export async function checkStripe(): Promise<HealthCheckResult> {
+  const now = new Date().toISOString();
   const stripeKey = process.env.STRIPE_SECRET_KEY;
   if (!stripeKey) {
     return {
@@ -68,7 +78,9 @@ export async function checkStripe(): Promise<HealthCheckResult> {
       status: "unknown",
       severity: "warning",
       response_time_ms: null,
+      consecutive_failures: 0,
       last_error: "STRIPE_SECRET_KEY not configured",
+      checked_at: now,
       metadata: null,
     };
   }
@@ -99,7 +111,9 @@ export async function checkStripe(): Promise<HealthCheckResult> {
       status,
       severity: classifySeverity(status),
       response_time_ms: responseTime,
+      consecutive_failures: 0,
       last_error: response.ok ? null : `HTTP ${response.status}`,
+      checked_at: now,
       metadata: { endpoint: "https://api.stripe.com/v1/balance" },
     };
   } catch (err) {
@@ -112,7 +126,9 @@ export async function checkStripe(): Promise<HealthCheckResult> {
       status: "error",
       severity: "critical",
       response_time_ms: Date.now() - startTime,
+      consecutive_failures: 0,
       last_error: err instanceof Error ? err.message : "Connection failed",
+      checked_at: now,
       metadata: { endpoint: "https://api.stripe.com/v1/balance" },
     };
   }
@@ -132,6 +148,7 @@ interface PharmacyBackendRow {
 export async function checkDigitalRx(
   backend: PharmacyBackendRow,
 ): Promise<HealthCheckResult> {
+  const now = new Date().toISOString();
   const checkKey = `digitalrx-${backend.pharmacy_id}`;
   const baseUrl = (backend.api_url || "https://www.dbswebserver.com/DBSRestApi/API").replace(/\/+$/, "");
 
@@ -149,7 +166,9 @@ export async function checkDigitalRx(
         status: "error",
         severity: "critical",
         response_time_ms: null,
+        consecutive_failures: 0,
         last_error: "Failed to decrypt API key",
+        checked_at: now,
         metadata: { endpoint: baseUrl },
       };
     }
@@ -182,7 +201,9 @@ export async function checkDigitalRx(
       status,
       severity: classifySeverity(status),
       response_time_ms: responseTime,
+      consecutive_failures: 0,
       last_error: response.ok ? null : `HTTP ${response.status}`,
+      checked_at: now,
       metadata: { endpoint: baseUrl, pharmacyName: backend.pharmacy_name },
     };
   } catch (err) {
@@ -195,7 +216,9 @@ export async function checkDigitalRx(
       status: "degraded",
       severity: "warning",
       response_time_ms: Date.now() - startTime,
+      consecutive_failures: 0,
       last_error: err instanceof Error ? err.message : "Connection failed",
+      checked_at: now,
       metadata: { endpoint: baseUrl, pharmacyName: backend.pharmacy_name },
     };
   }
@@ -204,6 +227,7 @@ export async function checkDigitalRx(
 export async function checkPioneerRx(
   backend: PharmacyBackendRow,
 ): Promise<HealthCheckResult> {
+  const now = new Date().toISOString();
   const checkKey = `pioneerrx-${backend.pharmacy_id}`;
 
   if (!backend.api_url) {
@@ -216,7 +240,9 @@ export async function checkPioneerRx(
       status: "error",
       severity: "critical",
       response_time_ms: null,
+      consecutive_failures: 0,
       last_error: "API URL not configured",
+      checked_at: now,
       metadata: { pharmacyName: backend.pharmacy_name },
     };
   }
@@ -235,7 +261,9 @@ export async function checkPioneerRx(
         status: "error",
         severity: "critical",
         response_time_ms: null,
+        consecutive_failures: 0,
         last_error: "Failed to decrypt API key",
+        checked_at: now,
         metadata: { pharmacyName: backend.pharmacy_name },
       };
     }
@@ -252,7 +280,9 @@ export async function checkPioneerRx(
       status: "error",
       severity: "critical",
       response_time_ms: null,
+      consecutive_failures: 0,
       last_error: "Invalid API key format — shared secret missing",
+      checked_at: now,
       metadata: { pharmacyName: backend.pharmacy_name },
     };
   }
@@ -300,7 +330,9 @@ export async function checkPioneerRx(
       status,
       severity: classifySeverity(status),
       response_time_ms: responseTime,
+      consecutive_failures: 0,
       last_error: response.ok ? null : `HTTP ${response.status}`,
+      checked_at: now,
       metadata: { endpoint: testUrl, pharmacyName: backend.pharmacy_name },
     };
   } catch (err) {
@@ -314,7 +346,9 @@ export async function checkPioneerRx(
       status: "error",
       severity: "critical",
       response_time_ms: Date.now() - startTime,
+      consecutive_failures: 0,
       last_error: message.includes("timeout") ? "Connection timed out — check IP whitelisting" : message,
+      checked_at: now,
       metadata: { pharmacyName: backend.pharmacy_name },
     };
   }

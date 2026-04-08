@@ -36,6 +36,8 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 let cachedResult: HealthRunResult | null = null;
 let cachedAt = 0;
 
+const failureTracker: Record<string, number> = {};
+
 async function discoverBackends(supabase: ReturnType<typeof createCronClient>): Promise<PharmacyBackendRow[]> {
   const { data, error } = await supabase
     .from("pharmacy_backends")
@@ -94,10 +96,19 @@ export async function runAllHealthChecks(): Promise<HealthRunResult> {
 
   const healthChecks: HealthCheckResult[] = results.map((result, index) => {
     if (result.status === "fulfilled") {
-      return result.value;
+      const check = result.value;
+      if (check.status === "error" || check.status === "degraded") {
+        failureTracker[check.check_key] = (failureTracker[check.check_key] || 0) + 1;
+      } else {
+        failureTracker[check.check_key] = 0;
+      }
+      check.consecutive_failures = failureTracker[check.check_key] || 0;
+      return check;
     }
+    const key = `unknown-${index}`;
+    failureTracker[key] = (failureTracker[key] || 0) + 1;
     return {
-      check_key: `unknown-${index}`,
+      check_key: key,
       pharmacy_id: null,
       backend_id: null,
       service_name: `Unknown Check ${index}`,
@@ -105,7 +116,9 @@ export async function runAllHealthChecks(): Promise<HealthRunResult> {
       status: "error" as const,
       severity: "critical" as const,
       response_time_ms: null,
+      consecutive_failures: failureTracker[key],
       last_error: result.reason instanceof Error ? result.reason.message : "Check failed",
+      checked_at: new Date().toISOString(),
       metadata: null,
     };
   });
