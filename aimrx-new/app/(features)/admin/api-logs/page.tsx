@@ -102,7 +102,6 @@ export default function APILogsPage() {
     summary?: { total: number; operational: number; degraded: number; error: number; unknown: number };
     healthChecks?: HealthCheck[];
     cached?: boolean;
-    fromSnapshot?: boolean;
   } | null>(null);
   const [systemLogs, setSystemLogs] = useState<SystemLogData[]>([]);
   const [prescriptions, setPrescriptions] = useState<PrescriptionData[]>([]);
@@ -848,168 +847,121 @@ export default function APILogsPage() {
           </div>
         </div>
 
-        {apiStatusExpanded && healthData?.healthChecks && (() => {
-          const globalChecks = healthData.healthChecks!.filter(
-            (api) => !api.pharmacy_id
-          );
-          const pharmacyChecks = healthData.healthChecks!.filter(
-            (api) => !!api.pharmacy_id
-          );
-          const pharmacyGroups = new Map<string, { name: string; checks: HealthCheck[] }>();
-          pharmacyChecks.forEach((api) => {
-            const pid = api.pharmacy_id || "unknown";
-            const meta = api.metadata as Record<string, unknown> | null;
-            const name = (meta?.pharmacyName as string) || api.service_name.split(" — ")[1] || "Unknown Pharmacy";
-            if (!pharmacyGroups.has(pid)) pharmacyGroups.set(pid, { name, checks: [] });
-            pharmacyGroups.get(pid)!.checks.push(api);
-          });
+        {apiStatusExpanded && healthData?.healthChecks && (
+          <div className="px-6 py-4 border-t border-gray-200">
+            <div className="space-y-5">
+              {(
+                [
+                  { key: "database", label: "Database" },
+                  { key: "external", label: "External Services (Pharmacy Systems & Payments)" },
+                  { key: "internal", label: "Internal APIs" },
+                ] as const
+              ).map(({ key: category, label }) => {
+                const apis = healthData.healthChecks!.filter(
+                  (api) => api.category === category
+                );
+                if (apis.length === 0) return null;
 
-          const renderCard = (api: HealthCheck, idx: number) => (
-            <div
-              key={idx}
-              className={`p-4 rounded-lg border-2 ${
-                api.status === "operational"
-                  ? "border-green-200 bg-green-50/50"
-                  : api.status === "degraded"
-                    ? "border-yellow-200 bg-yellow-50/50"
-                    : api.status === "unknown"
-                      ? "border-gray-200 bg-gray-50/50"
-                      : "border-red-200 bg-red-50/50"
-              }`}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  {api.status === "operational" ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  ) : api.status === "degraded" ? (
-                    <Clock className="h-4 w-4 text-yellow-600" />
-                  ) : api.status === "unknown" ? (
-                    <AlertCircle className="h-4 w-4 text-gray-400" />
-                  ) : (
-                    <XCircle className="h-4 w-4 text-red-600" />
-                  )}
-                  <span className="font-medium text-sm">{api.service_name}</span>
-                </div>
-                <Badge
-                  variant="outline"
-                  className={
-                    api.status === "operational"
-                      ? "border-green-500 text-green-700 bg-green-100"
-                      : api.status === "degraded"
-                        ? "border-yellow-500 text-yellow-700 bg-yellow-100"
-                        : api.status === "unknown"
-                          ? "border-gray-400 text-gray-600 bg-gray-100"
-                          : "border-red-500 text-red-700 bg-red-100"
-                  }
-                >
-                  {api.status}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between text-xs text-gray-600">
-                <div className="flex items-center gap-3">
-                  {api.response_time_ms !== null && (
-                    <span
-                      className={`font-mono px-2 py-0.5 rounded ${
-                        api.response_time_ms < 500
-                          ? "bg-green-100 text-green-800"
-                          : api.response_time_ms < 2000
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800"
-                      }`}
-                    >
-                      {api.response_time_ms}ms
-                    </span>
-                  )}
-                  {(api.consecutive_failures ?? 0) > 0 && (
-                    <span className="text-red-600 font-medium">
-                      {api.consecutive_failures} consecutive failure{(api.consecutive_failures ?? 0) > 1 ? "s" : ""}
-                    </span>
-                  )}
-                </div>
-                {api.checked_at && (
-                  <span className="text-gray-400">
-                    {formatTimeAgo(api.checked_at)}
-                  </span>
-                )}
-              </div>
-              {api.last_error && (
-                <div className="mt-2 text-xs text-red-600 bg-red-50 px-2 py-1 rounded truncate">
-                  {api.last_error}
-                </div>
-              )}
-              {api.metadata && typeof (api.metadata as Record<string, unknown>).endpoint === "string" && (
-                <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
-                  <ExternalLink className="h-3 w-3" />
-                  <span className="font-mono truncate">{String((api.metadata as Record<string, unknown>).endpoint)}</span>
-                  <button
-                    onClick={() => copyToClipboard(String((api.metadata as Record<string, unknown>)?.endpoint || ""))}
-                    className="ml-auto p-0.5 hover:bg-gray-200 rounded"
-                  >
-                    <Copy className="h-3 w-3" />
-                  </button>
-                </div>
-              )}
-            </div>
-          );
-
-          return (
-            <div className="px-6 py-4 border-t border-gray-200">
-              <div className="space-y-5">
-                {healthData?.fromSnapshot && (
-                  <div className="flex items-center gap-2 text-xs text-blue-600 bg-blue-50 px-3 py-2 rounded-lg">
-                    <Activity className="h-3 w-3" />
-                    <span>Showing saved snapshot data. Click &quot;Run Now&quot; for live checks.</span>
-                  </div>
-                )}
-
-                {globalChecks.length > 0 && (
-                  <div>
+                return (
+                  <div key={category}>
                     <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-                      Global Services
+                      {label}
                     </h3>
                     <div className="grid gap-3 sm:grid-cols-2">
-                      {globalChecks.map((api, idx) => renderCard(api, idx))}
-                    </div>
-                  </div>
-                )}
-
-                {pharmacyGroups.size > 0 && (
-                  <div>
-                    <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
-                      Per-Pharmacy Backends
-                    </h3>
-                    <div className="space-y-4">
-                      {Array.from(pharmacyGroups.entries()).map(([pid, group]) => {
-                        const allOk = group.checks.every((c) => c.status === "operational");
-                        const hasError = group.checks.some((c) => c.status === "error");
-                        return (
-                          <div key={pid} className={`rounded-lg border ${hasError ? "border-red-200" : allOk ? "border-green-200" : "border-yellow-200"} p-4`}>
-                            <div className="flex items-center gap-2 mb-3">
-                              {allOk ? (
+                      {apis.map((api, idx) => (
+                        <div
+                          key={idx}
+                          className={`p-4 rounded-lg border-2 ${
+                            api.status === "operational"
+                              ? "border-green-200 bg-green-50/50"
+                              : api.status === "degraded"
+                                ? "border-yellow-200 bg-yellow-50/50"
+                                : api.status === "unknown"
+                                  ? "border-gray-200 bg-gray-50/50"
+                                  : "border-red-200 bg-red-50/50"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              {api.status === "operational" ? (
                                 <CheckCircle2 className="h-4 w-4 text-green-600" />
-                              ) : hasError ? (
-                                <XCircle className="h-4 w-4 text-red-600" />
+                              ) : api.status === "degraded" ? (
+                                <Clock className="h-4 w-4 text-yellow-600" />
+                              ) : api.status === "unknown" ? (
+                                <AlertCircle className="h-4 w-4 text-gray-400" />
                               ) : (
-                                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+                                <XCircle className="h-4 w-4 text-red-600" />
                               )}
-                              <span className="font-semibold text-sm">{group.name}</span>
-                              <span className="text-xs text-gray-400">
-                                {group.checks.filter((c) => c.status === "operational").length}/{group.checks.length} operational
-                              </span>
+                              <span className="font-medium text-sm">{api.service_name}</span>
                             </div>
-                            <div className="grid gap-3 sm:grid-cols-2">
-                              {group.checks.map((api, idx) => renderCard(api, idx))}
-                            </div>
+                            <Badge
+                              variant="outline"
+                              className={
+                                api.status === "operational"
+                                  ? "border-green-500 text-green-700 bg-green-100"
+                                  : api.status === "degraded"
+                                    ? "border-yellow-500 text-yellow-700 bg-yellow-100"
+                                    : api.status === "unknown"
+                                      ? "border-gray-400 text-gray-600 bg-gray-100"
+                                      : "border-red-500 text-red-700 bg-red-100"
+                              }
+                            >
+                              {api.status}
+                            </Badge>
                           </div>
-                        );
-                      })}
+                          <div className="flex items-center justify-between text-xs text-gray-600">
+                            <div className="flex items-center gap-3">
+                              {api.response_time_ms !== null && (
+                                <span
+                                  className={`font-mono px-2 py-0.5 rounded ${
+                                    api.response_time_ms < 500
+                                      ? "bg-green-100 text-green-800"
+                                      : api.response_time_ms < 2000
+                                        ? "bg-yellow-100 text-yellow-800"
+                                        : "bg-red-100 text-red-800"
+                                  }`}
+                                >
+                                  {api.response_time_ms}ms
+                                </span>
+                              )}
+                              {(api.consecutive_failures ?? 0) > 0 && (
+                                <span className="text-red-600 font-medium">
+                                  {api.consecutive_failures} consecutive failures
+                                </span>
+                              )}
+                            </div>
+                            {api.checked_at && (
+                              <span className="text-gray-400">
+                                {formatTimeAgo(api.checked_at)}
+                              </span>
+                            )}
+                          </div>
+                          {api.last_error && (
+                            <div className="mt-2 text-xs text-red-600 bg-red-50 px-2 py-1 rounded truncate">
+                              {api.last_error}
+                            </div>
+                          )}
+                          {api.metadata && typeof (api.metadata as Record<string, unknown>).endpoint === "string" && (
+                            <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
+                              <ExternalLink className="h-3 w-3" />
+                              <span className="font-mono truncate">{String((api.metadata as Record<string, unknown>).endpoint)}</span>
+                              <button
+                                onClick={() => copyToClipboard(String((api.metadata as Record<string, unknown>)?.endpoint || ""))}
+                                className="ml-auto p-0.5 hover:bg-gray-200 rounded"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                )}
-              </div>
+                );
+              })}
             </div>
-          );
-        })()}
+          </div>
+        )}
       </div>
 
       {/* Recent Activity */}

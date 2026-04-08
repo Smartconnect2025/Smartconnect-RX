@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import sgMail from "@sendgrid/mail";
 import { paymentConfirmationEmailHtml } from "@core/services/email/emailTemplates";
-import { createAdminClient } from "@core/database/client";
-import { checkEmailDedup } from "@core/services/email-guard";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "support@aimrx.com";
@@ -49,14 +47,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const dedupCheck = await checkEmailDedup(patientEmail, "payment_confirmation", transactionId, 30);
-    if (!dedupCheck.allowed) {
-      console.log(`[CONFIRM-EMAIL] Skipped (dedup): ${dedupCheck.reason}`);
-      return NextResponse.json({ success: true, skipped: true, reason: dedupCheck.reason });
-    }
-
-    const supabase = createAdminClient();
-
     const deliveryTexts = {
       pickup: "Pharmacy Pickup",
       delivery: "Local Delivery",
@@ -73,13 +63,6 @@ export async function POST(request: NextRequest) {
     const nextStepsText = nextStepsTexts[deliveryMethod as keyof typeof nextStepsTexts] || "Your provider will approve the order, and the pharmacy will prepare your medication.";
 
     if (!SENDGRID_API_KEY) {
-      await supabase.from("system_logs").insert({
-        action: "PATIENT_NOTIFICATION_SENT",
-        details: `Payment Confirmation Email (Demo) | To: ${patientEmail} | Rx: ${escHtml(medication)} | Amount: $${totalAmount} | Transaction: ${transactionId} | Provider: ${escHtml(providerName)}`,
-        user_email: patientEmail,
-        user_name: patientName || "Patient",
-        status: "success",
-      });
       return NextResponse.json({
         success: true,
         message: 'Email logged (demo mode - no actual email sent)',
@@ -147,40 +130,8 @@ Keep this email for your records.
 
     await sgMail.send(msg);
 
-    const logDetails = [
-      "Payment Confirmation Email",
-      `To: ${patientEmail}`,
-      `Rx: ${medication || "N/A"}`,
-      `Amount: $${totalAmount || "0"}`,
-      `Transaction: ${transactionId}`,
-      `Provider: ${providerName || "N/A"}`,
-      pharmacyName ? `Pharmacy: ${pharmacyName}` : null,
-    ].filter(Boolean).join(" | ");
-
-    await supabase.from("system_logs").insert({
-      action: "PATIENT_NOTIFICATION_SENT",
-      details: logDetails,
-      user_email: patientEmail,
-      user_name: patientName || "Patient",
-      status: "success",
-    });
-
     return NextResponse.json({ success: true });
   } catch (error) {
-    const supabaseErr = createAdminClient();
-    const body = await request.clone().json().catch(() => ({}));
-    try {
-      await supabaseErr.from("system_logs").insert({
-        action: "PATIENT_NOTIFICATION_FAILED",
-        details: `Payment Confirmation Email | To: ${body.patientEmail || "unknown"} | Error: ${error instanceof Error ? error.message : "Unknown"}`,
-        user_email: body.patientEmail || "",
-        user_name: body.patientName || "Patient",
-        status: "error",
-        error_message: error instanceof Error ? error.message : "Unknown error",
-      });
-    } catch {
-    }
-
     console.error("[CONFIRM-EMAIL] Error:", error instanceof Error ? error.message : "Unknown");
     return NextResponse.json(
       {
