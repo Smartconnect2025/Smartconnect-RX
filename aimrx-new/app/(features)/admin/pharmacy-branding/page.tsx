@@ -35,6 +35,8 @@ import {
   X,
 } from "lucide-react";
 
+const DEFAULT_BANNER_URL = "/images/default-catalog-banner.svg";
+
 const PRESET_COLORS = [
   { name: "Ocean Blue", hex: "#00AEEF" },
   { name: "Navy", hex: "#1E3A8A" },
@@ -325,6 +327,10 @@ export default function PharmacyBrandingPage() {
     }
   };
 
+  const handleResetBannerToDefault = () => {
+    setBannerUrl(DEFAULT_BANNER_URL);
+  };
+
   const handleRemoveBanner = () => {
     setBannerUrl("");
   };
@@ -528,42 +534,59 @@ export default function PharmacyBrandingPage() {
                 Catalog Banner
               </CardTitle>
               <CardDescription>
-                Upload a custom banner image for your product catalog page. Recommended size: 1400×300px. Max 5MB, JPG/PNG/WebP.
+                Customize the banner displayed at the top of your product catalog page.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {bannerUrl ? (
-                <div className="relative">
-                  <div className="border rounded-lg overflow-hidden bg-gray-50">
-                    <div className="relative w-full h-[120px]">
-                      <img
-                        src={bannerUrl}
-                        alt="Catalog banner"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 bg-black/40" />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-white font-semibold text-sm">Banner Preview</span>
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    onClick={handleRemoveBanner}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
-                    title="Remove banner"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ) : (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                  <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500">No banner uploaded</p>
-                  <p className="text-xs text-gray-400 mt-1">The default blue gradient will be used</p>
-                </div>
-              )}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-sm font-medium text-blue-800">Banner Specifications</p>
+                <ul className="text-xs text-blue-700 mt-1 space-y-0.5">
+                  <li>Recommended size: <strong>1400 x 300 pixels</strong></li>
+                  <li>Aspect ratio: approximately 4.7:1 (wide landscape)</li>
+                  <li>Max file size: 5MB</li>
+                  <li>Formats: JPG, PNG, or WebP</li>
+                </ul>
+              </div>
 
               <div>
+                <Label className="text-sm font-medium text-gray-700 mb-2 block">Current Banner</Label>
+                {bannerUrl ? (
+                  <div className="relative">
+                    <div className="border rounded-lg overflow-hidden bg-gray-50">
+                      <div className="relative w-full h-[120px]">
+                        <img
+                          src={bannerUrl}
+                          alt="Catalog banner"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/30" />
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-white font-semibold text-sm drop-shadow-md">
+                            {bannerUrl === DEFAULT_BANNER_URL ? "Default Banner" : "Custom Banner"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    {bannerUrl !== DEFAULT_BANNER_URL && (
+                      <button
+                        onClick={handleRemoveBanner}
+                        className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                        title="Remove banner"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500">No banner set</p>
+                    <p className="text-xs text-gray-400 mt-1">The default blue gradient will be used on the catalog</p>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex gap-2">
                 <input
                   ref={bannerInputRef}
                   type="file"
@@ -576,15 +599,25 @@ export default function PharmacyBrandingPage() {
                   variant="outline"
                   onClick={() => bannerInputRef.current?.click()}
                   disabled={uploadingBanner}
-                  className="w-full"
+                  className="flex-1"
                 >
                   {uploadingBanner ? (
                     <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   ) : (
                     <Upload className="h-4 w-4 mr-2" />
                   )}
-                  {uploadingBanner ? "Uploading..." : bannerUrl ? "Replace Banner" : "Upload Banner"}
+                  {uploadingBanner ? "Uploading..." : bannerUrl ? "Upload Custom Banner" : "Upload Banner"}
                 </Button>
+                {bannerUrl !== DEFAULT_BANNER_URL && (
+                  <Button
+                    variant="secondary"
+                    onClick={handleResetBannerToDefault}
+                    disabled={uploadingBanner}
+                    className="whitespace-nowrap"
+                  >
+                    Reset to Default
+                  </Button>
+                )}
               </div>
             </CardContent>
           </Card>

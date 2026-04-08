@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="300" viewBox="0 0 1400 300">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E3A8A"/>
+      <stop offset="50%" style="stop-color:#2563EB"/>
+      <stop offset="100%" style="stop-color:#3B82F6"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0);stop-opacity:0"/>
+      <stop offset="50%" style="stop-color:rgba(255,255,255,0.08);stop-opacity:1"/>
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0);stop-opacity:0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="300" fill="url(#bg)"/>
+  <rect width="1400" height="300" fill="url(#shine)"/>
+  <circle cx="120" cy="60" r="180" fill="white" opacity="0.04"/>
+  <circle cx="1300" cy="250" r="220" fill="white" opacity="0.04"/>
+  <circle cx="700" cy="150" r="120" fill="white" opacity="0.03"/>
+  <circle cx="400" cy="280" r="100" fill="white" opacity="0.03"/>
+  <circle cx="1000" cy="40" r="90" fill="white" opacity="0.03"/>
+  <g transform="translate(700, 130)" text-anchor="middle">
+    <text font-family="system-ui, -apple-system, sans-serif" font-size="42" font-weight="700" fill="white" letter-spacing="1">SmartConnect RX</text>
+    <text y="45" font-family="system-ui, -apple-system, sans-serif" font-size="18" font-weight="400" fill="rgba(255,255,255,0.7)" letter-spacing="2">PRESCRIPTIONS MADE SIMPLE</text>
+  </g>
+  <line x1="560" y1="175" x2="840" y2="175" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+</svg>
