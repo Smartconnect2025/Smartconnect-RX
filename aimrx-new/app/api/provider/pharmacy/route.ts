@@ -82,7 +82,8 @@ export async function GET() {
           name,
           slug,
           primary_color,
-          tagline
+          tagline,
+          catalog_banner_url
         )
       `,
       )

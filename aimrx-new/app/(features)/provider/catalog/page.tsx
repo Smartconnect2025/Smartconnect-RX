@@ -150,6 +150,7 @@ interface PharmacyMedication {
     slug: string;
     primary_color: string;
     tagline: string;
+    catalog_banner_url: string | null;
   };
 }
 
@@ -439,7 +440,6 @@ export default function ProviderCatalogPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [dbCategoryImages, setDbCategoryImages] = useState<Record<string, string>>({});
   const [prescribingMedId, setPrescribingMedId] = useState<string | null>(null);
-  const [pharmacyBannerUrl] = useState<string | null>(null);
 
   const setSelectedCategory = useCallback((category: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -488,18 +488,30 @@ export default function ProviderCatalogPage() {
   };
 
   const allPharmacies = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; primary_color: string }>();
+    const map = new Map<string, { id: string; name: string; primary_color: string; catalog_banner_url: string | null }>();
     medications.forEach((med) => {
       if (med.pharmacy && !map.has(med.pharmacy.id)) {
         map.set(med.pharmacy.id, {
           id: med.pharmacy.id,
           name: med.pharmacy.name,
           primary_color: med.pharmacy.primary_color,
+          catalog_banner_url: med.pharmacy.catalog_banner_url,
         });
       }
     });
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [medications]);
+
+  const activeBannerUrl = useMemo(() => {
+    if (selectedPharmacy !== "all") {
+      const pharm = allPharmacies.find(p => p.id === selectedPharmacy);
+      return pharm?.catalog_banner_url || null;
+    }
+    if (allPharmacies.length === 1) {
+      return allPharmacies[0].catalog_banner_url || null;
+    }
+    return null;
+  }, [selectedPharmacy, allPharmacies]);
 
   const availableCategories = useMemo(() => {
     const cats = new Map<string, number>();
@@ -598,11 +610,23 @@ export default function ProviderCatalogPage() {
     <>
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
         <div className="relative overflow-hidden bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6]">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
-            <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full translate-x-1/3 translate-y-1/3" />
-            <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
-          </div>
+          {activeBannerUrl && (
+            <div className="absolute inset-0">
+              <img
+                src={activeBannerUrl}
+                alt="Pharmacy banner"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/40 to-black/60" />
+            </div>
+          )}
+          {!activeBannerUrl && (
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full translate-x-1/3 translate-y-1/3" />
+              <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
+            </div>
+          )}
 
           <div className="relative container max-w-7xl mx-auto px-4 py-10 sm:py-14">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -612,30 +636,30 @@ export default function ProviderCatalogPage() {
                     <ShoppingBag className="h-7 w-7 text-white" />
                   </div>
                   <h1
-                    className="text-3xl sm:text-4xl font-bold text-white tracking-tight"
+                    className="text-3xl sm:text-4xl font-bold text-white tracking-tight drop-shadow-lg"
                     data-testid="text-catalog-title"
                   >
                     Product Catalog
                   </h1>
                 </div>
-                <p className="text-blue-100 text-base sm:text-lg mt-1 max-w-xl">
+                <p className="text-blue-100 text-base sm:text-lg mt-1 max-w-xl drop-shadow-md">
                   Browse products, compare pricing, and check availability across all pharmacies.
                 </p>
               </div>
 
               <div className="flex items-center gap-3">
                 <div className="text-right hidden sm:block">
-                  <div className="text-3xl font-bold text-white" data-testid="text-total-products">
+                  <div className="text-3xl font-bold text-white drop-shadow-lg" data-testid="text-total-products">
                     {totalProducts}
                   </div>
-                  <div className="text-blue-200 text-sm">Products Available</div>
+                  <div className="text-blue-200 text-sm drop-shadow-md">Products Available</div>
                 </div>
                 <div className="w-px h-12 bg-white/20 hidden sm:block" />
                 <div className="text-right hidden sm:block">
-                  <div className="text-3xl font-bold text-emerald-300" data-testid="text-in-stock-count">
+                  <div className="text-3xl font-bold text-emerald-300 drop-shadow-lg" data-testid="text-in-stock-count">
                     {inStockCount}
                   </div>
-                  <div className="text-blue-200 text-sm">In Stock</div>
+                  <div className="text-blue-200 text-sm drop-shadow-md">In Stock</div>
                 </div>
               </div>
             </div>
