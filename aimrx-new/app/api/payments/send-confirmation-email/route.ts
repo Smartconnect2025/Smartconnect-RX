@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import sgMail from "@sendgrid/mail";
 import { paymentConfirmationEmailHtml } from "@core/services/email/emailTemplates";
-import { createAdminClient } from "@core/lib/supabase/admin";
+import { createAdminClient } from "@core/database/client";
 import { checkEmailDedup } from "@core/services/email-guard";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";

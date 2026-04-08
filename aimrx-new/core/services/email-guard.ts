@@ -1,4 +1,4 @@
-import { createAdminClient } from "@core/lib/supabase/admin";
+import { createAdminClient } from "@core/database/client";
 
 interface DeduplicationResult {
   allowed: boolean;
