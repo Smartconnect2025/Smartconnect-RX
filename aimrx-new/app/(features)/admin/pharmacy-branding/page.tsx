@@ -58,23 +58,7 @@ interface PharmacyData {
   tagline: string | null;
   phone: string | null;
   address: string | null;
-  catalog_banner_url: string | null;
 }
-
-const PRESET_BANNERS = [
-  {
-    id: "default",
-    name: "SmartConnect Default",
-    url: "/images/default-catalog-banner.svg",
-    description: "Clean, professional SmartConnect RX branded banner",
-  },
-  {
-    id: "westside",
-    name: "Westside Graffiti",
-    url: "/images/westside-graffiti-banner.png",
-    description: "Bold, urban-styled pharmacy banner",
-  },
-];
 
 export default function PharmacyBrandingPage() {
   const { user, userRole } = useUser();
@@ -93,11 +77,6 @@ export default function PharmacyBrandingPage() {
   const [tagline, setTagline] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
-  const [catalogBannerUrl, setCatalogBannerUrl] = useState("");
-  const [uploadingBanner, setUploadingBanner] = useState(false);
-
-  const bannerFileInputRef = useRef<HTMLInputElement>(null);
-
   const [pharmacies, setPharmacies] = useState<{ id: string; name: string }[]>([]);
   const [selectedPharmacyId, setSelectedPharmacyId] = useState<string>("");
 
@@ -135,7 +114,6 @@ export default function PharmacyBrandingPage() {
         setTagline(pharmacyData.tagline || "");
         setPhone(pharmacyData.phone || "");
         setAddress(pharmacyData.address || "");
-        setCatalogBannerUrl(pharmacyData.catalog_banner_url || "");
       } else {
         setPharmacy(null);
       }
@@ -201,7 +179,6 @@ export default function PharmacyBrandingPage() {
     setTagline("");
     setPhone("");
     setAddress("");
-    setCatalogBannerUrl("");
   };
 
   const handleSave = async () => {
@@ -220,7 +197,6 @@ export default function PharmacyBrandingPage() {
           tagline: tagline || null,
           phone: phone || null,
           address: address || null,
-          catalog_banner_url: catalogBannerUrl || null,
         }),
       });
 
@@ -290,55 +266,6 @@ export default function PharmacyBrandingPage() {
 
   const handleRemoveLogo = () => {
     setLogoUrl("");
-  };
-
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !pharmacy) return;
-
-    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    if (!allowedTypes.includes(file.type)) {
-      setErrorMessage("Invalid file type. Use JPG, PNG, or WebP.");
-      setSaveStatus("error");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      setErrorMessage("File too large. Maximum 5MB.");
-      setSaveStatus("error");
-      return;
-    }
-
-    setUploadingBanner(true);
-    setErrorMessage("");
-
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("type", "pharmacy-banner");
-      formData.append("entityId", pharmacy.id);
-      formData.append("entityName", pharmacy.name);
-
-      const res = await fetch("/api/admin/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result = await res.json();
-      if (!res.ok || !result.success) {
-        throw new Error(result.error || "Upload failed");
-      }
-
-      setCatalogBannerUrl(result.url);
-    } catch (err) {
-      setErrorMessage(err instanceof Error ? err.message : "Upload failed");
-      setSaveStatus("error");
-    } finally {
-      setUploadingBanner(false);
-      if (bannerFileInputRef.current) {
-        bannerFileInputRef.current.value = "";
-      }
-    }
   };
 
   if (loading) {
@@ -536,104 +463,6 @@ export default function PharmacyBrandingPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
-                <ImageIcon className="h-5 w-5 text-blue-600" />
-                Catalog Banner
-              </CardTitle>
-              <CardDescription>
-                Choose a banner image for your pharmacy&apos;s product catalog. Pick a template or upload your own.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {catalogBannerUrl && (
-                <div className="relative">
-                  <div className="border rounded-lg overflow-hidden bg-gray-50">
-                    <img
-                      src={catalogBannerUrl}
-                      alt="Catalog banner preview"
-                      className="w-full h-32 object-cover"
-                    />
-                  </div>
-                  <button
-                    onClick={() => setCatalogBannerUrl("")}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors shadow-md"
-                    title="Remove banner"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                  <div className="mt-2 flex items-center gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <span className="text-sm text-green-700 font-medium">
-                      {PRESET_BANNERS.find(b => b.url === catalogBannerUrl)?.name || "Custom Banner"}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <p className="text-sm font-medium text-gray-700 mb-3">Pre-made Templates</p>
-                <div className="grid grid-cols-1 gap-3">
-                  {PRESET_BANNERS.map((banner) => (
-                    <button
-                      key={banner.id}
-                      onClick={() => setCatalogBannerUrl(banner.url)}
-                      className={`relative rounded-lg overflow-hidden border-2 transition-all text-left ${
-                        catalogBannerUrl === banner.url
-                          ? "border-blue-500 ring-2 ring-blue-200"
-                          : "border-gray-200 hover:border-gray-300"
-                      }`}
-                    >
-                      <img
-                        src={banner.url}
-                        alt={banner.name}
-                        className="w-full h-20 object-cover"
-                      />
-                      <div className="p-2 bg-white">
-                        <p className="text-sm font-medium text-gray-800">{banner.name}</p>
-                        <p className="text-xs text-gray-500">{banner.description}</p>
-                      </div>
-                      {catalogBannerUrl === banner.url && (
-                        <div className="absolute top-2 right-2 bg-blue-500 text-white rounded-full p-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                        </div>
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border-t pt-4">
-                <p className="text-sm font-medium text-gray-700 mb-2">Upload Custom Banner</p>
-                <p className="text-xs text-gray-500 mb-3">
-                  Recommended size: 1400×300px. Max 5MB. JPG, PNG, or WebP.
-                </p>
-                <input
-                  ref={bannerFileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp"
-                  onChange={handleBannerUpload}
-                  className="hidden"
-                  id="banner-upload"
-                />
-                <Button
-                  variant="outline"
-                  onClick={() => bannerFileInputRef.current?.click()}
-                  disabled={uploadingBanner}
-                  className="w-full"
-                >
-                  {uploadingBanner ? (
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  ) : (
-                    <Upload className="h-4 w-4 mr-2" />
-                  )}
-                  {uploadingBanner ? "Uploading..." : "Upload Custom Banner"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-lg">
                 <Palette className="h-5 w-5 text-blue-600" />
                 Brand Color
               </CardTitle>
@@ -753,7 +582,7 @@ export default function PharmacyBrandingPage() {
 
           <Button
             onClick={handleSave}
-            disabled={saving || uploading || uploadingBanner}
+            disabled={saving || uploading}
             className="w-full h-12 text-base font-medium"
             style={{ backgroundColor: primaryColor || "#00AEEF" }}
           >
@@ -762,7 +591,7 @@ export default function PharmacyBrandingPage() {
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Saving...
               </>
-            ) : uploading || uploadingBanner ? (
+            ) : uploading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Upload in progress...

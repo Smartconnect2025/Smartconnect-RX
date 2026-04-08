@@ -54,7 +54,7 @@ export async function GET(
 
     const { data: pharmacy, error } = await supabaseAdmin
       .from("pharmacies")
-      .select("id, name, slug, logo_url, primary_color, tagline, phone, address, catalog_banner_url, is_active, created_at")
+      .select("id, name, slug, logo_url, primary_color, tagline, phone, address, is_active, created_at")
       .eq("id", pharmacyId)
       .single();
 
@@ -359,7 +359,7 @@ export async function PATCH(
 
     const body = await request.json();
 
-    const allowedFields = ["phone", "address", "logo_url", "tagline", "primary_color", "catalog_banner_url"];
+    const allowedFields = ["phone", "address", "logo_url", "tagline", "primary_color"];
     const updateData: Record<string, unknown> = {};
     for (const field of allowedFields) {
       if (field in body) {
@@ -384,10 +384,10 @@ export async function PATCH(
       }
     }
 
-    for (const urlField of ["logo_url", "catalog_banner_url"] as const) {
+    for (const urlField of ["logo_url"] as const) {
       if (urlField in updateData && updateData[urlField] !== null) {
         const url = String(updateData[urlField]);
-        const label = urlField === "logo_url" ? "Logo URL" : "Banner URL";
+        const label = "Logo URL";
         if (url.length > 2000) {
           return NextResponse.json(
             { success: false, error: `${label} must be 2000 characters or less` },
