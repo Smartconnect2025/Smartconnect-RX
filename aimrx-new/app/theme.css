@@ -2,15 +2,14 @@
 @plugin "tailwindcss-animate";
 
 :root {
-  /* IM Athletic Branding Colors */
+  /* SmartConnect RX Branding Colors */
   --primary-navy: #1D4E89;
-  --secondary-orange: #F97316;
   --white: #FFFFFF;
   --light-gray: #F8FAFC;
   --dark-gray: #374151;
   --sharp-radius: 4px;
 
-  /* Tailwind Theme Variables (IM Athletic) */
+  /* Tailwind Theme Variables (SmartConnect RX) */
   --background: #F8FAFC;
   --foreground: #374151;
   --card: #FFFFFF;
@@ -19,29 +18,29 @@
   --popover-foreground: #374151;
   --primary: #1D4E89;
   --primary-foreground: #FFFFFF;
-  --secondary: #F97316;
-  --secondary-foreground: #FFFFFF;
+  --secondary: #E8EEF4;
+  --secondary-foreground: #1D4E89;
   --muted: #F1F5F9;
   --muted-foreground: #64748B;
-  --accent: #F97316;
-  --accent-foreground: #FFFFFF;
+  --accent: #E8EEF4;
+  --accent-foreground: #1D4E89;
   --destructive: #EF4444;
   --destructive-foreground: #FFFFFF;
   --border: #E2E8F0;
   --input: #E2E8F0;
   --ring: #1D4E89;
   --chart-1: #1D4E89;
-  --chart-2: #F97316;
-  --chart-3: #3B82F6;
-  --chart-4: #EAB308;
+  --chart-2: #3B82F6;
+  --chart-3: #60A5FA;
+  --chart-4: #93C5FD;
   --chart-5: #10B981;
   --radius: 4px;
   --sidebar: #FFFFFF;
   --sidebar-foreground: #374151;
   --sidebar-primary: #1D4E89;
   --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F97316;
-  --sidebar-accent-foreground: #FFFFFF;
+  --sidebar-accent: #E8EEF4;
+  --sidebar-accent-foreground: #1D4E89;
   --sidebar-border: #E2E8F0;
   --sidebar-ring: #1D4E89;
 }
@@ -103,7 +102,7 @@
   font-weight: 700;
 }
 
-/* IM Athletic Button & Input Styles */
+/* SmartConnect RX Button & Input Styles */
 button, .btn, [role="button"], input[type="submit"] {
   border-radius: var(--sharp-radius) !important;
   transition: background-color 0.2s ease, transform 0.1s ease;
