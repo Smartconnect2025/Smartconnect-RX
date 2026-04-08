@@ -90,26 +90,25 @@ export default function PharmacyBrandingPage() {
 
   const fetchPharmacies = useCallback(async () => {
     try {
-      const { data } = await supabase
-        .from("pharmacies")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("name");
-      setPharmacies(data || []);
+      const res = await fetch("/api/admin/pharmacies/list");
+      if (!res.ok) return;
+      const result = await res.json();
+      setPharmacies(result.pharmacies || []);
     } catch (error) {
       console.error("Error fetching pharmacies:", error);
     }
-  }, [supabase]);
+  }, []);
 
   const loadPharmacyById = useCallback(async (pharmacyId: string) => {
     const requestId = ++loadRequestRef.current;
     setLoading(true);
     try {
-      const { data: pharmacyData } = await supabase
-        .from("pharmacies")
-        .select("id, name, logo_url, banner_url, primary_color, tagline, phone, address")
-        .eq("id", pharmacyId)
-        .single();
+      const res = await fetch(`/api/admin/pharmacies/${pharmacyId}`);
+      if (!res.ok) {
+        if (requestId === loadRequestRef.current) setPharmacy(null);
+        return;
+      }
+      const pharmacyData = await res.json();
 
       if (requestId !== loadRequestRef.current) return;
 
@@ -133,7 +132,7 @@ export default function PharmacyBrandingPage() {
         setLoading(false);
       }
     }
-  }, [supabase]);
+  }, []);
 
   const loadPharmacyForAdmin = useCallback(async () => {
     if (!user?.id) return;

@@ -6,6 +6,76 @@ import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 
 /**
+ * Get a pharmacy by ID
+ * GET /api/admin/pharmacies/[id]
+ */
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const supabase = await createServerClient();
+  const supabaseAdmin = createAdminClient();
+
+  try {
+    const { id: pharmacyId } = await context.params;
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { success: false, error: "Not authenticated" },
+        { status: 401 }
+      );
+    }
+
+    const { data: userRole } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!userRole || !["admin", "super_admin"].includes(userRole.role)) {
+      return NextResponse.json(
+        { success: false, error: "Unauthorized. Admin access required." },
+        { status: 403 }
+      );
+    }
+
+    const scope = await getPharmacyAdminScope(user.id);
+    if (scope.isPharmacyAdmin && scope.pharmacyId !== pharmacyId) {
+      return NextResponse.json(
+        { success: false, error: "Access denied to this pharmacy" },
+        { status: 403 }
+      );
+    }
+
+    const { data: pharmacy, error } = await supabaseAdmin
+      .from("pharmacies")
+      .select("id, name, slug, logo_url, banner_url, primary_color, tagline, phone, address, is_active, created_at")
+      .eq("id", pharmacyId)
+      .single();
+
+    if (error || !pharmacy) {
+      return NextResponse.json(
+        { success: false, error: "Pharmacy not found" },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(pharmacy);
+  } catch (err) {
+    console.error("[GET /api/admin/pharmacies/[id]] Error:", err);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/**
  * Update a pharmacy
  * PUT /api/admin/pharmacies/[id]
  */
