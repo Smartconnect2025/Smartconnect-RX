@@ -142,21 +142,10 @@ export default function LoginPage() {
           <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-blue-300 rounded-full blur-3xl animate-pulse" style={{ animationDelay: "2s" }}></div>
         </div>
 
-        {/* Header with logo on the left */}
+        {/* Header */}
         <header className="w-full px-4 py-3 z-10">
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            {/* Logo - Left side */}
-            <Link href="/" className="flex items-center hover:opacity-90 transition-opacity">
-              <div className="bg-white rounded-xl px-4 py-2 shadow-lg">
-                <img
-                  src="/logo-header.png"
-                  alt="SmartConnect RX"
-                  className="h-10 w-auto object-contain"
-                />
-              </div>
-            </Link>
-
-            {/* HIPAA Trust Badge - Right side */}
+          <div className="flex items-center justify-end max-w-7xl mx-auto">
+            {/* HIPAA Trust Badge */}
             <div className="bg-white/95 backdrop-blur-sm rounded-lg px-3 py-1.5 shadow-lg border border-green-500/50">
               <div className="flex items-center gap-2">
                 <div className="w-6 h-6 rounded-full bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
