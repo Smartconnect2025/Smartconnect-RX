@@ -614,26 +614,12 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
                   {provider.company_name ? (
                     <Badge
                       variant="outline"
-                      className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs cursor-pointer hover:bg-indigo-100"
-                      onClick={() => {
-                        setAssigningCompanyProvider(provider);
-                        setSelectedCompanyName(provider.company_name || "none");
-                        setCompanyInputMode("select");
-                      }}
+                      className="bg-indigo-50 text-indigo-700 border-indigo-200 text-xs"
                     >
                       {provider.company_name}
                     </Badge>
                   ) : (
-                    <button
-                      className="text-xs text-gray-400 hover:text-indigo-600 transition-colors"
-                      onClick={() => {
-                        setAssigningCompanyProvider(provider);
-                        setSelectedCompanyName("none");
-                        setCompanyInputMode("select");
-                      }}
-                    >
-                      + Assign
-                    </button>
+                    <span className="text-xs text-gray-400">—</span>
                   )}
                 </TableCell>
                 <TableCell className="px-4 py-3">
@@ -857,77 +843,20 @@ export const ProvidersManagement: React.FC<ProvidersManagementProps> = ({ initia
             </div>
             <div>
               <Label htmlFor="editCompanyName">Company Name</Label>
-              <div className="flex items-center gap-1 mb-2">
-                <Button
-                  type="button"
-                  variant={editCompanyMode === "select" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setEditCompanyMode("select")}
-                  className="text-xs h-7 px-3"
-                >
-                  Select Existing
-                </Button>
-                <Button
-                  type="button"
-                  variant={editCompanyMode === "new" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setEditCompanyMode("new");
-                    setEditNewCompanyName("");
-                  }}
-                  className="text-xs h-7 px-3"
-                >
-                  New Company
-                </Button>
-              </div>
-              {editCompanyMode === "select" ? (
-                <Select
-                  value={editFormData.companyName || "none"}
-                  onValueChange={(val) => setEditFormData({ ...editFormData, companyName: val === "none" ? "" : val })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a company" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">No Company</SelectItem>
-                    {existingCompanies.map((name) => (
-                      <SelectItem key={name} value={name}>{name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : (
-                <div className="flex gap-2">
-                  <Input
-                    value={editNewCompanyName}
-                    onChange={(e) => setEditNewCompanyName(e.target.value)}
-                    placeholder="Enter new company name"
-                    className="flex-1"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleAddCompanyInline(editNewCompanyName, (name) => {
-                          setEditFormData({ ...editFormData, companyName: name });
-                          setEditCompanyMode("select");
-                          setEditNewCompanyName("");
-                        });
-                      }
-                    }}
-                  />
-                  <Button
-                    type="button"
-                    onClick={() => handleAddCompanyInline(editNewCompanyName, (name) => {
-                      setEditFormData({ ...editFormData, companyName: name });
-                      setEditCompanyMode("select");
-                      setEditNewCompanyName("");
-                    })}
-                    disabled={isAddingCompany || !editNewCompanyName.trim()}
-                    size="sm"
-                    className="h-9 bg-blue-600 hover:bg-blue-700 text-white px-3"
-                  >
-                    {isAddingCompany ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-                  </Button>
-                </div>
-              )}
+              <Select
+                value={editFormData.companyName || "none"}
+                onValueChange={(val) => setEditFormData({ ...editFormData, companyName: val === "none" ? "" : val })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a company" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No Company</SelectItem>
+                  {existingCompanies.map((name) => (
+                    <SelectItem key={name} value={name}>{name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-xs text-blue-600 mt-1">Providers in the same company share patient access</p>
             </div>
 
