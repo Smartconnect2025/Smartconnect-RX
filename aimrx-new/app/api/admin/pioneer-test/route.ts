@@ -8,10 +8,14 @@ import {
 import { requirePlatformAdmin, createGuardErrorResponse } from "@core/auth/api-guards";
 
 export async function POST(request: NextRequest) {
-  const platformCheck = await requirePlatformAdmin();
-  if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+  const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
+  const internalKey = request.headers.get("x-internal-api-key");
+  const isInternalCall = !!(INTERNAL_API_KEY && internalKey && internalKey === INTERNAL_API_KEY);
 
-  try {
+  if (!isInternalCall) {
+    const platformCheck = await requirePlatformAdmin();
+    if (!platformCheck.success) return createGuardErrorResponse(platformCheck);
+
     const { user, userRole } = await getUser();
     if (!user || !userRole || !["admin", "super_admin"].includes(userRole)) {
       return NextResponse.json(
@@ -19,6 +23,9 @@ export async function POST(request: NextRequest) {
         { status: 403 },
       );
     }
+  }
+
+  try {
 
     const body = await request.json();
     const { pharmacy_id } = body;
