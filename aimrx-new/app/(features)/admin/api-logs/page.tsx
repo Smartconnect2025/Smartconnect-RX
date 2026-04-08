@@ -30,11 +30,18 @@ import {
 } from "@/components/ui/select";
 
 interface HealthCheck {
-  name: string;
+  check_key: string;
+  service_name: string;
   category: "database" | "external" | "internal";
   status: "operational" | "degraded" | "error" | "unknown";
-  responseTime: number | null;
-  endpoint: string;
+  severity: "info" | "warning" | "critical";
+  response_time_ms: number | null;
+  last_error: string | null;
+  pharmacy_id: string | null;
+  backend_id: string | null;
+  metadata: Record<string, unknown> | null;
+  checked_at?: string;
+  consecutive_failures?: number;
 }
 
 interface SystemLogData {
@@ -91,8 +98,9 @@ export default function APILogsPage() {
   const [healthData, setHealthData] = useState<{
     success: boolean;
     overallStatus: string;
-    summary?: { total: number; operational: number; degraded: number; error: number };
+    summary?: { total: number; operational: number; degraded: number; error: number; unknown: number };
     healthChecks?: HealthCheck[];
+    cached?: boolean;
   } | null>(null);
   const [systemLogs, setSystemLogs] = useState<SystemLogData[]>([]);
   const [prescriptions, setPrescriptions] = useState<PrescriptionData[]>([]);
@@ -243,20 +251,19 @@ export default function APILogsPage() {
 
     if (!healthData?.healthChecks) return issues;
 
-    // Check for critical errors
     const errorApis = healthData.healthChecks.filter((api) => api.status === "error");
     errorApis.forEach((api) => {
-      const issueKey = `api-error-${api.name}`;
+      const issueKey = `api-error-${api.check_key}`;
       const tracking = getIssueTracking(issueKey);
 
       issues.push({
         severity: "critical",
-        title: `${api.name} is down`,
-        description: `The ${api.name} API is not responding. This may prevent prescription submissions or status updates.`,
+        title: `${api.service_name} is down`,
+        description: `The ${api.service_name} is not responding.${api.last_error ? ` Error: ${api.last_error}` : ""} This may prevent prescription submissions or status updates.`,
         action: api.category === "external"
           ? "Contact the service provider to verify their system status."
           : "Check your network connection and API credentials in settings.",
-        api: api.name,
+        api: api.service_name,
         detectedAt: new Date(tracking.firstSeen),
         lastSeenAt: new Date(tracking.lastSeen),
         isResolved: false,
@@ -280,21 +287,19 @@ export default function APILogsPage() {
       });
     });
 
-    // Check for degraded performance
-    // Note: Skip H2H DigitalRx degraded status as it's often from test connections
     const degradedApis = healthData.healthChecks.filter(
-      (api) => api.status === "degraded" && api.name !== "H2H DigitalRx API"
+      (api) => api.status === "degraded"
     );
     degradedApis.forEach((api) => {
-      const issueKey = `api-degraded-${api.name}`;
+      const issueKey = `api-degraded-${api.check_key}`;
       const tracking = getIssueTracking(issueKey);
 
       issues.push({
         severity: "warning",
-        title: `${api.name} is slow`,
-        description: `Response time: ${api.responseTime}ms. This may cause delays in prescription processing.`,
+        title: `${api.service_name} is slow`,
+        description: `Response time: ${api.response_time_ms}ms.${api.last_error ? ` Note: ${api.last_error}` : ""} This may cause delays in processing.`,
         action: "Monitor the situation. If it persists, contact support.",
-        api: api.name,
+        api: api.service_name,
         detectedAt: new Date(tracking.firstSeen),
         lastSeenAt: new Date(tracking.lastSeen),
         isResolved: false,
@@ -403,10 +408,9 @@ export default function APILogsPage() {
     setIssueHistory((prevHistory) => {
       const updates = { ...prevHistory };
 
-      // Track active issues
       healthData.healthChecks?.forEach((api) => {
         if (api.status === "error") {
-          const issueKey = `api-error-${api.name}`;
+          const issueKey = `api-error-${api.check_key}`;
           activeIssueKeys.add(issueKey);
           if (!updates[issueKey]) {
             updates[issueKey] = { firstSeen: now, lastSeen: now };
@@ -417,7 +421,7 @@ export default function APILogsPage() {
           }
         }
         if (api.status === "degraded") {
-          const issueKey = `api-degraded-${api.name}`;
+          const issueKey = `api-degraded-${api.check_key}`;
           activeIssueKeys.add(issueKey);
           if (!updates[issueKey]) {
             updates[issueKey] = { firstSeen: now, lastSeen: now };
@@ -780,13 +784,48 @@ export default function APILogsPage() {
               operational
             </span>
           </div>
+          <div className="flex items-center gap-2">
+            {healthData?.cached && (
+              <span className="text-xs text-gray-400">cached</span>
+            )}
+            <Button
+              onClick={async (e) => {
+                e.stopPropagation();
+                setIsRefreshing(true);
+                try {
+                  const response = await fetch("/api/admin/api-health?runNow=true");
+                  const data = await response.json();
+                  if (data.success) {
+                    setHealthData(data);
+                    toast.success("Health check completed");
+                  }
+                } catch {
+                  toast.error("Failed to run health check");
+                } finally {
+                  setIsRefreshing(false);
+                }
+              }}
+              disabled={isRefreshing}
+              size="sm"
+              variant="outline"
+              className="text-xs h-7"
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${isRefreshing ? "animate-spin" : ""}`} />
+              Run Now
+            </Button>
+          </div>
         </div>
 
         {apiStatusExpanded && healthData?.healthChecks && (
           <div className="px-6 py-4 border-t border-gray-200">
-            <div className="space-y-3">
-              {/* Group by category */}
-              {(["database", "external", "internal"] as const).map((category) => {
+            <div className="space-y-5">
+              {(
+                [
+                  { key: "database", label: "Database" },
+                  { key: "external", label: "External Services (Pharmacy Systems & Payments)" },
+                  { key: "internal", label: "Internal APIs" },
+                ] as const
+              ).map(({ key: category, label }) => {
                 const apis = healthData.healthChecks!.filter(
                   (api) => api.category === category
                 );
@@ -794,64 +833,95 @@ export default function APILogsPage() {
 
                 return (
                   <div key={category}>
-                    <h3 className="text-sm font-medium text-gray-700 mb-2 capitalize">
-                      {category} APIs
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+                      {label}
                     </h3>
-                    <div className="space-y-2">
+                    <div className="grid gap-3 sm:grid-cols-2">
                       {apis.map((api, idx) => (
                         <div
                           key={idx}
-                          className="p-4 rounded-lg border border-gray-200 bg-gray-50"
+                          className={`p-4 rounded-lg border-2 ${
+                            api.status === "operational"
+                              ? "border-green-200 bg-green-50/50"
+                              : api.status === "degraded"
+                                ? "border-yellow-200 bg-yellow-50/50"
+                                : api.status === "unknown"
+                                  ? "border-gray-200 bg-gray-50/50"
+                                  : "border-red-200 bg-red-50/50"
+                          }`}
                         >
                           <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
                               {api.status === "operational" ? (
                                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                               ) : api.status === "degraded" ? (
                                 <Clock className="h-4 w-4 text-yellow-600" />
+                              ) : api.status === "unknown" ? (
+                                <AlertCircle className="h-4 w-4 text-gray-400" />
                               ) : (
                                 <XCircle className="h-4 w-4 text-red-600" />
                               )}
-                              <span className="font-medium text-sm">{api.name}</span>
+                              <span className="font-medium text-sm">{api.service_name}</span>
                             </div>
+                            <Badge
+                              variant="outline"
+                              className={
+                                api.status === "operational"
+                                  ? "border-green-500 text-green-700 bg-green-100"
+                                  : api.status === "degraded"
+                                    ? "border-yellow-500 text-yellow-700 bg-yellow-100"
+                                    : api.status === "unknown"
+                                      ? "border-gray-400 text-gray-600 bg-gray-100"
+                                      : "border-red-500 text-red-700 bg-red-100"
+                              }
+                            >
+                              {api.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between text-xs text-gray-600">
                             <div className="flex items-center gap-3">
-                              {api.responseTime && (
+                              {api.response_time_ms !== null && (
                                 <span
-                                  className={`text-xs font-mono px-2 py-1 rounded ${
-                                    api.responseTime < 500
+                                  className={`font-mono px-2 py-0.5 rounded ${
+                                    api.response_time_ms < 500
                                       ? "bg-green-100 text-green-800"
-                                      : api.responseTime < 1000
+                                      : api.response_time_ms < 2000
                                         ? "bg-yellow-100 text-yellow-800"
                                         : "bg-red-100 text-red-800"
                                   }`}
                                 >
-                                  {api.responseTime}ms
+                                  {api.response_time_ms}ms
                                 </span>
                               )}
-                              <Badge
-                                variant="outline"
-                                className={
-                                  api.status === "operational"
-                                    ? "border-green-500 text-green-700"
-                                    : api.status === "degraded"
-                                      ? "border-yellow-500 text-yellow-700"
-                                      : "border-red-500 text-red-700"
-                                }
-                              >
-                                {api.status}
-                              </Badge>
+                              {(api.consecutive_failures ?? 0) > 0 && (
+                                <span className="text-red-600 font-medium">
+                                  {api.consecutive_failures} consecutive failures
+                                </span>
+                              )}
                             </div>
+                            {api.checked_at && (
+                              <span className="text-gray-400">
+                                {formatTimeAgo(api.checked_at)}
+                              </span>
+                            )}
                           </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-600">
-                            <ExternalLink className="h-3 w-3" />
-                            <span className="font-mono truncate">{api.endpoint}</span>
-                            <button
-                              onClick={() => copyToClipboard(api.endpoint)}
-                              className="ml-auto p-1 hover:bg-gray-200 rounded"
-                            >
-                              <Copy className="h-3 w-3" />
-                            </button>
-                          </div>
+                          {api.last_error && (
+                            <div className="mt-2 text-xs text-red-600 bg-red-50 px-2 py-1 rounded truncate">
+                              {api.last_error}
+                            </div>
+                          )}
+                          {api.metadata?.endpoint && (
+                            <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
+                              <ExternalLink className="h-3 w-3" />
+                              <span className="font-mono truncate">{String(api.metadata.endpoint)}</span>
+                              <button
+                                onClick={() => copyToClipboard(String(api.metadata?.endpoint || ""))}
+                                className="ml-auto p-0.5 hover:bg-gray-200 rounded"
+                              >
+                                <Copy className="h-3 w-3" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
