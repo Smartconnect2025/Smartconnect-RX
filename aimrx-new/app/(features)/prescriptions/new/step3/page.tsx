@@ -680,7 +680,11 @@ export default function PrescriptionStep3Page() {
   const itemsToDisplay = isMultiOrder ? cartItems : (prescriptionData ? [prescriptionData] : []);
 
   const totalMedicationCost = itemsToDisplay.reduce(
-    (sum, item) => sum + (parseFloat(("patientPrice" in item ? item.patientPrice : "0") || "0")),
+    (sum, item) => {
+      const unitPrice = parseFloat(("patientPrice" in item ? item.patientPrice : "0") || "0");
+      const qty = parseInt(item.quantity) || 1;
+      return sum + (unitPrice * qty);
+    },
     0,
   );
   const totalOversightFees = Array.isArray(displayFees.oversightFees)
@@ -981,7 +985,7 @@ export default function PrescriptionStep3Page() {
                     </div>
                     <div>
                       <p className="text-muted-foreground">Price</p>
-                      <p className="font-medium">${parseFloat(item.patientPrice || "0").toFixed(2)}</p>
+                      <p className="font-medium">${((parseFloat(item.patientPrice) || 0) * (parseInt(item.quantity) || 1)).toFixed(2)}</p>
                     </div>
                   </div>
                   <div className="text-sm">
@@ -1062,7 +1066,7 @@ export default function PrescriptionStep3Page() {
                   <h3 className="text-lg font-semibold text-gray-900">Price of Medication</h3>
                   <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                     <p className="text-2xl font-bold text-gray-900">
-                      ${(parseFloat(prescriptionData.patientPrice || "0") || 0).toFixed(2)}
+                      ${((parseFloat(prescriptionData.patientPrice || "0") || 0) * (parseInt(prescriptionData.quantity) || 1)).toFixed(2)}
                     </p>
                   </div>
                 </div>

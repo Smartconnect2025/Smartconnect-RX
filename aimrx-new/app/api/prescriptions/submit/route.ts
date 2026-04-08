@@ -435,10 +435,11 @@ export async function POST(request: NextRequest) {
 
     // Save prescription to Supabase with real Queue ID (supabaseAdmin already initialized above)
 
-    // Convert patient_price from dollars to cents for total_paid_cents
-    const medicationPriceCents = body.patient_price
+    const unitPriceCents = body.patient_price
       ? Math.round(parseFloat(body.patient_price) * 100)
       : 0;
+    const qty = body.quantity && body.quantity > 0 ? body.quantity : 1;
+    const medicationPriceCents = unitPriceCents * qty;
     const totalPaidCents =
       medicationPriceCents + (body.profit_cents || 0) + (body.shipping_fee_cents || 0);
 

@@ -1583,7 +1583,7 @@ export default function PrescriptionStep2Page() {
                   </h2>
                 </div>
                 <span className="text-sm text-green-600 font-medium">
-                  Total: ${cart.reduce((sum, item) => sum + (parseFloat(item.patientPrice) || 0), 0).toFixed(2)}
+                  Total: ${cart.reduce((sum, item) => sum + ((parseFloat(item.patientPrice) || 0) * (parseInt(item.quantity) || 1)), 0).toFixed(2)}
                 </span>
               </div>
 
@@ -1611,7 +1611,7 @@ export default function PrescriptionStep2Page() {
                     </div>
                     <div className="flex items-center gap-3">
                       <span className="font-semibold text-gray-900">
-                        ${parseFloat(item.patientPrice || "0").toFixed(2)}
+                        ${((parseFloat(item.patientPrice) || 0) * (parseInt(item.quantity) || 1)).toFixed(2)}
                       </span>
                       <button
                         type="button"
