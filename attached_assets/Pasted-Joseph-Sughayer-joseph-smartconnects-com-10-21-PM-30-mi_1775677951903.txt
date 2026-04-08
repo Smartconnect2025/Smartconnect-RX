@@ -1,0 +1,181 @@
+Joseph Sughayer <joseph@smartconnects.com>
+10:21 PM (30 minutes ago)
+to Mitch, Jerry
+
+
+Hi Mitch,
+
+We've successfully connected to the PioneerRx sandbox and confirmed authentication is working. Both test connections passed with valid credentials.
+
+Here are the details:
+
+Connection Status:
+
+API URL: https://apitest.pioneerrx.com
+Authentication: Verified and working
+Server IP: 216.24.57.7 (already whitelisted)
+Webhook URL for Status Updates:
+Please configure this webhook URL on your end so we can receive automatic prescription status updates (filled, dispensed, shipped, delivered, cancelled):
+
+https://smartconnect-rx.onrender.com/api/webhook/pioneerrx
+
+Expected Webhook Payload Format:
+
+{
+  "rxTransactionID": "uuid",
+  "status": "filled",
+  "rxStatusTypeID": 2,
+  "trackingNumber": "optional"
+}
+
+Status type IDs we support: 1=Submitted, 2=Packed, 3=Cancelled, 4=Cancelled, 5=Approved, 6=Picked Up, 7=Delivered
+
+Next Steps:
+
+Please configure the webhook URL above on your side
+Let us know when you're ready to move us from sandbox to production — we'll need the production API URL, API key, and shared secret
+Let me know if you need anything else from our side.
+
+Thanks,
+Joseph
+
+Mitch Archer
+10:40 PM (11 minutes ago)
+to me, Jerry
+
+You sent me the URL:  https://smartconnect-rx.onrender.com/api/webhook/pioneerrx
+
+ 
+
+What is the Username/password I am supposed to use for the Basic Authentication?  Or do you not want to use Basic Auth?
+
+ 
+
+Also, once I sit this up, I can manually trigger a few messages, but that is all.  We will just confirm you can get them and Ack them back.
+
+ 
+
+As for as going live at a store, you must sign vendor contracts before that can happen.
+
+ 
+
+Here is a Vendor Questionnaire.  Please fill out and return, so I can have legal send you contracts.
+
+ 
+
+ 
+
+Vendor Details
+
+Question
+
+Answer
+
+Company
+
+Official Name
+
+Company
+
+Main Address
+
+Company
+
+Billing Address
+
+Company
+
+Billing Email
+
+Company
+
+Phone
+
+Company
+
+State Incorporated in
+
+Company
+
+Website
+
+Company
+
+Email
+
+Signer
+
+Name
+
+Signer
+
+Title
+
+Signer
+
+Email
+
+Signer
+
+Office Phone
+
+Signer
+
+Cell Phone
+
+Technical Contact
+
+Name
+
+Technical Contact
+
+Title
+
+Technical Contact
+
+Email
+
+Technical Contact
+
+Office Phone
+
+Technical Contact
+
+Cell Phone
+
+Exhibit A
+
+Option (A or B)
+
+B(2-Way), Read/Write APIs, RxEvents Webhook
+
+Exhibit C
+
+Application/Product Name
+
+??IVR??
+
+Exhibit C
+
+Frequency
+
+Real-Time
+
+Exhibit D
+
+Describe your product and how you will use the data from this integration
+
+ 
+
+List All API methods you will use
+
+RefillQuery
+
+RequestRefill
+
+LookUpListDetailGet
+
+LookUpListGet
+
+ 
+
