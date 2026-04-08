@@ -82,8 +82,7 @@ export async function GET() {
           name,
           slug,
           primary_color,
-          tagline,
-          banner_url
+          tagline
         )
       `,
       )
