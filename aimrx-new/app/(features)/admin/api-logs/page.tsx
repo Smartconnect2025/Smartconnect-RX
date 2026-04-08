@@ -18,6 +18,7 @@ import {
   Search,
   ChevronDown,
   ChevronRight,
+  Heart,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -121,6 +122,10 @@ export default function APILogsPage() {
   const [logsSearch, setLogsSearch] = useState("");
   const [logsStatusFilter, setLogsStatusFilter] = useState("all");
 
+  const HEARTBEAT_INTERVAL = 30;
+  const [heartbeatCountdown, setHeartbeatCountdown] = useState(HEARTBEAT_INTERVAL);
+  const [heartbeatActive, setHeartbeatActive] = useState(true);
+
   const [issueHistory, setIssueHistory] = useState<Record<string, {
     firstSeen: string;
     lastSeen: string;
@@ -211,9 +216,18 @@ export default function APILogsPage() {
   }, [loadAllData, pharmacyFilter]);
 
   useEffect(() => {
-    const interval = setInterval(loadAllData, 30000);
-    return () => clearInterval(interval);
-  }, [loadAllData]);
+    if (!heartbeatActive) return;
+    const tick = setInterval(() => {
+      setHeartbeatCountdown((prev) => {
+        if (prev <= 1) {
+          loadAllData();
+          return HEARTBEAT_INTERVAL;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(tick);
+  }, [loadAllData, heartbeatActive]);
 
   const handlePharmacyFilterChange = useCallback(
     (value: string) => {
@@ -533,12 +547,29 @@ export default function APILogsPage() {
         <div className="flex items-center justify-between mb-2">
           <h1 className="text-3xl font-bold">System Health & Monitoring</h1>
           <div className="flex items-center gap-3">
+            <button
+              onClick={() => setHeartbeatActive(!heartbeatActive)}
+              className="flex items-center gap-1.5 group cursor-pointer"
+              title={heartbeatActive ? "Click to pause auto-refresh" : "Click to resume auto-refresh"}
+            >
+              <Heart
+                className={`h-4 w-4 transition-all ${
+                  heartbeatActive
+                    ? "text-red-500 fill-red-500 animate-pulse"
+                    : "text-gray-400"
+                }`}
+              />
+              <span className={`text-xs font-mono tabular-nums ${heartbeatActive ? "text-red-500" : "text-gray-400"}`}>
+                {heartbeatActive ? `${heartbeatCountdown}s` : "paused"}
+              </span>
+            </button>
+            <div className="w-px h-5 bg-gray-300" />
             {lastRefresh && (
               <span className="text-sm text-gray-500">
                 Last updated: {formatTimeAgo(lastRefresh.toISOString())}
               </span>
             )}
-            <Button onClick={loadAllData} disabled={isRefreshing} size="sm">
+            <Button onClick={() => { loadAllData(); setHeartbeatCountdown(HEARTBEAT_INTERVAL); }} disabled={isRefreshing} size="sm">
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${isRefreshing ? "animate-spin" : ""}`}
               />
