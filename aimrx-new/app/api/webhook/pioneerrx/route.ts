@@ -110,6 +110,10 @@ interface RxEventBody {
     InitiatingEventID?: string | number;
     InitiatingEventText?: string;
   };
+  Message_Header?: {
+    Message_ID?: string;
+    Message_Type?: string;
+  };
   Body?: {
     Pharmacy?: Record<string, unknown>;
     Patient?: Record<string, unknown>;
@@ -197,12 +201,26 @@ function deriveStatusFromEvent(body: RxEventBody): {
   return { newStatus, queueId, trackingNumber, rxNumber };
 }
 
-function buildSuccessResponse(): NextResponse {
+function buildAckResponse(messageId: string): NextResponse {
   return NextResponse.json(
     {
-      Status: "OK",
-      Message: "Event received",
-      success: true,
+      Message_Header: {
+        Message_ID: messageId,
+        Message_Type: "ACK",
+      },
+    },
+    { status: 200 },
+  );
+}
+
+function buildNakResponse(messageId: string, error: string): NextResponse {
+  return NextResponse.json(
+    {
+      Message_Header: {
+        Message_ID: messageId,
+        Message_Type: "NAK",
+        Error: error,
+      },
     },
     { status: 200 },
   );
@@ -220,12 +238,13 @@ export async function POST(request: NextRequest) {
 
     const body: RxEventBody = await request.json();
 
+    const messageId = body.MessageHeader?.MessageID || body.Message_Header?.Message_ID || "";
     const eventText =
       body.MessageHeader?.InitiatingEventText ||
       body.MessageHeader?.InitiatingEventID ||
       "unknown";
     console.log(
-      `[webhook/pioneerrx] Received event: ${eventText}, messageId: ${body.MessageHeader?.MessageID || "none"}`,
+      `[webhook/pioneerrx] Received event: ${eventText}, messageId: ${messageId || "none"}`,
     );
 
     const { newStatus, queueId, trackingNumber, rxNumber } = deriveStatusFromEvent(body);
@@ -241,7 +260,7 @@ export async function POST(request: NextRequest) {
         details: `Event '${eventText}' received but no queueId found. RxNumber: ${rxNumber || "none"}`,
         status: "warning",
       });
-      return buildSuccessResponse();
+      return buildAckResponse(messageId);
     }
 
     const supabaseAdmin = createAdminClient();
@@ -260,12 +279,9 @@ export async function POST(request: NextRequest) {
         action: "WEBHOOK_STATUS_UPDATE",
         details: `Prescription not found for queueId: ${queueId}, event: ${eventText}`,
         queue_id: queueId,
-        status: "error",
+        status: "warning",
       });
-      return NextResponse.json(
-        { Status: "Error", Message: "Not found", success: false },
-        { status: 404 },
-      );
+      return buildNakResponse(messageId, "UnknownID or missing id");
     }
 
     const updateData: Record<string, unknown> = {
@@ -314,10 +330,7 @@ export async function POST(request: NextRequest) {
         queue_id: queueId,
         status: "error",
       });
-      return NextResponse.json(
-        { Status: "Error", Message: "Update failed", success: false },
-        { status: 500 },
-      );
+      return buildNakResponse(messageId, "Internal processing error");
     }
 
     if (trackingNumber) {
@@ -350,7 +363,7 @@ export async function POST(request: NextRequest) {
       ).catch((err) => console.error("[webhook/pioneerrx] Notification error:", err));
     }
 
-    return buildSuccessResponse();
+    return buildAckResponse(messageId);
   } catch (error) {
     console.error("[webhook/pioneerrx] Webhook error:", error);
     try {
@@ -364,9 +377,6 @@ export async function POST(request: NextRequest) {
         status: "error",
       });
     } catch { /* ignore */ }
-    return NextResponse.json(
-      { Status: "Error", Message: "Internal server error", success: false },
-      { status: 500 },
-    );
+    return buildNakResponse("", "Malformed Json");
   }
 }
