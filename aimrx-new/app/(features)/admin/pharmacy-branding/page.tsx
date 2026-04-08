@@ -139,23 +139,24 @@ export default function PharmacyBrandingPage() {
     if (!user?.id) return;
 
     try {
-      const { data: adminRecord } = await supabase
-        .from("pharmacy_admins")
-        .select("pharmacy_id")
-        .eq("user_id", user.id)
-        .maybeSingle();
+      const res = await fetch("/api/admin/scope");
+      if (!res.ok) {
+        setLoading(false);
+        return;
+      }
+      const scope = await res.json();
 
-      if (!adminRecord?.pharmacy_id) {
+      if (!scope.pharmacyId) {
         setLoading(false);
         return;
       }
 
-      await loadPharmacyById(adminRecord.pharmacy_id);
+      await loadPharmacyById(scope.pharmacyId);
     } catch (err) {
       console.error("Failed to load pharmacy:", err);
       setLoading(false);
     }
-  }, [user?.id, supabase, loadPharmacyById]);
+  }, [user?.id, loadPharmacyById]);
 
   useEffect(() => {
     if (isSuperAdmin) {
