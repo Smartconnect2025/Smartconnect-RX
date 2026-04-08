@@ -38,7 +38,7 @@ export async function POST(
     const { data: rxList, error: rxFetchError } = await supabaseAdmin
       .from("prescriptions")
       .select(
-        "id, prescriber_id, status, payment_status, payment_transaction_id, patient_id, patient_price, quantity, profit_cents, shipping_fee_cents, total_paid_cents",
+        "id, prescriber_id, status, payment_status, payment_transaction_id, patient_id, patient_price, profit_cents, shipping_fee_cents, total_paid_cents",
       )
       .in("id", explicitIds);
 
@@ -87,8 +87,7 @@ export async function POST(
 
     const combinedMedCents = rxList.reduce((sum, rx) => {
       const p = rx.patient_price ? parseFloat(rx.patient_price) : 0;
-      const qty = rx.quantity && rx.quantity > 0 ? rx.quantity : 1;
-      return sum + (Number.isFinite(p) ? Math.round(p * 100) * qty : 0);
+      return sum + (Number.isFinite(p) ? Math.round(p * 100) : 0);
     }, 0);
     const combinedProfitCents = rxList.reduce((sum, rx) => sum + (rx.profit_cents || 0), 0);
     const combinedShippingCents = rxList.reduce((sum, rx) => sum + (rx.shipping_fee_cents || 0), 0);

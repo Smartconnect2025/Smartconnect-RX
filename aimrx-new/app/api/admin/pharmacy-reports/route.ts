@@ -194,10 +194,9 @@ export async function GET(request: NextRequest) {
         const medicationPriceInDollars = medicationPriceCents / 100;
         const providerFeesInDollars = providerFeeCents / 100;
 
-        const prescriptionQty = prescription.quantity && prescription.quantity > 0 ? prescription.quantity : 1;
         const finalMedicationPrice = prescription.total_paid_cents
           ? medicationPriceInDollars
-          : (prescription.patient_price ? parseFloat(prescription.patient_price) * prescriptionQty : 0);
+          : (prescription.patient_price ? parseFloat(prescription.patient_price) : 0);
 
         const finalProviderFees = providerFeesInDollars;
         const finalTotalPrice = finalMedicationPrice + finalProviderFees;

@@ -461,7 +461,9 @@ export async function POST(request: NextRequest) {
         sig: body.sig,
         dispense_as_written: body.dispense_as_written || false,
         pharmacy_notes: body.pharmacy_notes || null,
-        patient_price: body.patient_price || null,
+        patient_price: body.patient_price
+          ? (parseFloat(body.patient_price) * qty).toFixed(2)
+          : null,
         pharmacy_id: body.pharmacy_id || null,
         medication_id: body.medication_id || null,
         profit_cents: body.profit_cents || 0, // Provider oversight/monitoring fees
