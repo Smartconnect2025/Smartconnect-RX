@@ -1,5 +1,10 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "5gbSq-ERYoKFfbSYC1Y15"
+uri = "file://aimrx-new/public/images/westside-graffiti-banner.png"
+type = "image"
+title = "Westside graffiti pharmacy banner"
 
 [[outputs]]
 id = "wRPYAzh1Qk5ph4gGlt8vV"
