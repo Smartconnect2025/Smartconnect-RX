@@ -31,7 +31,7 @@ export async function GET(
       );
     }
 
-    const { data: userRole } = await supabaseAdmin
+    const { data: userRole, error: roleError } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", user.id)
