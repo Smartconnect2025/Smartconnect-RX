@@ -417,6 +417,83 @@ async function resolvePrescriberId(
   return personID ? String(personID) : null;
 }
 
+export async function addPioneerRxPatient(
+  backend: PioneerRxBackend,
+  patient: {
+    firstName: string;
+    lastName: string;
+    dateOfBirth: string;
+    gender: string;
+    street?: string;
+    city?: string;
+    state?: string;
+    zip?: string;
+    phone?: string;
+    email?: string;
+  },
+): Promise<
+  | { success: true; patientId: string }
+  | { success: false; error: string }
+> {
+  const employeeId = backend.employeeId || "2005";
+
+  const genderMap: Record<string, string> = {
+    male: "1",
+    female: "2",
+    m: "1",
+    f: "2",
+    other: "3",
+    unknown: "0",
+  };
+  const genderCode = genderMap[(patient.gender || "").toLowerCase()] || "0";
+
+  const params: Array<{ Name: string; Value: string }> = [
+    { Name: "RequestedByEmployeeID", Value: employeeId },
+    { Name: "FirstName", Value: patient.firstName },
+    { Name: "LastName", Value: patient.lastName },
+    { Name: "GenderID", Value: genderCode },
+  ];
+
+  if (patient.dateOfBirth) {
+    const dob = new Date(patient.dateOfBirth);
+    if (!isNaN(dob.getTime())) {
+      params.push({ Name: "DateOfBirth", Value: `${dob.getMonth() + 1}/${dob.getDate()}/${dob.getFullYear()}` });
+    }
+  }
+
+  if (patient.street) params.push({ Name: "AddressLine1", Value: patient.street });
+  if (patient.city) params.push({ Name: "City", Value: patient.city });
+  if (patient.state) params.push({ Name: "State", Value: patient.state });
+  if (patient.zip) params.push({ Name: "ZipCode", Value: patient.zip });
+  if (patient.phone) params.push({ Name: "PrimaryPhone", Value: patient.phone.replace(/\D/g, "") });
+  if (patient.email) params.push({ Name: "Email", Value: patient.email });
+
+  console.log(`[pioneerrx] Adding patient: ${patient.firstName} ${patient.lastName}`);
+
+  const result = await callPioneerRxMethod(backend, "PatientAdd", params);
+
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+
+  const patientData =
+    (result.data.results?.patient as Array<Record<string, unknown>>)?.[0] ||
+    (result.data.results?.["1"] as Array<Record<string, unknown>>)?.[0];
+
+  const newPatientId = patientData
+    ? String(patientData.personID || patientData.PersonID || patientData.patientID || patientData.PatientID || "")
+    : "";
+
+  if (!newPatientId) {
+    return {
+      success: false,
+      error: "PioneerRx did not return a patient ID after registration",
+    };
+  }
+
+  return { success: true, patientId: newPatientId };
+}
+
 export async function submitPioneerRxEScript(
   backend: PioneerRxBackend,
   payload: {
@@ -482,10 +559,17 @@ export async function submitPioneerRxEScript(
     if (patientId) {
       console.log(`[pioneerrx] Found PatientID: ${patientId}`);
     } else {
-      return {
-        success: false,
-        error: `Patient "${payload.patient.firstName} ${payload.patient.lastName}" not found in PioneerRx. The patient must be registered in the pharmacy's PioneerRx system before a prescription can be submitted.`,
-      };
+      console.log("[pioneerrx] Patient not found, auto-registering in PioneerRx...");
+      const addResult = await addPioneerRxPatient(backend, payload.patient);
+      if (addResult.success) {
+        patientId = addResult.patientId;
+        console.log(`[pioneerrx] Patient auto-registered, PatientID: ${patientId}`);
+      } else {
+        return {
+          success: false,
+          error: `Failed to register patient "${payload.patient.firstName} ${payload.patient.lastName}" in PioneerRx: ${addResult.error}`,
+        };
+      }
     }
   }
 
