@@ -1,0 +1,86 @@
+Joseph Sughayer <joseph@smartconnects.com>
+Thu, Mar 26, 12:06 PM (13 days ago)
+to Jerry
+
+
+Hi Jerry,
+
+Here's a complete summary of where we stand after Monday's meeting with Mitch Archer from PioneerRx, what we've built, and what we need to do next.
+
+MEETING RECAP (Monday March 24th with Mitch Archer)
+
+The meeting covered how PioneerRx's API works, how we connect to it, and what the costs look like. Here are the key takeaways:
+
+1. How the Connection Works:
+
+PioneerRx's production API is PRIVATE — it runs inside each pharmacy's local network
+To connect in production, we need either:
+A site-to-site VPN from our server to the pharmacy's network, OR
+An on-premises component (a small app running on a workstation inside the pharmacy)
+PioneerRx does NOT allow installations on their servers — it must run on pharmacy hardware
+This is for HIPAA compliance and security
+2. Credentials & Access:
+
+Each pharmacy gets its own API key and shared secret
+Since we're acting as the pharmacy's programming staff (not a multi-pharmacy vendor), each pharmacy is responsible for its own credentials and fees
+Sandbox/test access does NOT require contracts or NDA
+Production/store access DOES require signed contracts
+3. Costs (deferred for now, but FYI):
+
+Base fee: $40 per pharmacy location per month
+Per-prescription fee: approximately $0.13 or less (not finalized)
+Vendor minimum: $2,000/month (applies if we switch to vendor model later)
+Pharmacies pay their own transaction fees — SmartConnect does not pay these
+4. Technical Details:
+
+Each prescription item requires a separate API call (3 medications = 3 calls)
+Must search for existing patients before adding new ones (to avoid duplicates)
+Real-time prescription tracking (RX Events/webhooks) is available but only if the pharmacy uses Pioneer's shipping integration
+No API exists to sync compounding medication inventory back into PioneerRx — pharmacy staff must create new items manually
+WHAT WE'VE BUILT
+
+Our system is fully integrated with PioneerRx's Enterprise API. Here's what works:
+
+Submit prescriptions into PioneerRx (uses their RxAddOnHold method)
+Automatically searches for patients and prescribers in PioneerRx before submitting (required by their system)
+Check prescription status in real-time
+Receive automatic status updates via webhook when a prescription is filled, verified, completed, etc.
+Search patients, prescribers, and medications in PioneerRx
+Check refill eligibility
+Test the API connection from the admin panel
+Each pharmacy stores its own PioneerRx credentials securely (encrypted in our database)
+IMMEDIATE NEXT STEPS (in order):
+
+Step 1: Get your Render server's IP address to Mitch
+
+Mitch needs this to whitelist our server for sandbox access
+It takes 4-5 days for their IT to process
+Email: mitch.archer@pioneerrx.com
+This is the #1 blocker right now
+Step 2: Set environment variables on Render
+
+PIONEERRX_WEBHOOK_USERNAME — a username for PioneerRx to send us updates
+PIONEERRX_WEBHOOK_PASSWORD — a password for the same
+(I can help you set these up)
+Step 3: Deploy latest code to Render
+
+Do a "Clear build cache & deploy" in Render dashboard
+This pushes the new PioneerRx integration code live
+Step 4: Test the sandbox connection
+
+Once IP is whitelisted (4-5 days), we can test end-to-end
+Submit a test prescription, check status, verify webhook updates
+Step 5: Plan the VPN / on-prem component for production
+
+This is the bigger conversation — how we connect to each pharmacy's local network
+Options: site-to-site VPN or lightweight on-prem app
+This should be discussed in a follow-up call with Mitch
+IMPORTANT QUESTION FOR YOU:
+The production API requires being on the pharmacy's network. We need to decide: do we set up VPN tunnels from our Render server to each pharmacy, or do we build a small on-premises connector that runs at each pharmacy? This is an architectural decision we should discuss before going to production.
+
+For sandbox testing, this isn't an issue — we just need the IP whitelisted.
+
+Let me know if you have any questions.
+
+Best,
+Joseph Sughayar
