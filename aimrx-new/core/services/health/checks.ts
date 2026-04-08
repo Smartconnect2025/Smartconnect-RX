@@ -301,10 +301,10 @@ export async function checkPioneerRx(
       .update(encoded)
       .digest("base64");
 
-    const testUrl = `${baseUrl}/api/v1/Test/IsAvailableWithAuth`;
+    const testUrl = `${baseUrl}/api/enterprise/isAuthenticated`;
 
     const response = await fetch(testUrl, {
-      method: "GET",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         "prx-api-key": apiKey,
