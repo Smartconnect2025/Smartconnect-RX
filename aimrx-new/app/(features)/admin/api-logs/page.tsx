@@ -910,12 +910,12 @@ export default function APILogsPage() {
                               {api.last_error}
                             </div>
                           )}
-                          {api.metadata?.endpoint && (
+                          {api.metadata && typeof (api.metadata as Record<string, unknown>).endpoint === "string" && (
                             <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
                               <ExternalLink className="h-3 w-3" />
-                              <span className="font-mono truncate">{String(api.metadata.endpoint)}</span>
+                              <span className="font-mono truncate">{String((api.metadata as Record<string, unknown>).endpoint)}</span>
                               <button
-                                onClick={() => copyToClipboard(String(api.metadata?.endpoint || ""))}
+                                onClick={() => copyToClipboard(String((api.metadata as Record<string, unknown>)?.endpoint || ""))}
                                 className="ml-auto p-0.5 hover:bg-gray-200 rounded"
                               >
                                 <Copy className="h-3 w-3" />

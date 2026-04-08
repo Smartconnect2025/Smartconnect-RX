@@ -1,0 +1,55 @@
+April 8, 2026 at 11:45 AM
+failed
+39db97b
+Dynamic API Health Monitoring System - New health check engine: auto-discovers pharmacy backends from DB - Checks DigitalRx, PioneerRx (HMAC auth), Stripe, and Supabase - 10-minute cron: full health ping of all services - 5-minute cron: prescription status sync (submitted/processing) - In-memory cache (5 min TTL) prevents API hammering - API endpoint supports ?runNow=true for manual refresh - Frontend: grouped by category, color-coded status cards - Run Now button for on-demand health checks - Logs health check results to system_logs - Both jobs added to trigger-cron for manual execution - Dynamic: new pharmacy backends auto-discovered on next check
+
+Rollback
+Exited with status 1 while building your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Apr 8, 11:44 AM - 11:49 AM
+GMT+3
+
+
+
+ ⚠ Installing TypeScript as it was not found while loading "next.config.ts".
+Installing devDependencies (npm):
+- typescript
+added 311 packages, and audited 859 packages in 5s
+312 packages are looking for funding
+  run `npm fund` for details
+18 vulnerabilities (1 low, 8 moderate, 8 high, 1 critical)
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+Some issues need review, and may require choosing
+a different dependency.
+Run `npm audit` for details.
+ ⚠ Warning: Found multiple lockfiles. Selecting /opt/render/project/src/pnpm-lock.yaml.
+   Consider removing the lockfiles at:
+   * /opt/render/project/src/aimrx-new/package-lock.json
+   ▲ Next.js 15.4.10
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 25.0s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+./app/(features)/admin/api-logs/page.tsx:913:27
+Type error: Type 'unknown' is not assignable to type 'ReactNode'.
+  911 |                             </div>
+Menu
+  912 |                           )}
+> 913 |                           {api.metadata?.endpoint && (
+      |                           ^
+  914 |                             <div className="mt-2 flex items-center gap-1 text-xs text-gray-500">
+  915 |                               <ExternalLink className="h-3 w-3" />
+  916 |                               <span className="font-mono truncate">{String(api.metadata.endpoint)}</span>
+Next.js build worker exited with code: 1 and signal: null
+==> Build failed 😞
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+Need b
