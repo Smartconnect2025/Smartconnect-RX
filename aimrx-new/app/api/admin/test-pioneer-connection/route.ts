@@ -64,13 +64,9 @@ export async function POST(request: NextRequest) {
       ? decryptApiKey(backend.api_key_encrypted)
       : backend.api_key_encrypted;
 
-    let apiKey = rawKey;
-    let sharedSecret = "";
-    const pipeIndex = rawKey.indexOf("|");
-    if (pipeIndex > 0 && pipeIndex < rawKey.length - 1) {
-      apiKey = rawKey.substring(0, pipeIndex);
-      sharedSecret = rawKey.substring(pipeIndex + 1);
-    }
+    const parts = rawKey.split("|");
+    const apiKey = parts[0];
+    const sharedSecret = parts.length >= 2 ? parts[1] : "";
 
     if (!sharedSecret) {
       return NextResponse.json({
@@ -94,10 +90,10 @@ export async function POST(request: NextRequest) {
       .update(encoded)
       .digest("base64");
 
-    const testUrl = `${backend.api_url.replace(/\/+$/, "")}/api/v1/Test/IsAvailableWithAuth`;
+    const testUrl = `${backend.api_url.replace(/\/+$/, "")}/api/enterprise/isAuthenticated`;
 
     const response = await fetch(testUrl, {
-      method: "GET",
+      method: "POST",
       headers: {
         "Content-Type": "application/json",
         "prx-api-key": apiKey,
