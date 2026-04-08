@@ -248,7 +248,7 @@ export async function POST(request: NextRequest) {
     } else if (type === "pharmacy-banner" && entityId) {
       const { data: updatedRows, error: updateError } = await adminClient
         .from("pharmacies")
-        .update({ banner_url: publicUrl, updated_at: new Date().toISOString() })
+        .update({ catalog_banner_url: publicUrl, updated_at: new Date().toISOString() })
         .eq("id", entityId)
         .select("id");
 
