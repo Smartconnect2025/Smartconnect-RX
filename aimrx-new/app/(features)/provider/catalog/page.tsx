@@ -150,6 +150,7 @@ interface PharmacyMedication {
     slug: string;
     primary_color: string;
     tagline: string;
+    banner_url?: string | null;
   };
 }
 
@@ -439,6 +440,7 @@ export default function ProviderCatalogPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [dbCategoryImages, setDbCategoryImages] = useState<Record<string, string>>({});
   const [prescribingMedId, setPrescribingMedId] = useState<string | null>(null);
+  const [pharmacyBannerUrl, setPharmacyBannerUrl] = useState<string | null>(null);
 
   const setSelectedCategory = useCallback((category: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -462,6 +464,9 @@ export default function ProviderCatalogPage() {
         const data = await medsResponse.json();
         if (data.success) {
           setMedications(data.medications || []);
+          if (data.pharmacy?.banner_url) {
+            setPharmacyBannerUrl(data.pharmacy.banner_url);
+          }
         }
         if (catsResponse?.ok) {
           const catsData = await catsResponse.json();
@@ -487,13 +492,14 @@ export default function ProviderCatalogPage() {
   };
 
   const allPharmacies = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; primary_color: string }>();
+    const map = new Map<string, { id: string; name: string; primary_color: string; banner_url?: string | null }>();
     medications.forEach((med) => {
       if (med.pharmacy && !map.has(med.pharmacy.id)) {
         map.set(med.pharmacy.id, {
           id: med.pharmacy.id,
           name: med.pharmacy.name,
           primary_color: med.pharmacy.primary_color,
+          banner_url: med.pharmacy.banner_url,
         });
       }
     });
@@ -593,15 +599,34 @@ export default function ProviderCatalogPage() {
   const inStockCount = filteredMedications.filter((m) => m.in_stock !== false).length;
   const totalProducts = filteredMedications.length;
 
+  const catalogBannerUrl = useMemo(() => {
+    if (selectedPharmacy !== "all") {
+      const pharmacy = allPharmacies.find((p) => p.id === selectedPharmacy);
+      return pharmacy?.banner_url || null;
+    }
+    return pharmacyBannerUrl || null;
+  }, [selectedPharmacy, allPharmacies, pharmacyBannerUrl]);
+
   return (
     <>
       <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
         <div className="relative overflow-hidden bg-gradient-to-r from-[#1E3A8A] via-[#2563EB] to-[#3B82F6]">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
-            <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full translate-x-1/3 translate-y-1/3" />
-            <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
-          </div>
+          {catalogBannerUrl ? (
+            <>
+              <img
+                src={catalogBannerUrl}
+                alt=""
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-black/50" />
+            </>
+          ) : (
+            <div className="absolute inset-0 opacity-10">
+              <div className="absolute top-0 left-0 w-72 h-72 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
+              <div className="absolute bottom-0 right-0 w-96 h-96 bg-white rounded-full translate-x-1/3 translate-y-1/3" />
+              <div className="absolute top-1/2 left-1/2 w-48 h-48 bg-white rounded-full -translate-x-1/2 -translate-y-1/2" />
+            </div>
+          )}
 
           <div className="relative container max-w-7xl mx-auto px-4 py-10 sm:py-14">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">

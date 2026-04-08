@@ -65,10 +65,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const maxSize = 3 * 1024 * 1024;
+    const maxSize = type === "pharmacy-banner" ? 5 * 1024 * 1024 : 3 * 1024 * 1024;
     if (file.size > maxSize) {
       return NextResponse.json(
-        { success: false, error: "File too large. Maximum size: 3MB" },
+        { success: false, error: `File too large. Maximum size: ${type === "pharmacy-banner" ? "5MB" : "3MB"}` },
         { status: 400 }
       );
     }
@@ -127,9 +127,24 @@ export async function POST(request: NextRequest) {
       }
       bucket = "pharmacy-logos";
       filePath = `pharmacies/${entityId}/${safeName}-${timestamp}-${randomId}.${ext}`;
+    } else if (type === "pharmacy-banner") {
+      if (!entityId) {
+        return NextResponse.json(
+          { success: false, error: "entityId (pharmacy ID) is required for pharmacy-banner uploads" },
+          { status: 400 }
+        );
+      }
+      if (isPharmacyAdmin && entityId !== scope.pharmacyId) {
+        return NextResponse.json(
+          { success: false, error: "You can only upload a banner for your own pharmacy" },
+          { status: 403 }
+        );
+      }
+      bucket = "pharmacy-banners";
+      filePath = `pharmacies/${entityId}/${safeName}-banner-${timestamp}-${randomId}.${ext}`;
     } else {
       return NextResponse.json(
-        { success: false, error: "Invalid upload type. Use 'medication', 'category', or 'pharmacy-logo'" },
+        { success: false, error: "Invalid upload type. Use 'medication', 'category', 'pharmacy-logo', or 'pharmacy-banner'" },
         { status: 400 }
       );
     }
@@ -140,9 +155,10 @@ export async function POST(request: NextRequest) {
     const { data: buckets } = await adminClient.storage.listBuckets();
     const bucketExists = buckets?.some((b: { name: string }) => b.name === bucket);
     if (!bucketExists) {
+      const bucketSizeLimit = bucket === "pharmacy-banners" ? 5 * 1024 * 1024 : 3 * 1024 * 1024;
       const { error: createBucketError } = await adminClient.storage.createBucket(bucket, {
         public: true,
-        fileSizeLimit: 3 * 1024 * 1024,
+        fileSizeLimit: bucketSizeLimit,
         allowedMimeTypes: ["image/jpeg", "image/png", "image/webp"],
       });
       if (createBucketError && !createBucketError.message?.includes("already exists")) {
@@ -224,6 +240,31 @@ export async function POST(request: NextRequest) {
       if (!updatedRows || updatedRows.length === 0) {
         const { error: removeErr } = await adminClient.storage.from(bucket).remove([filePath]);
         if (removeErr) console.error("Failed to clean up orphaned logo file:", filePath, removeErr);
+        return NextResponse.json(
+          { success: false, error: "Pharmacy not found" },
+          { status: 404 }
+        );
+      }
+    } else if (type === "pharmacy-banner" && entityId) {
+      const { data: updatedRows, error: updateError } = await adminClient
+        .from("pharmacies")
+        .update({ banner_url: publicUrl, updated_at: new Date().toISOString() })
+        .eq("id", entityId)
+        .select("id");
+
+      if (updateError) {
+        console.error("DB update error, cleaning up uploaded file:", updateError);
+        const { error: removeErr } = await adminClient.storage.from(bucket).remove([filePath]);
+        if (removeErr) console.error("Failed to clean up orphaned banner file:", filePath, removeErr);
+        return NextResponse.json(
+          { success: false, error: "Failed to save banner. Please try again." },
+          { status: 500 }
+        );
+      }
+
+      if (!updatedRows || updatedRows.length === 0) {
+        const { error: removeErr } = await adminClient.storage.from(bucket).remove([filePath]);
+        if (removeErr) console.error("Failed to clean up orphaned banner file:", filePath, removeErr);
         return NextResponse.json(
           { success: false, error: "Pharmacy not found" },
           { status: 404 }

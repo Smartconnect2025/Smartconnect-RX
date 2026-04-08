@@ -54,6 +54,7 @@ interface PharmacyData {
   id: string;
   name: string;
   logo_url: string | null;
+  banner_url: string | null;
   primary_color: string | null;
   tagline: string | null;
   phone: string | null;
@@ -73,6 +74,7 @@ export default function PharmacyBrandingPage() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const [logoUrl, setLogoUrl] = useState("");
+  const [bannerUrl, setBannerUrl] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#00AEEF");
   const [tagline, setTagline] = useState("");
   const [phone, setPhone] = useState("");
@@ -82,6 +84,8 @@ export default function PharmacyBrandingPage() {
   const [selectedPharmacyId, setSelectedPharmacyId] = useState<string>("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const bannerInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
   const loadRequestRef = useRef(0);
 
   const fetchPharmacies = useCallback(async () => {
@@ -103,7 +107,7 @@ export default function PharmacyBrandingPage() {
     try {
       const { data: pharmacyData } = await supabase
         .from("pharmacies")
-        .select("id, name, logo_url, primary_color, tagline, phone, address")
+        .select("id, name, logo_url, banner_url, primary_color, tagline, phone, address")
         .eq("id", pharmacyId)
         .single();
 
@@ -112,6 +116,7 @@ export default function PharmacyBrandingPage() {
       if (pharmacyData) {
         setPharmacy(pharmacyData);
         setLogoUrl(pharmacyData.logo_url || "");
+        setBannerUrl(pharmacyData.banner_url || "");
         setPrimaryColor(pharmacyData.primary_color || "#00AEEF");
         setTagline(pharmacyData.tagline || "");
         setPhone(pharmacyData.phone || "");
@@ -176,6 +181,7 @@ export default function PharmacyBrandingPage() {
     setSaveStatus("idle");
     setErrorMessage("");
     setLogoUrl("");
+    setBannerUrl("");
     setPrimaryColor("#00AEEF");
     setTagline("");
     setPhone("");
@@ -194,6 +200,7 @@ export default function PharmacyBrandingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           logo_url: logoUrl || null,
+          banner_url: bannerUrl || null,
           primary_color: primaryColor,
           tagline: tagline || null,
           phone: phone || null,
@@ -267,6 +274,59 @@ export default function PharmacyBrandingPage() {
 
   const handleRemoveLogo = () => {
     setLogoUrl("");
+  };
+
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !pharmacy) return;
+
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      setErrorMessage("Invalid file type. Use JPG, PNG, or WebP.");
+      setSaveStatus("error");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage("File too large. Maximum 5MB.");
+      setSaveStatus("error");
+      return;
+    }
+
+    setUploadingBanner(true);
+    setErrorMessage("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", "pharmacy-banner");
+      formData.append("entityId", pharmacy.id);
+      formData.append("entityName", pharmacy.name);
+
+      const res = await fetch("/api/admin/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await res.json();
+      if (!res.ok || !result.success) {
+        throw new Error(result.error || "Upload failed");
+      }
+
+      setBannerUrl(result.url);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Upload failed");
+      setSaveStatus("error");
+    } finally {
+      setUploadingBanner(false);
+      if (bannerInputRef.current) {
+        bannerInputRef.current.value = "";
+      }
+    }
+  };
+
+  const handleRemoveBanner = () => {
+    setBannerUrl("");
   };
 
   if (loading) {
@@ -464,6 +524,74 @@ export default function PharmacyBrandingPage() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg">
+                <ImageIcon className="h-5 w-5 text-blue-600" />
+                Catalog Banner
+              </CardTitle>
+              <CardDescription>
+                Upload a custom banner image for your product catalog page. Recommended size: 1400×300px. Max 5MB, JPG/PNG/WebP.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {bannerUrl ? (
+                <div className="relative">
+                  <div className="border rounded-lg overflow-hidden bg-gray-50">
+                    <div className="relative w-full h-[120px]">
+                      <img
+                        src={bannerUrl}
+                        alt="Catalog banner"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <span className="text-white font-semibold text-sm">Banner Preview</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleRemoveBanner}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600 transition-colors"
+                    title="Remove banner"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <ImageIcon className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500">No banner uploaded</p>
+                  <p className="text-xs text-gray-400 mt-1">The default blue gradient will be used</p>
+                </div>
+              )}
+
+              <div>
+                <input
+                  ref={bannerInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  onChange={handleBannerUpload}
+                  className="hidden"
+                  id="banner-upload"
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => bannerInputRef.current?.click()}
+                  disabled={uploadingBanner}
+                  className="w-full"
+                >
+                  {uploadingBanner ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  {uploadingBanner ? "Uploading..." : bannerUrl ? "Replace Banner" : "Upload Banner"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
                 <Palette className="h-5 w-5 text-blue-600" />
                 Brand Color
               </CardTitle>
@@ -583,7 +711,7 @@ export default function PharmacyBrandingPage() {
 
           <Button
             onClick={handleSave}
-            disabled={saving || uploading}
+            disabled={saving || uploading || uploadingBanner}
             className="w-full h-12 text-base font-medium"
             style={{ backgroundColor: primaryColor || "#00AEEF" }}
           >
@@ -592,7 +720,7 @@ export default function PharmacyBrandingPage() {
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Saving...
               </>
-            ) : uploading ? (
+            ) : uploading || uploadingBanner ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
                 Upload in progress...
