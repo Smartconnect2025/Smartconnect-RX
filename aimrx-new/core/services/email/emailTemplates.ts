@@ -116,7 +116,8 @@ export function emailFooterWithSupport(branding?: PharmacyBranding): string {
     <tr>
       <td style="background-color: #f8fafc; padding: 20px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
         <p style="margin: 0 0 4px; font-size: 12px; color: #94a3b8;">Thank you for trusting <strong style="color: ${primaryColor};">${displayName}</strong> with your care.</p>
-        <p style="margin: 0; font-size: 11px; color: #94a3b8;">© ${CURRENT_YEAR} ${displayName}. All rights reserved.</p>
+        <p style="margin: 0 0 8px; font-size: 11px; color: #94a3b8;">© ${CURRENT_YEAR} ${displayName}. All rights reserved.</p>
+        <p style="margin: 0; font-size: 10px; color: #cbd5e1;">Powered by <span style="color: #94a3b8;">SmartConnect</span></p>
       </td>
     </tr>`;
 }
@@ -128,7 +129,8 @@ export function emailFooterSimple(branding?: PharmacyBranding): string {
     <tr>
       <td style="background-color: #f8fafc; padding: 20px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
         <p style="margin: 0 0 4px; font-size: 12px; color: #94a3b8;">Thank you for trusting <strong style="color: ${primaryColor};">${displayName}</strong>.</p>
-        <p style="margin: 0; font-size: 11px; color: #94a3b8;">© ${CURRENT_YEAR} ${displayName}. All rights reserved.</p>
+        <p style="margin: 0 0 8px; font-size: 11px; color: #94a3b8;">© ${CURRENT_YEAR} ${displayName}. All rights reserved.</p>
+        <p style="margin: 0; font-size: 10px; color: #cbd5e1;">Powered by <span style="color: #94a3b8;">SmartConnect</span></p>
       </td>
     </tr>`;
 }
