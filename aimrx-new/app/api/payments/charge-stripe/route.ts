@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { getUser } from "@/core/auth/get-user";
 import { envConfig } from "@/core/config/envConfig";
-import { getPaymentConfigById } from "@/core/services/pharmacyPaymentConfigService";
+import { getActivePaymentConfig } from "@/core/services/pharmacyPaymentConfigService";
 import Stripe from "stripe";
 
 export async function POST(request: NextRequest) {
@@ -119,8 +119,8 @@ export async function POST(request: NextRequest) {
     claimedTransactionId = transaction.id;
 
     let stripeSecretKey: string | undefined;
-    if (transaction.payment_config_id) {
-      const pharmacyConfig = await getPaymentConfigById(transaction.payment_config_id);
+    if (transaction.pharmacy_id) {
+      const pharmacyConfig = await getActivePaymentConfig(transaction.pharmacy_id);
       if (pharmacyConfig?.stripeSecretKey) {
         stripeSecretKey = pharmacyConfig.stripeSecretKey;
       }
@@ -185,7 +185,7 @@ export async function POST(request: NextRequest) {
         .update({
           payment_status: "completed",
           order_progress: "payment_received",
-          stripe_payment_intent_id: pi.id,
+          authnet_transaction_id: pi.id,
           card_last_four: cardLast4,
           card_type: cardBrand,
           paid_at: now,
@@ -279,7 +279,7 @@ export async function POST(request: NextRequest) {
     if (paymentIntent.status === "requires_action" || paymentIntent.status === "requires_confirmation") {
       await supabase
         .from("payment_transactions")
-        .update({ payment_status: "pending", stripe_payment_intent_id: paymentIntent.id })
+        .update({ payment_status: "pending", authnet_transaction_id: paymentIntent.id })
         .eq("id", claimedTransactionId);
       claimedTransactionId = null;
 
@@ -327,7 +327,7 @@ export async function POST(request: NextRequest) {
       .update({
         payment_status: "completed",
         order_progress: "payment_received",
-        stripe_payment_intent_id: paymentIntent.id,
+        authnet_transaction_id: paymentIntent.id,
         card_last_four: cardLastFour,
         card_type: cardBrand,
         paid_at: now,

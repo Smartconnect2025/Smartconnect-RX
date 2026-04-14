@@ -175,8 +175,7 @@ async function handleCheckoutCompleted(
     .update({
       payment_status: "completed",
       order_progress: "payment_received",
-      stripe_payment_intent_id: stripePaymentIntentId,
-      stripe_session_id: session.id,
+      authnet_transaction_id: stripePaymentIntentId || session.id,
       card_last_four: cardLastFour,
       card_type: cardBrand,
       paid_at: new Date().toISOString(),
@@ -334,7 +333,7 @@ async function handlePaymentIntentSucceeded(
   const { data: existing } = await supabase
     .from("payment_transactions")
     .select("*")
-    .eq("stripe_payment_intent_id", paymentIntent.id)
+    .eq("authnet_transaction_id", paymentIntent.id)
     .single();
 
   if (!existing) {
@@ -487,7 +486,7 @@ async function handleChargeRefunded(
       refund_amount_cents: refundAmountCents,
       refunded_at: new Date().toISOString(),
     })
-    .eq("stripe_payment_intent_id", paymentIntentId);
+    .eq("authnet_transaction_id", paymentIntentId);
 
   if (error) {
     console.error(`[STRIPE-WEBHOOK] Failed to handle refund for ${paymentIntentId}:`, error.message);
@@ -505,7 +504,7 @@ async function handlePaymentFailed(
       .from("payment_transactions")
       .update({
         payment_status: "failed",
-        stripe_payment_intent_id: paymentIntent.id,
+        authnet_transaction_id: paymentIntent.id,
         webhook_received_at: new Date().toISOString(),
       })
       .eq("payment_token", paymentToken);
