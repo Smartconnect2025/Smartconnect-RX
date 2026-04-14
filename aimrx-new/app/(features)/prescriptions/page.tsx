@@ -419,7 +419,7 @@ export default function PrescriptionsPage() {
         ? `Dr. ${providerData.first_name} ${providerData.last_name}`
         : "Unknown Provider";
 
-      const formatted = data.map((rx) => {
+      const formatted = data.map((rx: any) => {
         const patient = Array.isArray(rx.patient) ? rx.patient[0] : rx.patient;
         const pharmacy = Array.isArray(rx.pharmacy)
           ? rx.pharmacy[0]
