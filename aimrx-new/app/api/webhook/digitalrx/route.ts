@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@core/database/client";
 import { notifyPrescriptionStatusChange } from "@/features/notifications/services/serverNotificationService";
 import { ensureTrackerRegistered } from "@/app/api/prescriptions/_shared/tracking-sync";
+import { sendPatientStatusEmail } from "@core/services/email/send-patient-status-email";
 
 const DIGITALRX_WEBHOOK_SECRET = process.env.DIGITALRX_WEBHOOK_SECRET;
 
@@ -184,18 +185,26 @@ export async function POST(request: NextRequest) {
       status: "success",
     });
 
-    if (prescription.prescriber_id && newStatus !== prescription.status) {
-      const patient = prescription.patients as { first_name?: string; last_name?: string } | null;
-      const patientName = patient
-        ? `${patient.first_name || ""} ${patient.last_name || ""}`.trim()
-        : "Patient";
-      notifyPrescriptionStatusChange(
-        prescription.prescriber_id,
-        queueId,
-        patientName,
+    if (newStatus !== prescription.status) {
+      if (prescription.prescriber_id) {
+        const patient = prescription.patients as { first_name?: string; last_name?: string } | null;
+        const patientName = patient
+          ? `${patient.first_name || ""} ${patient.last_name || ""}`.trim()
+          : "Patient";
+        notifyPrescriptionStatusChange(
+          prescription.prescriber_id,
+          queueId,
+          patientName,
+          newStatus,
+          prescription.id,
+        ).catch((err) => console.error("[webhook/digitalrx] Notification error:", err));
+      }
+
+      sendPatientStatusEmail({
+        prescriptionId: prescription.id,
         newStatus,
-        prescription.id,
-      ).catch((err) => console.error("[webhook/digitalrx] Notification error:", err));
+        trackingNumber: trackingNumber || null,
+      }).catch((err) => console.error("[webhook/digitalrx] Patient status email error:", err));
     }
 
     return NextResponse.json(

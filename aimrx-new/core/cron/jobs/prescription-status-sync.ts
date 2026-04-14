@@ -15,6 +15,7 @@ import {
   mapPioneerRxStatus,
   type PioneerRxBackend,
 } from "@/app/api/prescriptions/_shared/pioneerrx-helpers";
+import { sendPatientStatusEmail } from "@core/services/email/send-patient-status-email";
 
 interface PrescriptionRow {
   id: string;
@@ -158,6 +159,14 @@ export async function syncPrescriptionStatuses() {
               newStatus,
               trackingNumber,
             });
+
+            if (newStatus !== rx.status) {
+              sendPatientStatusEmail({
+                prescriptionId: rx.id,
+                newStatus,
+                trackingNumber,
+              }).catch((err) => console.error(`[prescription-status-sync] Status email error for ${rx.id}:`, err));
+            }
           }
         } else {
           run.trackSuccess({ prescriptionId: rx.id, status: "no-change" });

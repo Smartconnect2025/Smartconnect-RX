@@ -411,4 +411,54 @@ export function adminDetailCard(title: string, fields: { label: string; value: s
     </div>`;
 }
 
+export function statusEmailHtml(options: {
+  patientName: string;
+  medication: string;
+  providerName: string;
+  heading: string;
+  gradient: string;
+  message: string;
+  nextSteps: string;
+  steps: ProgressStep[];
+  trackingNumber?: string;
+  trackingUrl?: string;
+  pharmacyName?: string;
+  pharmacyPhone?: string;
+  pharmacyAddress?: string;
+}): string {
+  const trackingBox = options.trackingNumber
+    ? `<div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 2px solid #93c5fd; border-radius: 10px; padding: 20px; margin: 20px 0; text-align: center;">
+        <p style="margin: 0 0 8px; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Tracking Number</p>
+        <p style="margin: 0 0 16px; font-family: 'Courier New', monospace; font-size: 20px; font-weight: 700; color: #1e3a8a; letter-spacing: 2px;">${options.trackingNumber}</p>
+        ${options.trackingUrl ? `<a href="${options.trackingUrl}" style="display: inline-block; padding: 10px 28px; background: ${GRADIENTS.ctaButton}; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px;">Track Package</a>` : ""}
+      </div>`
+    : "";
+
+  const pharmacyBox = options.pharmacyName
+    ? `<div style="background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
+        <p style="margin: 0 0 4px; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Fulfilling Pharmacy</p>
+        <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1e293b;">${options.pharmacyName}</p>
+        ${options.pharmacyPhone ? `<p style="margin: 4px 0 0; font-size: 13px; color: #475569;">📞 ${options.pharmacyPhone}</p>` : ""}
+        ${options.pharmacyAddress ? `<p style="margin: 4px 0 0; font-size: 13px; color: #475569;">📍 ${options.pharmacyAddress}</p>` : ""}
+      </div>`
+    : "";
+
+  return emailWrapper(
+    emailHeader({ gradient: options.gradient, heading: options.heading }) +
+    contentSection(`
+      <p style="font-size: 16px; color: #334155; margin: 0 0 8px;">Hi ${options.patientName},</p>
+      <p style="font-size: 16px; color: #334155; margin: 0 0 20px;">${options.message}</p>
+      ${detailsCard("Prescription Details",
+        detailRow("Prescribing Clinician", `<strong style="color: #1E3A8A;">${options.providerName}</strong>`, "#1E3A8A") +
+        detailRow("Medication(s)", options.medication)
+      )}
+      ${trackingBox}
+      ${pharmacyBox}
+      ${infoBox(`<p style="margin: 0; font-size: 14px; color: #334155;"><strong>What Happens Next</strong></p><p style="margin: 8px 0 0; font-size: 13px; color: #475569;">${options.nextSteps}</p>`)}
+      ${progressTracker(options.steps)}
+    `) +
+    emailFooterWithSupport()
+  );
+}
+
 export { APP_NAME, APP_URL, LOGIN_URL, LOGO_URL, SUPPORT_PHONE, SUPPORT_EMAIL, SUPPORT_HOURS };
