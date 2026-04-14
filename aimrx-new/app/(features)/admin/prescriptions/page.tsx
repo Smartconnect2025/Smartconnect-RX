@@ -618,8 +618,19 @@ export default function AdminPrescriptionsPage() {
       </div>
 
       <div className="bg-white border border-border rounded-lg overflow-hidden">
-        <div>
-          <Table className="w-full">
+        <div className="overflow-x-auto">
+          <Table className="w-full table-fixed min-w-[800px]">
+            <colgroup>
+              <col className="w-[130px]" />
+              <col className="w-[120px]" />
+              <col className="w-[110px]" />
+              <col style={{ width: "22%" }} />
+              <col className="w-[70px]" />
+              <col className="w-[65px]" />
+              <col className="w-[90px]" />
+              <col style={{ width: "18%" }} />
+              <col className="w-[95px]" />
+            </colgroup>
             <TableHeader>
               <TableRow className="bg-gray-50">
                 <TableHead className="font-semibold text-sm px-3 whitespace-nowrap">Date</TableHead>
@@ -707,8 +718,8 @@ export default function AdminPrescriptionsPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="py-3 px-3">
-                      <div>
+                    <TableCell className="py-3 px-3 overflow-hidden">
+                      <div className="overflow-hidden">
                         <span className="text-sm truncate block" title={prescription.medication}>
                           {prescription.medication}
                         </span>
@@ -735,16 +746,16 @@ export default function AdminPrescriptionsPage() {
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-3 px-3">
+                    <TableCell className="py-3 px-3 overflow-hidden">
                       {prescription.pharmacyName ? (
-                        <span className="text-sm" style={{ color: prescription.pharmacyColor || "#1E3A8A" }}>
+                        <span className="text-sm truncate block" style={{ color: prescription.pharmacyColor || "#1E3A8A" }} title={prescription.pharmacyName}>
                           {prescription.pharmacyName}
                         </span>
                       ) : (
                         <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-3 px-3">
+                    <TableCell className="py-3 px-3 overflow-hidden">
                       <p className="text-sm truncate cursor-help" title={prescription.sig}>
                         {prescription.sig}
                       </p>
