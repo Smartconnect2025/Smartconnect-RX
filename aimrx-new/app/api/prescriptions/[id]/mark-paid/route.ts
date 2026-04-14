@@ -37,17 +37,25 @@ export async function POST(
 
     const { data: primaryRx } = await supabaseAdmin
       .from("prescriptions")
-      .select("order_group_id, pharmacy_id")
+      .select("pharmacy_id")
       .eq("id", prescriptionId)
       .single();
 
-    if (primaryRx?.order_group_id && explicitIds.length === 1) {
-      const { data: groupRxs } = await supabaseAdmin
+    if (explicitIds.length === 1) {
+      const probe = await supabaseAdmin
         .from("prescriptions")
-        .select("id")
-        .eq("order_group_id", primaryRx.order_group_id);
-      if (groupRxs && groupRxs.length > 1) {
-        explicitIds = groupRxs.map((rx) => rx.id);
+        .select("order_group_id")
+        .eq("id", prescriptionId)
+        .single();
+      const groupId = probe.error ? null : (probe.data as Record<string, unknown>)?.order_group_id;
+      if (groupId) {
+        const { data: groupRxs } = await supabaseAdmin
+          .from("prescriptions")
+          .select("id")
+          .eq("order_group_id", groupId as string);
+        if (groupRxs && groupRxs.length > 1) {
+          explicitIds = groupRxs.map((rx) => rx.id);
+        }
       }
     }
 

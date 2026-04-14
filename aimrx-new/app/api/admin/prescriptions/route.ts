@@ -55,35 +55,29 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "No pharmacy assigned to your account" }, { status: 403 });
     }
 
+    const selectFields = [
+      "id", "queue_id", "submitted_at", "medication", "dosage", "quantity",
+      "refills", "sig", "status", "payment_status", "patient_price",
+      "shipping_fee_cents", "profit_cents", "tracking_number", "fedex_status",
+      "estimated_delivery", "has_custom_address", "custom_address",
+      "payment_transaction_id", "prescriber_id", "pharmacy_id", "patient_id",
+      "patient:patients(first_name, last_name, email, physical_address)",
+      "pharmacy:pharmacies(name, primary_color)",
+    ];
+
+    let hasOrderGroupId = true;
+    {
+      const probe = await supabase
+        .from("prescriptions")
+        .select("order_group_id")
+        .limit(0);
+      if (probe.error) hasOrderGroupId = false;
+    }
+    if (hasOrderGroupId) selectFields.splice(selectFields.indexOf("payment_transaction_id"), 0, "order_group_id");
+
     let query = supabase
       .from("prescriptions")
-      .select(`
-        id,
-        queue_id,
-        submitted_at,
-        medication,
-        dosage,
-        quantity,
-        refills,
-        sig,
-        status,
-        payment_status,
-        patient_price,
-        shipping_fee_cents,
-        profit_cents,
-        tracking_number,
-        fedex_status,
-        estimated_delivery,
-        has_custom_address,
-        custom_address,
-        order_group_id,
-        payment_transaction_id,
-        prescriber_id,
-        pharmacy_id,
-        patient_id,
-        patient:patients(first_name, last_name, email, physical_address),
-        pharmacy:pharmacies(name, primary_color)
-      `)
+      .select(selectFields.join(", "))
       .neq("status", "cancelled")
       .order("submitted_at", { ascending: false });
 
