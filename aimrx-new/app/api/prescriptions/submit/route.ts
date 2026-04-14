@@ -467,7 +467,7 @@ export async function POST(request: NextRequest) {
           : null,
         pharmacy_id: body.pharmacy_id || null,
         medication_id: body.medication_id || null,
-        order_group_id: body.submission_group_id || null,
+        
         profit_cents: body.profit_cents || 0,
         consultation_reason: body.consultation_reason || null,
         shipping_fee_cents: body.shipping_fee_cents || 0,
