@@ -1,0 +1,146 @@
+Here's my complete gap analysis. I found 17 gaps between the blueprint and the current codebase. Here are the most critical ones:
+
+Missing entirely:
+
+charge-nonce API — The "Charge Now" flow that lets providers enter a patient's card directly in the portal doesn't exist. Currently the modal just redirects to the hosted checkout page (which is the patient flow).
+authnet-config API — Needed to load Accept.js SDK for client-side card tokenization.
+Broken flows:
+3. BillPatientModal "Charge Now" tab — Should have card entry fields (card number, expiry, CVV, ZIP) with Accept.js tokenization. Currently it's just a redirect to the hosted checkout.
+
+generate-link — Missing race condition protection (claim step), trusts client-provided prices instead of computing from DB, and blocks admin/super_admin roles from generating links.
+submit-to-pharmacy — No race condition protection against duplicate submissions, and blocks admin override for unpaid prescriptions.
+mark-paid — Never sends confirmation email to the patient after manual payment.
+Webhook handler — Only processes a single prescription, not group prescriptions. Void/refund events don't update prescriptions. Capture handler is too simple.
+get-hosted-token and verify-and-complete — Missing race condition claims.
+Payment details API — Doesn't return individual prescription/medication list for the patient page.
+Phone/DOB formatters — Don't validate properly per blueprint spec.
+The fix plan is 10 tasks. Should I start building these fixes now? I'll work through them in priority order — starting with the most critical missing pieces (charge-nonce API + authnet-config, then the BillPatientModal rebuild, then the generate-link and submit-to-pharmacy fixes).
+
+
+Checkpoint made
+24 minutes ago
+
+Worked for 7 minutes
+ok please implement the fix plan please
+
+23 minutes ago
+
+41 messages & 57 actions
+
+Checkpoint made
+11 minutes ago
+Enhance payment processing and prescription management workflows
+12:15 noon, Apr 14, 2026
+
+Rollback here
+
+Changes
+
+Preview
+
+Worked for 12 minutes
+Time worked
+12 minutes
+Work done
+66 actions
+Items read
+8131 lines
+Code changed
++2139
+-932
+Agent Usage
+$7.16
+
+Pasted-Page-Layout-Container-maxWidth-95vw-py-8-px-4-centered-_1776157697925.txt
+
+Attached Image
+ok now we need to look into the app and we need to fix the look of this page as follows the icnomming perscription page please implemnet the code for the style
+
+11 minutes ago
+
+Show less
+
+Deciding on page restyling approach
+Let me find the incoming prescriptions page component:
+
+
+6 actions
+I'll update the Incoming Prescriptions page to match the spec. Let me make all the styling changes:
+
+
+Edited aimrx-new/app/(features)/admin/prescriptions/page.tsx
+Now let me update the table structure - replace the percentage-based colgroup with spec-based widths and fix all cell styling:
+
+
+Edited aimrx-new/app/(features)/admin/prescriptions/page.tsx
+Now update the column headers with proper widths per spec:
+
+
+Edited aimrx-new/app/(features)/admin/prescriptions/page.tsx
+Now update the Provider cell to add font-medium:
+
+
+Edited aimrx-new/app/(features)/admin/prescriptions/page.tsx
+Now update the group badge to font-bold:
+
+
+Edited aimrx-new/app/(features)/admin/prescriptions/page.tsx
+Now update the medication cell to add font-medium and max-w-[200px]:
+
+
+Edited aimrx-new/app/(features)/admin/prescriptions/page.tsx
+Now update the Price cell to add green color:
+
+
+Edited aimrx-new/app/(features)/admin/prescriptions/page.tsx
+Now update the Pharmacy cell to show "Not specified" and add font-medium:
+
+
+Edited aimrx-new/app/(features)/admin/prescriptions/page.tsx
+Now update the SIG cell to add max-w-[180px]:
+
+
+Edited aimrx-new/app/(features)/admin/prescriptions/page.tsx
+Now update the status badge to use py-1 instead of py-0.5:
+
+
+Edited aimrx-new/app/(features)/admin/prescriptions/page.tsx
+Now let me verify the build compiles and restart:
+
+
+Ran cd
+Clean build. Let me restart the app and take a screenshot:
+
+
+2 actions
+Still starting up. Let me wait a moment and try again:
+
+
+2 actions
+The page is loading but not authenticated (showing 0 prescriptions since it needs a login session). The layout structure looks correct - the header, search bar, filter dropdown, results counter, and table headers are all properly styled and positioned according to the spec. The page uses the full 95vw width, the column headers are all showing correctly.
+
+All the styling changes are now applied:
+
+Container: 95vw max-width, centered with py-8 px-4
+Table columns: Date (140px), Medication (max 200px), Qty/Refills (100px), Price (80px), SIG (max 180px), Status (150px), Provider/Patient/Pharmacy auto
+Provider: font-medium
+Patient: font-medium name + font-bold group badge pill
+Medication: font-medium name with truncate + strength below
+Price: green text (text-green-700), font-semibold, shipping in text-[10px], "--" for no price
+Pharmacy: font-medium with custom color, "Not specified" instead of dash
+SIG: truncate with cursor-help and title tooltip
+Status badge: px-2 py-1 with spec color palette
+Row styling: alternating white/#FAFAFA, grouped rows with colored backgrounds + 4px left border from the 5-color palette
+Hover: hover:bg-blue-50/50, cursor-pointer
+The detail modal already matched the spec with all sections (info grid, progress tracker, medication details, pricing, shipping address, payment actions, submit to pharmacy, manual override). Let me write the commit message:
+
+All the styling changes for the Incoming Prescriptions page are complete. Here's what was updated:
+
+Page container now uses 95vw max-width for a wider layout
+Column widths set per spec: Date (140px), Medication (max 200px), Qty/Refills (100px), Price (80px), SIG (max 180px), Status (150px)
+Provider and Patient names are now bold (font-medium)
+Group badge on patient column uses font-bold for better visibility
+Price column shows green text for dollar amounts, smaller text for shipping costs, and "--" when no price is set
+Pharmacy column shows "Not specified" instead of a dash when empty, with font-medium styling
+Status badges have slightly more padding for better readability
+Medication column has font-medium on the drug name with strength shown below in muted text
