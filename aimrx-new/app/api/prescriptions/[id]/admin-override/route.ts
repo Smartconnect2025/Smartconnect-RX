@@ -125,7 +125,9 @@ export async function PATCH(
     await supabase.from("system_logs").insert({
       user_id: user.id,
       user_email: user.email || "",
-      user_name: user.user_metadata?.full_name || user.email || "Admin",
+      user_name: (user as Record<string, unknown>).user_metadata
+        ? ((user as Record<string, unknown>).user_metadata as Record<string, string>)?.full_name || user.email || "Admin"
+        : user.email || "Admin",
       action: "ADMIN_PRESCRIPTION_OVERRIDE",
       details: `${changes.join("; ")}${note ? ` — Note: ${note}` : ""}`,
       queue_id: prescription.queue_id,
