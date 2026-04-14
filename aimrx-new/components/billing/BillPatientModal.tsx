@@ -430,8 +430,9 @@ export function BillPatientModal({
   const [isExistingLink, setIsExistingLink] = useState(false);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [linkGateway, setLinkGateway] = useState<string>("authorizenet");
+  const [linkGateway, setLinkGateway] = useState<string>("stripe");
   const [pharmacyGatewayLabel, setPharmacyGatewayLabel] = useState<string | null>(null);
+  const [stripePublishableKey, setStripePublishableKey] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen && pharmacyId) {
@@ -445,6 +446,9 @@ export function BillPatientModal({
             setPharmacyGatewayLabel(
               data.gateway === "stripe" ? "Stripe" : "Authorize.Net",
             );
+            if (data.stripePublishableKey) {
+              setStripePublishableKey(data.stripePublishableKey);
+            }
           }
         })
         .catch(() => {});
@@ -622,13 +626,6 @@ export function BillPatientModal({
     }
   };
 
-  // Card form state for Charge Now
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExpMonth, setCardExpMonth] = useState("");
-  const [cardExpYear, setCardExpYear] = useState("");
-  const [cardCvv, setCardCvv] = useState("");
-  const [cardZip, setCardZip] = useState("");
-  const [acceptJsLoaded, setAcceptJsLoaded] = useState(false);
   const [chargeResult, setChargeResult] = useState<{
     success: boolean;
     transactionId?: string;
@@ -636,59 +633,78 @@ export function BillPatientModal({
     error?: string;
   } | null>(null);
 
+  const [stripeInstance, setStripeInstance] = useState<any>(null);
+  const [stripeElements, setStripeElements] = useState<any>(null);
+  const [stripeCardElement, setStripeCardElement] = useState<any>(null);
+  const [stripeCardReady, setStripeCardReady] = useState(false);
+  const [stripeCardError, setStripeCardError] = useState<string>("");
+
   useEffect(() => {
-    if (isOpen && paymentMethod === "charge-now" && !acceptJsLoaded) {
-      loadAcceptJs();
+    if (isOpen && paymentMethod === "charge-now" && linkGateway === "stripe") {
+      initStripeElements();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, paymentMethod]);
+  }, [isOpen, paymentMethod, linkGateway, stripePublishableKey]);
 
-  const loadAcceptJs = async () => {
+  const initStripeElements = async () => {
+    const pk = stripePublishableKey || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    if (!pk) {
+      console.error("[BillPatientModal] No Stripe publishable key available");
+      return;
+    }
+
+    if (stripeInstance) return;
+
     try {
-      const configResponse = await fetch("/api/payments/authnet-config", {
-        credentials: "include",
-      });
-      const configData = await configResponse.json();
-      if (!configResponse.ok || !configData.success) {
-        console.error("[BillPatientModal] Failed to load authnet config");
-        return;
-      }
+      const { loadStripe } = await import("@stripe/stripe-js");
+      const stripe = await loadStripe(pk);
+      if (!stripe) return;
 
-      if (document.querySelector('script[data-accept-js]')) {
-        setAcceptJsLoaded(true);
-        return;
-      }
+      setStripeInstance(stripe);
+      const elements = stripe.elements();
+      setStripeElements(elements);
 
-      const script = document.createElement("script");
-      script.src = configData.acceptJsUrl;
-      script.setAttribute("data-accept-js", "true");
-      script.async = true;
-      script.onload = () => setAcceptJsLoaded(true);
-      script.onerror = () => console.error("[BillPatientModal] Failed to load Accept.js");
-      document.head.appendChild(script);
+      setTimeout(() => {
+        const container = document.getElementById("stripe-card-element");
+        if (!container) return;
 
-      (window as any).__authnetConfig = {
-        apiLoginId: configData.apiLoginId,
-        clientKey: configData.clientKey,
-      };
-    } catch {
-      console.error("[BillPatientModal] Error loading Accept.js config");
+        const card = elements.create("card", {
+          style: {
+            base: {
+              fontSize: "16px",
+              color: "#1f2937",
+              fontFamily: "Inter, system-ui, sans-serif",
+              "::placeholder": { color: "#9ca3af" },
+            },
+            invalid: { color: "#ef4444", iconColor: "#ef4444" },
+          },
+          hidePostalCode: false,
+        });
+        card.mount("#stripe-card-element");
+        card.on("change", (event: any) => {
+          setStripeCardError(event.error ? event.error.message : "");
+          setStripeCardReady(event.complete);
+        });
+        setStripeCardElement(card);
+      }, 100);
+    } catch (err) {
+      console.error("[BillPatientModal] Error initializing Stripe:", err);
     }
   };
 
   const handleChargeNow = async () => {
     if (!validateForm()) return;
 
-    if (!cardNumber || cardNumber.replace(/\s/g, "").length < 13) {
-      toast.error("Please enter a valid card number");
-      return;
+    if (linkGateway === "stripe") {
+      await handleChargeStripe();
+    } else {
+      await handleChargeAuthnet();
     }
-    if (!cardExpMonth || !cardExpYear) {
-      toast.error("Please enter the card expiration date");
-      return;
-    }
-    if (!cardCvv || cardCvv.length < 3) {
-      toast.error("Please enter the card CVV");
+  };
+
+  const handleChargeStripe = async () => {
+    if (!stripeInstance || !stripeCardElement) {
+      toast.error("Payment form not ready. Please wait a moment and try again.");
       return;
     }
 
@@ -716,7 +732,7 @@ export function BillPatientModal({
             description,
             patientEmail,
             sendEmail: false,
-            paymentGateway: linkGateway,
+            paymentGateway: "stripe",
           }),
         });
 
@@ -727,50 +743,53 @@ export function BillPatientModal({
         }
 
         currentPaymentToken = generateData.paymentToken;
+        setPaymentToken(currentPaymentToken);
       }
 
-      const authConfig = (window as any).__authnetConfig;
-      if (!authConfig || !(window as any).Accept) {
-        toast.error("Payment system not loaded. Please try again.");
+      const { paymentMethod: pm, error: pmError } = await stripeInstance.createPaymentMethod({
+        type: "card",
+        card: stripeCardElement,
+        billing_details: {
+          email: patientEmail || undefined,
+        },
+      });
+
+      if (pmError) {
+        toast.error(pmError.message || "Failed to process card");
         return;
       }
 
-      const secureData = {
-        authData: {
-          apiLoginID: authConfig.apiLoginId,
-          clientKey: authConfig.clientKey,
-        },
-        cardData: {
-          cardNumber: cardNumber.replace(/\s/g, ""),
-          month: cardExpMonth.padStart(2, "0"),
-          year: cardExpYear.length === 2 ? `20${cardExpYear}` : cardExpYear,
-          cardCode: cardCvv,
-          zip: cardZip || undefined,
-        },
-      };
-
-      const opaqueData = await new Promise<{ dataDescriptor: string; dataValue: string }>((resolve, reject) => {
-        (window as any).Accept.dispatchData(secureData, (response: any) => {
-          if (response.opaqueData) {
-            resolve(response.opaqueData);
-          } else {
-            const errorMsg = response.messages?.message?.[0]?.text || "Card tokenization failed";
-            reject(new Error(errorMsg));
-          }
-        });
-      });
-
-      const chargeResponse = await fetch("/api/payments/charge-nonce", {
+      const chargeResponse = await fetch("/api/payments/charge-stripe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
         body: JSON.stringify({
           paymentToken: currentPaymentToken,
-          opaqueData,
+          paymentMethodId: pm.id,
         }),
       });
 
       const chargeData = await chargeResponse.json();
+
+      if (chargeData.requiresAction && chargeData.clientSecret) {
+        const { error: confirmError, paymentIntent } = await stripeInstance.confirmCardPayment(chargeData.clientSecret);
+        if (confirmError) {
+          setChargeResult({ success: false, error: confirmError.message });
+          toast.error(confirmError.message || "Payment authentication failed");
+          return;
+        }
+        if (paymentIntent?.status === "succeeded") {
+          setChargeResult({
+            success: true,
+            transactionId: paymentIntent.id,
+            cardLastFour: pm.card?.last4,
+          });
+          toast.success("Payment processed successfully!", {
+            icon: <CheckCircle2 className="h-5 w-5" />,
+          });
+          return;
+        }
+      }
 
       if (chargeResponse.ok && chargeData.success) {
         setChargeResult({
@@ -798,10 +817,16 @@ export function BillPatientModal({
     }
   };
 
+  const handleChargeAuthnet = async () => {
+    toast.error("Authorize.Net payments are not supported. This pharmacy uses Stripe.");
+  };
+
   const handleChargeDirectly = () => {
     setPaymentUrl(null);
     setPaymentMethod("charge-now");
-    loadAcceptJs();
+    if (linkGateway === "stripe") {
+      initStripeElements();
+    }
   };
 
   const handleCopyLink = () => {
@@ -868,14 +893,17 @@ export function BillPatientModal({
     setIsExistingLink(false);
     setExpiresAt(null);
     setEmailSent(false);
-    setLinkGateway("authorizenet");
+    setLinkGateway("stripe");
     setPharmacyGatewayLabel(null);
-    setCardNumber("");
-    setCardExpMonth("");
-    setCardExpYear("");
-    setCardCvv("");
-    setCardZip("");
     setChargeResult(null);
+    if (stripeCardElement) {
+      try { stripeCardElement.unmount(); } catch { /* already unmounted */ }
+    }
+    setStripeInstance(null);
+    setStripeElements(null);
+    setStripeCardElement(null);
+    setStripeCardReady(false);
+    setStripeCardError("");
     onClose();
   };
 
@@ -1035,66 +1063,19 @@ export function BillPatientModal({
 
                     <div className="space-y-3">
                       <div className="space-y-2">
-                        <Label htmlFor="cardNumber">Card Number</Label>
-                        <Input
-                          id="cardNumber"
-                          placeholder="4111 1111 1111 1111"
-                          value={cardNumber}
-                          onChange={(e) => {
-                            const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
-                            const formatted = raw.replace(/(\d{4})(?=\d)/g, "$1 ");
-                            setCardNumber(formatted);
-                          }}
-                          maxLength={19}
-                          disabled={loading}
+                        <Label>Card Details</Label>
+                        <div
+                          id="stripe-card-element"
+                          className={`p-4 border rounded-lg ${
+                            stripeCardError ? "border-red-500" : "border-gray-300"
+                          } bg-white min-h-[44px]`}
                         />
-                      </div>
-                      <div className="grid grid-cols-3 gap-3">
-                        <div className="space-y-2">
-                          <Label htmlFor="cardExpMonth">Month</Label>
-                          <Input
-                            id="cardExpMonth"
-                            placeholder="MM"
-                            value={cardExpMonth}
-                            onChange={(e) => setCardExpMonth(e.target.value.replace(/\D/g, "").slice(0, 2))}
-                            maxLength={2}
-                            disabled={loading}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="cardExpYear">Year</Label>
-                          <Input
-                            id="cardExpYear"
-                            placeholder="YYYY"
-                            value={cardExpYear}
-                            onChange={(e) => setCardExpYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                            maxLength={4}
-                            disabled={loading}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="cardCvv">CVV</Label>
-                          <Input
-                            id="cardCvv"
-                            placeholder="123"
-                            type="password"
-                            value={cardCvv}
-                            onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                            maxLength={4}
-                            disabled={loading}
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="cardZip">Billing ZIP (Optional)</Label>
-                        <Input
-                          id="cardZip"
-                          placeholder="12345"
-                          value={cardZip}
-                          onChange={(e) => setCardZip(e.target.value.slice(0, 10))}
-                          maxLength={10}
-                          disabled={loading}
-                        />
+                        {stripeCardError && (
+                          <p className="text-sm text-red-600">{stripeCardError}</p>
+                        )}
+                        <p className="text-xs text-gray-500">
+                          Test card: 4242 4242 4242 4242 &bull; Any future date &bull; Any 3-digit CVC
+                        </p>
                       </div>
                     </div>
 

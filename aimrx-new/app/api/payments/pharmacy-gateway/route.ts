@@ -65,12 +65,23 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({
+    const responseData: Record<string, unknown> = {
       success: true,
       configured: true,
       gateway: config.gateway,
       environment: config.environment,
-    });
+    };
+
+    if (config.gateway === "stripe" && config.stripePublishableKey) {
+      responseData.stripePublishableKey = config.stripePublishableKey;
+    } else if (config.gateway === "stripe") {
+      const { envConfig: ec } = await import("@/core/config/envConfig");
+      if (ec.STRIPE_PUBLISHABLE_KEY) {
+        responseData.stripePublishableKey = ec.STRIPE_PUBLISHABLE_KEY;
+      }
+    }
+
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error("[PHARMACY-GATEWAY] Error:", error);
     return NextResponse.json(
