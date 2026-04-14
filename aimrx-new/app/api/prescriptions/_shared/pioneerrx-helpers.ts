@@ -120,11 +120,16 @@ export async function callPioneerRxMethod(
     const responseText = await response.text();
 
     if (!response.ok) {
+      const detail = responseText.substring(0, 500);
+      console.error(`[pioneerrx] ${methodName} failed: HTTP ${response.status} — ${detail}`);
+      if (response.status === 401) {
+        console.error(`[pioneerrx] 401 Unauthorized — likely IP not whitelisted or credentials invalid. API key starts with: ${backend.apiKey.substring(0, 10)}... Base URL: ${backend.baseUrl}`);
+      }
       return {
         success: false,
         error: `PioneerRx API error: ${response.status}`,
         statusCode: response.status,
-        rawResponse: responseText.substring(0, 500),
+        rawResponse: detail,
       };
     }
 
