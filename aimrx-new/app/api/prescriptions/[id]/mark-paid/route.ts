@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { user } = await getUser();
+    const { user, userRole } = await getUser();
     if (!user) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },
@@ -26,7 +26,7 @@ export async function POST(
       // no body is fine for single-prescription mark-paid
     }
 
-    const explicitIds: string[] =
+    let explicitIds: string[] =
       Array.isArray(body.prescriptionIds) && body.prescriptionIds.length > 0
         ? body.prescriptionIds
         : [prescriptionId];
@@ -35,10 +35,26 @@ export async function POST(
       explicitIds.unshift(prescriptionId);
     }
 
+    const { data: primaryRx } = await supabaseAdmin
+      .from("prescriptions")
+      .select("order_group_id, pharmacy_id")
+      .eq("id", prescriptionId)
+      .single();
+
+    if (primaryRx?.order_group_id && explicitIds.length === 1) {
+      const { data: groupRxs } = await supabaseAdmin
+        .from("prescriptions")
+        .select("id")
+        .eq("order_group_id", primaryRx.order_group_id);
+      if (groupRxs && groupRxs.length > 1) {
+        explicitIds = groupRxs.map((rx) => rx.id);
+      }
+    }
+
     const { data: rxList, error: rxFetchError } = await supabaseAdmin
       .from("prescriptions")
       .select(
-        "id, prescriber_id, status, payment_status, payment_transaction_id, patient_id, patient_price, profit_cents, shipping_fee_cents, total_paid_cents",
+        "id, prescriber_id, status, payment_status, payment_transaction_id, patient_id, patient_price, profit_cents, shipping_fee_cents, total_paid_cents, pharmacy_id",
       )
       .in("id", explicitIds);
 
@@ -56,22 +72,31 @@ export async function POST(
       );
     }
 
+    const isAdmin = userRole && ["admin", "super_admin"].includes(userRole);
     const firstPatientId = rxList[0].patient_id;
 
+    if (isAdmin && userRole === "admin") {
+      const { data: pharmacyAdmin } = await supabaseAdmin
+        .from("pharmacy_admins")
+        .select("pharmacy_id")
+        .eq("user_id", user.id)
+        .single();
+
+      for (const rx of rxList) {
+        if (pharmacyAdmin && pharmacyAdmin.pharmacy_id !== rx.pharmacy_id) {
+          return NextResponse.json(
+            { success: false, error: "Access denied — prescription not assigned to your pharmacy" },
+            { status: 403 },
+          );
+        }
+      }
+    }
+
     for (const rx of rxList) {
-      if (rx.prescriber_id !== user.id) {
+      if (!isAdmin && rx.prescriber_id !== user.id) {
         return NextResponse.json(
           { success: false, error: `Forbidden: you do not own prescription ${rx.id}` },
           { status: 403 },
-        );
-      }
-      if (rx.status !== "pending_payment") {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Cannot mark prescription ${rx.id} as paid — status is not pending_payment`,
-          },
-          { status: 400 },
         );
       }
       if (rx.patient_id !== firstPatientId) {

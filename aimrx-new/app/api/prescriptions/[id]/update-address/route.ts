@@ -103,7 +103,10 @@ export async function PATCH(
 
     const { id } = await params;
     const body = await request.json();
-    const { custom_address } = body;
+    const { custom_address, saveToPatient } = body as {
+      custom_address: Record<string, string>;
+      saveToPatient?: boolean;
+    };
 
     if (!custom_address || !custom_address.street || !custom_address.city || !custom_address.state || !(custom_address.zipCode || custom_address.zip)) {
       return NextResponse.json({ error: "Complete address required (street, city, state, zip)" }, { status: 400 });
@@ -113,7 +116,7 @@ export async function PATCH(
 
     const { data: prescription, error: findErr } = await supabase
       .from("prescriptions")
-      .select("id, queue_id, medication, custom_address, has_custom_address, pharmacy_id, prescriber_id, patients(first_name, last_name)")
+      .select("id, queue_id, medication, custom_address, has_custom_address, pharmacy_id, prescriber_id, patient_id, patients(first_name, last_name)")
       .eq("id", id)
       .single();
 
@@ -159,6 +162,19 @@ export async function PATCH(
       return NextResponse.json({ error: "Failed to update address" }, { status: 500 });
     }
 
+    if (saveToPatient && prescription.patients) {
+      const patientId = (prescription as Record<string, unknown>).patient_id as string;
+      if (patientId) {
+        const { error: patientUpdateErr } = await supabase
+          .from("patients")
+          .update({ physical_address: custom_address })
+          .eq("id", patientId);
+        if (patientUpdateErr) {
+          console.error("[update-address] Patient address update failed:", patientUpdateErr.message);
+        }
+      }
+    }
+
     const patient = prescription.patients as { first_name?: string; last_name?: string } | null;
     const patientName = patient ? `${patient.first_name || ""} ${patient.last_name || ""}`.trim() : "Patient";
 
@@ -184,27 +200,41 @@ export async function PATCH(
       user_email: user.email || "",
       user_name: updaterName,
       action: "ADDRESS_UPDATED",
-      details: `Shipping address updated for prescription ${prescription.queue_id || id}. Patient: ${patientName}`,
+      details: `Shipping address updated for prescription ${prescription.queue_id || id}. Patient: ${patientName}${saveToPatient ? " (also saved to patient record)" : ""}`,
       queue_id: prescription.queue_id,
       status: "success",
+      event_type: "address_update_notification",
     });
 
     if (SENDGRID_API_KEY && prescription.pharmacy_id) {
       try {
         const { data: pharmacy } = await supabase
           .from("pharmacies")
-          .select("name, email")
+          .select("name, email, contact_email, notification_emails")
           .eq("id", prescription.pharmacy_id)
           .single();
 
         const recipientEmails: string[] = [];
-        if (pharmacy?.email) recipientEmails.push(pharmacy.email);
 
-        const fallbackEmails = process.env.PHARMACY_NOTIFICATION_EMAILS;
-        if (fallbackEmails) {
-          fallbackEmails.split(",").map(e => e.trim()).filter(Boolean).forEach(e => {
+        const envEmails = process.env.PHARMACY_NOTIFICATION_EMAILS;
+        if (envEmails) {
+          envEmails.split(",").map(e => e.trim()).filter(Boolean).forEach(e => {
             if (!recipientEmails.includes(e)) recipientEmails.push(e);
           });
+        }
+
+        if ((pharmacy as Record<string, unknown>)?.contact_email) {
+          const ce = (pharmacy as Record<string, unknown>).contact_email as string;
+          if (!recipientEmails.includes(ce)) recipientEmails.push(ce);
+        }
+        if ((pharmacy as Record<string, unknown>)?.notification_emails) {
+          const ne = (pharmacy as Record<string, unknown>).notification_emails as string;
+          ne.split(",").map(e => e.trim()).filter(Boolean).forEach(e => {
+            if (!recipientEmails.includes(e)) recipientEmails.push(e);
+          });
+        }
+        if (pharmacy?.email && !recipientEmails.includes(pharmacy.email)) {
+          recipientEmails.push(pharmacy.email);
         }
 
         if (recipientEmails.length > 0) {

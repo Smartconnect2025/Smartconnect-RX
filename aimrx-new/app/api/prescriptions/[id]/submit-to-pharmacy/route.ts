@@ -5,6 +5,7 @@ import { isEncrypted, decryptApiKey } from "@core/security/encryption";
 import { getUser } from "@/core/auth/get-user";
 import { resolvePharmacyBackendAny, type ResolvedPharmacyBackend } from "../../_shared/pharmacy-dispatcher";
 import { submitPioneerRxEScript } from "../../_shared/pioneerrx-helpers";
+import { formatPhoneForDigitalRx, formatDobForDigitalRx } from "@core/utils/digitalrx-format";
 
 const DEFAULT_DIGITALRX_BASE_URL =
   process.env.NEXT_PUBLIC_DIGITALRX_BASE_URL ||
@@ -54,13 +55,13 @@ async function submitToDigitalRx(
     Patient: {
       FirstName: patients.first_name || "",
       LastName: patients.last_name || "",
-      DOB: patients.date_of_birth || "",
+      DOB: formatDobForDigitalRx(patients.date_of_birth as string),
       Sex: patientSex,
       PatientStreet: patientAddress?.street,
       PatientCity: patientAddress?.city,
       PatientState: patientAddress?.state,
       PatientZip: patientAddress?.zipCode || patientAddress?.zip,
-      PatientPhone: (patient as Record<string, unknown>).phone,
+      PatientPhone: formatPhoneForDigitalRx((patient as Record<string, unknown>).phone as string),
       Email: (patient as Record<string, unknown>).email,
     },
     Doctor: {
@@ -73,11 +74,14 @@ async function submitToDigitalRx(
       DoctorState: ((provider as Record<string, unknown>).physical_address as Record<string, string>)?.state,
       DoctorZip: ((provider as Record<string, unknown>).physical_address as Record<string, string>)?.zipCode
         || ((provider as Record<string, unknown>).physical_address as Record<string, string>)?.zip,
-      DoctorPhone: (provider as Record<string, unknown>).phone_number,
+      DoctorPhone: formatPhoneForDigitalRx((provider as Record<string, unknown>).phone_number as string),
     },
     RxClaim: {
       RxNumber: rxNumber,
-      DrugName: (prescription as Record<string, unknown>).medication,
+      DrugName: (() => {
+        const med = (prescription as Record<string, unknown>).medication as string || "";
+        return med.startsWith("AIM-") ? med : `AIM-${med}`;
+      })(),
       Qty: String((prescription as Record<string, unknown>).quantity),
       DateWritten: dateWritten,
       RequestedBy: `${(provider as Record<string, unknown>).first_name} ${(provider as Record<string, unknown>).last_name}`,
@@ -300,14 +304,31 @@ export async function POST(
     }
 
     if (!isInternalCall && authenticatedUserId) {
-      const isAdmin = authenticatedUserRole && ["admin", "super_admin", "pharmacy_admin"].includes(authenticatedUserRole);
+      const isSuperAdmin = authenticatedUserRole === "super_admin";
       const isPrescriber = prescription.prescriber_id === authenticatedUserId;
-      if (!isAdmin && !isPrescriber) {
-        console.error("❌ [submit-to-pharmacy] User", authenticatedUserId, "not authorized for prescription", prescriptionId);
-        return NextResponse.json(
-          { success: false, error: "You are not authorized to submit this prescription" },
-          { status: 403 },
-        );
+
+      if (!isSuperAdmin && !isPrescriber) {
+        if (authenticatedUserRole === "admin") {
+          const { data: pharmacyAdmin } = await supabaseAdmin
+            .from("pharmacy_admins")
+            .select("pharmacy_id")
+            .eq("user_id", authenticatedUserId)
+            .single();
+
+          if (!pharmacyAdmin || pharmacyAdmin.pharmacy_id !== prescription.pharmacy_id) {
+            console.error("❌ [submit-to-pharmacy] Pharmacy admin", authenticatedUserId, "not scoped to prescription's pharmacy", prescriptionId);
+            return NextResponse.json(
+              { success: false, error: "Access denied — prescription not assigned to your pharmacy" },
+              { status: 403 },
+            );
+          }
+        } else {
+          console.error("❌ [submit-to-pharmacy] User", authenticatedUserId, "not authorized for prescription", prescriptionId);
+          return NextResponse.json(
+            { success: false, error: "You are not authorized to submit this prescription" },
+            { status: 403 },
+          );
+        }
       }
     }
 

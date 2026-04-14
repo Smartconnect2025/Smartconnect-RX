@@ -68,12 +68,23 @@ export async function GET(request: NextRequest) {
         sig,
         status,
         payment_status,
+        patient_price,
+        shipping_fee_cents,
+        profit_cents,
         tracking_number,
+        fedex_status,
+        estimated_delivery,
+        has_custom_address,
+        custom_address,
+        order_group_id,
+        payment_transaction_id,
         prescriber_id,
         pharmacy_id,
-        patient:patients(first_name, last_name),
+        patient_id,
+        patient:patients(first_name, last_name, email, physical_address),
         pharmacy:pharmacies(name, primary_color)
       `)
+      .neq("status", "cancelled")
       .order("submitted_at", { ascending: false });
 
     if (pharmacyId) {
@@ -104,10 +115,35 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const formatted = (prescriptionsData || []).map((rx) => {
+    const testLastNames = ["harton"];
+
+    const { data: paymentTxData } = await supabase
+      .from("payment_transactions")
+      .select("id, payment_token")
+      .in(
+        "id",
+        (prescriptionsData || [])
+          .map((rx) => rx.payment_transaction_id)
+          .filter(Boolean),
+      );
+    const paymentTxMap = new Map(
+      (paymentTxData || []).map((pt) => [pt.id, pt]),
+    );
+
+    const formatted = (prescriptionsData || [])
+      .filter((rx) => {
+        const patient = Array.isArray(rx.patient) ? rx.patient[0] : rx.patient;
+        const lastName = (patient as Record<string, unknown>)?.last_name as string;
+        if (lastName && testLastNames.includes(lastName.toLowerCase())) return false;
+        return true;
+      })
+      .map((rx) => {
       const patient = Array.isArray(rx.patient) ? rx.patient[0] : rx.patient;
       const provider = providerMap.get(rx.prescriber_id);
       const pharmacy = Array.isArray(rx.pharmacy) ? rx.pharmacy[0] : rx.pharmacy;
+      const paymentTx = rx.payment_transaction_id
+        ? paymentTxMap.get(rx.payment_transaction_id)
+        : null;
 
       return {
         id: rx.id,
@@ -119,6 +155,7 @@ export async function GET(request: NextRequest) {
         patientName: patient
           ? `${(patient as { first_name: string; last_name: string }).first_name} ${(patient as { first_name: string; last_name: string }).last_name}`
           : "Unknown Patient",
+        patientEmail: (patient as Record<string, unknown>)?.email || null,
         medication: rx.medication,
         strength: rx.dosage,
         quantity: rx.quantity,
@@ -126,9 +163,21 @@ export async function GET(request: NextRequest) {
         sig: rx.sig,
         status: rx.status || "submitted",
         paymentStatus: rx.payment_status,
+        patientPrice: rx.patient_price,
+        shippingFeeCents: rx.shipping_fee_cents,
+        profitCents: rx.profit_cents || 0,
+        submissionGroupId: rx.order_group_id || null,
         trackingNumber: rx.tracking_number,
         pharmacyName: (pharmacy as { name?: string })?.name,
         pharmacyColor: (pharmacy as { primary_color?: string })?.primary_color,
+        carrierStatus: rx.fedex_status,
+        estimatedDelivery: rx.estimated_delivery,
+        patientId: rx.patient_id,
+        hasCustomAddress: rx.has_custom_address,
+        customAddress: rx.custom_address,
+        patientAddress: (patient as Record<string, unknown>)?.physical_address || null,
+        paymentToken: paymentTx?.payment_token || null,
+        paymentTransactionId: rx.payment_transaction_id || null,
       };
     });
 

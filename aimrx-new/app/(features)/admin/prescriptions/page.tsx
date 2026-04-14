@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -24,7 +24,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, User, Calendar, Pill, Hash, FileText, RefreshCw, AlertCircle, Send } from "lucide-react";
+import {
+  Search, User, Calendar, Pill, Hash, FileText, RefreshCw, AlertCircle,
+  Send, Mail, DollarSign, CheckCircle2, Truck, MapPin, Pencil, X,
+  ExternalLink, AlertTriangle, Package,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { PrescriptionProgressTracker } from "@/app/(features)/prescriptions/_components/PrescriptionProgressTracker";
@@ -37,6 +41,7 @@ interface AdminPrescription {
   submittedAt: string;
   providerName: string;
   patientName: string;
+  patientEmail: string | null;
   medication: string;
   strength: string;
   quantity: number;
@@ -44,13 +49,23 @@ interface AdminPrescription {
   sig: string;
   status: string;
   paymentStatus?: string;
+  patientPrice?: number | null;
+  shippingFeeCents?: number | null;
+  profitCents?: number;
+  submissionGroupId?: string | null;
   trackingNumber?: string;
   pharmacyName?: string;
   pharmacyColor?: string;
+  carrierStatus?: string;
+  estimatedDelivery?: string;
+  patientId?: string;
+  hasCustomAddress?: boolean;
+  customAddress?: { street?: string; city?: string; state?: string; zipCode?: string; country?: string } | null;
+  patientAddress?: { street?: string; city?: string; state?: string; zipCode?: string; country?: string } | null;
+  paymentToken?: string | null;
+  paymentTransactionId?: string | null;
   billingStatus?: string;
   patientCopay?: string;
-  deliveryDate?: string;
-  lotNumber?: string;
 }
 
 const getEffectiveStatus = (rx: AdminPrescription): string => {
@@ -109,10 +124,31 @@ const formatDateTime = (dateTime: string) => {
   return { datePart, timePart };
 };
 
+const formatAddress = (addr: { street?: string; city?: string; state?: string; zipCode?: string; zip?: string } | null | undefined): string => {
+  if (!addr) return "";
+  return [addr.street, addr.city, addr.state, addr.zipCode || addr.zip].filter(Boolean).join(", ");
+};
+
+const GROUP_BG_COLORS = ["#EFF6FF", "#F5F3FF", "#FFFBEB", "#ECFDF5", "#FFF1F2"];
+const GROUP_BORDER_COLORS = ["#3B82F6", "#8B5CF6", "#F59E0B", "#10B981", "#F43F5E"];
+
+const getTrackingUrl = (trackingNumber: string, carrier?: string): string => {
+  const c = (carrier || "").toLowerCase();
+  if (c.includes("ups")) return `https://www.ups.com/track?tracknum=${trackingNumber}`;
+  if (c.includes("usps")) return `https://tools.usps.com/go/TrackConfirmAction?tLabels=${trackingNumber}`;
+  if (c.includes("dhl")) return `https://www.dhl.com/en/express/tracking.html?AWB=${trackingNumber}`;
+  if (c.includes("fedex")) return `https://www.fedex.com/fedextrack/?trknbr=${trackingNumber}`;
+  return `https://parcelsapp.com/en/tracking/${trackingNumber}`;
+};
+
 interface PharmacyOption {
   id: string;
   name: string;
 }
+
+const OVERRIDE_STATUSES = [
+  "submitted", "packed", "approved", "shipped", "delivered", "ready_for_pickup", "cancelled",
+];
 
 export default function AdminPrescriptionsPage() {
   const { user } = useUser();
@@ -130,6 +166,56 @@ export default function AdminPrescriptionsPage() {
   const [selectedPharmacy, setSelectedPharmacy] = useState<string>("all");
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   const [scopeChecked, setScopeChecked] = useState(false);
+
+  const [isMarkingPaid, setIsMarkingPaid] = useState(false);
+  const [markPaidResult, setMarkPaidResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isSendingPaymentLink, setIsSendingPaymentLink] = useState(false);
+  const [paymentLinkResult, setPaymentLinkResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const [showAddressEdit, setShowAddressEdit] = useState(false);
+  const [addressForm, setAddressForm] = useState({ street: "", city: "", state: "", zipCode: "", country: "US" });
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [addressResult, setAddressResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const [showOverride, setShowOverride] = useState(false);
+  const [overrideStatus, setOverrideStatus] = useState("");
+  const [overrideTracking, setOverrideTracking] = useState("");
+  const [overrideNote, setOverrideNote] = useState("");
+  const [isApplyingOverride, setIsApplyingOverride] = useState(false);
+
+  const groupColorMap = useMemo(() => {
+    const map = new Map<string, number>();
+    let colorIdx = 0;
+    prescriptions.forEach((rx) => {
+      if (rx.submissionGroupId && !map.has(rx.submissionGroupId)) {
+        map.set(rx.submissionGroupId, colorIdx % 5);
+        colorIdx++;
+      }
+    });
+    return map;
+  }, [prescriptions]);
+
+  const groupCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    prescriptions.forEach((rx) => {
+      if (rx.submissionGroupId) {
+        counts.set(rx.submissionGroupId, (counts.get(rx.submissionGroupId) || 0) + 1);
+      }
+    });
+    return counts;
+  }, [prescriptions]);
+
+  const groupFirstIds = useMemo(() => {
+    const firstIds = new Set<string>();
+    const seen = new Set<string>();
+    prescriptions.forEach((rx) => {
+      if (rx.submissionGroupId && !seen.has(rx.submissionGroupId)) {
+        seen.add(rx.submissionGroupId);
+        firstIds.add(rx.id);
+      }
+    });
+    return firstIds;
+  }, [prescriptions]);
 
   useEffect(() => {
     const checkScope = async () => {
@@ -206,6 +292,143 @@ export default function AdminPrescriptionsPage() {
     }
   };
 
+  const handleMarkPaid = async (prescriptionId: string) => {
+    setIsMarkingPaid(true);
+    setMarkPaidResult(null);
+    try {
+      const response = await fetch(`/api/prescriptions/${prescriptionId}/mark-paid`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await response.json();
+      if (data.success) {
+        setMarkPaidResult({ success: true, message: "Prescription marked as paid and sent to pharmacy!" });
+        loadPrescriptions();
+        setTimeout(() => setSelectedPrescription(null), 1500);
+      } else {
+        setMarkPaidResult({ success: false, message: data.error || "Failed to mark as paid" });
+      }
+    } catch {
+      setMarkPaidResult({ success: false, message: "Network error — please try again" });
+    } finally {
+      setIsMarkingPaid(false);
+    }
+  };
+
+  const handleSendPaymentLink = async (rx: AdminPrescription) => {
+    setIsSendingPaymentLink(true);
+    setPaymentLinkResult(null);
+    try {
+      const groupRxs = rx.submissionGroupId
+        ? prescriptions.filter((p) => p.submissionGroupId === rx.submissionGroupId)
+        : [rx];
+
+      const totalMedCents = groupRxs.reduce((sum, p) => sum + ((p.patientPrice || 0) * 100), 0);
+      const totalShipCents = groupRxs.reduce((sum, p) => sum + (p.shippingFeeCents || 0), 0);
+      const totalProfitCents = groupRxs.reduce((sum, p) => sum + (p.profitCents || 0), 0);
+
+      const response = await fetch("/api/payments/generate-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prescriptionIds: groupRxs.map((p) => p.id),
+          medicationCostCents: totalMedCents,
+          shippingFeeCents: totalShipCents,
+          consultationFeeCents: totalProfitCents,
+          description: `Payment for ${groupRxs.length} medication(s): ${groupRxs.map((p) => p.medication).join(", ")}`,
+          patientEmail: rx.patientEmail,
+          sendEmail: true,
+        }),
+      });
+      const data = await response.json();
+      if (data.success || data.paymentUrl) {
+        setPaymentLinkResult({ success: true, message: "Payment link sent to patient!" });
+      } else {
+        setPaymentLinkResult({ success: false, message: data.error || "Failed to generate payment link" });
+      }
+    } catch {
+      setPaymentLinkResult({ success: false, message: "Network error — please try again" });
+    } finally {
+      setIsSendingPaymentLink(false);
+    }
+  };
+
+  const handleSaveAddress = async (prescriptionId: string, saveToPatient: boolean) => {
+    setIsSavingAddress(true);
+    setAddressResult(null);
+    try {
+      const response = await fetch(`/api/prescriptions/${prescriptionId}/update-address`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          custom_address: addressForm,
+          saveToPatient,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        setAddressResult({
+          success: true,
+          message: saveToPatient
+            ? "Address updated for prescription and patient record. Pharmacy notified."
+            : "Address updated for this prescription only. Pharmacy notified.",
+        });
+        setShowAddressEdit(false);
+        loadPrescriptions();
+      } else {
+        setAddressResult({ success: false, message: data.error || "Failed to update address" });
+      }
+    } catch {
+      setAddressResult({ success: false, message: "Network error — please try again" });
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
+
+  const handleApplyOverride = async (prescriptionId: string) => {
+    setIsApplyingOverride(true);
+    try {
+      const response = await fetch(`/api/prescriptions/${prescriptionId}/admin-override`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: overrideStatus || undefined,
+          trackingNumber: overrideTracking || undefined,
+          note: overrideNote || undefined,
+        }),
+      });
+      const data = await response.json();
+      if (data.success) {
+        loadPrescriptions();
+        setTimeout(() => {
+          setSelectedPrescription(null);
+          setShowOverride(false);
+        }, 1500);
+      }
+    } catch {
+      // silent
+    } finally {
+      setIsApplyingOverride(false);
+    }
+  };
+
+  const handleSyncTracking = useCallback(async (prescriptionId: string) => {
+    try {
+      const response = await fetch("/api/prescriptions/sync-tracking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prescriptionId }),
+      });
+      const data = await response.json();
+      if (data.updated) {
+        loadPrescriptions();
+      }
+    } catch {
+      // silent
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const loadPrescriptions = useCallback(async (signal?: AbortSignal) => {
     try {
       setIsLoading(true);
@@ -250,6 +473,23 @@ export default function AdminPrescriptionsPage() {
     };
   }, [loadPrescriptions]);
 
+  useEffect(() => {
+    if (selectedPrescription?.trackingNumber && getEffectiveStatus(selectedPrescription) !== "delivered") {
+      handleSyncTracking(selectedPrescription.id);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPrescription?.id]);
+
+  useEffect(() => {
+    if (selectedPrescription) {
+      const updated = prescriptions.find((p) => p.id === selectedPrescription.id);
+      if (updated && JSON.stringify(updated) !== JSON.stringify(selectedPrescription)) {
+        setSelectedPrescription(updated);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prescriptions]);
+
   const filteredPrescriptions = prescriptions.filter((prescription) => {
     const matchesSearch =
       prescription.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -268,6 +508,35 @@ export default function AdminPrescriptionsPage() {
     if (status === "All") return prescriptions.length;
     return prescriptions.filter((p) => getEffectiveStatus(p).toLowerCase() === status.toLowerCase()).length;
   };
+
+  const getGroupRxs = (rx: AdminPrescription): AdminPrescription[] => {
+    if (!rx.submissionGroupId) return [rx];
+    return prescriptions.filter((p) => p.submissionGroupId === rx.submissionGroupId);
+  };
+
+  const computeTotal = (rx: AdminPrescription): number => {
+    const groupRxs = getGroupRxs(rx);
+    return groupRxs.reduce((sum, p) => {
+      return sum + (p.patientPrice || 0) + ((p.shippingFeeCents || 0) / 100) + ((p.profitCents || 0) / 100);
+    }, 0);
+  };
+
+  const openPrescriptionDetail = (rx: AdminPrescription) => {
+    setSelectedPrescription(rx);
+    setSubmitResult(null);
+    setMarkPaidResult(null);
+    setPaymentLinkResult(null);
+    setAddressResult(null);
+    setShowAddressEdit(false);
+    setShowOverride(false);
+    setOverrideStatus(rx.status || "");
+    setOverrideTracking(rx.trackingNumber || "");
+    setOverrideNote("");
+  };
+
+  const currentAddress = selectedPrescription?.hasCustomAddress && selectedPrescription?.customAddress
+    ? selectedPrescription.customAddress
+    : selectedPrescription?.patientAddress;
 
   return (
     <div className="container mx-auto max-w-7xl py-8 px-4">
@@ -351,15 +620,16 @@ export default function AdminPrescriptionsPage() {
                 <TableHead className="font-semibold">Patient</TableHead>
                 <TableHead className="font-semibold">Medication</TableHead>
                 <TableHead className="font-semibold w-[100px]">Qty/Refills</TableHead>
+                <TableHead className="font-semibold w-[80px]">Price</TableHead>
                 <TableHead className="font-semibold">Pharmacy</TableHead>
                 <TableHead className="font-semibold">SIG</TableHead>
-                <TableHead className="font-semibold w-[120px]">Status</TableHead>
+                <TableHead className="font-semibold w-[150px]">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                       <RefreshCw className="h-4 w-4 animate-spin" />
                       Loading prescriptions...
@@ -368,7 +638,7 @@ export default function AdminPrescriptionsPage() {
                 </TableRow>
               ) : loadError ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2 text-red-600">
                       <AlertCircle className="h-5 w-5" />
                       <p className="text-sm font-medium">{loadError}</p>
@@ -380,7 +650,7 @@ export default function AdminPrescriptionsPage() {
                 </TableRow>
               ) : filteredPrescriptions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <p className="text-muted-foreground">
                       No prescriptions found matching your filters
                     </p>
@@ -389,11 +659,26 @@ export default function AdminPrescriptionsPage() {
               ) : (
                 filteredPrescriptions.map((prescription, idx) => {
                   const { datePart, timePart } = formatDateTime(prescription.submittedAt);
+                  const groupIdx = prescription.submissionGroupId
+                    ? groupColorMap.get(prescription.submissionGroupId)
+                    : undefined;
+                  const isGrouped = groupIdx !== undefined;
+                  const isFirstInGroup = groupFirstIds.has(prescription.id);
+                  const groupCount = prescription.submissionGroupId
+                    ? groupCounts.get(prescription.submissionGroupId) || 0
+                    : 0;
+
                   return (
                   <TableRow
                     key={prescription.id}
-                    className={`cursor-pointer transition-colors hover:bg-blue-50/50 ${idx % 2 === 0 ? "bg-white" : "bg-gray-50/40"}`}
-                    onClick={() => setSelectedPrescription(prescription)}
+                    className="cursor-pointer transition-colors hover:bg-blue-50/50"
+                    style={isGrouped ? {
+                      backgroundColor: GROUP_BG_COLORS[groupIdx!],
+                      borderLeft: `4px solid ${GROUP_BORDER_COLORS[groupIdx!]}`,
+                    } : {
+                      backgroundColor: idx % 2 === 0 ? "#FFFFFF" : "#FAFAFA",
+                    }}
+                    onClick={() => openPrescriptionDetail(prescription)}
                     data-testid={`row-prescription-${prescription.id}`}
                   >
                     <TableCell className="text-sm">
@@ -404,14 +689,21 @@ export default function AdminPrescriptionsPage() {
                       {prescription.providerName}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {prescription.patientName}
+                      <div className="flex items-center gap-2">
+                        {prescription.patientName}
+                        {isFirstInGroup && groupCount > 1 && (
+                          <span
+                            className="text-xs px-2 py-0.5 rounded-full text-white font-medium"
+                            style={{ backgroundColor: GROUP_BORDER_COLORS[groupIdx!] }}
+                          >
+                            {groupCount} items
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="max-w-[200px]">
                       <div className="flex flex-col">
-                        <span
-                          className="font-medium truncate"
-                          title={prescription.medication}
-                        >
+                        <span className="font-medium truncate" title={prescription.medication}>
                           {prescription.medication}
                         </span>
                         <span className="text-sm text-muted-foreground truncate">
@@ -422,10 +714,20 @@ export default function AdminPrescriptionsPage() {
                     <TableCell className="text-sm">
                       <div className="flex flex-col">
                         <span>Qty: {prescription.quantity}</span>
-                        <span className="text-muted-foreground">
-                          Ref: {prescription.refills}
-                        </span>
+                        <span className="text-muted-foreground">Ref: {prescription.refills}</span>
                       </div>
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {prescription.patientPrice != null ? (
+                        <div className="flex flex-col">
+                          <span className="font-medium">${Number(prescription.patientPrice).toFixed(2)}</span>
+                          {(prescription.shippingFeeCents || 0) > 0 && (
+                            <span className="text-xs text-muted-foreground">+${((prescription.shippingFeeCents || 0) / 100).toFixed(2)} ship</span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {prescription.pharmacyName ? (
@@ -437,10 +739,7 @@ export default function AdminPrescriptionsPage() {
                       )}
                     </TableCell>
                     <TableCell className="max-w-[180px]">
-                      <p
-                        className="text-sm truncate cursor-help"
-                        title={prescription.sig}
-                      >
+                      <p className="text-sm truncate cursor-help" title={prescription.sig}>
                         {prescription.sig}
                       </p>
                     </TableCell>
@@ -461,9 +760,16 @@ export default function AdminPrescriptionsPage() {
         </div>
       </div>
 
-      <Dialog open={!!selectedPrescription} onOpenChange={(open) => !open && setSelectedPrescription(null)}>
+      <Dialog open={!!selectedPrescription} onOpenChange={(open) => { if (!open) setSelectedPrescription(null); }}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="modal-prescription-detail">
-          {selectedPrescription && (
+          {selectedPrescription && (() => {
+            const effectiveStatus = getEffectiveStatus(selectedPrescription);
+            const groupRxs = getGroupRxs(selectedPrescription);
+            const isGrouped = groupRxs.length > 1;
+            const total = computeTotal(selectedPrescription);
+            const addr = currentAddress;
+
+            return (
             <>
               <DialogHeader>
                 <div className="flex items-center justify-between pr-6">
@@ -472,14 +778,15 @@ export default function AdminPrescriptionsPage() {
                   </DialogTitle>
                   <Badge
                     variant="outline"
-                    className={`${getStatusColor(getEffectiveStatus(selectedPrescription))} text-xs px-2.5 py-1`}
+                    className={`${getStatusColor(effectiveStatus)} text-xs px-2.5 py-1`}
                   >
-                    {getEffectiveStatus(selectedPrescription).charAt(0).toUpperCase() + getEffectiveStatus(selectedPrescription).slice(1).replace(/_/g, " ")}
+                    {effectiveStatus.charAt(0).toUpperCase() + effectiveStatus.slice(1).replace(/_/g, " ")}
                   </Badge>
                 </div>
               </DialogHeader>
 
               <div className="space-y-5 mt-2">
+                {/* Section 2: Info Grid */}
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-start gap-3 bg-gray-50 rounded-lg p-3">
                     <Hash className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
@@ -511,14 +818,16 @@ export default function AdminPrescriptionsPage() {
                   </div>
                 </div>
 
+                {/* Section 3: Progress Tracker */}
                 <PrescriptionProgressTracker
-                  status={getEffectiveStatus(selectedPrescription)}
+                  status={effectiveStatus}
                   trackingNumber={selectedPrescription.trackingNumber}
                   pharmacyName={selectedPrescription.pharmacyName}
                   billingStatus={selectedPrescription.billingStatus}
                   patientCopay={selectedPrescription.patientCopay}
                 />
 
+                {/* Section 4: Medication Details */}
                 <div className="bg-gray-50 rounded-lg p-4 space-y-3">
                   <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
                     <Pill className="h-4 w-4 text-[#1E3A8A]" />
@@ -553,6 +862,238 @@ export default function AdminPrescriptionsPage() {
                   )}
                 </div>
 
+                {/* Section 5: Pricing */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 space-y-3">
+                  <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
+                    <DollarSign className="h-4 w-4 text-green-600" />
+                    Pricing
+                    {isGrouped && (
+                      <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs ml-2">
+                        {groupRxs.length} items in group
+                      </Badge>
+                    )}
+                  </h4>
+
+                  {isGrouped ? (
+                    <div className="space-y-2">
+                      {groupRxs.map((grx) => (
+                        <div
+                          key={grx.id}
+                          className={`flex justify-between items-center text-sm px-2 py-1 rounded ${grx.id === selectedPrescription.id ? "bg-green-100" : ""}`}
+                        >
+                          <span className="truncate mr-2">{grx.medication}</span>
+                          <span className="flex-shrink-0 font-medium">
+                            ${Number(grx.patientPrice || 0).toFixed(2)}
+                            {(grx.shippingFeeCents || 0) > 0 && (
+                              <span className="text-xs text-muted-foreground ml-1">+${((grx.shippingFeeCents || 0) / 100).toFixed(2)} ship</span>
+                            )}
+                          </span>
+                        </div>
+                      ))}
+                      <div className="border-t border-green-300 pt-2 space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>Shipping & Handling</span>
+                          <span>${(groupRxs.reduce((s, p) => s + (p.shippingFeeCents || 0), 0) / 100).toFixed(2)}</span>
+                        </div>
+                        {groupRxs.reduce((s, p) => s + (p.profitCents || 0), 0) > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span>Oversight & Monitoring</span>
+                            <span>${(groupRxs.reduce((s, p) => s + (p.profitCents || 0), 0) / 100).toFixed(2)}</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between font-bold text-green-700 text-lg pt-1">
+                          <span>Group Total</span>
+                          <span>${total.toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span>Medication Cost</span>
+                        <span>${Number(selectedPrescription.patientPrice || 0).toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Shipping</span>
+                        <span>${((selectedPrescription.shippingFeeCents || 0) / 100).toFixed(2)}</span>
+                      </div>
+                      {(selectedPrescription.profitCents || 0) > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>Oversight & Monitoring</span>
+                          <span>${((selectedPrescription.profitCents || 0) / 100).toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between font-bold text-green-700 text-lg border-t border-green-300 pt-2">
+                        <span>Total</span>
+                        <span>${total.toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Section 6: Shipping Address */}
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+                  <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
+                    <MapPin className="h-4 w-4 text-[#1E3A8A]" />
+                    Shipping Address
+                  </h4>
+                  {addr && formatAddress(addr) ? (
+                    <div>
+                      <p className="text-sm">{formatAddress(addr)}</p>
+                      {selectedPrescription.hasCustomAddress && (
+                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-xs mt-1">
+                          Custom address for this order
+                        </Badge>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-amber-600">No shipping address on file</p>
+                  )}
+
+                  {!showAddressEdit ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setAddressForm({
+                          street: addr?.street || "",
+                          city: addr?.city || "",
+                          state: addr?.state || "",
+                          zipCode: addr?.zipCode || "",
+                          country: addr?.country || "US",
+                        });
+                        setShowAddressEdit(true);
+                        setAddressResult(null);
+                      }}
+                    >
+                      <Pencil className="h-3 w-3 mr-1" />
+                      Edit Shipping Address
+                    </Button>
+                  ) : (
+                    <div className="space-y-3 border border-gray-200 rounded-lg p-3 bg-white">
+                      <div>
+                        <Label className="text-xs">Street Address</Label>
+                        <Input
+                          value={addressForm.street}
+                          onChange={(e) => setAddressForm({ ...addressForm, street: e.target.value })}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <Label className="text-xs">City</Label>
+                          <Input
+                            value={addressForm.city}
+                            onChange={(e) => setAddressForm({ ...addressForm, city: e.target.value })}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">State</Label>
+                          <Input
+                            value={addressForm.state}
+                            onChange={(e) => setAddressForm({ ...addressForm, state: e.target.value })}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">Zip Code</Label>
+                          <Input
+                            value={addressForm.zipCode}
+                            onChange={(e) => setAddressForm({ ...addressForm, zipCode: e.target.value })}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          size="sm"
+                          onClick={() => handleSaveAddress(selectedPrescription.id, true)}
+                          disabled={isSavingAddress}
+                        >
+                          {isSavingAddress ? <RefreshCw className="h-3 w-3 mr-1 animate-spin" /> : <CheckCircle2 className="h-3 w-3 mr-1" />}
+                          Save to Patient Record & Prescription
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => handleSaveAddress(selectedPrescription.id, false)}
+                          disabled={isSavingAddress}
+                        >
+                          This Prescription Only
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setShowAddressEdit(false)}
+                        >
+                          <X className="h-3 w-3 mr-1" />
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {addressResult && (
+                    <p className={`text-sm ${addressResult.success ? "text-green-600 bg-green-50 border border-green-200" : "text-red-600"} rounded px-3 py-2`}>
+                      {addressResult.message}
+                    </p>
+                  )}
+                </div>
+
+                {/* Section 7: Payment Actions */}
+                {effectiveStatus === "pending_payment" && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
+                    <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
+                      <DollarSign className="h-4 w-4 text-blue-600" />
+                      Payment Actions
+                    </h4>
+                    {selectedPrescription.patientEmail && (
+                      <p className="text-xs text-muted-foreground">Patient email: {selectedPrescription.patientEmail}</p>
+                    )}
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        onClick={() => handleSendPaymentLink(selectedPrescription)}
+                        disabled={isSendingPaymentLink || !selectedPrescription.patientEmail || !selectedPrescription.patientPrice}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        {isSendingPaymentLink ? (
+                          <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+                        ) : (
+                          <><Mail className="h-4 w-4 mr-2" />
+                            {isGrouped ? `Send Payment Link (${groupRxs.length} items)` : "Send Payment Link to Patient"}
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => handleMarkPaid(selectedPrescription.id)}
+                        disabled={isMarkingPaid}
+                        className="border-violet-300 text-violet-700 hover:bg-violet-50"
+                      >
+                        {isMarkingPaid ? (
+                          <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Processing...</>
+                        ) : (
+                          <><CheckCircle2 className="h-4 w-4 mr-2" />
+                            {isGrouped ? `Mark All ${groupRxs.length} Items as Paid` : "Mark as Paid"}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                    {paymentLinkResult && (
+                      <p className={`text-sm ${paymentLinkResult.success ? "text-green-600" : "text-red-600"}`}>
+                        {paymentLinkResult.message}
+                      </p>
+                    )}
+                    {markPaidResult && (
+                      <p className={`text-sm ${markPaidResult.success ? "text-green-600" : "text-red-600"}`}>
+                        {markPaidResult.message}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {/* Section 8: Submit to Pharmacy */}
                 {(!selectedPrescription.queueId || selectedPrescription.queueId === "N/A") && (
                   <div className="pt-2 space-y-2">
                     {selectedPrescription.paymentStatus !== "paid" && (
@@ -567,15 +1108,9 @@ export default function AdminPrescriptionsPage() {
                       data-testid="button-submit-to-pharmacy"
                     >
                       {isSubmittingToPharmacy ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Submitting to Pharmacy...
-                        </>
+                        <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Submitting to Pharmacy...</>
                       ) : (
-                        <>
-                          <Send className="h-4 w-4 mr-2" />
-                          Submit to Pharmacy
-                        </>
+                        <><Send className="h-4 w-4 mr-2" />Submit to Pharmacy</>
                       )}
                     </Button>
                     {submitResult && (
@@ -585,9 +1120,86 @@ export default function AdminPrescriptionsPage() {
                     )}
                   </div>
                 )}
+
+                {/* Section 9: Manual Status / Tracking Override */}
+                <div className="pt-2">
+                  {!showOverride ? (
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowOverride(true)}
+                      className="border-orange-300 text-orange-700 hover:bg-orange-50"
+                    >
+                      <AlertTriangle className="h-4 w-4 mr-2" />
+                      Manual Status / Tracking Override
+                    </Button>
+                  ) : (
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 space-y-3">
+                      <h4 className="font-semibold text-sm text-orange-800 flex items-center gap-2">
+                        <AlertTriangle className="h-4 w-4" />
+                        Manual Override
+                      </h4>
+                      <p className="text-xs text-orange-700">
+                        Use this when the pharmacy confirms a status change but the API hasn't updated. The patient will be notified automatically.
+                      </p>
+                      <div>
+                        <Label className="text-xs">Status</Label>
+                        <Select value={overrideStatus} onValueChange={setOverrideStatus}>
+                          <SelectTrigger className="mt-1 bg-white">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {OVERRIDE_STATUSES.map((s) => (
+                              <SelectItem key={s} value={s}>
+                                {s.charAt(0).toUpperCase() + s.slice(1).replace(/_/g, " ")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Tracking Number</Label>
+                        <div className="relative mt-1">
+                          <Truck className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            value={overrideTracking}
+                            onChange={(e) => setOverrideTracking(e.target.value)}
+                            className="pl-10 bg-white"
+                            placeholder="e.g. 870226650547"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs">Note (optional)</Label>
+                        <Input
+                          value={overrideNote}
+                          onChange={(e) => setOverrideNote(e.target.value)}
+                          className="mt-1 bg-white"
+                          placeholder="e.g. Confirmed by Leyla via email"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleApplyOverride(selectedPrescription.id)}
+                          disabled={isApplyingOverride || (!overrideStatus && !overrideTracking)}
+                          className="bg-orange-600 hover:bg-orange-700 text-white"
+                        >
+                          {isApplyingOverride ? (
+                            <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Applying...</>
+                          ) : (
+                            "Apply Override"
+                          )}
+                        </Button>
+                        <Button variant="ghost" onClick={() => setShowOverride(false)}>
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </>
-          )}
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
