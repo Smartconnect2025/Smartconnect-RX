@@ -612,18 +612,18 @@ export default function AdminPrescriptionsPage() {
 
       <div className="bg-white border border-border rounded-lg overflow-hidden">
         <div>
-          <Table className="w-full table-fixed">
+          <Table className="w-full">
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="font-semibold text-xs whitespace-nowrap px-2 w-[9%]">Date</TableHead>
-                <TableHead className="font-semibold text-xs px-2 w-[13%]">Provider</TableHead>
-                <TableHead className="font-semibold text-xs px-2 w-[11%]">Patient</TableHead>
-                <TableHead className="font-semibold text-xs px-2 w-[16%]">Medication</TableHead>
-                <TableHead className="font-semibold text-xs whitespace-nowrap px-2 w-[5%]">Qty/Ref</TableHead>
-                <TableHead className="font-semibold text-xs px-2 w-[7%]">Price</TableHead>
-                <TableHead className="font-semibold text-xs px-2 w-[14%]">Pharmacy</TableHead>
-                <TableHead className="font-semibold text-xs px-2 w-[14%]">SIG</TableHead>
-                <TableHead className="font-semibold text-xs px-2 w-[11%]">Status</TableHead>
+                <TableHead className="font-semibold text-sm px-3 whitespace-nowrap">Date</TableHead>
+                <TableHead className="font-semibold text-sm px-3">Provider</TableHead>
+                <TableHead className="font-semibold text-sm px-3">Patient</TableHead>
+                <TableHead className="font-semibold text-sm px-3">Medication</TableHead>
+                <TableHead className="font-semibold text-sm px-3 whitespace-nowrap">Qty/Refills</TableHead>
+                <TableHead className="font-semibold text-sm px-3">Price</TableHead>
+                <TableHead className="font-semibold text-sm px-3">Pharmacy</TableHead>
+                <TableHead className="font-semibold text-sm px-3">SIG</TableHead>
+                <TableHead className="font-semibold text-sm px-3">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -681,69 +681,71 @@ export default function AdminPrescriptionsPage() {
                     onClick={() => openPrescriptionDetail(prescription)}
                     data-testid={`row-prescription-${prescription.id}`}
                   >
-                    <TableCell className="text-xs whitespace-nowrap py-2 px-2">
-                      <div>{datePart}</div>
-                      <div className="text-muted-foreground">{timePart}</div>
+                    <TableCell className="text-sm whitespace-nowrap py-3 px-3">
+                      {datePart}, {timePart}
                     </TableCell>
-                    <TableCell className="text-xs font-medium py-2 px-2 truncate" title={prescription.providerName}>
+                    <TableCell className="text-sm py-3 px-3">
                       {prescription.providerName}
                     </TableCell>
-                    <TableCell className="text-xs font-medium py-2 px-2">
-                      <div className="flex items-center gap-1">
-                        <span className="truncate max-w-[100px]">{prescription.patientName}</span>
+                    <TableCell className="text-sm py-3 px-3">
+                      <div className="flex items-center gap-1.5">
+                        {prescription.patientName}
                         {isFirstInGroup && groupCount > 1 && (
                           <span
                             className="text-[10px] px-1.5 py-0.5 rounded-full text-white font-medium whitespace-nowrap"
                             style={{ backgroundColor: GROUP_BORDER_COLORS[groupIdx!] }}
                           >
-                            {groupCount}
+                            {groupCount} items
                           </span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-[160px] py-2 px-2">
-                      <div className="flex flex-col">
-                        <span className="text-xs font-medium truncate" title={prescription.medication}>
+                    <TableCell className="py-3 px-3">
+                      <div>
+                        <span className="text-sm truncate block" title={prescription.medication}>
                           {prescription.medication}
                         </span>
-                        <span className="text-[11px] text-muted-foreground truncate">
+                        <span className="text-xs text-muted-foreground truncate block">
                           {prescription.strength}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-xs whitespace-nowrap py-2 px-2">
-                      <span>{prescription.quantity}/{prescription.refills}</span>
+                    <TableCell className="text-sm whitespace-nowrap py-3 px-3">
+                      <div>
+                        <div>Qty: {prescription.quantity}</div>
+                        <div className="text-muted-foreground">Ref: {prescription.refills}</div>
+                      </div>
                     </TableCell>
-                    <TableCell className="text-xs py-2 px-2">
+                    <TableCell className="text-sm py-3 px-3">
                       {prescription.patientPrice != null ? (
-                        <div className="flex flex-col">
-                          <span className="font-medium">${Number(prescription.patientPrice).toFixed(2)}</span>
+                        <div>
+                          <div className="font-semibold">${Number(prescription.patientPrice).toFixed(2)}</div>
                           {(prescription.shippingFeeCents || 0) > 0 && (
-                            <span className="text-[10px] text-muted-foreground">+${((prescription.shippingFeeCents || 0) / 100).toFixed(2)}</span>
+                            <div className="text-xs text-muted-foreground">+${((prescription.shippingFeeCents || 0) / 100).toFixed(2)} ship</div>
                           )}
                         </div>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-2 px-2 truncate" title={prescription.pharmacyName || ""}>
+                    <TableCell className="py-3 px-3">
                       {prescription.pharmacyName ? (
-                        <span className="font-medium text-xs" style={{ color: prescription.pharmacyColor || "#1E3A8A" }}>
+                        <span className="text-sm" style={{ color: prescription.pharmacyColor || "#1E3A8A" }}>
                           {prescription.pharmacyName}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
+                        <span className="text-muted-foreground text-sm">—</span>
                       )}
                     </TableCell>
-                    <TableCell className="max-w-[120px] py-2 px-2">
-                      <p className="text-xs truncate cursor-help" title={prescription.sig}>
+                    <TableCell className="py-3 px-3">
+                      <p className="text-sm truncate cursor-help" title={prescription.sig}>
                         {prescription.sig}
                       </p>
                     </TableCell>
-                    <TableCell className="py-2 px-2">
+                    <TableCell className="py-3 px-3">
                       <Badge
                         variant="outline"
-                        className={`${getStatusColor(getEffectiveStatus(prescription))} text-[10px] px-1.5 py-0.5 whitespace-nowrap`}
+                        className={`${getStatusColor(getEffectiveStatus(prescription))} text-xs px-2 py-0.5 whitespace-nowrap`}
                       >
                         {getEffectiveStatus(prescription).charAt(0).toUpperCase() + getEffectiveStatus(prescription).slice(1).replace(/_/g, " ")}
                       </Badge>
