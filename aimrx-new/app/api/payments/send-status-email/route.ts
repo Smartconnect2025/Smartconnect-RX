@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import sgMail from "@sendgrid/mail";
 import { statusEmailHtml, GRADIENTS } from "@core/services/email/emailTemplates";
 import { checkEmailDedup, logEmailSent, logEmailFailed } from "@core/services/email/email-guard";
+import { getPharmacyBranding, getFromName } from "@core/services/email/pharmacy-branding";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "support@aimrx.com";
-const FROM_NAME = process.env.SENDGRID_FROM_NAME || "SmartConnect RX";
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
 
 function escHtml(str: string | undefined | null): string {
@@ -114,8 +114,11 @@ export async function POST(request: NextRequest) {
       pharmacyName,
       pharmacyPhone,
       pharmacyAddress,
+      pharmacyId,
       prescriptionId,
     } = body;
+
+    const branding = pharmacyId ? await getPharmacyBranding(pharmacyId) : undefined;
 
     if (!patientEmail || !statusType || !medication) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
@@ -147,9 +150,12 @@ export async function POST(request: NextRequest) {
     const safePatientName = escHtml(patientName) || "there";
     const safeMedication = escHtml(medication);
     const safeProviderName = escHtml(providerName);
-    const safePharmacyName = escHtml(pharmacyName);
+    const displayPharmacyName = branding?.name || pharmacyName;
+    const safePharmacyName = escHtml(displayPharmacyName);
+    const displayPhone = branding?.phone || pharmacyPhone;
+    const displayAddress = branding?.address || pharmacyAddress;
 
-    const fromName = pharmacyName ? `${pharmacyName} via SmartConnect RX` : FROM_NAME;
+    const fromName = getFromName(branding);
 
     const htmlContent = statusEmailHtml({
       patientName: safePatientName,
@@ -158,19 +164,20 @@ export async function POST(request: NextRequest) {
       heading: config.heading,
       gradient: config.gradient,
       message: config.message(safeMedication, safePharmacyName || undefined),
-      nextSteps: config.nextSteps + (pharmacyPhone ? ` Reach the pharmacy at ${escHtml(pharmacyPhone)}.` : "") + (pharmacyAddress ? ` Located at ${escHtml(pharmacyAddress)}.` : ""),
+      nextSteps: config.nextSteps + (displayPhone ? ` Reach the pharmacy at ${escHtml(displayPhone)}.` : "") + (displayAddress ? ` Located at ${escHtml(displayAddress)}.` : ""),
       steps: config.steps,
       trackingNumber: escHtml(trackingNumber),
       trackingUrl: trackingUrl || undefined,
       pharmacyName: safePharmacyName || undefined,
-      pharmacyPhone: escHtml(pharmacyPhone),
-      pharmacyAddress: escHtml(pharmacyAddress),
+      pharmacyPhone: escHtml(displayPhone),
+      pharmacyAddress: escHtml(displayAddress),
+      branding,
     });
 
     const msg = {
       to: patientEmail,
       from: { email: FROM_EMAIL, name: fromName },
-      subject: config.subject(medication) + (pharmacyName ? ` - ${pharmacyName}` : ""),
+      subject: config.subject(medication) + (displayPharmacyName ? ` - ${displayPharmacyName}` : ""),
       html: htmlContent,
     };
 

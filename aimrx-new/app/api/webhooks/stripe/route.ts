@@ -311,9 +311,8 @@ async function handleCheckoutCompleted(
           totalAmount: (paymentTransaction.total_amount_cents / 100).toFixed(2),
           transactionId: stripePaymentIntentId || session.id,
           pharmacyName: paymentTransaction.pharmacy_name,
+          pharmacyId: paymentTransaction.pharmacy_id,
           deliveryMethod: paymentTransaction.delivery_method,
-          pharmacyLogoUrl,
-          pharmacyColor,
         }),
       });
 
@@ -455,6 +454,7 @@ async function handlePaymentIntentSucceeded(
           transactionId: paymentIntent.id,
           paymentMethod: "Credit Card (Stripe)",
           pharmacyName: existing.pharmacy_name,
+          pharmacyId: existing.pharmacy_id,
           prescriptionId: existing.prescription_id,
         }),
       });

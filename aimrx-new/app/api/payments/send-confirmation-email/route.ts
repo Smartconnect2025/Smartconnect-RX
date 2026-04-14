@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import sgMail from "@sendgrid/mail";
 import { paymentConfirmationEmailHtml } from "@core/services/email/emailTemplates";
 import { checkEmailDedup, logEmailSent, logEmailFailed } from "@core/services/email/email-guard";
+import { getPharmacyBranding, getFromName } from "@core/services/email/pharmacy-branding";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "support@aimrx.com";
-const FROM_NAME = process.env.SENDGRID_FROM_NAME || "SmartConnect RX";
 
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
 
@@ -38,7 +38,10 @@ export async function POST(request: NextRequest) {
       transactionId,
       deliveryMethod,
       pharmacyName,
+      pharmacyId,
     } = body;
+
+    const branding = pharmacyId ? await getPharmacyBranding(pharmacyId) : undefined;
 
     if (!patientEmail || !transactionId) {
       return NextResponse.json(
@@ -80,8 +83,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: "Duplicate blocked", deduplicated: true });
     }
 
-    const safeName = escHtml(pharmacyName);
-    const fromName = pharmacyName ? `${pharmacyName} via SmartConnect RX` : FROM_NAME;
+    const displayPharmacyName = branding?.name || pharmacyName;
+    const fromName = getFromName(branding);
     const safePatientName = escHtml(patientName);
     const safeProviderName = escHtml(providerName);
     const safeMedication = escHtml(medication);
@@ -94,7 +97,7 @@ export async function POST(request: NextRequest) {
         email: FROM_EMAIL,
         name: fromName,
       },
-      subject: `Payment Confirmed: ${medication} Prescription${pharmacyName ? ` - ${pharmacyName}` : ""}`,
+      subject: `Payment Confirmed: ${medication} Prescription${displayPharmacyName ? ` - ${displayPharmacyName}` : ""}`,
       text: `
 Hi ${patientName},
 
@@ -106,7 +109,7 @@ Transaction Details:
 - Transaction ID: ${transactionId}
 - Prescribed by: ${providerName}
 - Medication: ${medication}
-${pharmacyName ? `- Pharmacy: ${pharmacyName}` : ''}
+${displayPharmacyName ? `- Pharmacy: ${displayPharmacyName}` : ''}
 - Fulfillment Method: ${deliveryDisplayText}
 - Amount Paid: $${totalAmount}
 
@@ -119,13 +122,13 @@ Order Progress:
 \u25cb Pharmacy Processing
 \u25cb ${deliveryMethod === 'pickup' ? 'Ready for Pickup' : deliveryMethod === 'delivery' ? 'Out for Delivery' : 'Shipped'}
 
-We'll send you updates as your order progresses through each stage.
+You'll receive updates as your order progresses through each stage.
 
-Questions? Contact your provider or reply to this email.
+Questions? Contact ${displayPharmacyName || 'your pharmacy'} or your provider.
 
 Keep this email for your records.
 
-\u00a9 ${new Date().getFullYear()} ${FROM_NAME}
+\u00a9 ${new Date().getFullYear()} ${displayPharmacyName || "SmartConnect RX"}
       `,
       html: paymentConfirmationEmailHtml({
         patientName: safePatientName || "there",
@@ -133,8 +136,9 @@ Keep this email for your records.
         providerName: safeProviderName,
         amountFormatted: `$${safeTotalAmount}`,
         transactionId: safeTransactionId,
-        pharmacyName: safeName || undefined,
+        pharmacyName: escHtml(displayPharmacyName) || undefined,
         fulfillmentMethod: deliveryMethod as string,
+        branding,
       }),
     };
 

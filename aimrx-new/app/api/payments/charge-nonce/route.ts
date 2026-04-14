@@ -414,6 +414,7 @@ export async function POST(request: NextRequest) {
             transactionId: authnetTransactionId,
             paymentMethod: "Credit Card",
             pharmacyName: transaction.pharmacy_name,
+            pharmacyId: transaction.pharmacy_id,
             prescriptionId: transaction.prescription_id,
           }),
         });

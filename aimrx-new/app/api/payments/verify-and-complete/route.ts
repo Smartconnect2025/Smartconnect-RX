@@ -463,6 +463,7 @@ export async function POST(request: NextRequest) {
             totalAmount: (transaction.total_amount_cents / 100).toFixed(2),
             transactionId: matchedTransaction.transId,
             pharmacyName: transaction.pharmacy_name,
+            pharmacyId: transaction.pharmacy_id,
           }),
         });
       } catch (err) {

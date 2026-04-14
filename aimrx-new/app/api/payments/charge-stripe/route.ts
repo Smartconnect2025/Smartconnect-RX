@@ -491,6 +491,7 @@ export async function POST(request: NextRequest) {
             transactionId: paymentIntent.id,
             paymentMethod: "Credit Card (Stripe)",
             pharmacyName: transaction.pharmacy_name,
+            pharmacyId: transaction.pharmacy_id,
             prescriptionId: transaction.prescription_id,
           }),
         });

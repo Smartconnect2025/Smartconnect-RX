@@ -59,7 +59,7 @@ async function sendStatusEmail(prescriptionId: string, newStatus: string, tracki
 
   const { data: rx } = await supabase
     .from("prescriptions")
-    .select("patient_id, prescriber_id, medication, dosage, pharmacy_id, tracking_number")
+    .select("patient_id, prescriber_id, medication, dosage, pharmacy_id, tracking_number, id")
     .eq("id", prescriptionId)
     .single();
 
@@ -112,6 +112,7 @@ async function sendStatusEmail(prescriptionId: string, newStatus: string, tracki
       statusType: emailType,
       prescriptionId,
       pharmacyName,
+      pharmacyId: rx.pharmacy_id,
       pharmacyPhone,
       pharmacyAddress,
     };

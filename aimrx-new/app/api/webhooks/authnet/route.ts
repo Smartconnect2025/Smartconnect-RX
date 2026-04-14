@@ -421,9 +421,8 @@ async function handlePaymentSuccess(
           totalAmount: (paymentTransaction.total_amount_cents / 100).toFixed(2),
           transactionId: authnetTransactionId,
           pharmacyName: paymentTransaction.pharmacy_name,
+          pharmacyId: paymentTransaction.pharmacy_id,
           deliveryMethod: paymentTransaction.delivery_method,
-          pharmacyLogoUrl,
-          pharmacyColor,
         }),
       });
 

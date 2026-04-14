@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import sgMail from "@sendgrid/mail";
 import { paymentRequestEmailHtml } from "@core/services/email/emailTemplates";
 import { checkEmailDedup, logEmailSent, logEmailFailed } from "@core/services/email/email-guard";
+import { getPharmacyBranding, getFromName } from "@core/services/email/pharmacy-branding";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "support@aimrx.com";
-const FROM_NAME = process.env.SENDGRID_FROM_NAME || "SmartConnect RX";
 
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
 
@@ -47,9 +47,12 @@ export async function POST(request: NextRequest) {
       totalAmount,
       paymentUrl,
       pharmacyName,
+      pharmacyId,
       paymentToken,
       patientPhone,
     } = body;
+
+    const branding = pharmacyId ? await getPharmacyBranding(pharmacyId) : undefined;
 
     if (!patientEmail || !paymentUrl) {
       return NextResponse.json(
@@ -75,8 +78,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, message: "Duplicate blocked", deduplicated: true });
     }
 
-    const safeName = escHtml(pharmacyName);
-    const fromName = pharmacyName ? `${pharmacyName} via SmartConnect RX` : FROM_NAME;
+    const displayPharmacyName = branding?.name || pharmacyName;
+    const fromName = getFromName(branding);
     const safePaymentUrl = sanitizeUrl(paymentUrl);
     const safePatientName = escHtml(patientName);
     const safeProviderName = escHtml(providerName);
@@ -89,14 +92,14 @@ export async function POST(request: NextRequest) {
         email: FROM_EMAIL,
         name: fromName,
       },
-      subject: `Action Needed: Complete Payment for Your ${medication} Prescription${pharmacyName ? ` - ${pharmacyName}` : ""}`,
+      subject: `Action Needed: Complete Payment for Your ${medication} Prescription${displayPharmacyName ? ` - ${displayPharmacyName}` : ""}`,
       text: `
 Hi ${patientName},
 
 Your prescription for ${medication} is ready for payment.
 
 Prescribed by: ${providerName}
-${pharmacyName ? `Pharmacy: ${pharmacyName}` : ""}
+${displayPharmacyName ? `Pharmacy: ${displayPharmacyName}` : ""}
 Medication: ${medication}
 Total Amount Due: $${totalAmount}
 
@@ -105,9 +108,9 @@ ${paymentUrl}
 
 This link expires in 7 days.
 
-Questions? Contact your provider or reply to this email.
+Questions? Contact your pharmacy${displayPharmacyName ? ` (${displayPharmacyName})` : ""} or your provider.
 
-\u00a9 ${new Date().getFullYear()} ${pharmacyName || "SmartConnect RX"}. All rights reserved.
+\u00a9 ${new Date().getFullYear()} ${displayPharmacyName || "SmartConnect RX"}. All rights reserved.
       `,
       html: paymentRequestEmailHtml({
         patientName: safePatientName || "there",
@@ -115,7 +118,8 @@ Questions? Contact your provider or reply to this email.
         providerName: safeProviderName,
         totalAmountFormatted: `$${safeTotalAmount}`,
         paymentUrl: safePaymentUrl,
-        pharmacyName: safeName || undefined,
+        pharmacyName: escHtml(displayPharmacyName) || undefined,
+        branding,
       }),
     };
 

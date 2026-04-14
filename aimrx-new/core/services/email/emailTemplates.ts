@@ -7,6 +7,36 @@ const SUPPORT_HOURS = "Mon–Fri 9AM–6PM CST";
 const SUPPORT_EMAIL = "support@smartconnectrx.com";
 const CURRENT_YEAR = new Date().getFullYear();
 
+export interface PharmacyBranding {
+  name: string;
+  logoUrl?: string | null;
+  primaryColor?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  tagline?: string | null;
+}
+
+function resolveLogoUrl(branding?: PharmacyBranding): string {
+  return branding?.logoUrl || LOGO_URL;
+}
+
+function resolveDisplayName(branding?: PharmacyBranding): string {
+  return branding?.name || APP_NAME;
+}
+
+function resolvePrimaryColor(branding?: PharmacyBranding): string {
+  return branding?.primaryColor || "#1E3A8A";
+}
+
+function resolveGradient(branding?: PharmacyBranding): string {
+  const color = resolvePrimaryColor(branding);
+  return `linear-gradient(135deg, ${color} 0%, #00AEEF 100%)`;
+}
+
+function resolveSuccessGradient(): string {
+  return GRADIENTS.greenSuccess;
+}
+
 function escHtml(str: string | undefined | null): string {
   if (!str) return "";
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -47,29 +77,37 @@ export function emailHeader(options: {
   heading: string;
   subtext?: string;
   logoHeight?: number;
+  branding?: PharmacyBranding;
 }): string {
-  const { gradient, heading, subtext, logoHeight = 60 } = options;
+  const { heading, subtext, logoHeight = 60, branding } = options;
+  const logo = resolveLogoUrl(branding);
+  const displayName = resolveDisplayName(branding);
+  const gradient = branding ? resolveGradient(branding) : options.gradient;
   return `
     <tr>
       <td style="background: ${gradient}; padding: 36px 40px; text-align: center;">
-        <img src="${LOGO_URL}" alt="${APP_NAME}" height="${logoHeight}" style="height: ${logoHeight}px; margin-bottom: 16px; display: block; margin-left: auto; margin-right: auto;" />
+        <img src="${logo}" alt="${displayName}" height="${logoHeight}" style="height: ${logoHeight}px; margin-bottom: 16px; display: block; margin-left: auto; margin-right: auto;" />
         <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700;">${heading}</h1>
         ${subtext ? `<p style="margin: 8px 0 0; color: rgba(255,255,255,0.85); font-size: 14px;">${subtext}</p>` : ""}
       </td>
     </tr>`;
 }
 
-export function emailFooterWithSupport(): string {
+export function emailFooterWithSupport(branding?: PharmacyBranding): string {
+  const displayName = resolveDisplayName(branding);
+  const primaryColor = resolvePrimaryColor(branding);
+  const contactPhone = branding?.phone || SUPPORT_PHONE;
+  const contactAddress = branding?.address;
+
   return `
     <tr>
       <td style="padding: 28px 40px; border-top: 1px solid #e5e7eb;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td style="text-align: center; padding-bottom: 20px;">
-              <p style="margin: 0 0 8px; font-size: 14px; font-weight: 700; color: #1E3A8A;">Need Help?</p>
-              <p style="margin: 0 0 4px; font-size: 13px; color: #475569;">📞 ${SUPPORT_PHONE}</p>
-              <p style="margin: 0 0 4px; font-size: 13px; color: #475569;">🕐 ${SUPPORT_HOURS}</p>
-              <p style="margin: 0; font-size: 13px; color: #475569;">✉️ <a href="mailto:${SUPPORT_EMAIL}" style="color: #2563EB; text-decoration: none;">${SUPPORT_EMAIL}</a></p>
+              <p style="margin: 0 0 8px; font-size: 14px; font-weight: 700; color: ${primaryColor};">Need Help?</p>
+              <p style="margin: 0 0 4px; font-size: 13px; color: #475569;">📞 ${contactPhone}</p>
+              ${contactAddress ? `<p style="margin: 0 0 4px; font-size: 13px; color: #475569;">📍 ${escHtml(contactAddress)}</p>` : `<p style="margin: 0 0 4px; font-size: 13px; color: #475569;">🕐 ${SUPPORT_HOURS}</p>`}
             </td>
           </tr>
         </table>
@@ -77,18 +115,20 @@ export function emailFooterWithSupport(): string {
     </tr>
     <tr>
       <td style="background-color: #f8fafc; padding: 20px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
-        <p style="margin: 0 0 4px; font-size: 12px; color: #94a3b8;">Thank you for trusting <strong style="color: #1E3A8A;">${APP_NAME}</strong> with your care.</p>
-        <p style="margin: 0; font-size: 11px; color: #94a3b8;">© ${CURRENT_YEAR} SmartConnect Technologies. All rights reserved.</p>
+        <p style="margin: 0 0 4px; font-size: 12px; color: #94a3b8;">Thank you for trusting <strong style="color: ${primaryColor};">${displayName}</strong> with your care.</p>
+        <p style="margin: 0; font-size: 11px; color: #94a3b8;">© ${CURRENT_YEAR} ${displayName}. All rights reserved.</p>
       </td>
     </tr>`;
 }
 
-export function emailFooterSimple(): string {
+export function emailFooterSimple(branding?: PharmacyBranding): string {
+  const displayName = resolveDisplayName(branding);
+  const primaryColor = resolvePrimaryColor(branding);
   return `
     <tr>
       <td style="background-color: #f8fafc; padding: 20px 40px; text-align: center; border-top: 1px solid #e5e7eb;">
-        <p style="margin: 0 0 4px; font-size: 12px; color: #94a3b8;">Thank you for trusting <strong style="color: #1E3A8A;">${APP_NAME}</strong>.</p>
-        <p style="margin: 0; font-size: 11px; color: #94a3b8;">© ${CURRENT_YEAR} SmartConnect Technologies. All rights reserved.</p>
+        <p style="margin: 0 0 4px; font-size: 12px; color: #94a3b8;">Thank you for trusting <strong style="color: ${primaryColor};">${displayName}</strong>.</p>
+        <p style="margin: 0; font-size: 11px; color: #94a3b8;">© ${CURRENT_YEAR} ${displayName}. All rights reserved.</p>
       </td>
     </tr>`;
 }
@@ -272,19 +312,23 @@ export function paymentRequestEmailHtml(options: {
   totalAmountFormatted: string;
   paymentUrl: string;
   pharmacyName?: string;
+  branding?: PharmacyBranding;
 }): string {
+  const primaryColor = resolvePrimaryColor(options.branding);
+  const displayName = resolveDisplayName(options.branding);
   return emailWrapper(
     emailHeader({
       gradient: GRADIENTS.navyCyan,
       heading: "Complete Your Prescription Payment",
+      branding: options.branding,
     }) +
     contentSection(`
       <p style="font-size: 16px; color: #334155; margin: 0 0 8px;">Hi ${options.patientName},</p>
-      <p style="font-size: 16px; color: #334155; margin: 0 0 20px;">Your prescription for <strong>${options.medication}</strong>, prescribed by <strong style="color: #1E3A8A;">${options.providerName}</strong>, is ready for payment.</p>
+      <p style="font-size: 16px; color: #334155; margin: 0 0 20px;">Your prescription for <strong>${options.medication}</strong>, prescribed by <strong style="color: ${primaryColor};">${options.providerName}</strong>, is ready for payment.</p>
       ${detailsCard("Prescription Details",
-        detailRow("Prescribing Clinician", `<strong style="color: #1E3A8A;">${options.providerName}</strong>`, "#1E3A8A") +
+        detailRow("Prescribing Clinician", `<strong style="color: ${primaryColor};">${options.providerName}</strong>`, primaryColor) +
         detailRow("Medication(s)", options.medication) +
-        (options.pharmacyName ? detailRow("Fulfilling Pharmacy", options.pharmacyName) : "") +
+        detailRow("Pharmacy", options.pharmacyName || displayName) +
         `<tr><td colspan="2" style="padding: 14px 16px; text-align: right;">
           <span style="font-size: 13px; color: #64748b;">Total Amount Due</span><br>
           <span style="font-size: 22px; font-weight: 700; color: #00AEEF;">${options.totalAmountFormatted}</span>
@@ -301,7 +345,7 @@ export function paymentRequestEmailHtml(options: {
         { label: "Delivered", done: false },
       ])}
     `) +
-    emailFooterWithSupport()
+    emailFooterWithSupport(options.branding)
   );
 }
 
@@ -313,29 +357,33 @@ export function paymentConfirmationEmailHtml(options: {
   transactionId: string;
   pharmacyName?: string;
   fulfillmentMethod?: string;
+  branding?: PharmacyBranding;
 }): string {
-  let nextStepsText = "Your prescription has been sent to the pharmacy for processing. We will notify you with updates.";
+  const primaryColor = resolvePrimaryColor(options.branding);
+  const displayName = resolveDisplayName(options.branding);
+  let nextStepsText = `Your prescription has been sent to ${options.pharmacyName || displayName} for processing. You will be notified with updates.`;
   if (options.fulfillmentMethod === "pickup") {
-    nextStepsText = "Your prescription has been sent to the pharmacy. They will notify you when it's ready for pickup.";
+    nextStepsText = `Your prescription has been sent to ${options.pharmacyName || displayName}. You will be notified when it's ready for pickup.`;
   } else if (options.fulfillmentMethod === "delivery") {
-    nextStepsText = "Your prescription has been sent to the pharmacy. They will deliver it to your address on file.";
+    nextStepsText = `Your prescription has been sent to ${options.pharmacyName || displayName}. It will be delivered to your address on file.`;
   } else if (options.fulfillmentMethod === "shipping") {
-    nextStepsText = "Your prescription has been sent to the pharmacy. Once shipped, you'll receive tracking information.";
+    nextStepsText = `Your prescription has been sent to ${options.pharmacyName || displayName}. Once shipped, you'll receive tracking information.`;
   }
 
   return emailWrapper(
     emailHeader({
       gradient: GRADIENTS.greenSuccess,
       heading: "Payment Confirmed",
+      branding: options.branding,
     }) +
     contentSection(`
       <p style="font-size: 16px; color: #334155; margin: 0 0 8px;">Hi ${options.patientName},</p>
       <p style="font-size: 16px; color: #334155; margin: 0 0 20px;">Thank you! Your payment has been successfully processed.</p>
       ${detailsCard("Transaction Details",
         detailRow("Transaction ID", `<code style="font-family: monospace; font-size: 14px; font-weight: 600; color: #1e293b;">${options.transactionId}</code>`) +
-        detailRow("Prescribing Clinician", `<strong style="color: #1E3A8A;">${options.providerName}</strong>`, "#1E3A8A") +
+        detailRow("Prescribing Clinician", `<strong style="color: ${primaryColor};">${options.providerName}</strong>`, primaryColor) +
         detailRow("Medication(s)", options.medication) +
-        (options.pharmacyName ? detailRow("Fulfilling Pharmacy", options.pharmacyName) : "") +
+        detailRow("Pharmacy", options.pharmacyName || displayName) +
         `<tr><td colspan="2" style="padding: 14px 16px; text-align: right;">
           <span style="font-size: 13px; color: #64748b;">Amount Paid</span><br>
           <span style="font-size: 22px; font-weight: 700; color: #10B981;">${options.amountFormatted}</span>
@@ -350,7 +398,7 @@ export function paymentConfirmationEmailHtml(options: {
         { label: "Delivered / Completed", done: false },
       ])}
     `) +
-    emailFooterWithSupport()
+    emailFooterWithSupport(options.branding)
   );
 }
 
@@ -425,18 +473,21 @@ export function statusEmailHtml(options: {
   pharmacyName?: string;
   pharmacyPhone?: string;
   pharmacyAddress?: string;
+  branding?: PharmacyBranding;
 }): string {
+  const primaryColor = resolvePrimaryColor(options.branding);
+
   const trackingBox = options.trackingNumber
     ? `<div style="background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 2px solid #93c5fd; border-radius: 10px; padding: 20px; margin: 20px 0; text-align: center;">
         <p style="margin: 0 0 8px; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Tracking Number</p>
-        <p style="margin: 0 0 16px; font-family: 'Courier New', monospace; font-size: 20px; font-weight: 700; color: #1e3a8a; letter-spacing: 2px;">${options.trackingNumber}</p>
-        ${options.trackingUrl ? `<a href="${options.trackingUrl}" style="display: inline-block; padding: 10px 28px; background: ${GRADIENTS.ctaButton}; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px;">Track Package</a>` : ""}
+        <p style="margin: 0 0 16px; font-family: 'Courier New', monospace; font-size: 20px; font-weight: 700; color: ${primaryColor}; letter-spacing: 2px;">${options.trackingNumber}</p>
+        ${options.trackingUrl ? `<a href="${options.trackingUrl}" style="display: inline-block; padding: 10px 28px; background: ${resolveGradient(options.branding)}; color: #ffffff; font-size: 14px; font-weight: 600; text-decoration: none; border-radius: 6px;">Track Package</a>` : ""}
       </div>`
     : "";
 
   const pharmacyBox = options.pharmacyName
     ? `<div style="background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
-        <p style="margin: 0 0 4px; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Fulfilling Pharmacy</p>
+        <p style="margin: 0 0 4px; font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;">Your Pharmacy</p>
         <p style="margin: 0; font-size: 14px; font-weight: 600; color: #1e293b;">${options.pharmacyName}</p>
         ${options.pharmacyPhone ? `<p style="margin: 4px 0 0; font-size: 13px; color: #475569;">📞 ${options.pharmacyPhone}</p>` : ""}
         ${options.pharmacyAddress ? `<p style="margin: 4px 0 0; font-size: 13px; color: #475569;">📍 ${options.pharmacyAddress}</p>` : ""}
@@ -444,12 +495,12 @@ export function statusEmailHtml(options: {
     : "";
 
   return emailWrapper(
-    emailHeader({ gradient: options.gradient, heading: options.heading }) +
+    emailHeader({ gradient: options.gradient, heading: options.heading, branding: options.branding }) +
     contentSection(`
       <p style="font-size: 16px; color: #334155; margin: 0 0 8px;">Hi ${options.patientName},</p>
       <p style="font-size: 16px; color: #334155; margin: 0 0 20px;">${options.message}</p>
       ${detailsCard("Prescription Details",
-        detailRow("Prescribing Clinician", `<strong style="color: #1E3A8A;">${options.providerName}</strong>`, "#1E3A8A") +
+        detailRow("Prescribing Clinician", `<strong style="color: ${primaryColor};">${options.providerName}</strong>`, primaryColor) +
         detailRow("Medication(s)", options.medication)
       )}
       ${trackingBox}
@@ -457,7 +508,7 @@ export function statusEmailHtml(options: {
       ${infoBox(`<p style="margin: 0; font-size: 14px; color: #334155;"><strong>What Happens Next</strong></p><p style="margin: 8px 0 0; font-size: 13px; color: #475569;">${options.nextSteps}</p>`)}
       ${progressTracker(options.steps)}
     `) +
-    emailFooterWithSupport()
+    emailFooterWithSupport(options.branding)
   );
 }
 
