@@ -52,6 +52,7 @@ hooks/                  # Global custom hooks
 
 **Optional integrations:**
 - SENDGRID_API_KEY, SENDGRID_FROM_EMAIL, SENDGRID_FROM_NAME
+- ADMIN_ALERT_EMAIL (for admin alert notifications, defaults to support@smartconnectrx.com)
 - TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER
 - DIGITALRX_API_KEY, DIGITALRX_BASE_URL
 - FEDEX_API_KEY, FEDEX_API_SECRET, FEDEX_ACCOUNT_NUMBER
@@ -162,6 +163,19 @@ hooks/                  # Global custom hooks
   - Per-pharmacy medication counts — expand any category to see how many meds each pharmacy has
   - Categories API enhanced: returns medication_count + pharmacy_counts[] per category (matched by category name from pharmacy_medications table)
   - Files: app/(features)/admin/categories/page.tsx, components/layout/AdminNavigationTabs.tsx, app/api/admin/categories/route.ts
+
+## Email Notification System (Completed April 14, 2026)
+Full email notification system with 17 email flows:
+- **Emails #1-7**: Already existed (MFA, password reset, welcome emails, payment request/confirmation)
+- **Emails #8-11**: Status update emails to patients (pharmacy processing, shipped, delivered, ready for pickup)
+  - New route: `app/api/payments/send-status-email/route.ts`
+  - New template: `statusEmailHtml()` in `core/services/email/emailTemplates.ts`
+  - Wired into: DigitalRx webhook, PioneerRx webhook, prescription-status-sync cron
+- **Emails #12-13**: Access request emails (already existed)
+- **Emails #15-17**: Admin alert emails (unknown status, stuck orders, invalid tracking)
+  - New service: `core/services/admin-alerts.ts`
+- **Email dedup**: `core/services/email/email-guard.ts` prevents duplicate sends within time windows
+- **Status email helper**: `core/services/email/send-patient-status-email.ts` fetches prescription/patient/pharmacy data and calls the status email endpoint
 
 ## Remaining Issues (Priority Order)
 ### Critical
