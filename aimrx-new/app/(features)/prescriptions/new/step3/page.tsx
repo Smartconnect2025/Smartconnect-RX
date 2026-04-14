@@ -1082,10 +1082,15 @@ export default function PrescriptionStep3Page() {
 
           {totalShipping > 0 && (
             <div className="space-y-3">
-              <h3 className="text-lg font-semibold text-gray-900">Shipping and Handling</h3>
+              <h3 className="text-lg font-semibold text-gray-900">Delivery</h3>
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                 <div className="flex justify-between items-center">
-                  <p className="font-medium text-gray-900">Delivery Fee</p>
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {(sharedFees as any).selectedShippingOption === "refrigerated_overnight" ? "Refrigerated Overnight" : "Standard Overnight"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Overnight delivery</p>
+                  </div>
                   <p className="text-xl font-bold text-gray-900">${totalShipping.toFixed(2)}</p>
                 </div>
               </div>

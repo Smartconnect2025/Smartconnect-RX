@@ -120,24 +120,31 @@ export default function PrescriptionStep2Page() {
   );
   const [selectedMedicationDetails, setSelectedMedicationDetails] =
     useState<PharmacyMedication | null>(null);
-  const [shippingFee, setShippingFee] = useState<string>("25.00");
+  const [shippingFee, setShippingFee] = useState<string>("40.00");
+  const [shippingOptions, setShippingOptions] = useState<{id: string; label: string; price_cents: number}[]>([
+    { id: "standard_overnight", label: "Standard Overnight", price_cents: 4000 },
+    { id: "refrigerated_overnight", label: "Refrigerated Overnight", price_cents: 5500 },
+  ]);
+  const [selectedShippingOption, setSelectedShippingOption] = useState<string>("standard_overnight");
   const [cart, setCart] = useState<CartItem[]>([]);
 
-  // Fetch provider's default shipping fee (fallback to $25)
   useEffect(() => {
-    const fetchDefaultShippingFee = async () => {
-      if (!user?.id) return;
-      const { data } = await supabase
-        .from("providers")
-        .select("default_shipping_fee")
-        .eq("user_id", user.id)
-        .single();
-      if (data?.default_shipping_fee != null) {
-        setShippingFee(String(data.default_shipping_fee));
-      }
+    const fetchShippingOptions = async () => {
+      try {
+        const resp = await fetch("/api/pharmacies/shipping-options");
+        if (resp.ok) {
+          const data = await resp.json();
+          if (data.options?.length > 0) {
+            setShippingOptions(data.options);
+            const defaultOpt = data.options[0];
+            setSelectedShippingOption(defaultOpt.id);
+            setShippingFee((defaultOpt.price_cents / 100).toFixed(2));
+          }
+        }
+      } catch {}
     };
-    fetchDefaultShippingFee();
-  }, [user?.id]);
+    fetchShippingOptions();
+  }, []);
 
   // Load cart from sessionStorage on mount
   useEffect(() => {
@@ -147,6 +154,7 @@ export default function PrescriptionStep2Page() {
     }
     const savedFees = getSharedFees();
     if (savedFees.shippingFee) setShippingFee(savedFees.shippingFee);
+    if ((savedFees as any).selectedShippingOption) setSelectedShippingOption((savedFees as any).selectedShippingOption);
     if (savedFees.oversightFees?.length > 0) setOversightFees(savedFees.oversightFees);
   }, []);
 
@@ -419,7 +427,7 @@ export default function PrescriptionStep2Page() {
     const updatedCart = [...cart, newItem];
     setCart(updatedCart);
     saveCart(updatedCart);
-    saveSharedFees({ shippingFee, oversightFees });
+    saveSharedFees({ shippingFee, selectedShippingOption, oversightFees } as any);
 
     setFormData({
       medication: "",
@@ -451,7 +459,7 @@ export default function PrescriptionStep2Page() {
   };
 
   const handleReviewPrescriptions = () => {
-    saveSharedFees({ shippingFee, oversightFees });
+    saveSharedFees({ shippingFee, selectedShippingOption, oversightFees } as any);
     saveCart(cart);
     sessionStorage.setItem("selectedPatientId", patientId);
     sessionStorage.removeItem("prescriptionFormData");
@@ -472,7 +480,7 @@ export default function PrescriptionStep2Page() {
 
   const handleBack = () => {
     saveFormToSession();
-    saveSharedFees({ shippingFee, oversightFees });
+    saveSharedFees({ shippingFee, selectedShippingOption, oversightFees } as any);
     router.push("/prescriptions/new/step1");
   };
 
@@ -1437,23 +1445,40 @@ export default function PrescriptionStep2Page() {
               </div>
             </div>
 
-            {/* Shipping and Handling */}
+            {/* Shipping Options */}
             <div className="pt-4 border-t border-gray-200">
-              <div className="space-y-2">
-                <Label htmlFor="shippingFee">Shipping and Handling</Label>
-                <div className="relative">
-                  <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">
-                    $
-                  </span>
-                  <Input
-                    id="shippingFee"
-                    type="number"
-                    min="0"
-                    placeholder="0.00"
-                    value={shippingFee}
-                    onChange={(e) => setShippingFee(e.target.value)}
-                    className="h-[50px] pl-7"
-                  />
+              <div className="space-y-3">
+                <Label>Delivery Method</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  {shippingOptions.map((option) => (
+                    <button
+                      key={option.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedShippingOption(option.id);
+                        setShippingFee((option.price_cents / 100).toFixed(2));
+                      }}
+                      className={`relative flex flex-col items-center gap-1.5 p-4 rounded-lg border-2 transition-all ${
+                        selectedShippingOption === option.id
+                          ? "border-[#1E3A8A] bg-blue-50 shadow-sm"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      }`}
+                    >
+                      {selectedShippingOption === option.id && (
+                        <div className="absolute top-2 right-2 w-5 h-5 bg-[#1E3A8A] rounded-full flex items-center justify-center">
+                          <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      )}
+                      <span className={`text-sm font-medium ${selectedShippingOption === option.id ? "text-[#1E3A8A]" : "text-gray-700"}`}>
+                        {option.label}
+                      </span>
+                      <span className={`text-lg font-bold ${selectedShippingOption === option.id ? "text-[#1E3A8A]" : "text-gray-900"}`}>
+                        ${(option.price_cents / 100).toFixed(2)}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
