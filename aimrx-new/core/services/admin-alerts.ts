@@ -28,6 +28,11 @@ interface AdminAlertOptions {
   queueId?: string;
 }
 
+function escHtml(str: string | undefined | null): string {
+  if (!str) return "";
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
 function severityBadge(severity: "warning" | "critical"): string {
   const bg = severity === "critical" ? "#DC2626" : "#F59E0B";
   const text = severity === "critical" ? "#FFFFFF" : "#78350F";
@@ -43,10 +48,10 @@ export async function sendAdminAlert(options: AdminAlertOptions): Promise<void> 
   const gradient = options.severity === "critical" ? "linear-gradient(135deg, #991B1B 0%, #DC2626 100%)" : "linear-gradient(135deg, #92400E 0%, #F59E0B 100%)";
 
   const infoRows: string[] = [];
-  if (options.patientName) infoRows.push(`<strong>Patient:</strong> ${options.patientName}`);
-  if (options.medication) infoRows.push(`<strong>Medication:</strong> ${options.medication}`);
-  if (options.queueId) infoRows.push(`<strong>Queue ID:</strong> ${options.queueId}`);
-  if (options.prescriptionId) infoRows.push(`<strong>Prescription ID:</strong> <code style="font-family: monospace; font-size: 12px;">${options.prescriptionId}</code>`);
+  if (options.patientName) infoRows.push(`<strong>Patient:</strong> ${escHtml(options.patientName)}`);
+  if (options.medication) infoRows.push(`<strong>Medication:</strong> ${escHtml(options.medication)}`);
+  if (options.queueId) infoRows.push(`<strong>Queue ID:</strong> ${escHtml(options.queueId)}`);
+  if (options.prescriptionId) infoRows.push(`<strong>Prescription ID:</strong> <code style="font-family: monospace; font-size: 12px;">${escHtml(options.prescriptionId)}</code>`);
 
   const infoBox = infoRows.length > 0
     ? `<div style="background-color: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0;">
@@ -98,12 +103,12 @@ export async function alertUnknownDigitalRxStatus(
   rawData?: string,
 ): Promise<void> {
   await sendAdminAlert({
-    subject: `${APP_NAME} WARNING — Unknown DigitalRx Status '${rawStatus}' — ${patientName}`,
-    headline: `DigitalRx returned an unrecognized status: '${rawStatus}'`,
+    subject: `${APP_NAME} WARNING — Unknown DigitalRx Status '${escHtml(rawStatus)}' — ${escHtml(patientName)}`,
+    headline: `DigitalRx returned an unrecognized status: '${escHtml(rawStatus)}'`,
     details: [
       "The system received a status it doesn't recognize from DigitalRx.",
       "Contact the pharmacy to verify the order status.",
-      rawData ? `Raw API response: <code style="font-family: monospace; font-size: 11px;">${rawData.substring(0, 300)}</code>` : "",
+      rawData ? `Raw API response: <code style="font-family: monospace; font-size: 11px;">${escHtml(rawData.substring(0, 300))}</code>` : "",
     ].filter(Boolean),
     severity: "warning",
     patientName,
@@ -147,10 +152,10 @@ export async function alertBadTrackingNumber(
   reason: string,
 ): Promise<void> {
   await sendAdminAlert({
-    subject: `${APP_NAME} CRITICAL — Invalid Tracking Number — ${patientName}`,
-    headline: `Tracking number '${trackingNumber}' is not valid`,
+    subject: `${APP_NAME} CRITICAL — Invalid Tracking Number — ${escHtml(patientName)}`,
+    headline: `Tracking number '${escHtml(trackingNumber)}' is not valid`,
     details: [
-      reason,
+      escHtml(reason),
       "EasyPost could not identify a carrier for this tracking number.",
       "The patient has NOT been notified about shipping yet.",
       "Verify the tracking number with the pharmacy.",

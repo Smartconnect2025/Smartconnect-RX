@@ -113,12 +113,34 @@ export async function PATCH(
 
     const { data: prescription, error: findErr } = await supabase
       .from("prescriptions")
-      .select("id, queue_id, medication, custom_address, has_custom_address, pharmacy_id, patients(first_name, last_name)")
+      .select("id, queue_id, medication, custom_address, has_custom_address, pharmacy_id, prescriber_id, patients(first_name, last_name)")
       .eq("id", id)
       .single();
 
     if (findErr || !prescription) {
       return NextResponse.json({ error: "Prescription not found" }, { status: 404 });
+    }
+
+    if (userRole === "provider") {
+      const { data: provider } = await supabase
+        .from("providers")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!provider || provider.id !== prescription.prescriber_id) {
+        return NextResponse.json({ error: "Access denied — you can only update prescriptions you created" }, { status: 403 });
+      }
+    } else if (userRole === "admin") {
+      const { data: pharmacyAdmin } = await supabase
+        .from("pharmacy_admins")
+        .select("pharmacy_id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!pharmacyAdmin || pharmacyAdmin.pharmacy_id !== prescription.pharmacy_id) {
+        return NextResponse.json({ error: "Access denied — prescription not assigned to your pharmacy" }, { status: 403 });
+      }
     }
 
     const previousAddress = prescription.custom_address as Record<string, string> | null;

@@ -5,6 +5,7 @@ import {
   easypostCarrierCode,
   mapEasyPostStatus,
 } from "./easypost-helpers";
+import { alertBadTrackingNumber } from "@core/services/admin-alerts";
 
 export async function ensureTrackerRegistered(
   prescriptionId: string,
@@ -52,6 +53,17 @@ export async function ensureTrackerRegistered(
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error(`[easypost] Failed to create tracker: ${msg}`);
+
+    if (msg.includes("carrier") || msg.includes("not found") || msg.includes("invalid")) {
+      alertBadTrackingNumber(
+        "Unknown",
+        "",
+        trackingNumber,
+        prescriptionId,
+        msg,
+      ).catch((e) => console.error("[easypost] Admin alert error:", e));
+    }
+
     return { trackerId: null, error: msg };
   }
 }

@@ -16,6 +16,7 @@ import {
   type PioneerRxBackend,
 } from "@/app/api/prescriptions/_shared/pioneerrx-helpers";
 import { sendPatientStatusEmail } from "@core/services/email/send-patient-status-email";
+import { alertStuckOrder } from "@core/services/admin-alerts";
 
 interface PrescriptionRow {
   id: string;
@@ -23,6 +24,9 @@ interface PrescriptionRow {
   status: string;
   pharmacy_id: string | null;
   tracking_number: string | null;
+  submitted_at: string | null;
+  patients: { first_name?: string; last_name?: string }[] | { first_name?: string; last_name?: string } | null;
+  medication: string | null;
 }
 
 const BATCH_LIMIT = 50;
@@ -36,7 +40,7 @@ export async function syncPrescriptionStatuses() {
 
     const { data: prescriptions, error } = await supabase
       .from("prescriptions")
-      .select("id, queue_id, status, pharmacy_id, tracking_number")
+      .select("id, queue_id, status, pharmacy_id, tracking_number, submitted_at, medication, patients(first_name, last_name)")
       .in("status", ["submitted", "processing", "packed", "approved"])
       .not("queue_id", "is", null)
       .not("pharmacy_id", "is", null)
@@ -175,6 +179,27 @@ export async function syncPrescriptionStatuses() {
         const msg = err instanceof Error ? err.message : String(err);
         console.error(`[prescription-status-sync] Error for ${rx.id}:`, msg);
         run.trackFailure({ prescriptionId: rx.id, step: "process", error: msg });
+      }
+    }
+
+    for (const rx of prescriptions as PrescriptionRow[]) {
+      if (rx.status === "submitted" && rx.submitted_at) {
+        const submittedAt = new Date(rx.submitted_at).getTime();
+        const hoursStuck = (Date.now() - submittedAt) / (1000 * 60 * 60);
+        if (hoursStuck >= 24) {
+          const rawPatient = rx.patients;
+          const patient = Array.isArray(rawPatient) ? rawPatient[0] : rawPatient;
+          const patientName = patient
+            ? `${patient.first_name || ""} ${patient.last_name || ""}`.trim()
+            : "Patient";
+          alertStuckOrder(
+            patientName,
+            rx.medication || "",
+            rx.queue_id || "",
+            rx.id,
+            hoursStuck,
+          ).catch((err) => console.error(`[prescription-status-sync] Stuck order alert error for ${rx.id}:`, err));
+        }
       }
     }
 

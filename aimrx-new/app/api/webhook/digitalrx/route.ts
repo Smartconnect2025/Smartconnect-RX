@@ -3,6 +3,7 @@ import { createAdminClient } from "@core/database/client";
 import { notifyPrescriptionStatusChange } from "@/features/notifications/services/serverNotificationService";
 import { ensureTrackerRegistered } from "@/app/api/prescriptions/_shared/tracking-sync";
 import { sendPatientStatusEmail } from "@core/services/email/send-patient-status-email";
+import { alertUnknownDigitalRxStatus } from "@core/services/admin-alerts";
 
 const DIGITALRX_WEBHOOK_SECRET = process.env.DIGITALRX_WEBHOOK_SECRET;
 
@@ -46,6 +47,7 @@ function mapToOrderProgress(status: string): string {
   const s = status.toLowerCase().replace(/[\s_-]/g, "");
   if (s === "delivered" || s === "completed") return "delivered";
   if (s === "shipped" || s === "pickedup") return "picked_up";
+  if (s === "readyforpickup") return "ready_for_pickup";
   if (s === "approved") return "approved";
   if (s === "packed") return "packed";
   return "submitted";
@@ -184,6 +186,22 @@ export async function POST(request: NextRequest) {
       queue_id: queueId,
       status: "success",
     });
+
+    const knownStatuses = ["submitted", "packed", "approved", "picked_up", "delivered", "cancelled", "ready_for_pickup"];
+    if (!knownStatuses.includes(newStatus)) {
+      const patient = prescription.patients as { first_name?: string; last_name?: string } | null;
+      const patientName = patient
+        ? `${patient.first_name || ""} ${patient.last_name || ""}`.trim()
+        : "Patient";
+      alertUnknownDigitalRxStatus(
+        patientName,
+        "",
+        queueId,
+        prescription.id,
+        newStatus,
+        JSON.stringify(body).substring(0, 500),
+      ).catch((err) => console.error("[webhook/digitalrx] Admin alert error:", err));
+    }
 
     if (newStatus !== prescription.status) {
       if (prescription.prescriber_id) {
