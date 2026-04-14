@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import sgMail from "@sendgrid/mail";
 import { paymentConfirmationEmailHtml } from "@core/services/email/emailTemplates";
+import { checkEmailDedup, logEmailSent, logEmailFailed } from "@core/services/email/email-guard";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "support@aimrx.com";
@@ -12,7 +13,6 @@ function escHtml(str: string | undefined | null): string {
   if (!str) return "";
   return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 }
-
 
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
@@ -47,6 +47,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const detailsStr = `Payment Confirmation Email | To: ${patientEmail} | Medication: ${medication || "N/A"} | Amount: $${totalAmount || "0"} | Transaction: ${transactionId} | Provider: ${providerName || "N/A"}${pharmacyName ? ` | Pharmacy: ${pharmacyName}` : ""}`;
+
     const deliveryTexts = {
       pickup: "Pharmacy Pickup",
       delivery: "Local Delivery",
@@ -63,11 +65,19 @@ export async function POST(request: NextRequest) {
     const nextStepsText = nextStepsTexts[deliveryMethod as keyof typeof nextStepsTexts] || "Your provider will approve the order, and the pharmacy will prepare your medication.";
 
     if (!SENDGRID_API_KEY) {
+      await logEmailSent(patientEmail, patientName || "Patient", detailsStr);
       return NextResponse.json({
         success: true,
         message: 'Email logged (demo mode - no actual email sent)',
         demoMode: true
       });
+    }
+
+    const dedupKey = transactionId;
+    const dedup = await checkEmailDedup(patientEmail, "Payment Confirmation Email", dedupKey, 30);
+    if (!dedup.allowed) {
+      console.log(`[send-confirmation-email] Dedup blocked: ${dedup.reason}`);
+      return NextResponse.json({ success: true, message: "Duplicate blocked", deduplicated: true });
     }
 
     const safeName = escHtml(pharmacyName);
@@ -130,9 +140,19 @@ Keep this email for your records.
 
     await sgMail.send(msg);
 
+    await logEmailSent(patientEmail, patientName || "Patient", detailsStr);
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[CONFIRM-EMAIL] Error:", error instanceof Error ? error.message : "Unknown");
+
+    try {
+      const { patientEmail, patientName, medication, transactionId } = await request.clone().json().catch(() => ({} as Record<string, string>));
+      if (patientEmail) {
+        await logEmailFailed(patientEmail, patientName || "Patient", `Payment Confirmation Email Failed | To: ${patientEmail} | Medication: ${medication || "N/A"} | Transaction: ${transactionId || "N/A"} | Error: ${error instanceof Error ? error.message : "Unknown"}`);
+      }
+    } catch {}
+
     return NextResponse.json(
       {
         success: false,

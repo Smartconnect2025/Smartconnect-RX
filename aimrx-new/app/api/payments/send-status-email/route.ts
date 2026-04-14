@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import sgMail from "@sendgrid/mail";
 import { statusEmailHtml, GRADIENTS } from "@core/services/email/emailTemplates";
-import { checkEmailDedup, logEmailSent } from "@core/services/email/email-guard";
+import { checkEmailDedup, logEmailSent, logEmailFailed } from "@core/services/email/email-guard";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "support@aimrx.com";
@@ -130,7 +130,8 @@ export async function POST(request: NextRequest) {
     }
 
     const dedupKey = prescriptionId ? `${prescriptionId}_${statusType}` : `${patientEmail}_${statusType}`;
-    const dedup = await checkEmailDedup(patientEmail, `STATUS_${statusType}`, dedupKey, 60);
+    const detailsStr = `${config.subject(medication)} | To: ${patientEmail} | Medication: ${medication} | Provider: ${providerName || "N/A"} | Pharmacy: ${pharmacyName || "N/A"} | Status: ${statusType}${trackingNumber ? ` | Tracking: ${trackingNumber}` : ""} | Rx: ${prescriptionId || "N/A"}`;
+    const dedup = await checkEmailDedup(patientEmail, config.subject(medication), dedupKey, 60);
     if (!dedup.allowed) {
       console.log(`[send-status-email] Dedup blocked: ${dedup.reason}`);
       return NextResponse.json({ success: true, message: "Duplicate blocked", deduplicated: true });
@@ -168,11 +169,18 @@ export async function POST(request: NextRequest) {
 
     await sgMail.send(msg);
 
-    await logEmailSent(patientEmail, `STATUS_${statusType}`, dedupKey, `Status email: ${statusType} for ${medication}`);
+    await logEmailSent(patientEmail, patientName || "Patient", detailsStr);
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[send-status-email] Error:", error instanceof Error ? error.message : "Unknown");
+
+    try {
+      if (patientEmail) {
+        await logEmailFailed(patientEmail, patientName || "Patient", `Status Email Failed | To: ${patientEmail} | Status: ${statusType} | Medication: ${medication || "N/A"} | Error: ${error instanceof Error ? error.message : "Unknown"}`);
+      }
+    } catch {}
+
     return NextResponse.json({ success: false, error: "Failed to send email" }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import sgMail from "@sendgrid/mail";
 import { paymentRequestEmailHtml } from "@core/services/email/emailTemplates";
+import { checkEmailDedup, logEmailSent, logEmailFailed } from "@core/services/email/email-guard";
 
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || "";
 const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || "support@aimrx.com";
@@ -46,6 +47,8 @@ export async function POST(request: NextRequest) {
       totalAmount,
       paymentUrl,
       pharmacyName,
+      paymentToken,
+      patientPhone,
     } = body;
 
     if (!patientEmail || !paymentUrl) {
@@ -55,12 +58,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const detailsStr = `Payment Request Email | To: ${patientEmail} | Medication: ${medication || "N/A"} | Amount: $${totalAmount || "0"} | Provider: ${providerName || "N/A"}${pharmacyName ? ` | Pharmacy: ${pharmacyName}` : ""}`;
+
     if (!SENDGRID_API_KEY) {
+      await logEmailSent(patientEmail, patientName || "Patient", detailsStr);
       return NextResponse.json({
         success: true,
         message: 'Email logged (demo mode - no actual email sent)',
         demoMode: true
       });
+    }
+
+    const dedupKey = paymentToken || `${patientEmail}_${medication}`;
+    const dedup = await checkEmailDedup(patientEmail, "Payment Request Email", dedupKey, 30);
+    if (!dedup.allowed) {
+      console.log(`[send-payment-email] Dedup blocked: ${dedup.reason}`);
+      return NextResponse.json({ success: true, message: "Duplicate blocked", deduplicated: true });
     }
 
     const safeName = escHtml(pharmacyName);
@@ -77,7 +90,7 @@ export async function POST(request: NextRequest) {
         email: FROM_EMAIL,
         name: fromName,
       },
-      subject: `Payment Required: ${medication} Prescription${pharmacyName ? ` - ${pharmacyName}` : ""}`,
+      subject: `Action Needed: Complete Payment for Your ${medication} Prescription${pharmacyName ? ` - ${pharmacyName}` : ""}`,
       text: `
 Hi ${patientName},
 
@@ -109,9 +122,19 @@ Questions? Contact your provider or reply to this email.
 
     await sgMail.send(msg);
 
+    await logEmailSent(patientEmail, patientName || "Patient", detailsStr);
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("[SEND-EMAIL] Error:", error instanceof Error ? error.message : "Unknown");
+
+    try {
+      const { patientEmail, patientName, medication } = await request.clone().json().catch(() => ({} as Record<string, string>));
+      if (patientEmail) {
+        await logEmailFailed(patientEmail, patientName || "Patient", `Payment Request Email Failed | To: ${patientEmail} | Medication: ${medication || "N/A"} | Error: ${error instanceof Error ? error.message : "Unknown"}`);
+      }
+    } catch {}
+
     return NextResponse.json(
       {
         success: false,

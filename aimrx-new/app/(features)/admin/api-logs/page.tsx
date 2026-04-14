@@ -19,6 +19,12 @@ import {
   ChevronDown,
   ChevronRight,
   Heart,
+  Mail,
+  MessageSquare,
+  Webhook,
+  Monitor,
+  Send,
+  Phone,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
@@ -116,6 +122,8 @@ export default function APILogsPage() {
 
   const [issuesExpanded, setIssuesExpanded] = useState(true);
   const [apiStatusExpanded, setApiStatusExpanded] = useState(false);
+  const [webhookExpanded, setWebhookExpanded] = useState(false);
+  const [commsExpanded, setCommsExpanded] = useState(false);
   const [recentActivityExpanded, setRecentActivityExpanded] = useState(false);
   const [prescriptionsExpanded, setPrescriptionsExpanded] = useState(false);
 
@@ -496,7 +504,35 @@ export default function APILogsPage() {
     });
   }, [healthData, systemLogs, prescriptions]);
 
-  // Filter logs
+  const webhookLogs = useMemo(() =>
+    systemLogs.filter((log) => log.action.startsWith("WEBHOOK_")),
+    [systemLogs]
+  );
+
+  const commsLogs = useMemo(() => {
+    const actions = new Set([
+      "PATIENT_NOTIFICATION_SENT",
+      "PATIENT_NOTIFICATION_FAILED",
+      "PATIENT_SMS_SENT",
+      "PATIENT_SMS_FAILED",
+    ]);
+    return systemLogs.filter((log) => actions.has(log.action));
+  }, [systemLogs]);
+
+  const commsStats = useMemo(() => {
+    const emailsSent = commsLogs.filter((l) => l.action === "PATIENT_NOTIFICATION_SENT").length;
+    const emailsFailed = commsLogs.filter((l) => l.action === "PATIENT_NOTIFICATION_FAILED").length;
+    const smsSent = commsLogs.filter((l) => l.action === "PATIENT_SMS_SENT").length;
+    const smsFailed = commsLogs.filter((l) => l.action === "PATIENT_SMS_FAILED").length;
+    return { emailsSent, emailsFailed, smsSent, smsFailed, total: commsLogs.length };
+  }, [commsLogs]);
+
+  const webhookStats = useMemo(() => {
+    const successful = webhookLogs.filter((l) => l.status === "success").length;
+    const failed = webhookLogs.filter((l) => l.status === "error").length;
+    return { successful, failed, total: webhookLogs.length };
+  }, [webhookLogs]);
+
   const filteredLogs = systemLogs.filter((log) => {
     const matchesSearch =
       logsSearch === "" ||
@@ -545,7 +581,7 @@ export default function APILogsPage() {
       {/* Page Header */}
       <div className="mb-8">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold">System Health & Monitoring</h1>
+          <h1 className="text-3xl font-bold">System Insights</h1>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setHeartbeatActive(!heartbeatActive)}
@@ -647,16 +683,21 @@ export default function APILogsPage() {
           <div className="text-xs text-gray-500 mt-1">Prescriptions submitted</div>
         </div>
 
-        {/* Active Issues */}
+        {/* Monitoring */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-600">Active Issues</span>
-            <AlertCircle className="h-5 w-5 text-orange-600" />
+            <span className="text-sm font-medium text-gray-600">Monitoring</span>
+            <Monitor className="h-5 w-5 text-indigo-600" />
           </div>
           <div className="text-2xl font-bold">
-            {issues.filter((i) => i.severity !== "info").length}
+            {commsStats.total}
           </div>
-          <div className="text-xs text-gray-500 mt-1">Requiring attention</div>
+          <div className="text-xs text-gray-500 mt-1">
+            {commsStats.emailsSent + commsStats.smsSent} sent
+            {(commsStats.emailsFailed + commsStats.smsFailed) > 0 && (
+              <span className="text-red-500"> · {commsStats.emailsFailed + commsStats.smsFailed} failed</span>
+            )}
+          </div>
         </div>
       </div>
 
@@ -964,6 +1005,218 @@ export default function APILogsPage() {
         )}
       </div>
 
+      {/* Webhook Activity */}
+      <div className="bg-white rounded-lg border border-gray-200 mb-6">
+        <div
+          onClick={() => setWebhookExpanded(!webhookExpanded)}
+          className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            {webhookExpanded ? (
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronRight className="h-5 w-5 text-gray-500" />
+            )}
+            <h2 className="text-lg font-semibold">Webhook Activity</h2>
+            <Badge variant="outline">
+              {webhookStats.total} events
+            </Badge>
+          </div>
+        </div>
+
+        {webhookExpanded && (
+          <div className="px-6 py-4 border-t border-gray-200">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <Webhook className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm font-medium text-gray-600">Total Events</span>
+                </div>
+                <div className="text-xl font-bold">{webhookStats.total}</div>
+              </div>
+              <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <CheckCircle2 className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-700">Successful</span>
+                </div>
+                <div className="text-xl font-bold text-green-700">{webhookStats.successful}</div>
+              </div>
+              <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                <div className="flex items-center gap-2 mb-1">
+                  <XCircle className="h-4 w-4 text-red-600" />
+                  <span className="text-sm font-medium text-red-700">Failed</span>
+                </div>
+                <div className="text-xl font-bold text-red-700">{webhookStats.failed}</div>
+              </div>
+            </div>
+
+            {webhookLogs.length === 0 ? (
+              <div className="text-center py-8">
+                <Webhook className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-500 text-sm">No webhook events recorded yet</p>
+                <p className="text-gray-400 text-xs mt-1">Webhook events will appear here when pharmacy systems send updates</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {webhookLogs.slice(0, 20).map((log) => (
+                  <div
+                    key={log.id}
+                    className="p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div
+                          className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${
+                            log.status === "success" ? "bg-green-500" : "bg-red-500"
+                          }`}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-sm font-medium text-gray-900">
+                              {log.action.replace("WEBHOOK_", "").replace(/_/g, " ")}
+                            </span>
+                            <Badge variant="outline" className="text-xs">
+                              {log.status}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-gray-600 truncate">{log.details}</p>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500 ml-4 flex-shrink-0">
+                        {formatTimeAgo(log.created_at)}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Patient Communications */}
+      <div className="bg-white rounded-lg border border-gray-200 mb-6">
+        <div
+          onClick={() => setCommsExpanded(!commsExpanded)}
+          className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-3">
+            {commsExpanded ? (
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronRight className="h-5 w-5 text-gray-500" />
+            )}
+            <h2 className="text-lg font-semibold">Patient Communications</h2>
+            <div className="flex items-center gap-2">
+              {commsStats.emailsSent > 0 && (
+                <Badge variant="outline" className="bg-blue-50 border-blue-200 text-blue-700">
+                  <Mail className="h-3 w-3 mr-1" />
+                  {commsStats.emailsSent} emails
+                </Badge>
+              )}
+              {commsStats.smsSent > 0 && (
+                <Badge variant="outline" className="bg-green-50 border-green-200 text-green-700">
+                  <Phone className="h-3 w-3 mr-1" />
+                  {commsStats.smsSent} SMS
+                </Badge>
+              )}
+              {(commsStats.emailsFailed + commsStats.smsFailed) > 0 && (
+                <Badge variant="outline" className="bg-red-50 border-red-200 text-red-700">
+                  <XCircle className="h-3 w-3 mr-1" />
+                  {commsStats.emailsFailed + commsStats.smsFailed} failed
+                </Badge>
+              )}
+              {commsStats.total === 0 && (
+                <Badge variant="outline" className="text-gray-500">
+                  0 communications
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {commsExpanded && (
+          <div className="px-6 py-4 border-t border-gray-200">
+            {commsLogs.length === 0 ? (
+              <div className="text-center py-8">
+                <Send className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-gray-500 text-sm">No patient communications recorded yet</p>
+                <p className="text-gray-400 text-xs mt-1">Email and SMS notifications will appear here when sent to patients</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {commsLogs.map((log) => {
+                  const isEmail = log.action.includes("NOTIFICATION");
+                  const isSms = log.action.includes("SMS");
+                  const isFailed = log.action.includes("FAILED");
+                  const parts = log.details?.split(" | ") || [];
+                  const typeLabel = parts[0] || log.action;
+                  const recipientPart = parts.find((p) => p.startsWith("To:"));
+                  const medPart = parts.find((p) => p.startsWith("Medication:"));
+                  const amountPart = parts.find((p) => p.startsWith("Amount:"));
+
+                  return (
+                    <div
+                      key={log.id}
+                      className={`p-3 rounded-lg border transition-colors ${
+                        isFailed
+                          ? "border-red-200 bg-red-50/30 hover:bg-red-50"
+                          : "border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-start gap-3 flex-1">
+                          <div className="mt-0.5">
+                            {isEmail && !isFailed && <Mail className="h-4 w-4 text-blue-500" />}
+                            {isEmail && isFailed && <Mail className="h-4 w-4 text-red-500" />}
+                            {isSms && !isFailed && <MessageSquare className="h-4 w-4 text-green-500" />}
+                            {isSms && isFailed && <MessageSquare className="h-4 w-4 text-red-500" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-medium text-gray-900">{typeLabel}</span>
+                              <Badge
+                                variant="outline"
+                                className={
+                                  isFailed
+                                    ? "border-red-300 text-red-700 bg-red-50"
+                                    : "border-green-300 text-green-700 bg-green-50"
+                                }
+                              >
+                                {isFailed ? "Failed" : "Sent"}
+                              </Badge>
+                              {isEmail && (
+                                <Badge variant="outline" className="text-xs border-blue-200 text-blue-600">Email</Badge>
+                              )}
+                              {isSms && (
+                                <Badge variant="outline" className="text-xs border-green-200 text-green-600">SMS</Badge>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-600">
+                              {recipientPart && <span>{recipientPart}</span>}
+                              {medPart && <span>{medPart}</span>}
+                              {amountPart && <span>{amountPart}</span>}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {log.user_name && log.user_name !== "Email System" && (
+                                <span>Patient: {log.user_name}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-xs text-gray-500 ml-4 flex-shrink-0">
+                          {formatTimeAgo(log.created_at)}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Recent Activity */}
       <div className="bg-white rounded-lg border border-gray-200 mb-6">
         <div
@@ -976,7 +1229,7 @@ export default function APILogsPage() {
             ) : (
               <ChevronRight className="h-5 w-5 text-gray-500" />
             )}
-            <h2 className="text-lg font-semibold">Recent Activity</h2>
+            <h2 className="text-lg font-semibold">System Activity Logs</h2>
             <span className="text-sm text-gray-500">
               Last {filteredLogs.length} events
             </span>
@@ -1071,7 +1324,7 @@ export default function APILogsPage() {
       </div>
 
       {/* Recent Prescriptions */}
-      <div className="bg-white rounded-lg border border-gray-200">
+      <div className="bg-white rounded-lg border border-gray-200 mb-6">
         <div
           onClick={() => setPrescriptionsExpanded(!prescriptionsExpanded)}
           className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
@@ -1095,7 +1348,12 @@ export default function APILogsPage() {
                   No prescriptions found
                 </div>
               ) : (
-                prescriptions.map((rx) => (
+                prescriptions
+                  .filter((rx) => {
+                    const name = `${rx.patient?.first_name || ""} ${rx.patient?.last_name || ""}`.toLowerCase();
+                    return !name.includes("test");
+                  })
+                  .map((rx) => (
                   <div
                     key={rx.id}
                     className="p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
@@ -1136,6 +1394,11 @@ export default function APILogsPage() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Footer */}
+      <div className="text-center text-xs text-gray-400 py-4">
+        System Insights • Auto-refreshes every {HEARTBEAT_INTERVAL}s • Data shown reflects recent activity
       </div>
     </div>
   );

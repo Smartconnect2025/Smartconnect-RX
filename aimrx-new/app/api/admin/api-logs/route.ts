@@ -60,6 +60,14 @@ export async function GET(request: NextRequest) {
     }
 
     let systemLogs: Record<string, unknown>[] = [];
+    let commsLogs: Record<string, unknown>[] = [];
+
+    const commsActions = [
+      "PATIENT_NOTIFICATION_SENT",
+      "PATIENT_NOTIFICATION_FAILED",
+      "PATIENT_SMS_SENT",
+      "PATIENT_SMS_FAILED",
+    ];
 
     if (pharmacyId) {
       const { data: pharmacyRx, error: queueError } = await supabase
@@ -101,40 +109,72 @@ export async function GET(request: NextRequest) {
       }
 
       if (orFilters.length > 0) {
-        const { data: logsData, error: logsError } = await supabase
-          .from("system_logs")
-          .select("*")
-          .or(orFilters.join(","))
-          .order("created_at", { ascending: false })
-          .limit(50);
+        const [logsResult, commsResult] = await Promise.all([
+          supabase
+            .from("system_logs")
+            .select("*")
+            .or(orFilters.join(","))
+            .order("created_at", { ascending: false })
+            .limit(50),
+          supabase
+            .from("system_logs")
+            .select("*")
+            .in("action", commsActions)
+            .order("created_at", { ascending: false })
+            .limit(50),
+        ]);
 
-        if (logsError) {
-          console.error("Error loading filtered system logs:", logsError);
+        if (logsResult.error) {
+          console.error("Error loading filtered system logs:", logsResult.error);
           return NextResponse.json(
             { error: "Failed to load system logs" },
             { status: 500 },
           );
         }
 
-        systemLogs = logsData || [];
+        systemLogs = logsResult.data || [];
+        commsLogs = commsResult.data || [];
       }
     } else {
-      const { data: logsData, error: logsError } = await supabase
-        .from("system_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
+      const [logsResult, commsResult] = await Promise.all([
+        supabase
+          .from("system_logs")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .limit(50),
+        supabase
+          .from("system_logs")
+          .select("*")
+          .in("action", commsActions)
+          .order("created_at", { ascending: false })
+          .limit(50),
+      ]);
 
-      if (logsError) {
-        console.error("Error loading system logs:", logsError);
+      if (logsResult.error) {
+        console.error("Error loading system logs:", logsResult.error);
         return NextResponse.json(
           { error: "Failed to load system logs" },
           { status: 500 },
         );
       }
 
-      systemLogs = logsData || [];
+      systemLogs = logsResult.data || [];
+      commsLogs = commsResult.data || [];
     }
+
+    const seenIds = new Set<string>();
+    const mergedLogs: Record<string, unknown>[] = [];
+    for (const log of [...systemLogs, ...commsLogs]) {
+      const id = log.id as string;
+      if (!seenIds.has(id)) {
+        seenIds.add(id);
+        mergedLogs.push(log);
+      }
+    }
+    mergedLogs.sort((a, b) =>
+      new Date(b.created_at as string).getTime() - new Date(a.created_at as string).getTime()
+    );
+    systemLogs = mergedLogs;
 
     const [rxResult, statsResult] = await Promise.all([rxQuery, statsQuery]);
 
