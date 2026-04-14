@@ -91,6 +91,11 @@ const STATUS_CONFIGS: Record<StatusType, StatusConfig> = {
 };
 
 export async function POST(request: NextRequest) {
+  let patientEmail = "";
+  let patientName = "";
+  let medication = "";
+  let statusType = "";
+
   try {
     const authHeader = request.headers.get("x-internal-api-key");
     if (!INTERNAL_API_KEY || authHeader !== INTERNAL_API_KEY) {
@@ -98,12 +103,12 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    patientEmail = body.patientEmail || "";
+    patientName = body.patientName || "";
+    medication = body.medication || "";
+    statusType = body.statusType || "";
     const {
-      patientEmail,
-      patientName,
-      medication,
       providerName,
-      statusType,
       trackingNumber,
       trackingUrl,
       pharmacyName,
@@ -121,7 +126,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Unknown statusType: ${statusType}` }, { status: 400 });
     }
 
+    const dedupKey = prescriptionId ? `${prescriptionId}_${statusType}` : `${patientEmail}_${statusType}`;
+    const detailsStr = `${config.subject(medication)} | To: ${patientEmail} | Medication: ${medication} | Provider: ${providerName || "N/A"} | Pharmacy: ${pharmacyName || "N/A"} | Status: ${statusType}${trackingNumber ? ` | Tracking: ${trackingNumber}` : ""} | Rx: ${prescriptionId || "N/A"} | [dedup:${dedupKey}]`;
+
     if (!SENDGRID_API_KEY) {
+      await logEmailSent(patientEmail, patientName || "Patient", detailsStr);
       return NextResponse.json({
         success: true,
         message: "Email logged (demo mode - no actual email sent)",
@@ -129,8 +138,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const dedupKey = prescriptionId ? `${prescriptionId}_${statusType}` : `${patientEmail}_${statusType}`;
-    const detailsStr = `${config.subject(medication)} | To: ${patientEmail} | Medication: ${medication} | Provider: ${providerName || "N/A"} | Pharmacy: ${pharmacyName || "N/A"} | Status: ${statusType}${trackingNumber ? ` | Tracking: ${trackingNumber}` : ""} | Rx: ${prescriptionId || "N/A"}`;
     const dedup = await checkEmailDedup(patientEmail, config.subject(medication), dedupKey, 60);
     if (!dedup.allowed) {
       console.log(`[send-status-email] Dedup blocked: ${dedup.reason}`);

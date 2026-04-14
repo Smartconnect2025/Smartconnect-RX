@@ -15,8 +15,7 @@ export async function checkEmailDedup(
       .select("id")
       .eq("action", "PATIENT_NOTIFICATION_SENT")
       .eq("user_email", recipientEmail)
-      .ilike("details", `%${dedupKey}%`)
-      .ilike("details", `%${emailType}%`)
+      .ilike("details", `%[dedup:${dedupKey}]%`)
       .gte("created_at", windowStart)
       .limit(1);
 

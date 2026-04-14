@@ -109,6 +109,14 @@ export async function GET(request: NextRequest) {
       }
 
       if (orFilters.length > 0) {
+        const commsQuery = supabase
+          .from("system_logs")
+          .select("*")
+          .in("action", commsActions)
+          .or(orFilters.join(","))
+          .order("created_at", { ascending: false })
+          .limit(50);
+
         const [logsResult, commsResult] = await Promise.all([
           supabase
             .from("system_logs")
@@ -116,12 +124,7 @@ export async function GET(request: NextRequest) {
             .or(orFilters.join(","))
             .order("created_at", { ascending: false })
             .limit(50),
-          supabase
-            .from("system_logs")
-            .select("*")
-            .in("action", commsActions)
-            .order("created_at", { ascending: false })
-            .limit(50),
+          commsQuery,
         ]);
 
         if (logsResult.error) {

@@ -58,7 +58,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const detailsStr = `Payment Request Email | To: ${patientEmail} | Medication: ${medication || "N/A"} | Amount: $${totalAmount || "0"} | Provider: ${providerName || "N/A"}${pharmacyName ? ` | Pharmacy: ${pharmacyName}` : ""}`;
+    const dedupKey = paymentToken || `${patientEmail}_${medication}`;
+    const detailsStr = `Payment Request Email | To: ${patientEmail} | Medication: ${medication || "N/A"} | Amount: $${totalAmount || "0"} | Provider: ${providerName || "N/A"}${pharmacyName ? ` | Pharmacy: ${pharmacyName}` : ""} | [dedup:${dedupKey}]`;
 
     if (!SENDGRID_API_KEY) {
       await logEmailSent(patientEmail, patientName || "Patient", detailsStr);
@@ -68,8 +69,6 @@ export async function POST(request: NextRequest) {
         demoMode: true
       });
     }
-
-    const dedupKey = paymentToken || `${patientEmail}_${medication}`;
     const dedup = await checkEmailDedup(patientEmail, "Payment Request Email", dedupKey, 30);
     if (!dedup.allowed) {
       console.log(`[send-payment-email] Dedup blocked: ${dedup.reason}`);

@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const detailsStr = `Payment Confirmation Email | To: ${patientEmail} | Medication: ${medication || "N/A"} | Amount: $${totalAmount || "0"} | Transaction: ${transactionId} | Provider: ${providerName || "N/A"}${pharmacyName ? ` | Pharmacy: ${pharmacyName}` : ""}`;
+    const detailsStr = `Payment Confirmation Email | To: ${patientEmail} | Medication: ${medication || "N/A"} | Amount: $${totalAmount || "0"} | Transaction: ${transactionId} | Provider: ${providerName || "N/A"}${pharmacyName ? ` | Pharmacy: ${pharmacyName}` : ""} | [dedup:${transactionId}]`;
 
     const deliveryTexts = {
       pickup: "Pharmacy Pickup",
