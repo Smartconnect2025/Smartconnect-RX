@@ -1459,6 +1459,7 @@ export default function PrescriptionStep2Page() {
             </div>
 
             {/* Medication Oversight & Monitoring Fee - Hidden */}
+          </div>
 
           {/* Cart Panel */}
           {cart.length > 0 && (
