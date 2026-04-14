@@ -546,7 +546,7 @@ export default function AdminPrescriptionsPage() {
     : selectedPrescription?.patientAddress;
 
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="mx-auto py-8 px-4" style={{ maxWidth: "95vw" }}>
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -619,29 +619,18 @@ export default function AdminPrescriptionsPage() {
 
       <div className="bg-white border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <Table className="w-full table-fixed">
-            <colgroup>
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "12%" }} />
-              <col style={{ width: "11%" }} />
-              <col style={{ width: "20%" }} />
-              <col style={{ width: "7%" }} />
-              <col style={{ width: "6%" }} />
-              <col style={{ width: "8%" }} />
-              <col style={{ width: "15%" }} />
-              <col style={{ width: "9%" }} />
-            </colgroup>
+          <Table className="w-full">
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="font-semibold text-sm px-3 whitespace-nowrap">Date</TableHead>
+                <TableHead className="font-semibold text-sm px-3 w-[140px] whitespace-nowrap">Date</TableHead>
                 <TableHead className="font-semibold text-sm px-3">Provider</TableHead>
                 <TableHead className="font-semibold text-sm px-3">Patient</TableHead>
-                <TableHead className="font-semibold text-sm px-3">Medication</TableHead>
-                <TableHead className="font-semibold text-sm px-3 whitespace-nowrap">Qty/Refills</TableHead>
-                <TableHead className="font-semibold text-sm px-3">Price</TableHead>
+                <TableHead className="font-semibold text-sm px-3 max-w-[200px]">Medication</TableHead>
+                <TableHead className="font-semibold text-sm px-3 w-[100px] whitespace-nowrap">Qty/Refills</TableHead>
+                <TableHead className="font-semibold text-sm px-3 w-[80px]">Price</TableHead>
                 <TableHead className="font-semibold text-sm px-3">Pharmacy</TableHead>
-                <TableHead className="font-semibold text-sm px-3">SIG</TableHead>
-                <TableHead className="font-semibold text-sm px-3">Status</TableHead>
+                <TableHead className="font-semibold text-sm px-3 max-w-[180px]">SIG</TableHead>
+                <TableHead className="font-semibold text-sm px-3 w-[150px]">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -702,15 +691,15 @@ export default function AdminPrescriptionsPage() {
                     <TableCell className="text-sm whitespace-nowrap py-3 px-3">
                       {datePart}, {timePart}
                     </TableCell>
-                    <TableCell className="text-sm py-3 px-3">
+                    <TableCell className="text-sm font-medium py-3 px-3">
                       {prescription.providerName}
                     </TableCell>
                     <TableCell className="text-sm py-3 px-3">
                       <div className="flex items-center gap-1.5">
-                        {prescription.patientName}
+                        <span className="font-medium">{prescription.patientName}</span>
                         {isFirstInGroup && groupCount > 1 && (
                           <span
-                            className="text-[10px] px-1.5 py-0.5 rounded-full text-white font-medium whitespace-nowrap"
+                            className="text-[10px] px-1.5 py-0.5 rounded-full text-white font-bold whitespace-nowrap"
                             style={{ backgroundColor: GROUP_BORDER_COLORS[groupIdx!] }}
                           >
                             {groupCount} items
@@ -718,9 +707,9 @@ export default function AdminPrescriptionsPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="py-3 px-3 overflow-hidden">
+                    <TableCell className="py-3 px-3 max-w-[200px] overflow-hidden">
                       <div className="overflow-hidden">
-                        <span className="text-sm truncate block" title={prescription.medication}>
+                        <span className="text-sm font-medium truncate block" title={prescription.medication}>
                           {prescription.medication}
                         </span>
                         <span className="text-xs text-muted-foreground truncate block">
@@ -734,36 +723,36 @@ export default function AdminPrescriptionsPage() {
                         <div className="text-muted-foreground">Ref: {prescription.refills}</div>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm py-3 px-3">
+                    <TableCell className="text-sm py-3 px-3 w-[80px]">
                       {prescription.patientPrice != null ? (
                         <div>
-                          <div className="font-semibold">${Number(prescription.patientPrice).toFixed(2)}</div>
+                          <div className="font-semibold text-green-700">${Number(prescription.patientPrice).toFixed(2)}</div>
                           {(prescription.shippingFeeCents || 0) > 0 && (
-                            <div className="text-xs text-muted-foreground">+${((prescription.shippingFeeCents || 0) / 100).toFixed(2)} ship</div>
+                            <div className="text-[10px] text-muted-foreground">+${((prescription.shippingFeeCents || 0) / 100).toFixed(2)} ship</div>
                           )}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-muted-foreground">--</span>
                       )}
                     </TableCell>
                     <TableCell className="py-3 px-3 overflow-hidden">
                       {prescription.pharmacyName ? (
-                        <span className="text-sm truncate block" style={{ color: prescription.pharmacyColor || "#1E3A8A" }} title={prescription.pharmacyName}>
+                        <span className="font-medium text-sm truncate block" style={{ color: prescription.pharmacyColor || "#1E3A8A" }} title={prescription.pharmacyName}>
                           {prescription.pharmacyName}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground text-sm">—</span>
+                        <span className="text-muted-foreground text-sm">Not specified</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-3 px-3 overflow-hidden">
+                    <TableCell className="py-3 px-3 max-w-[180px] overflow-hidden">
                       <p className="text-sm truncate cursor-help" title={prescription.sig}>
                         {prescription.sig}
                       </p>
                     </TableCell>
-                    <TableCell className="py-3 px-3">
+                    <TableCell className="py-3 px-3 w-[150px]">
                       <Badge
                         variant="outline"
-                        className={`${getStatusColor(getEffectiveStatus(prescription))} text-xs px-2 py-0.5 whitespace-nowrap`}
+                        className={`${getStatusColor(getEffectiveStatus(prescription))} text-xs px-2 py-1 whitespace-nowrap`}
                       >
                         {getEffectiveStatus(prescription).charAt(0).toUpperCase() + getEffectiveStatus(prescription).slice(1).replace(/_/g, " ")}
                       </Badge>
