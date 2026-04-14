@@ -60,3 +60,22 @@ The application utilizes Tailwind CSS and ShadCN UI for a modern, responsive, an
 *   **API Client Generation:** Orval
 *   **Validation:** Zod
 *   **Version Control:** GitHub
+
+## PioneerRx Simulation Mode
+
+When `PIONEERRX_SIMULATION_MODE=true` is set (env var), all PioneerRx API calls are simulated locally instead of hitting the live API. This is used when PioneerRx hasn't whitelisted the server's IP address.
+
+**Simulated methods:**
+- `PatientSearch` → Returns fake patient ID
+- `PatientAdd` → Returns fake patient ID
+- `PrescriberSearch` → Returns fake prescriber ID
+- `RxAddOnHold` → Returns fake queue ID (`SIM-TX-*`)
+- `GetRxTransaction` → Returns "Verified" (approved) status
+
+**To disable:** Remove or set `PIONEERRX_SIMULATION_MODE=false`. This is currently enabled in both development (Replit) and production (Render).
+
+## Render Production Environment
+
+**Render env vars (11 total):** `INTERNAL_API_KEY`, `INTERNAL_API_SECRET`, `DATABASE_URL`, `EASYPOST_TEST_API_KEY`, `SENDGRID_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `PIONEERRX_WEBHOOK_PASSWORD`, `PIONEERRX_WEBHOOK_USERNAME`, `PIONEERRX_SIMULATION_MODE`.
+
+**Still missing on Render:** `ENCRYPTION_KEY` (DigitalRx credential decryption), `AUTHNET_CLIENT_KEY` (Accept.js card forms).

@@ -2,7 +2,11 @@ import crypto from "crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { decryptApiKey, isEncrypted } from "@/core/security/encryption";
 
-const SIMULATION_MODE = process.env.PIONEERRX_SIMULATION_MODE === "true";
+export const SIMULATION_MODE = process.env.PIONEERRX_SIMULATION_MODE === "true";
+
+if (SIMULATION_MODE) {
+  console.warn("⚠️ [pioneerrx] SIMULATION MODE IS ACTIVE — all PioneerRx API calls are being simulated. Set PIONEERRX_SIMULATION_MODE=false to use live API.");
+}
 
 function simulateMethod(
   methodName: string,

@@ -230,6 +230,23 @@ export async function checkPioneerRx(
   const now = new Date().toISOString();
   const checkKey = `pioneerrx-${backend.pharmacy_id}`;
 
+  if (process.env.PIONEERRX_SIMULATION_MODE === "true") {
+    return {
+      check_key: checkKey,
+      pharmacy_id: backend.pharmacy_id,
+      backend_id: backend.id,
+      service_name: `PioneerRx — ${backend.pharmacy_name || "Unknown"}`,
+      category: "external",
+      status: "operational",
+      severity: "info",
+      response_time_ms: 1,
+      consecutive_failures: 0,
+      last_error: null,
+      checked_at: now,
+      metadata: { pharmacyName: backend.pharmacy_name, simulated: true },
+    };
+  }
+
   if (!backend.api_url) {
     return {
       check_key: checkKey,

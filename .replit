@@ -65,6 +65,7 @@ RENDER_API_KEY = "rnd_pRL9b2T9xUbI9E3r5A9OFKmmNhSc"
 
 [userenv.development]
 PIONEERRX_SIMULATION_MODE = "true"
+INTERNAL_API_SECRET = "4eb32b44d2c8c7609abc6374aefc9298d4eb7017785898523b0bd98a8bfd8fe9"
 
   [nix]
   channel = "stable-25_05"
