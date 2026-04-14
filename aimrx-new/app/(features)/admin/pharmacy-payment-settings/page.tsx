@@ -93,7 +93,8 @@ export default function PharmacyPaymentSettingsPage() {
   const [showSecrets, setShowSecrets] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  const [shippingRateDollars, setShippingRateDollars] = useState("");
+  const [shippingStandardDollars, setShippingStandardDollars] = useState("40.00");
+  const [shippingRefrigeratedDollars, setShippingRefrigeratedDollars] = useState("55.00");
   const [shippingRateLoading, setShippingRateLoading] = useState(false);
   const [savingShipping, setSavingShipping] = useState(false);
 
@@ -120,16 +121,17 @@ export default function PharmacyPaymentSettingsPage() {
     if (!pharmacyId) return;
     try {
       setShippingRateLoading(true);
-      const response = await fetch(`/api/admin/pharmacies/shipping-rate?pharmacyId=${pharmacyId}`, {
+      const response = await fetch(`/api/pharmacies/shipping-options?pharmacyId=${pharmacyId}`, {
         credentials: "include",
       });
       const data = await response.json();
-      if (data.success) {
-        const cents = data.default_shipping_rate_cents || 0;
-        setShippingRateDollars((cents / 100).toFixed(2));
+      if (data.success && data.options) {
+        const standard = data.options.find((o: any) => o.id === "standard_overnight");
+        const refrigerated = data.options.find((o: any) => o.id === "refrigerated_overnight");
+        if (standard) setShippingStandardDollars((standard.price_cents / 100).toFixed(2));
+        if (refrigerated) setShippingRefrigeratedDollars((refrigerated.price_cents / 100).toFixed(2));
       }
     } catch {
-      // ignore
     } finally {
       setShippingRateLoading(false);
     }
@@ -140,29 +142,34 @@ export default function PharmacyPaymentSettingsPage() {
     fetchShippingRate();
   }, [fetchConfigs, fetchShippingRate]);
 
-  const handleSaveShippingRate = async () => {
+  const handleSaveShippingRates = async () => {
     if (!pharmacyId) return;
-    const cents = Math.round(parseFloat(shippingRateDollars || "0") * 100);
-    if (isNaN(cents) || cents < 0) {
-      toast.error("Please enter a valid shipping rate");
+    const standardCents = Math.round(parseFloat(shippingStandardDollars || "0") * 100);
+    const refrigeratedCents = Math.round(parseFloat(shippingRefrigeratedDollars || "0") * 100);
+    if (isNaN(standardCents) || standardCents < 0 || isNaN(refrigeratedCents) || refrigeratedCents < 0) {
+      toast.error("Please enter valid shipping rates");
       return;
     }
     try {
       setSavingShipping(true);
-      const response = await fetch(`/api/admin/pharmacies/shipping-rate`, {
+      const response = await fetch(`/api/pharmacies/shipping-options`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ pharmacyId, default_shipping_rate_cents: cents }),
+        body: JSON.stringify({
+          pharmacyId,
+          standard_overnight_cents: standardCents,
+          refrigerated_overnight_cents: refrigeratedCents,
+        }),
       });
       const data = await response.json();
       if (data.success) {
-        toast.success("Shipping rate saved");
+        toast.success("Shipping rates saved");
       } else {
-        toast.error(data.error || "Failed to save shipping rate");
+        toast.error(data.error || "Failed to save shipping rates");
       }
     } catch {
-      toast.error("Failed to save shipping rate");
+      toast.error("Failed to save shipping rates");
     } finally {
       setSavingShipping(false);
     }
@@ -548,49 +555,68 @@ export default function PharmacyPaymentSettingsPage() {
             <CardHeader>
               <div className="flex items-center gap-2">
                 <Truck className="h-5 w-5" />
-                <CardTitle>Default Shipping Rate</CardTitle>
+                <CardTitle>Shipping Options</CardTitle>
               </div>
               <CardDescription>
-                Set the default shipping fee applied when patients choose shipping as their delivery method.
+                Set the delivery fees for each shipping method. Providers will select one of these options when creating prescriptions.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-6">
               {shippingRateLoading ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="h-6 w-6 animate-spin text-primary" />
                 </div>
               ) : (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="shippingRate">Shipping Rate ($)</Label>
-                    <div className="flex items-center gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2 p-4 border border-gray-200 rounded-lg">
+                      <Label htmlFor="standardRate" className="text-sm font-semibold">Standard Overnight</Label>
+                      <p className="text-xs text-muted-foreground">Regular overnight delivery for non-temperature-sensitive items.</p>
                       <div className="relative max-w-[200px]">
                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
                         <Input
-                          id="shippingRate"
+                          id="standardRate"
                           type="number"
                           min="0"
                           step="0.01"
                           placeholder="0.00"
-                          value={shippingRateDollars}
-                          onChange={(e) => setShippingRateDollars(e.target.value)}
+                          value={shippingStandardDollars}
+                          onChange={(e) => setShippingStandardDollars(e.target.value)}
                           className="pl-7"
                         />
                       </div>
-                      <Button
-                        onClick={handleSaveShippingRate}
-                        disabled={savingShipping}
-                        className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
-                      >
-                        {savingShipping ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : null}
-                        Save
-                      </Button>
                     </div>
+                    <div className="space-y-2 p-4 border border-blue-200 rounded-lg bg-blue-50/30">
+                      <Label htmlFor="refrigeratedRate" className="text-sm font-semibold">Refrigerated Overnight</Label>
+                      <p className="text-xs text-muted-foreground">Cold-chain overnight delivery for temperature-sensitive medications.</p>
+                      <div className="relative max-w-[200px]">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                        <Input
+                          id="refrigeratedRate"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={shippingRefrigeratedDollars}
+                          onChange={(e) => setShippingRefrigeratedDollars(e.target.value)}
+                          className="pl-7"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button
+                      onClick={handleSaveShippingRates}
+                      disabled={savingShipping}
+                      className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+                    >
+                      {savingShipping ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : null}
+                      Save Shipping Rates
+                    </Button>
                     <p className="text-xs text-muted-foreground">
-                      This rate will be pre-filled when providers bill patients who select shipping.
-                      Set to $0.00 for free shipping.
+                      These rates will appear as selectable options when providers create prescriptions.
                     </p>
                   </div>
                 </>
