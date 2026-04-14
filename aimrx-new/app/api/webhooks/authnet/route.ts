@@ -281,70 +281,113 @@ async function handlePaymentSuccess(
 
   console.log(`[WEBHOOK] Payment transaction ${paymentTransaction.id} marked as completed`);
 
-  if (paymentTransaction.prescription_id) {
-    const { data: rxData } = await supabase
-      .from("prescriptions")
-      .select("id, queue_id, prescriber_id, patients(first_name, last_name)")
-      .eq("id", paymentTransaction.prescription_id)
-      .single();
+  // Collect all Rx IDs: linked by payment_transaction_id + prescription_id + order_group_id
+  const { data: linkedRx } = await supabase
+    .from("prescriptions")
+    .select("id")
+    .eq("payment_transaction_id", paymentTransaction.id);
 
+  const allRxIds: string[] = linkedRx?.map((rx: { id: string }) => rx.id) || [];
+
+  if (paymentTransaction.prescription_id && !allRxIds.includes(paymentTransaction.prescription_id)) {
+    allRxIds.push(paymentTransaction.prescription_id);
+  }
+
+  // Group Rx lookup via order_group_id
+  try {
+    const probeId = allRxIds[0] || paymentTransaction.prescription_id;
+    if (probeId) {
+      const { data: probe } = await (supabase.from("prescriptions") as any)
+        .select("order_group_id")
+        .eq("id", probeId)
+        .single();
+      if (probe?.order_group_id) {
+        const { data: groupRxs } = await (supabase.from("prescriptions") as any)
+          .select("id")
+          .eq("order_group_id", probe.order_group_id);
+        if (groupRxs) {
+          for (const grx of groupRxs) {
+            if (!allRxIds.includes(grx.id)) allRxIds.push(grx.id);
+          }
+        }
+      }
+    }
+  } catch { /* order_group_id may not exist */ }
+
+  if (allRxIds.length > 0) {
     const { error: rxUpdateError } = await supabase
       .from("prescriptions")
       .update({
         payment_status: "paid",
         order_progress: "payment_received",
         status: "payment_received",
+        payment_transaction_id: paymentTransaction.id,
       })
-      .eq("id", paymentTransaction.prescription_id);
+      .in("id", allRxIds);
 
     if (rxUpdateError) {
-      console.error(`[WEBHOOK] Failed to update prescription ${paymentTransaction.prescription_id} payment status:`, rxUpdateError.message);
+      console.error(`[WEBHOOK] Failed to update prescriptions:`, rxUpdateError.message);
     }
 
-    if (rxData?.prescriber_id) {
-      const patient = rxData.patients as { first_name?: string; last_name?: string } | null;
-      const patientName = patient
-        ? `${patient.first_name || ""} ${patient.last_name || ""}`.trim()
-        : "Patient";
-      notifyPrescriptionStatusChange(
-        rxData.prescriber_id,
-        rxData.queue_id || rxData.id,
-        patientName,
-        "payment_received",
-        paymentTransaction.prescription_id,
-      ).catch((err) => console.error("[WEBHOOK] Notification error:", err));
-    }
+    // Notify prescriber for primary Rx
+    if (paymentTransaction.prescription_id) {
+      const { data: rxData } = await supabase
+        .from("prescriptions")
+        .select("id, queue_id, prescriber_id, patients(first_name, last_name)")
+        .eq("id", paymentTransaction.prescription_id)
+        .single();
 
-    try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-      const internalSecret = process.env.INTERNAL_API_SECRET || "";
-      const submitHeaders: Record<string, string> = {
-        "Content-Type": "application/json",
-        "x-internal-secret": internalSecret,
-      };
-
-      console.log(`[WEBHOOK] Auto-submitting prescription ${paymentTransaction.prescription_id} to pharmacy...`);
-      const submitResponse = await fetch(
-        `${siteUrl}/api/prescriptions/${paymentTransaction.prescription_id}/submit-to-pharmacy`,
-        {
-          method: "POST",
-          headers: submitHeaders,
-        }
-      );
-
-      if (submitResponse.ok) {
-        await supabase
-          .from("payment_transactions")
-          .update({ order_progress: "pharmacy_processing" })
-          .eq("id", paymentTransaction.id);
-        console.log(`[WEBHOOK] Prescription ${paymentTransaction.prescription_id} submitted to pharmacy successfully`);
-      } else {
-        const errorBody = await submitResponse.text().catch(() => "unable to read response");
-        console.error(`[WEBHOOK] Pharmacy submission failed for prescription ${paymentTransaction.prescription_id}: HTTP ${submitResponse.status} — ${errorBody}`);
+      if (rxData?.prescriber_id) {
+        const patient = rxData.patients as { first_name?: string; last_name?: string } | null;
+        const patientName = patient
+          ? `${patient.first_name || ""} ${patient.last_name || ""}`.trim()
+          : "Patient";
+        notifyPrescriptionStatusChange(
+          rxData.prescriber_id,
+          rxData.queue_id || rxData.id,
+          patientName,
+          "payment_received",
+          paymentTransaction.prescription_id,
+        ).catch((err) => console.error("[WEBHOOK] Notification error:", err));
       }
-    } catch (err) {
-      console.error(`[WEBHOOK] Pharmacy submission error for prescription ${paymentTransaction.prescription_id}:`, err instanceof Error ? err.message : "Unknown");
     }
+
+    // Auto-submit all Rx to pharmacy
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const internalSecret = process.env.INTERNAL_API_SECRET || "";
+    let anyFailed = false;
+
+    for (const rxId of allRxIds) {
+      try {
+        console.log(`[WEBHOOK] Auto-submitting prescription ${rxId} to pharmacy...`);
+        const submitResponse = await fetch(
+          `${siteUrl}/api/prescriptions/${rxId}/submit-to-pharmacy`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-internal-secret": internalSecret,
+            },
+          }
+        );
+
+        if (submitResponse.ok) {
+          console.log(`[WEBHOOK] Prescription ${rxId} submitted to pharmacy successfully`);
+        } else {
+          const errorBody = await submitResponse.text().catch(() => "unable to read response");
+          console.error(`[WEBHOOK] Pharmacy submission failed for ${rxId}: HTTP ${submitResponse.status} — ${errorBody}`);
+          anyFailed = true;
+        }
+      } catch (err) {
+        console.error(`[WEBHOOK] Pharmacy submission error for ${rxId}:`, err instanceof Error ? err.message : "Unknown");
+        anyFailed = true;
+      }
+    }
+
+    await supabase
+      .from("payment_transactions")
+      .update({ order_progress: anyFailed ? "pharmacy_partial_failure" : "pharmacy_processing" })
+      .eq("id", paymentTransaction.id);
   }
 
   if (paymentTransaction.patient_email) {
@@ -397,16 +440,48 @@ async function handlePaymentCaptured(
   supabase: ReturnType<typeof createAdminClient>,
   payload: { id: string }
 ) {
+  const { data: tx } = await supabase
+    .from("payment_transactions")
+    .select("id, payment_status, prescription_id")
+    .eq("authnet_transaction_id", payload.id)
+    .single();
+
+  if (!tx) {
+    console.error(`[WEBHOOK] Capture: No transaction found for authnet ID ${payload.id}`);
+    return;
+  }
+
+  if (tx.payment_status === "completed") {
+    console.log(`[WEBHOOK] Capture: Transaction ${tx.id} already completed — skipping`);
+    return;
+  }
+
   const { error } = await supabase
     .from("payment_transactions")
     .update({
       payment_status: "completed",
       order_progress: "payment_received",
+      paid_at: new Date().toISOString(),
     })
-    .eq("authnet_transaction_id", payload.id);
+    .eq("id", tx.id)
+    .neq("payment_status", "completed");
 
   if (error) {
     console.error(`[WEBHOOK] Failed to handle capture for transaction ${payload.id}:`, error.message);
+    return;
+  }
+
+  // Update all linked Rx
+  const allRxIds = await collectAllRxIds(supabase, tx);
+  if (allRxIds.length > 0) {
+    await supabase
+      .from("prescriptions")
+      .update({
+        payment_status: "paid",
+        status: "payment_received",
+        payment_transaction_id: tx.id,
+      })
+      .in("id", allRxIds);
   }
 }
 
@@ -414,13 +489,37 @@ async function handlePaymentVoided(
   supabase: ReturnType<typeof createAdminClient>,
   payload: { id: string }
 ) {
+  const { data: tx } = await supabase
+    .from("payment_transactions")
+    .select("id, prescription_id")
+    .eq("authnet_transaction_id", payload.id)
+    .single();
+
+  if (!tx) {
+    console.error(`[WEBHOOK] Void: No transaction found for authnet ID ${payload.id}`);
+    return;
+  }
+
   const { error } = await supabase
     .from("payment_transactions")
     .update({ payment_status: "cancelled" })
-    .eq("authnet_transaction_id", payload.id);
+    .eq("id", tx.id);
 
   if (error) {
     console.error(`[WEBHOOK] Failed to handle void for transaction ${payload.id}:`, error.message);
+    return;
+  }
+
+  // Revert linked Rx to pending
+  const allRxIds = await collectAllRxIds(supabase, tx);
+  if (allRxIds.length > 0) {
+    await supabase
+      .from("prescriptions")
+      .update({
+        payment_status: "pending",
+        status: "pending",
+      })
+      .in("id", allRxIds);
   }
 }
 
@@ -428,6 +527,17 @@ async function handlePaymentRefunded(
   supabase: ReturnType<typeof createAdminClient>,
   payload: { id: string; refundAmount?: number }
 ) {
+  const { data: tx } = await supabase
+    .from("payment_transactions")
+    .select("id, prescription_id")
+    .eq("authnet_transaction_id", payload.id)
+    .single();
+
+  if (!tx) {
+    console.error(`[WEBHOOK] Refund: No transaction found for authnet ID ${payload.id}`);
+    return;
+  }
+
   const { error } = await supabase
     .from("payment_transactions")
     .update({
@@ -435,9 +545,60 @@ async function handlePaymentRefunded(
       refund_amount_cents: payload.refundAmount ? Math.round(payload.refundAmount * 100) : null,
       refunded_at: new Date().toISOString(),
     })
-    .eq("authnet_transaction_id", payload.id);
+    .eq("id", tx.id);
 
   if (error) {
     console.error(`[WEBHOOK] Failed to handle refund for transaction ${payload.id}:`, error.message);
+    return;
   }
+
+  // Update linked Rx to refunded
+  const allRxIds = await collectAllRxIds(supabase, tx);
+  if (allRxIds.length > 0) {
+    await supabase
+      .from("prescriptions")
+      .update({
+        payment_status: "refunded",
+        status: "refunded",
+      })
+      .in("id", allRxIds);
+  }
+}
+
+async function collectAllRxIds(
+  supabase: ReturnType<typeof createAdminClient>,
+  tx: { id: string; prescription_id?: string | null },
+): Promise<string[]> {
+  const { data: linkedRx } = await supabase
+    .from("prescriptions")
+    .select("id")
+    .eq("payment_transaction_id", tx.id);
+
+  const ids: string[] = linkedRx?.map((rx: { id: string }) => rx.id) || [];
+
+  if (tx.prescription_id && !ids.includes(tx.prescription_id)) {
+    ids.push(tx.prescription_id);
+  }
+
+  try {
+    const probeId = ids[0] || tx.prescription_id;
+    if (probeId) {
+      const { data: probe } = await (supabase.from("prescriptions") as any)
+        .select("order_group_id")
+        .eq("id", probeId)
+        .single();
+      if (probe?.order_group_id) {
+        const { data: groupRxs } = await (supabase.from("prescriptions") as any)
+          .select("id")
+          .eq("order_group_id", probe.order_group_id);
+        if (groupRxs) {
+          for (const grx of groupRxs) {
+            if (!ids.includes(grx.id)) ids.push(grx.id);
+          }
+        }
+      }
+    }
+  } catch { /* order_group_id may not exist */ }
+
+  return ids;
 }

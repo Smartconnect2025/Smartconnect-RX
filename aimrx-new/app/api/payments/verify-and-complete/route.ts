@@ -255,6 +255,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Race condition protection — claim transaction
+    const { data: claimedRows } = await supabase
+      .from("payment_transactions")
+      .update({ payment_status: "verifying" })
+      .eq("id", transaction.id)
+      .eq("payment_status", transaction.payment_status)
+      .select("id");
+
+    if (!claimedRows || claimedRows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Payment is already being verified by another request" },
+        { status: 409 },
+      );
+    }
+
+    let claimedTransactionId: string | null = transaction.id;
+
     const apiUrl = AUTHNET_API_URLS[envConfig.AUTHNET_ENVIRONMENT];
 
     const matchedTransaction = await findTransactionByInvoice(
@@ -268,6 +285,12 @@ export async function POST(request: NextRequest) {
       console.log(
         `[VERIFY] No matching transaction found for ref ${transaction.authnet_ref_id}`,
       );
+      // Revert claim
+      await supabase
+        .from("payment_transactions")
+        .update({ payment_status: transaction.payment_status })
+        .eq("id", claimedTransactionId);
+      claimedTransactionId = null;
       return NextResponse.json({
         success: false,
         error: "Payment not found at processor — may still be processing",
@@ -282,6 +305,12 @@ export async function POST(request: NextRequest) {
         console.error(
           `[VERIFY] Amount mismatch: expected $${expectedAmount}, got $${matchedTransaction.amount}`,
         );
+        // Revert claim
+        await supabase
+          .from("payment_transactions")
+          .update({ payment_status: transaction.payment_status })
+          .eq("id", claimedTransactionId);
+        claimedTransactionId = null;
         return NextResponse.json(
           { success: false, error: "Payment amount mismatch" },
           { status: 400 },
@@ -305,6 +334,8 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", transaction.id);
 
+    claimedTransactionId = null;
+
     if (updateTxError) {
       console.error("[VERIFY] Failed to update payment transaction:", updateTxError.message);
       return NextResponse.json(
@@ -326,6 +357,31 @@ export async function POST(request: NextRequest) {
     if (rxIdsToUpdate.length === 0 && transaction.prescription_id) {
       rxIdsToUpdate.push(transaction.prescription_id);
     }
+
+    if (transaction.prescription_id && !rxIdsToUpdate.includes(transaction.prescription_id)) {
+      rxIdsToUpdate.push(transaction.prescription_id);
+    }
+
+    // Expand by order_group_id
+    try {
+      const probeId = rxIdsToUpdate[0];
+      if (probeId) {
+        const { data: probe } = await (supabase.from("prescriptions") as any)
+          .select("order_group_id")
+          .eq("id", probeId)
+          .single();
+        if (probe?.order_group_id) {
+          const { data: groupRxs } = await (supabase.from("prescriptions") as any)
+            .select("id")
+            .eq("order_group_id", probe.order_group_id);
+          if (groupRxs) {
+            for (const grx of groupRxs) {
+              if (!rxIdsToUpdate.includes(grx.id)) rxIdsToUpdate.push(grx.id);
+            }
+          }
+        }
+      }
+    } catch { /* order_group_id may not exist */ }
 
     if (rxIdsToUpdate.length > 0) {
       const { error: rxError } = await supabase
@@ -424,6 +480,20 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("[VERIFY] Error:", error instanceof Error ? error.message : "Unknown");
+
+    // Best effort revert if we claimed a transaction
+    try {
+      const revertSupabase = createAdminClient();
+      const revertBody = await request.clone().json().catch(() => null);
+      if (revertBody?.paymentToken) {
+        await revertSupabase
+          .from("payment_transactions")
+          .update({ payment_status: "processing" })
+          .eq("payment_token", revertBody.paymentToken)
+          .eq("payment_status", "verifying");
+      }
+    } catch { /* best effort */ }
+
     return NextResponse.json(
       { success: false, error: "Verification failed" },
       { status: 500 },

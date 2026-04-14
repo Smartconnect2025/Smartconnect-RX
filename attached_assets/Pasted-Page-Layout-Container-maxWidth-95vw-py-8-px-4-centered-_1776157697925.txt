@@ -1,0 +1,104 @@
+Page Layout
+Container: maxWidth: 95vw, py-8 px-4, centered
+
+Page Header:
+
+Title: "Incoming Prescriptions" — text-2xl sm:text-3xl font-bold tracking-tight
+Subtitle: "Click any row to view full details and order progress" — text-sm text-muted-foreground mt-1
+Search Bar + Filter Row: flex items-center gap-4 mb-6
+
+Search Input — full width (flex-1), left icon (Search), placeholder: "Search by patient, provider, medication, or Queue ID...", with pl-10 for icon space
+Status Filter Dropdown — fixed w-64 flex-shrink-0, options: All, submitted, pending_payment, payment_received, packed, approved, picked_up, shipped, delivered — each shows count like "Submitted (3)"
+Results Counter: text-sm text-muted-foreground mb-4 — "Showing X of Y prescriptions"
+
+Table Structure
+Table Wrapper: bg-white border border-border rounded-lg overflow-hidden → inner overflow-x-auto
+
+Header Row: bg-gray-50, all headers font-semibold
+
+9 Columns
+#	Column Header	Width	Cell Content
+1	Date	w-[140px]	formatDateTime() — "Apr 14, 2026, 2:30 PM" format. whitespace-nowrap text-sm
+2	Provider	auto	Provider name. font-medium
+3	Patient	auto	Patient name (font-medium) + group badge if first in batch: colored pill showing "3 items" (text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white)
+4	Medication	max-w-[200px]	Two lines: medication name (font-medium truncate) + strength below (text-sm text-muted-foreground truncate). Title tooltip shows full name
+5	Qty/Refills	w-[100px]	Two lines: "Qty: 10" + "Ref: 3" (muted). text-sm
+6	Price	w-[80px]	Green font-semibold text-green-700 dollar amount. If shipping > 0, shows "+$25.00 ship" below in text-[10px] text-muted-foreground. Shows "--" if no price
+7	Pharmacy	auto	Pharmacy name in font-medium text-sm with custom color from pharmacyColor (default #1E3A8A). Shows "Not specified" if empty
+8	SIG	max-w-[180px]	SIG instructions, text-sm truncate cursor-help with full text in title tooltip
+9	Status	w-[150px]	Badge with colored background. text-xs px-2 py-1 whitespace-nowrap
+Status Badge Colors
+Status	Colors
+submitted	bg-blue-100 text-blue-800 border-blue-200
+pending_payment	bg-yellow-100 text-yellow-800 border-yellow-200
+payment_received	bg-teal-100 text-teal-800 border-teal-200
+packed	bg-purple-100 text-purple-800 border-purple-200
+approved	bg-green-100 text-green-800 border-green-200
+picked_up / shipped	bg-indigo-100 text-indigo-800 border-indigo-200
+delivered	bg-emerald-100 text-emerald-800 border-emerald-200
+default	bg-gray-100 text-gray-800 border-gray-200
+Row Styling
+Single rows: Alternating white / #FAFAFA
+Grouped rows (same submissionGroupId or paymentTransactionId): Colored background + 4px left border
+Group color palette (cycles through 5):
+#EFF6FF bg / #3B82F6 border (blue)
+#F5F3FF bg / #8B5CF6 border (purple)
+#FFFBEB bg / #F59E0B border (amber)
+#ECFDF5 bg / #10B981 border (green)
+#FFF1F2 bg / #F43F5E border (rose)
+Hover: hover:bg-blue-50/50
+Cursor: cursor-pointer
+All rows clickable → opens detail modal
+Loading/Empty/Error States
+Loading: Spinner (RefreshCw animate-spin) + "Loading prescriptions..." centered, colspan=9
+Error: Red AlertCircle icon + error message + "Try again" link
+Empty: "No prescriptions found matching your filters" centered
+Detail Modal (on row click)
+Dialog: max-w-2xl max-h-[90vh] overflow-y-auto
+
+Header
+Title: "Prescription Details" — text-xl font-bold text-[#1E3A8A]
+Status badge (same colors as table)
+Content Sections (top to bottom)
+Info Grid (2×2 grid, each in bg-gray-50 rounded-lg p-3):
+
+Queue ID (Hash icon, font-mono font-semibold)
+Submitted date (Calendar icon)
+Provider name (User icon)
+Patient name (User icon)
+Progress Tracker — PrescriptionProgressTracker component (visual step tracker)
+
+Medication Details — bg-gray-50 rounded-lg p-4:
+
+2×2 grid: Medication, Strength, Quantity, Refills
+SIG Instructions below (if present)
+Pricing Section — bg-green-50 border border-green-200 rounded-lg p-4:
+
+Single item: 2×2 grid with Medication Cost, Shipping, Oversight & Monitoring, Total
+Grouped items: Lists each medication with price, then Shipping & Handling subtotal, Oversight & Monitoring subtotal, Group Total in bold
+Shipping Address — bg-gray-50 rounded-lg p-4:
+
+Shows address with MapPin icon
+"Custom address for this order" amber badge if custom
+"Edit Shipping Address" button → expands inline form with Street, City, State, Zip, Country
+Two save buttons: "Save to Patient Record & Prescription" or "This Prescription Only"
+Pharmacy notification banner if address change was emailed
+Payment Actions (only when pending_payment) — bg-blue-50 border border-blue-200:
+
+Patient Email display
+"Send Payment Link to Patient" button (blue) — shows item count for groups
+"Mark as Paid" button (violet outline) — shows item count for groups
+Success/error result message
+Submit to Pharmacy button (only when no queue_id) — bg-[#1E3A8A]
+
+Warning if payment not received
+Manual Override — expandable bg-orange-50 border border-orange-200:
+
+Status dropdown (submitted, packed, approved, picked_up, delivered, ready_for_pickup, cancelled)
+Tracking Number input with Truck icon
+Note input
+"Apply Override" button (orange)
+Auto-Refresh
+setInterval(loadPrescriptions, 15000) — table refreshes every 15 seconds
+Tracking sync: When a shipped Rx is opened, calls /api/prescriptions/sync-tracking
+That's every detail of the table — columns, widths, colors, grouping logic, modal sections, and all interactive features. Let me know what you're building with this

@@ -311,17 +311,8 @@ function PaymentLinkResultView({
             className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
             disabled={loading || deleting}
           >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <CreditCard className="mr-2 h-4 w-4" />
-                Charge Directly
-              </>
-            )}
+            <CreditCard className="mr-2 h-4 w-4" />
+            Charge Card Now
           </Button>
         )}
         <div className="flex gap-3">
@@ -631,118 +622,186 @@ export function BillPatientModal({
     }
   };
 
-  // This is when the link is not already generated
-  const handleChargeNow = async () => {
-    if (!validateForm()) return;
+  // Card form state for Charge Now
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExpMonth, setCardExpMonth] = useState("");
+  const [cardExpYear, setCardExpYear] = useState("");
+  const [cardCvv, setCardCvv] = useState("");
+  const [cardZip, setCardZip] = useState("");
+  const [acceptJsLoaded, setAcceptJsLoaded] = useState(false);
+  const [chargeResult, setChargeResult] = useState<{
+    success: boolean;
+    transactionId?: string;
+    cardLastFour?: string;
+    error?: string;
+  } | null>(null);
 
+  useEffect(() => {
+    if (isOpen && paymentMethod === "charge-now" && !acceptJsLoaded) {
+      loadAcceptJs();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, paymentMethod]);
+
+  const loadAcceptJs = async () => {
     try {
-      setLoading(true);
-      const consultationFee = parseFloat(consultationFeeDollars);
-      const medicationCost = parseFloat(medicationCostDollars);
-
-      const shippingFee = parseFloat(shippingFeeDollars) || 0;
-
-      const generateResponse = await fetch("/api/payments/generate-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const configResponse = await fetch("/api/payments/authnet-config", {
         credentials: "include",
-        body: JSON.stringify({
-          prescriptionId,
-          prescriptionIds: allPrescriptionIds,
-          consultationFeeCents: Math.round(consultationFee * 100),
-          medicationCostCents: Math.round(medicationCost * 100),
-          shippingFeeCents: Math.round(shippingFee * 100),
-          description,
-          patientEmail,
-          sendEmail: false,
-          paymentGateway: linkGateway,
-        }),
       });
-
-      const generateData = await generateResponse.json();
-      if (!generateResponse.ok || !generateData.success) {
-        toast.error(
-          generateData.error || "Failed to create payment transaction",
-        );
+      const configData = await configResponse.json();
+      if (!configResponse.ok || !configData.success) {
+        console.error("[BillPatientModal] Failed to load authnet config");
         return;
       }
 
-      const gateway = generateData.paymentGateway || linkGateway;
+      if (document.querySelector('script[data-accept-js]')) {
+        setAcceptJsLoaded(true);
+        return;
+      }
 
-      // Step 2: Get hosted token and redirect
-      await redirectToHostedCheckout(generateData.paymentToken, gateway);
-    } catch (error) {
-      console.error("[BillPatientModal] Charge now error:", error);
-      toast.error("Failed to process payment. Please try again.");
-    } finally {
-      setLoading(false);
+      const script = document.createElement("script");
+      script.src = configData.acceptJsUrl;
+      script.setAttribute("data-accept-js", "true");
+      script.async = true;
+      script.onload = () => setAcceptJsLoaded(true);
+      script.onerror = () => console.error("[BillPatientModal] Failed to load Accept.js");
+      document.head.appendChild(script);
+
+      (window as any).__authnetConfig = {
+        apiLoginId: configData.apiLoginId,
+        clientKey: configData.clientKey,
+      };
+    } catch {
+      console.error("[BillPatientModal] Error loading Accept.js config");
     }
   };
 
-  // This is when the link is already generated
-  const handleChargeDirectly = async () => {
-    if (!paymentToken) {
-      toast.error("Payment token not found");
+  const handleChargeNow = async () => {
+    if (!validateForm()) return;
+
+    if (!cardNumber || cardNumber.replace(/\s/g, "").length < 13) {
+      toast.error("Please enter a valid card number");
+      return;
+    }
+    if (!cardExpMonth || !cardExpYear) {
+      toast.error("Please enter the card expiration date");
+      return;
+    }
+    if (!cardCvv || cardCvv.length < 3) {
+      toast.error("Please enter the card CVV");
       return;
     }
 
     try {
       setLoading(true);
-      await redirectToHostedCheckout(paymentToken, linkGateway);
+      setChargeResult(null);
+
+      let currentPaymentToken = paymentToken;
+
+      if (!currentPaymentToken) {
+        const consultationFee = parseFloat(consultationFeeDollars);
+        const medicationCost = parseFloat(medicationCostDollars);
+        const shippingFee = parseFloat(shippingFeeDollars) || 0;
+
+        const generateResponse = await fetch("/api/payments/generate-link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({
+            prescriptionId,
+            prescriptionIds: allPrescriptionIds,
+            consultationFeeCents: Math.round(consultationFee * 100),
+            medicationCostCents: Math.round(medicationCost * 100),
+            shippingFeeCents: Math.round(shippingFee * 100),
+            description,
+            patientEmail,
+            sendEmail: false,
+            paymentGateway: linkGateway,
+          }),
+        });
+
+        const generateData = await generateResponse.json();
+        if (!generateResponse.ok || !generateData.success) {
+          toast.error(generateData.error || "Failed to create payment transaction");
+          return;
+        }
+
+        currentPaymentToken = generateData.paymentToken;
+      }
+
+      const authConfig = (window as any).__authnetConfig;
+      if (!authConfig || !(window as any).Accept) {
+        toast.error("Payment system not loaded. Please try again.");
+        return;
+      }
+
+      const secureData = {
+        authData: {
+          apiLoginID: authConfig.apiLoginId,
+          clientKey: authConfig.clientKey,
+        },
+        cardData: {
+          cardNumber: cardNumber.replace(/\s/g, ""),
+          month: cardExpMonth.padStart(2, "0"),
+          year: cardExpYear.length === 2 ? `20${cardExpYear}` : cardExpYear,
+          cardCode: cardCvv,
+          zip: cardZip || undefined,
+        },
+      };
+
+      const opaqueData = await new Promise<{ dataDescriptor: string; dataValue: string }>((resolve, reject) => {
+        (window as any).Accept.dispatchData(secureData, (response: any) => {
+          if (response.opaqueData) {
+            resolve(response.opaqueData);
+          } else {
+            const errorMsg = response.messages?.message?.[0]?.text || "Card tokenization failed";
+            reject(new Error(errorMsg));
+          }
+        });
+      });
+
+      const chargeResponse = await fetch("/api/payments/charge-nonce", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          paymentToken: currentPaymentToken,
+          opaqueData,
+        }),
+      });
+
+      const chargeData = await chargeResponse.json();
+
+      if (chargeResponse.ok && chargeData.success) {
+        setChargeResult({
+          success: true,
+          transactionId: chargeData.transactionId,
+          cardLastFour: chargeData.cardLastFour,
+        });
+        toast.success("Payment processed successfully!", {
+          icon: <CheckCircle2 className="h-5 w-5" />,
+          description: `Transaction ID: ${chargeData.transactionId}`,
+        });
+      } else {
+        setChargeResult({
+          success: false,
+          error: chargeData.error || "Payment failed",
+        });
+        toast.error(chargeData.error || "Payment failed");
+      }
     } catch (error) {
-      console.error("[BillPatientModal] Charge directly error:", error);
-      toast.error("Failed to process payment. Please try again.");
+      const msg = error instanceof Error ? error.message : "Payment processing failed";
+      setChargeResult({ success: false, error: msg });
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   };
 
-  const redirectToHostedCheckout = async (token: string, gateway?: string) => {
-    const paymentGateway = gateway || "authorizenet";
-
-    if (paymentGateway === "stripe") {
-      const sessionResponse = await fetch("/api/payments/create-stripe-session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ paymentToken: token, from: "provider-dashboard" }),
-      });
-
-      const sessionData = await sessionResponse.json();
-      if (!sessionResponse.ok || !sessionData.success) {
-        toast.error(sessionData.error || "Failed to initialize Stripe checkout");
-        return;
-      }
-
-      window.location.href = sessionData.sessionUrl;
-    } else {
-      const tokenResponse = await fetch("/api/payments/get-hosted-token", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ paymentToken: token, from: "provider-dashboard" }),
-      });
-
-      const tokenData = await tokenResponse.json();
-      if (!tokenResponse.ok || !tokenData.success) {
-        toast.error(tokenData.error || "Failed to initialize payment gateway");
-        return;
-      }
-
-      const form = document.createElement("form");
-      form.method = "POST";
-      form.action = tokenData.paymentUrl;
-      form.target = "_self";
-
-      const tokenInput = document.createElement("input");
-      tokenInput.type = "hidden";
-      tokenInput.name = "token";
-      tokenInput.value = tokenData.formToken;
-      form.appendChild(tokenInput);
-
-      document.body.appendChild(form);
-      form.submit();
-    }
+  const handleChargeDirectly = () => {
+    setPaymentUrl(null);
+    setPaymentMethod("charge-now");
+    loadAcceptJs();
   };
 
   const handleCopyLink = () => {
@@ -811,6 +870,12 @@ export function BillPatientModal({
     setEmailSent(false);
     setLinkGateway("authorizenet");
     setPharmacyGatewayLabel(null);
+    setCardNumber("");
+    setCardExpMonth("");
+    setCardExpYear("");
+    setCardCvv("");
+    setCardZip("");
+    setChargeResult(null);
     onClose();
   };
 
@@ -922,60 +987,158 @@ export function BillPatientModal({
               </TabsContent>
 
               <TabsContent value="charge-now" className="space-y-4 mt-4">
-                {/* Info Banner */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <CreditCard className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
-                    <div className="text-sm text-blue-800">
-                      <p className="font-medium mb-1">Process Payment Now</p>
-                      <p>
-                        You will be redirected to a secure payment page to enter
-                        the patient&apos;s card details. A confirmation email
-                        will be sent to the patient after successful payment.
+                {chargeResult?.success ? (
+                  <div className="space-y-4 py-4">
+                    <div className="text-center">
+                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
+                        <CheckCircle2 className="w-10 h-10 text-green-600" />
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">Payment Successful!</h3>
+                      <p className="text-gray-600">
+                        Card ending in {chargeResult.cardLastFour} was charged ${calculateTotal()}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Transaction ID: {chargeResult.transactionId}
                       </p>
                     </div>
+                    <Button onClick={handleClose} className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90">
+                      Done
+                    </Button>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <div className="flex items-start gap-3">
+                        <CreditCard className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
+                        <div className="text-sm text-blue-800">
+                          <p className="font-medium mb-1">Process Payment Now</p>
+                          <p>
+                            Enter the patient&apos;s card details below. The card
+                            is tokenized securely — card numbers never touch our
+                            server. A confirmation email will be sent after payment.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
 
-                <PaymentFormFields
-                  patientEmail={patientEmail}
-                  setPatientEmail={setPatientEmail}
-                  consultationFeeDollars={consultationFeeDollars}
-                  medicationCostDollars={medicationCostDollars}
-                  shippingFeeDollars={shippingFeeDollars}
-                  description={description}
-                  setDescription={setDescription}
-                  totalAmount={calculateTotal()}
-                  emailHelperText="Payment confirmation will be sent to this email"
-                  idPrefix="chargeNow"
-                />
-                <div className="flex gap-3 pt-4">
-                  <Button
-                    variant="outline"
-                    onClick={handleClose}
-                    className="flex-1"
-                    disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={handleChargeNow}
-                    className="flex-1 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <CreditCard className="mr-2 h-4 w-4" />
-                        Process Payment
-                      </>
+                    {chargeResult?.error && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-start gap-3">
+                          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
+                          <div className="text-sm text-red-800">
+                            <p className="font-medium">Payment Failed</p>
+                            <p>{chargeResult.error}</p>
+                          </div>
+                        </div>
+                      </div>
                     )}
-                  </Button>
-                </div>
+
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="cardNumber">Card Number</Label>
+                        <Input
+                          id="cardNumber"
+                          placeholder="4111 1111 1111 1111"
+                          value={cardNumber}
+                          onChange={(e) => {
+                            const raw = e.target.value.replace(/\D/g, "").slice(0, 16);
+                            const formatted = raw.replace(/(\d{4})(?=\d)/g, "$1 ");
+                            setCardNumber(formatted);
+                          }}
+                          maxLength={19}
+                          disabled={loading}
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-2">
+                          <Label htmlFor="cardExpMonth">Month</Label>
+                          <Input
+                            id="cardExpMonth"
+                            placeholder="MM"
+                            value={cardExpMonth}
+                            onChange={(e) => setCardExpMonth(e.target.value.replace(/\D/g, "").slice(0, 2))}
+                            maxLength={2}
+                            disabled={loading}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cardExpYear">Year</Label>
+                          <Input
+                            id="cardExpYear"
+                            placeholder="YYYY"
+                            value={cardExpYear}
+                            onChange={(e) => setCardExpYear(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                            maxLength={4}
+                            disabled={loading}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="cardCvv">CVV</Label>
+                          <Input
+                            id="cardCvv"
+                            placeholder="123"
+                            type="password"
+                            value={cardCvv}
+                            onChange={(e) => setCardCvv(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                            maxLength={4}
+                            disabled={loading}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cardZip">Billing ZIP (Optional)</Label>
+                        <Input
+                          id="cardZip"
+                          placeholder="12345"
+                          value={cardZip}
+                          onChange={(e) => setCardZip(e.target.value.slice(0, 10))}
+                          maxLength={10}
+                          disabled={loading}
+                        />
+                      </div>
+                    </div>
+
+                    <PaymentFormFields
+                      patientEmail={patientEmail}
+                      setPatientEmail={setPatientEmail}
+                      consultationFeeDollars={consultationFeeDollars}
+                      medicationCostDollars={medicationCostDollars}
+                      shippingFeeDollars={shippingFeeDollars}
+                      description={description}
+                      setDescription={setDescription}
+                      totalAmount={calculateTotal()}
+                      emailHelperText="Payment confirmation will be sent to this email"
+                      idPrefix="chargeNow"
+                    />
+                    <div className="flex gap-3 pt-4">
+                      <Button
+                        variant="outline"
+                        onClick={handleClose}
+                        className="flex-1"
+                        disabled={loading}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={handleChargeNow}
+                        className="flex-1 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="mr-2 h-4 w-4" />
+                            Charge ${calculateTotal()}
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </>
+                )}
               </TabsContent>
             </Tabs>
           </div>

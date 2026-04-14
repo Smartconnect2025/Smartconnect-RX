@@ -22,6 +22,8 @@ const AUTHNET_HOSTED_URLS = {
  * This token is used to redirect the user to Authorize.Net's hosted payment page
  */
 export async function POST(request: NextRequest) {
+  let claimedTransactionId: string | null = null;
+
   try {
     const body = await request.json();
     const { paymentToken, from } = body;
@@ -55,6 +57,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (transaction.payment_status === "processing") {
+      return NextResponse.json(
+        { success: false, error: "Payment is already being processed" },
+        { status: 409 },
+      );
+    }
+
     if (
       transaction.payment_link_expires_at &&
       new Date(transaction.payment_link_expires_at) < new Date()
@@ -71,6 +80,23 @@ export async function POST(request: NextRequest) {
         { status: 400 },
       );
     }
+
+    // Race condition protection — claim transaction
+    const { data: claimedRows } = await supabase
+      .from("payment_transactions")
+      .update({ payment_status: "processing" })
+      .eq("id", transaction.id)
+      .eq("payment_status", "pending")
+      .select("id");
+
+    if (!claimedRows || claimedRows.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Payment is already being processed by another request" },
+        { status: 409 },
+      );
+    }
+
+    claimedTransactionId = transaction.id;
 
     let authnetLoginId: string | undefined;
     let authnetTransKey: string | undefined;
@@ -91,6 +117,11 @@ export async function POST(request: NextRequest) {
     }
 
     if (!authnetLoginId || !authnetTransKey) {
+      await supabase
+        .from("payment_transactions")
+        .update({ payment_status: "pending" })
+        .eq("id", claimedTransactionId);
+      claimedTransactionId = null;
       return NextResponse.json(
         { success: false, error: "Payment system not configured" },
         { status: 500 },
@@ -199,6 +230,12 @@ export async function POST(request: NextRequest) {
       const errorMessage =
         authnetData.messages?.message?.[0]?.text ||
         "Failed to get hosted payment token";
+      // Revert claim on failure
+      await supabase
+        .from("payment_transactions")
+        .update({ payment_status: "pending" })
+        .eq("id", claimedTransactionId);
+      claimedTransactionId = null;
       return NextResponse.json(
         { success: false, error: errorMessage },
         { status: 400 },
@@ -214,6 +251,8 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", transaction.id);
 
+    claimedTransactionId = null;
+
     return NextResponse.json({
       success: true,
       formToken: authnetData.token,
@@ -224,6 +263,18 @@ export async function POST(request: NextRequest) {
       "[HOSTED-TOKEN] Error:",
       error instanceof Error ? error.message : "Unknown",
     );
+
+    // Revert claim on unexpected error
+    if (claimedTransactionId) {
+      try {
+        const revertSupabase = createAdminClient();
+        await revertSupabase
+          .from("payment_transactions")
+          .update({ payment_status: "pending" })
+          .eq("id", claimedTransactionId);
+      } catch { /* best effort */ }
+    }
+
     return NextResponse.json(
       {
         success: false,

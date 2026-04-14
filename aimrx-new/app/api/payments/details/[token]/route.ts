@@ -55,6 +55,46 @@ export async function GET(
       ? payment.pharmacy[0]
       : payment.pharmacy;
 
+    // Fetch prescriptions linked to this payment
+    const { data: linkedRx } = await supabase
+      .from("prescriptions")
+      .select("id, medication, quantity, patient_price, shipping_fee_cents, profit_cents, status, payment_status")
+      .eq("payment_transaction_id", payment.id);
+
+    let prescriptions = linkedRx || [];
+
+    // If no linked Rx found, try by prescription_id
+    if (prescriptions.length === 0 && payment.prescription_id) {
+      const { data: singleRx } = await supabase
+        .from("prescriptions")
+        .select("id, medication, quantity, patient_price, shipping_fee_cents, profit_cents, status, payment_status")
+        .eq("id", payment.prescription_id);
+      if (singleRx) prescriptions = singleRx;
+    }
+
+    // Group Rx lookup
+    if (prescriptions.length > 0) {
+      try {
+        const { data: probe } = await (supabase.from("prescriptions") as any)
+          .select("order_group_id")
+          .eq("id", prescriptions[0].id)
+          .single();
+        if (probe?.order_group_id) {
+          const existingIds = prescriptions.map((rx: any) => rx.id);
+          const { data: groupRxs } = await (supabase.from("prescriptions") as any)
+            .select("id, medication, quantity, patient_price, shipping_fee_cents, profit_cents, status, payment_status")
+            .eq("order_group_id", probe.order_group_id);
+          if (groupRxs) {
+            for (const grx of groupRxs) {
+              if (!existingIds.includes(grx.id)) {
+                prescriptions.push(grx);
+              }
+            }
+          }
+        }
+      } catch { /* order_group_id may not exist */ }
+    }
+
     return NextResponse.json({
       success: true,
       payment: {
@@ -77,6 +117,16 @@ export async function GET(
         pharmacyLogoUrl: pharmacy?.logo_url || null,
         pharmacyColor: pharmacy?.primary_color || null,
         pharmacyPhone: pharmacy?.phone || null,
+        prescriptions: prescriptions.map((rx: any) => ({
+          id: rx.id,
+          medication: rx.medication,
+          quantity: rx.quantity,
+          patientPrice: rx.patient_price,
+          shippingFeeCents: rx.shipping_fee_cents,
+          profitCents: rx.profit_cents,
+          status: rx.status,
+          paymentStatus: rx.payment_status,
+        })),
       },
     });
   } catch {

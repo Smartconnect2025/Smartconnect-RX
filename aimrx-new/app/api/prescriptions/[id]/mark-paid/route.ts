@@ -183,23 +183,43 @@ export async function POST(
       paymentTransactionId = newTransaction.id;
     }
 
-    const { error: rxError } = await supabaseAdmin
-      .from("prescriptions")
-      .update({
-        payment_status: "paid",
-        order_progress: "payment_received",
-        status: "payment_received",
-        payment_transaction_id: paymentTransactionId,
-        updated_at: now,
-      })
-      .in("id", allRxIds);
+    // Idempotency: skip Rx already paid
+    const rxIdsToUpdate = allRxIds.filter((id) => {
+      const rx = rxList.find((r) => r.id === id);
+      return rx && rx.payment_status !== "paid";
+    });
 
-    if (rxError) {
-      console.error("Error updating prescriptions:", rxError);
-      return NextResponse.json(
-        { success: false, error: "Failed to update prescriptions" },
-        { status: 500 },
-      );
+    if (rxIdsToUpdate.length > 0) {
+      const { error: rxError } = await supabaseAdmin
+        .from("prescriptions")
+        .update({
+          payment_status: "paid",
+          order_progress: "payment_received",
+          status: "payment_received",
+          payment_transaction_id: paymentTransactionId,
+          updated_at: now,
+        })
+        .in("id", rxIdsToUpdate);
+
+      if (rxError) {
+        console.error("Error updating prescriptions:", rxError);
+        return NextResponse.json(
+          { success: false, error: "Failed to update prescriptions" },
+          { status: 500 },
+        );
+      }
+    }
+
+    // Link any remaining Rx that were already paid but not linked
+    const alreadyPaidIds = allRxIds.filter((id) => !rxIdsToUpdate.includes(id));
+    for (const id of alreadyPaidIds) {
+      const rx = rxList.find((r) => r.id === id);
+      if (rx && !rx.payment_transaction_id) {
+        await supabaseAdmin
+          .from("prescriptions")
+          .update({ payment_transaction_id: paymentTransactionId })
+          .eq("id", id);
+      }
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
@@ -220,13 +240,13 @@ export async function POST(
         );
 
         if (!submitResponse.ok) {
-          console.error(`⚠️ [mark-paid] Failed to submit ${rxId} to pharmacy`);
+          console.error(`[mark-paid] Failed to submit ${rxId} to pharmacy`);
           anySubmitFailed = true;
         } else {
-          console.log(`✅ [mark-paid] Prescription ${rxId} submitted to pharmacy`);
+          console.log(`[mark-paid] Prescription ${rxId} submitted to pharmacy`);
         }
       } catch (submitError) {
-        console.error(`⚠️ [mark-paid] Error submitting ${rxId}:`, submitError);
+        console.error(`[mark-paid] Error submitting ${rxId}:`, submitError);
         anySubmitFailed = true;
       }
     }
@@ -242,10 +262,63 @@ export async function POST(
           status: "error",
         });
       } catch (_) {}
+    }
 
+    // Send confirmation email
+    let emailSent = false;
+    const primaryRxPatient = rxList[0];
+    try {
+      const { data: patientData } = await supabaseAdmin
+        .from("patients")
+        .select("email, first_name, last_name")
+        .eq("id", primaryRxPatient.patient_id)
+        .single();
+
+      if (patientData?.email) {
+        const { data: provider } = await supabaseAdmin
+          .from("providers")
+          .select("first_name, last_name")
+          .eq("user_id", user.id)
+          .single();
+
+        const { data: pharmacy } = primaryRx?.pharmacy_id
+          ? await supabaseAdmin
+              .from("pharmacies")
+              .select("name")
+              .eq("id", primaryRx.pharmacy_id)
+              .single()
+          : { data: null };
+
+        const internalApiKey = process.env.INTERNAL_API_KEY || "";
+
+        await fetch(`${siteUrl}/api/payments/send-confirmation-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-internal-api-key": internalApiKey,
+          },
+          body: JSON.stringify({
+            patientEmail: patientData.email,
+            patientName: `${patientData.first_name} ${patientData.last_name}`,
+            providerName: provider ? `${provider.first_name} ${provider.last_name}` : "Your Provider",
+            medication: allRxIds.length > 1 ? `${allRxIds.length} medications` : "Prescription medication",
+            totalAmount: (combinedTotal / 100).toFixed(2),
+            paymentMethod: "Manual Payment",
+            pharmacyName: pharmacy?.name,
+            prescriptionId,
+          }),
+        });
+        emailSent = true;
+      }
+    } catch (emailErr) {
+      console.error("[mark-paid] Email error:", emailErr instanceof Error ? emailErr.message : "Unknown");
+    }
+
+    if (anySubmitFailed) {
       return NextResponse.json({
         success: true,
         updatedIds: allRxIds,
+        emailSent,
         warning: "Marked as paid but some prescriptions failed to submit to pharmacy.",
       });
     }
@@ -253,6 +326,7 @@ export async function POST(
     return NextResponse.json({
       success: true,
       updatedIds: allRxIds,
+      emailSent,
       message: allRxIds.length > 1
         ? `${allRxIds.length} prescriptions marked as paid and submitted to pharmacy`
         : "Prescription marked as paid and submitted to pharmacy",

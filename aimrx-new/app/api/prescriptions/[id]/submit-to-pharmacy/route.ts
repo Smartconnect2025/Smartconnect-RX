@@ -379,17 +379,46 @@ export async function POST(
     }
 
     if (prescription.payment_status !== "paid") {
-      console.error("❌ Payment not completed for prescription:", prescriptionId);
+      const isAdminOrInternal = isInternalCall || authenticatedUserRole === "admin" || authenticatedUserRole === "super_admin";
+      if (!isAdminOrInternal) {
+        console.error("❌ Payment not completed for prescription:", prescriptionId);
+        return NextResponse.json(
+          { success: false, error: "Payment not completed" },
+          { status: 400 },
+        );
+      }
+      console.warn(`⚠️ [submit-to-pharmacy] Admin/internal override: submitting unpaid prescription ${prescriptionId}`);
+    }
+
+    // Race condition protection — claim the prescription
+    const { data: claimResult } = await supabaseAdmin
+      .from("prescriptions")
+      .update({ status: "submitting_to_pharmacy" })
+      .eq("id", prescriptionId)
+      .neq("status", "submitted")
+      .neq("status", "submitting_to_pharmacy")
+      .select("id");
+
+    if (!claimResult || claimResult.length === 0) {
       return NextResponse.json(
-        { success: false, error: "Payment not completed" },
-        { status: 400 },
+        { success: false, error: "Prescription is already being submitted or was already submitted" },
+        { status: 409 },
       );
     }
 
     const backend = await resolvePharmacyBackendAny(supabaseAdmin, prescription.pharmacy_id);
 
+    async function revertSubmittingStatus() {
+      await supabaseAdmin
+        .from("prescriptions")
+        .update({ status: "payment_received" })
+        .eq("id", prescriptionId)
+        .eq("status", "submitting_to_pharmacy");
+    }
+
     if (!backend) {
       console.error("❌ [submit-to-pharmacy] Pharmacy backend not configured for pharmacy_id:", prescription.pharmacy_id);
+      await revertSubmittingStatus();
       return NextResponse.json(
         { success: false, error: "Pharmacy backend not configured" },
         { status: 400 },
@@ -408,6 +437,7 @@ export async function POST(
 
     if (criticalErrors.length > 0) {
       console.error("❌ [submit-to-pharmacy] Critical validation failed:", criticalErrors);
+      await revertSubmittingStatus();
       return NextResponse.json(
         { success: false, error: `Missing critical fields: ${criticalErrors.join(", ")}`, details: criticalErrors },
         { status: 400 },
@@ -431,6 +461,7 @@ export async function POST(
 
     if (!result.success) {
       console.error(`❌ [submit-to-pharmacy] ${backend.systemType} submission failed:`, result.error);
+      await revertSubmittingStatus();
       return NextResponse.json(
         { success: false, error: result.error },
         { status: result.status },
@@ -484,6 +515,17 @@ export async function POST(
   } catch (error) {
     console.error("❌ [submit-to-pharmacy] Unexpected error:", error);
     console.error("❌ [submit-to-pharmacy] Error stack:", error instanceof Error ? error.stack : "No stack trace");
+
+    try {
+      const supabaseRevert = createAdminClient();
+      const { id: failedRxId } = await params;
+      await supabaseRevert
+        .from("prescriptions")
+        .update({ status: "payment_received" })
+        .eq("id", failedRxId)
+        .eq("status", "submitting_to_pharmacy");
+    } catch { /* best effort revert */ }
+
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : "Unknown error" },
       { status: 500 },
