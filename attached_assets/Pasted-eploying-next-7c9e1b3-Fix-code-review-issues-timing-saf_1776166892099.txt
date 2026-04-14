@@ -1,0 +1,166 @@
+eploying next
+7c9e1b3: Fix code review issues: timing-safe auth comparison, remove query-param secret, fix USPS/FedEx carrier detection precedence, use exact dedup tokens for notification dedup
+Learn more
+
+Filter events31
+Deploy started for 7c9e1b3: Fix code review issues: timing-safe auth comparison, remove query-param secret, fix USPS/FedEx carrier detection precedence, use exact dedup tokens for notification dedup
+Triggered by you via API
+April 14, 2026 at 2:38 PM
+Cancel deploy
+Deploy live for f3353e1: Add cron tracking-sync route, enhance tracking-sync with status email notifications, fix FedEx carrier code to FedExDefault, add duplicate tracker handling
+April 14, 2026 at 2:38 PM
+Deploy started for f3353e1: Add cron tracking-sync route, enhance tracking-sync with status email notifications, fix FedEx carrier code to FedExDefault, add duplicate tracker handling
+Triggered by you via API
+April 14, 2026 at 2:33 PM
+Deploy live for a622a89: Fix DB column references: use authnet_transaction_id for Stripe PI IDs, use getActivePaymentConfig by pharmacy_id
+April 14, 2026 at 2:25 PM
+Deploy started for a622a89: Fix DB column references: use authnet_transaction_id for Stripe PI IDs, use getActivePaymentConfig by pharmacy_id
+Triggered by you via API
+April 14, 2026 at 2:21 PM
+Deploy live for 85aa5a5: Integrate Stripe as a payment gateway for patient billing Integrates Stripe Elements for card input and creates a new API route for handling Stripe payment processing, replacing the previous Authorize.Net logic. Replit-Commit-Author: Agent Replit-Commit-Session-Id: ce09a16d-c5ac-40d8-ac2a-e08b3853f111 Replit-Commit-Checkpoint-Type: full_checkpoint Replit-Commit-Event-Id: dcd8bafb-f783-4161-9732-3ea4e77e4a73 Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/c5a9dbd1-1b6e-4eff-a868-457131d3f4e1/ce09a16d-c5ac-40d8-ac2a-e08b3853f111/BjvKlOI Replit-Helium-Checkpoint-Created: true
+April 14, 2026 at 1:49 PM
+Deploy started for 85aa5a5: Integrate Stripe as a payment gateway for patient billing Integrates Stripe Elements for card input and creates a new API route for handling Stripe payment processing, replacing the previous Authorize.Net logic. Replit-Commit-Author: Agent Replit-Commit-Session-Id: ce09a16d-c5ac-40d8-ac2a-e08b3853f111 Replit-Commit-Checkpoint-Type: full_checkpoint Replit-Commit-Event-Id: dcd8bafb-f783-4161-9732-3ea4e77e4a73 Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/c5a9dbd1-1b6e-4eff-a868-457131d3f4e1/ce09a16d-c5ac-40d8-ac2a-e08b3853f111/BjvKlOI Replit-Helium-Checkpoint-Created: true
+Triggered by you via API
+April 14, 2026 at 1:45 PM
+Deploy live for 0acc195: Add simulation mode safety: startup warning + health check bypass - Warn at module load when PIONEERRX_SIMULATION_MODE is active - Export SIMULATION_MODE for use by health checks - Make checkPioneerRx() return simulated 'operational' when sim mode is on - Prevents unnecessary network calls to PioneerRx during simulation
+April 14, 2026 at 1:39 PM
+Deploy started for 0acc195: Add simulation mode safety: startup warning + health check bypass - Warn at module load when PIONEERRX_SIMULATION_MODE is active - Export SIMULATION_MODE for use by health checks - Make checkPioneerRx() return simulated 'operational' when sim mode is on - Prevents unnecessary network calls to PioneerRx during simulation
+Triggered by you via API
+April 14, 2026 at 1:35 PM
+Deploy live for 57eebb4: Fix send-patient-status-email: broken providers join → separate prescriber lookup The prescriptions table uses prescriber_id which doesn't have a direct FK to providers discoverable by Supabase. Split into a separate .maybeSingle() query instead of an embedded join that causes 'not found' errors.
+April 14, 2026 at 1:31 PM
+Deploy started for 57eebb4: Fix send-patient-status-email: broken providers join → separate prescriber lookup The prescriptions table uses prescriber_id which doesn't have a direct FK to providers discoverable by Supabase. Split into a separate .maybeSingle() query instead of an embedded join that causes 'not found' errors.
+Triggered by you via API
+April 14, 2026 at 1:26 PM
+Deploy live for 57eebb4: Fix send-patient-status-email: broken providers join → separate prescriber lookup The prescriptions table uses prescriber_id which doesn't have a direct FK to providers discoverable by Supabase. Split into a separate .maybeSingle() query instead of an embedded join that causes 'not found' errors.
+April 14, 2026 at 1:25 PM
+Deploy started for 57eebb4: Fix send-patient-status-email: broken providers join → separate prescriber lookup The prescriptions table uses prescriber_id which doesn't have a direct FK to providers discoverable by Supabase. Split into a separate .maybeSingle() query instead of an embedded join that causes 'not found' errors.
+Triggered by you via API
+April 14, 2026 at 1:20 PM
+Deploy live for 92b0b40: Improve PioneerRx diagnostics: better 401 logging + outbound IP check in test endpoint
+April 14, 2026 at 1:10 PM
+Deploy started for 92b0b40: Improve PioneerRx diagnostics: better 401 logging + outbound IP check in test endpoint
+Triggered by you via API
+April 14, 2026 at 1:05 PM
+Deploy live for 3b5b045: Update the website's icon to a new cube design Replace the existing favicon with a new cube logo image file. Replit-Commit-Author: Agent Replit-Commit-Session-Id: ce09a16d-c5ac-40d8-ac2a-e08b3853f111 Replit-Commit-Checkpoint-Type: full_checkpoint Replit-Commit-Event-Id: 1fa39076-9679-417e-9b07-9a0dacc166aa Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/c5a9dbd1-1b6e-4eff-a868-457131d3f4e1/ce09a16d-c5ac-40d8-ac2a-e08b3853f111/BjvKlOI Replit-Helium-Checkpoint-Created: true
+April 14, 2026 at 12:33 PM
+Deploy started for 3b5b045: Update the website's icon to a new cube design Replace the existing favicon with a new cube logo image file. Replit-Commit-Author: Agent Replit-Commit-Session-Id: ce09a16d-c5ac-40d8-ac2a-e08b3853f111 Replit-Commit-Checkpoint-Type: full_checkpoint Replit-Commit-Event-Id: 1fa39076-9679-417e-9b07-9a0dacc166aa Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/c5a9dbd1-1b6e-4eff-a868-457131d3f4e1/ce09a16d-c5ac-40d8-ac2a-e08b3853f111/BjvKlOI Replit-Helium-Checkpoint-Created: true
+Triggered by you via API
+April 14, 2026 at 12:28 PM
+Deploy live for eb65d1a: Improve the appearance and layout of the incoming prescriptions page Update the incoming prescriptions page with new styling, including adjusted column widths, font styles, and color changes for better readability and a more polished look. Replit-Commit-Author: Agent Replit-Commit-Session-Id: ce09a16d-c5ac-40d8-ac2a-e08b3853f111 Replit-Commit-Checkpoint-Type: full_checkpoint Replit-Commit-Event-Id: bc48cd27-db8c-4ea1-b2fb-20a3515b09fd Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/c5a9dbd1-1b6e-4eff-a868-457131d3f4e1/ce09a16d-c5ac-40d8-ac2a-e08b3853f111/BjvKlOI Replit-Helium-Checkpoint-Created: true
+April 14, 2026 at 12:28 PM
+Deploy started for eb65d1a: Improve the appearance and layout of the incoming prescriptions page Update the incoming prescriptions page with new styling, including adjusted column widths, font styles, and color changes for better readability and a more polished look. Replit-Commit-Author: Agent Replit-Commit-Session-Id: ce09a16d-c5ac-40d8-ac2a-e08b3853f111 Replit-Commit-Checkpoint-Type: full_checkpoint Replit-Commit-Event-Id: bc48cd27-db8c-4ea1-b2fb-20a3515b09fd Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/c5a9dbd1-1b6e-4eff-a868-457131d3f4e1/ce09a16d-c5ac-40d8-ac2a-e08b3853f111/BjvKlOI Replit-Helium-Checkpoint-Created: true
+Triggered by you via API
+April 14, 2026 at 12:22 PM
+Deploy live for efa139a: Fix: prescription table column widths to percentage-based for better proportioning
+April 14, 2026 at 11:55 AM
+Deploy started for efa139a: Fix: prescription table column widths to percentage-based for better proportioning
+Triggered by you via API
+April 14, 2026 at 11:50 AM
+Deploy live for e168755: Fix: system activity logs overflow with proper truncation and overflow-hidden
+April 14, 2026 at 11:49 AM
+Rollback
+Deploy started for e168755: Fix: system activity logs overflow with proper truncation and overflow-hidden
+Triggered by you via API
+April 14, 2026 at 11:45 AM
+Deploy live for 08f8c4e: Fix: table layout with table-fixed and column widths for compact view
+April 14, 2026 at 11:45 AM
+Rollback
+Deploy started for 08f8c4e: Fix: table layout with table-fixed and column widths for compact view
+Triggered by you via API
+April 14, 2026 at 11:40 AM
+Deploy live for 66f9acb: Fix: ts-ignore twilio optional import for production build
+April 14, 2026 at 11:40 AM
+Rollback
+Deploy started for 66f9acb: Fix: ts-ignore twilio optional import for production build
+Triggered by you via API
+April 14, 2026 at 11:36 AM
+Deploy failed for 49a2f1d: Fix: scoped catch vars, dedup markers, pharmacy-scoped comms logs
+Exited with status 1 while building your code. Check your deploy logs for more information.
+April 14, 2026 at 11:32 AM
+
+Rollback
+Deploy started for 49a2f1d: Fix: scoped catch vars, dedup markers, pharmacy-scoped comms logs
+Triggered by you via API
+April 14, 2026 at 11:30 AM
+Deploy failed for 49a2f1d: Fix: scoped catch vars, dedup markers, pharmacy-scoped comms logs
+Exited with status 1 while building your code. Check your deploy logs for more information.
+April 14, 2026 at 11:30 AM
+
+Rollback
+Deploy started for 49a2f1d: Fix: scoped catch vars, dedup markers, pharmacy-scoped comms logs
+Triggered by you via API
+April 14, 2026 at 11:28 AM
+Deploy failed for 857feb9: API & Logs blueprint alignment: email-guard 3-layer, system_logs logging, SMS service, webhook/comms sections
+Exited with status 1 while building your code. Check your deploy logs for more information.
+April 14, 2026 at 11:25 AM
+
+Rollback
+Deploy started for 857feb9: API & Logs blueprint alignment: email-guard 3-layer, system_logs logging, SMS service, webhook/comms sections
+Triggered by you via API
+April 14, 2026 at 11:23 AM
+Deploy live for d694b0c: Fix: silent background refresh - no loading flash on 15s auto-poll, only show spinner on initial load
+April 14, 2026 at 11:17 AM
+Rollback
+Deploy started for d694b0c: Fix: silent background refresh - no loading flash on 15s auto-poll, only show spinner on initial load
+Triggered by you via API
+April 14, 2026 at 11:13 AM
+Deploy live for 3457118: Match original app table layout: single-line dates, readable text size, proper spacing, no horizontal scroll
+April 14, 2026 at 11:13 AM
+Rollback
+Deploy started for 3457118: Match original app table layout: single-line dates, readable text size, proper spacing, no horizontal scroll
+Triggered by you via API
+April 14, 2026 at 11:08 AM
+Deploy live for 32c055a: Fix: make prescriptions table fit without horizontal scroll - compact layout with percentage widths, table-fixed, smaller text
+April 14, 2026 at 11:03 AM
+Rollback
+Deploy started for 32c055a: Fix: make prescriptions table fit without horizontal scroll - compact layout with percentage widths, table-fixed, smaller text
+Triggered by you via API
+April 14, 2026 at 10:58 AM
+Deploy live for b313690: Fix TS build: use 'as any' cast for order_group_id queries to bypass Supabase generated type checks
+April 14, 2026 at 10:44 AM
+Rollback
+Deploy started for b313690: Fix TS build: use 'as any' cast for order_group_id queries to bypass Supabase generated type checks
+Triggered by you via API
+April 14, 2026 at 10:39 AM
+Deploy failed for a34a399: Fix: make order_group_id column optional - probe before querying to handle missing column gracefully
+Exited with status 1 while building your code. Check your deploy logs for more information.
+April 14, 2026 at 10:29 AM
+
+Rollback
+Deploy started for a34a399: Fix: make order_group_id column optional - probe before querying to handle missing column gracefully
+Triggered by you via API
+April 14, 2026 at 10:27 AM
+Deploy live for 26ba4f1: Fix type error: user_metadata property on auth user type in admin-override
+April 14, 2026 at 10:23 AM
+Deploy started for 26ba4f1: Fix type error: user_metadata property on auth user type in admin-override
+Triggered by you via API
+April 14, 2026 at 10:18 AM
+Deploy failed for bf466ea: Blueprint alignment: admin-override route, sync-tracking, submission-groups, DigitalRx formatting (AIM- prefix, phone/DOB), group highlighting, pricing/address/payment/override UI sections, IDOR fixes
+Exited with status 1 while building your code. Check your deploy logs for more information.
+April 14, 2026 at 9:59 AM
+
+Rollback
+Deploy started for bf466ea: Blueprint alignment: admin-override route, sync-tracking, submission-groups, DigitalRx formatting (AIM- prefix, phone/DOB), group highlighting, pricing/address/payment/override UI sections, IDOR fixes
+Triggered by you via API
+April 14, 2026 at 9:57 AM
+Deploy live for 38dbc5a: Sync PioneerRx status maps: add 'ready for shipping' to webhook RX_STATUS_TEXT_MAP and mapToOrderProgress, align with pioneerrx-helpers TEXT_STATUS_MAP
+April 14, 2026 at 9:31 AM
+Deploy started for 38dbc5a: Sync PioneerRx status maps: add 'ready for shipping' to webhook RX_STATUS_TEXT_MAP and mapToOrderProgress, align with pioneerrx-helpers TEXT_STATUS_MAP
+Triggered by you via API
+April 14, 2026 at 9:26 AM
+Deploy live for f9f0c02: Fix architect findings: wire admin alerts, fix IDOR in update-address, sanitize HTML, add ready_for_pickup status mapping
+April 14, 2026 at 9:26 AM
+Deploy started for f9f0c02: Fix architect findings: wire admin alerts, fix IDOR in update-address, sanitize HTML, add ready_for_pickup status mapping
+Triggered by you via API
+April 14, 2026 at 9:21 AM
+Deploy live for 8f09b20: Add Email #14: Shipping address update notification to pharmacy with old vs new address comparison
+April 14, 2026 at 9:16 AM
+Deploy started for 8f09b20: Add Email #14: Shipping address update notification to pharmacy with old vs new address comparison
+Triggered by you via API
+April 14, 2026 at 9:11 AM
+Deploy live for 8161b29: Add complete email notification system: status emails (#8-11), admin alerts (#15-17), email dedup, wired into webhooks and cron jobs
+April 14, 2026 at 9:07 AM
+Deploy started for 8161b29: Add complete email notification system: status emails (#8-11), admin alerts (#15-17), email dedup, wired into webhooks and cron jobs
+Triggered by you via API
+April 14, 2026 at 9:01 AM
