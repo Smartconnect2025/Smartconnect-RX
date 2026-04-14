@@ -1,0 +1,617 @@
+Incoming Prescriptions & Prescription Detail — Complete Feature Blueprint
+Overview
+The Incoming Prescriptions page (/admin/prescriptions) is the central admin dashboard for managing all prescription orders. It consists of:
+
+Table View — filterable, searchable list of all prescriptions with visual group highlighting
+Prescription Detail Modal — full detail dialog opened by clicking any row, with 8 functional sections
+PART 1: DATABASE SCHEMA
+Tables Referenced
+prescriptions (primary)
+Column	Type	Description
+id	uuid PK	Prescription ID
+queue_id	text	Pharmacy queue ID (set after pharmacy submission)
+submitted_at	timestamptz	When provider submitted the Rx
+updated_at	timestamptz	Last update timestamp
+medication	text	Medication name
+dosage	text	Strength/dosage
+quantity	int	Quantity prescribed
+refills	int	Number of refills
+sig	text	SIG instructions (directions)
+status	text	Current status (see Status Lifecycle below)
+payment_status	text	pending / paid
+patient_price	numeric	Medication cost in dollars (e.g., 90.00)
+shipping_fee_cents	int	Shipping fee in cents (e.g., 2500 = $25.00)
+profit_cents	int	"Oversight & Monitoring" fee in cents (displayed to patient as fee, stored as cents)
+total_paid_cents	int	Total actually paid in cents
+patient_id	uuid FK → patients	
+prescriber_id	uuid FK → auth.users	The provider who wrote the Rx
+pharmacy_id	uuid FK → pharmacies	
+medication_id	uuid FK → pharmacy_medications	Catalog medication reference
+payment_transaction_id	uuid FK → payment_transactions	
+order_group_id	uuid	Groups multiple prescriptions into one payment/order
+tracking_number	text	Carrier tracking number
+fedex_status	text	Carrier status from EasyPost (e.g., "In Transit")
+estimated_delivery	text	ETA from carrier
+easypost_tracker_id	text	EasyPost tracker ID
+has_custom_address	boolean	Whether a custom shipping address overrides patient address
+custom_address	jsonb	{street, city, state, zipCode, country}
+submitted_to_pharmacy_at	timestamptz	When sent to pharmacy API
+pdf_storage_path	text	Supabase storage path for prescription PDF
+pharmacy_notes	text	Notes sent to pharmacy
+dispense_as_written	boolean	DAW flag
+refill_frequency_days	int	Days between refills
+next_refill_date	timestamptz	Calculated next refill date
+patients
+Column	Type	Description
+id	uuid PK	
+first_name	text	
+last_name	text	
+email	text	
+phone	text	
+date_of_birth	text	YYYY-MM-DD format
+physical_address	jsonb	{street, city, state, zipCode, country}
+data	jsonb	Contains {gender: "Male"/"Female"} etc.
+providers
+Column	Type	Description
+user_id	uuid (FK → auth.users)	Links to prescriber_id
+first_name	text	
+last_name	text	
+email	text	
+phone_number	text	
+npi_number	text	NPI for pharmacy submission
+dea_number	text	DEA number
+signature_url	text	Digital signature URL
+physical_address	jsonb	{street, city, state, zipCode}
+pharmacies
+Column	Type	Description
+id	uuid PK	
+name	text	
+primary_color	text	Hex color for UI display
+contact_email	text	
+notification_emails	text	Comma-separated list
+phone	text	
+address	text	
+slug	text	URL slug
+pharmacy_backends
+Column	Type	Description
+pharmacy_id	uuid FK	
+system_type	text	"DigitalRx"
+api_key_encrypted	text	Encrypted or raw API key
+api_url	text	Base URL for pharmacy API
+store_id	text	Store identifier
+is_active	boolean	
+pharmacy_medications
+Column	Type	Description
+id	uuid PK	
+name	text	
+ndc	text	National Drug Code
+strength	text	
+form	text	
+dosage_instructions	text	Default SIG
+notes	text	
+payment_transactions
+Column	Type	Description
+id	uuid PK	
+prescription_id	uuid FK	Primary prescription
+patient_id	uuid FK	
+payment_token	text	Unique token for payment URL
+payment_status	text	pending / completed / failed
+order_progress	text	
+total_amount_cents	int	
+medication_cost_cents	int	
+consultation_fee_cents	int	= oversight/monitoring fees
+shipping_fee_cents	int	
+paid_at	timestamptz	
+card_type	text	visa/mastercard/manual-payment
+pharmacy_admins
+Column	Type	Description
+user_id	uuid FK	
+pharmacy_id	uuid FK	Scopes admin to see only their pharmacy's Rxs
+system_logs
+Column	Type	Description
+user_id	text	
+user_email	text	
+user_name	text	
+action	text	Event type
+details	text	Free-form description
+queue_id	text	
+status	text	success/error
+event_type	text	For address update logs
+created_at	timestamptz	
+PART 2: STATUS LIFECYCLE
+All Valid Statuses (in order of progression)
+pending_payment → payment_received → submitted → packed → approved → shipped/picked_up → delivered
+                                                                   → ready_for_pickup
+                                                                   → cancelled
+
+Status → Color Mapping (UI)
+Status	Background Color	Text Color
+submitted	blue-100	blue-800
+pending_payment	yellow-100	yellow-800
+payment_received	teal-100	teal-800
+packed	purple-100	purple-800
+approved	green-100	green-800
+shipped / picked_up	indigo-100	indigo-800
+delivered	emerald-100	emerald-800
+default	gray-100	gray-800
+Effective Status Logic
+The displayed status is computed via getEffectiveStatus():
+
+IF status === "submitted" AND (no queue_id or queue_id === "N/A"):
+  IF payment_status === "paid" → display "payment_received"
+  ELSE → display "pending_payment"
+ELSE:
+  display actual status
+
+This is because prescriptions start as "submitted" in the DB when the provider creates them, but from the admin perspective, if no queue_id exists, it hasn't been sent to the pharmacy yet — so it's either awaiting payment or payment was received.
+
+PART 3: API ENDPOINTS
+1. GET /api/admin/prescriptions — Load All Prescriptions
+Auth: Admin or super_admin only Pharmacy scoping: If the logged-in admin is linked to a pharmacy via pharmacy_admins, they only see that pharmacy's prescriptions.
+
+Query joins:
+
+prescriptions
+  JOIN patients (first_name, last_name, email, physical_address)
+  JOIN pharmacies (name, primary_color)
+  JOIN payment_transactions (id, payment_token)
+WHERE status != 'cancelled'
+ORDER BY submitted_at DESC
+
+Group ID lookup: Separate query fetches all order_group_id values to map prescription → group.
+
+Provider lookup: Fetches all providers by user_id in batch, maps prescriber_id → Dr. FirstName LastName.
+
+Test data filtering: Hides patients with last_name in ["harton"] (case-insensitive).
+
+Response shape:
+
+{
+  prescriptions: [{
+    id: string,
+    queueId: string,
+    submittedAt: string,
+    providerName: string,         // "Dr. Joseph Sughayer"
+    patientName: string,          // "Test Test 1"
+    patientEmail: string | null,
+    medication: string,
+    strength: string,             // from dosage column
+    quantity: number,
+    refills: number,
+    sig: string,
+    status: string,
+    paymentStatus: string,
+    patientPrice: number | null,  // dollars
+    shippingFeeCents: number | null, // cents
+    profitCents: number,          // cents (oversight & monitoring)
+    submissionGroupId: string | null, // order_group_id
+    trackingNumber: string,
+    pharmacyName: string,
+    pharmacyColor: string,        // hex color
+    carrierStatus: string,        // fedex_status
+    estimatedDelivery: string,
+    patientId: string,
+    hasCustomAddress: boolean,
+    customAddress: {street, city, state, zipCode, country} | null,
+    patientAddress: {street, city, state, zipCode, country} | null,
+    paymentToken: string | null,
+    paymentTransactionId: string | null,
+  }]
+}
+
+2. POST /api/payments/generate-link — Create Payment Link
+Auth: Provider, admin, super_admin, or internal API key Input:
+
+{
+  "prescriptionIds": ["uuid1", "uuid2"],  // supports single or multiple
+  "consultationFeeCents": 100,            // oversight/monitoring in cents
+  "medicationCostCents": 9000,            // total medication cost in cents
+  "shippingFeeCents": 2500,               // shipping in cents
+  "description": "Payment for 2 medications: Dihexa, BPC-157",
+  "patientEmail": "patient@email.com",
+  "sendEmail": true
+}
+
+Behavior:
+
+Checks for existing unpaid payment link for these prescriptions (reuses if found)
+Generates unique payment_token (crypto random hex)
+Creates payment_transactions record
+Links all prescription IDs to the transaction via payment_transaction_id and order_group_id
+If sendEmail: true, calls /api/payments/send-payment-email to email patient
+Patient total = medicationCostCents + shippingFeeCents + consultationFeeCents
+Race condition protection: Uses optimistic locking — sets status to generating_link first, reverts on failure.
+
+3. POST /api/prescriptions/[id]/mark-paid — Mark as Paid (Manual)
+Auth: Admin/super_admin or the prescribing provider What it does (in order):
+
+Validates prescription exists and is in pending_payment status
+Calculates group total: if order_group_id exists, sums ALL group members' patient_price + shipping_fee_cents + profit_cents
+Creates or updates payment_transactions record with card_type: "manual-payment"
+Updates ALL prescriptions in the group to payment_status: "paid", status: "payment_received"
+Sends confirmation email (async, fire-and-forget) with all medications listed
+Submits ALL prescriptions to pharmacy (loops through each, calls submit-to-pharmacy)
+Returns success with any pharmacy submission errors as warnings
+Key: One mark-paid action processes the ENTIRE group — all items get paid, emailed, and submitted.
+
+4. POST /api/prescriptions/[id]/submit-to-pharmacy — Submit to DigitalRx
+Auth: Provider (own Rx only), admin, super_admin, or internal secret header Race condition protection: Uses submitting_to_pharmacy intermediate status — claims the row first, reverts on failure.
+
+DigitalRx API payload:
+
+{
+  "StoreID": "from pharmacy_backends",
+  "VendorName": "from env NEXT_PUBLIC_VENDOR_NAME",
+  "Patient": {
+    "FirstName": "", "LastName": "",
+    "DOB": "YYYY-MM-DD",           // MUST be this format
+    "Sex": "M/F/U",
+    "PatientStreet": "", "PatientCity": "", "PatientState": "", "PatientZip": "",
+    "PatientPhone": "10 digits only",
+    "Email": ""
+  },
+  "Doctor": {
+    "DoctorFirstName": "", "DoctorLastName": "",
+    "DoctorNpi": "", "DoctorDea": "",
+    "DoctorStreet": "", "DoctorCity": "", "DoctorState": "", "DoctorZip": "",
+    "DoctorPhone": "10 digits only"
+  },
+  "RxClaim": {
+    "DrugName": "AIM-{medication}",   // Always prefixed with "AIM-"
+    "Qty": "string",
+    "DateWritten": "YYYY-MM-DD",
+    "RequestedBy": "FirstName LastName",
+    "Refills": "string",
+    "DrugNDC": "from pharmacy_medications",
+    "Instructions": "SIG or default from catalog",
+    "Notes": "",
+    "Daw": "Y/N"
+  },
+  "DocSignature": "URL to provider signature image",
+  "PDFFile": "base64 encoded PDF or null"
+}
+
+Address resolution: Uses custom_address if has_custom_address=true AND has actual data, otherwise falls back to patient's physical_address.
+
+API key handling: Supports encrypted keys — checks isEncrypted(), decrypts if needed.
+
+Critical validation (blocks submission): StoreID, Patient FirstName/LastName, DrugName Optional validation (warns but submits anyway): DOB, address fields, NPI
+
+On success: Updates prescription with queue_id, status: "submitted", submitted_to_pharmacy_at, calculates next_refill_date. Logs to system_logs.
+
+5. PATCH /api/prescriptions/[id]/admin-override — Manual Status/Tracking Override
+Auth: Admin or super_admin only Input:
+
+{
+  "status": "shipped",              // optional
+  "trackingNumber": "870226650547", // optional
+  "note": "Confirmed by Leyla"      // optional
+}
+
+Valid statuses: pending_payment, payment_received, submitted, packed, approved, picked_up, shipped, delivered, ready_for_pickup, cancelled
+
+What it does:
+
+Updates prescription status and/or tracking number
+Logs to system_logs with action ADMIN_PRESCRIPTION_OVERRIDE, recording old → new values
+If BOTH status AND tracking number changed: sends patient status notification email via /api/payments/send-status-email
+Status → email statusType mapping:
+
+packed/approved → pharmacy_processing
+picked_up/shipped → shipped
+delivered → delivered
+ready_for_pickup → ready_for_pickup
+6. PATCH /api/prescriptions/[id]/update-address — Update Shipping Address
+Auth: Provider (own Rx only) or admin Input:
+
+{
+  "address": { "street": "...", "city": "...", "state": "...", "zipCode": "...", "country": "US" },
+  "saveToPatient": true  // also update patient.physical_address
+}
+
+What it does:
+
+Sets has_custom_address: true, saves custom_address JSON
+If saveToPatient: true, also updates patients.physical_address
+Builds recipient list: env PHARMACY_NOTIFICATION_EMAILS + pharmacy's contact_email + pharmacy's notification_emails
+Sends styled HTML email to all recipients showing old vs new address
+Logs to system_logs with event_type address_update_notification
+7. POST /api/prescriptions/sync-tracking — On-Demand Tracking Sync
+Auth: Provider (own Rx only) or admin Input: { "prescriptionId": "uuid" } Called automatically when admin opens a prescription detail that has a tracking number and isn't delivered yet. Uses: EasyPost API via fetchAndApplyTracking() shared utility. Updates: fedex_status, estimated_delivery, potentially status if carrier confirms delivery.
+
+8. POST /api/prescriptions/[id]/check-status — Check Pharmacy Status
+Auth: Admin only Returns: Current prescription status + last webhook log from system_logs. Note: DigitalRx polling is disabled — status updates come via webhook only.
+
+9. GET /api/prescriptions/submission-groups — Get All Group Mappings
+Auth: Any authenticated user Returns: { groups: { [prescriptionId]: order_group_id } }
+
+PART 4: FRONTEND — TABLE VIEW
+Page: app/(features)/admin/prescriptions/page.tsx
+Header Section
+Title: "Incoming Prescriptions"
+Subtitle: "Click any row to view full details and order progress"
+Search Bar
+Searches across: patient name, provider name, medication name, queue ID
+Real-time filtering (no debounce)
+Icon: Search (magnifying glass)
+Status Filter Dropdown
+Shows count for each status:
+
+All (total)
+submitted
+pending_payment
+payment_received
+packed
+approved
+picked_up
+shipped
+delivered
+Format: Status Name (count) — e.g., "Pending payment (3)"
+
+Results Counter
+"Showing X of Y prescriptions"
+
+Table Columns
+Column	Width	Content
+Date	140px	Formatted: "Apr 13, 2026, 6:31 PM"
+Provider	auto	"Dr. Joseph Sughayer"
+Patient	auto	Patient name + group badge if first in group
+Medication	max 200px	Medication name (truncated) + strength below
+Qty/Refills	100px	"Qty: 1" / "Ref: 0"
+Price	80px	"$90.00" + "+$25.00 ship" below in small text
+Pharmacy	auto	Pharmacy name in its branded color
+SIG	max 180px	Truncated with tooltip on hover
+Status	150px	Badge with status-specific color
+Group Highlighting (Multi-Prescription Orders)
+Prescriptions sharing the same order_group_id (or same paymentTransactionId) are visually grouped:
+
+Visual treatment:
+
+Colored background row (rotates through 5 colors: blue, purple, amber, green, rose)
+Left border (4px solid) in matching color
+Badge on FIRST row in group: e.g., "3 items" in matching color pill
+Color palette:
+
+backgrounds: ["#EFF6FF", "#F5F3FF", "#FFFBEB", "#ECFDF5", "#FFF1F2"]
+borders: ["#3B82F6", "#8B5CF6", "#F59E0B", "#10B981", "#F43F5E"]
+
+Non-grouped rows: Alternate white/#FAFAFA background. Hover: All rows get hover:bg-blue-50/50.
+
+Auto-Refresh
+Polls /api/admin/prescriptions every 15 seconds
+When selected prescription is open, auto-updates its data after reload
+Loading state: spinner with "Loading prescriptions..."
+Error state: AlertCircle icon + error message + "Try again" link
+PART 5: FRONTEND — PRESCRIPTION DETAIL MODAL
+Opened as a Dialog (max-w-2xl, max-h-90vh, scrollable).
+
+Section 1: Header
+Title: "Prescription Details" (blue text, #1E3A8A)
+Status badge (top right, colored per status)
+Section 2: Info Grid (2×2)
+Four info cards with gray-50 background, each showing:
+
+Queue ID — monospace font, with Hash icon
+Submitted — formatted date/time, with Calendar icon
+Provider — "Dr. FirstName LastName", with User icon
+Patient — "FirstName LastName", with User icon
+Section 3: Order Progress Tracker
+A dedicated component: PrescriptionProgressTracker
+
+7 Steps displayed horizontally:
+
+Order Created (ClipboardList icon)
+Payment (CreditCard icon)
+Sent to Pharmacy (Send icon)
+Processing (Package icon)
+Approved (ShieldCheck icon)
+Shipped (Truck icon)
+Delivered (PackageCheck icon)
+Visual behavior:
+
+Completed steps: Green gradient circle with checkmark
+Current step: Blue gradient circle with pulsing animation ring
+Payment pending (special): Amber gradient circle with amber pulse
+Future steps: Gray circle with gray icon
+Progress bar: Animated green gradient line connecting steps (1s transition)
+
+Payment badge: Shows in header area:
+
+"Payment Confirmed" or "Paid · $X.XX" (green)
+"Payment Pending" or "Due · $X.XX" (amber)
+Payment warning banner: When payment is pending, shows amber box: "Order will NOT be sent to the pharmacy until payment is received."
+
+Pharmacy name pill: Shown in header next to payment badge.
+
+Tracking section: When tracking number exists:
+
+Blue background box
+Carrier name label (e.g., "UPS Tracking")
+Tracking number in monospace bold
+"Track" button → links to carrier URL
+Carrier status badge (delivered=green, in transit=blue, default=gray)
+Estimated delivery date
+Tracking URL generation: Carrier-specific URLs:
+
+UPS → ups.com/track?tracknum=
+USPS → tools.usps.com/go/TrackConfirmAction?tLabels=
+DHL → dhl.com/en/express/tracking.html?AWB=
+Default → parcelsapp.com/en/tracking/
+Section 4: Medication Details
+Gray-50 background card:
+
+Medication — full name
+Strength — or "N/A"
+Quantity — number
+Refills — number
+SIG Instructions — full text (only shown if present)
+Section 5: Pricing
+Green-50 background card with green border.
+
+Single prescription view:
+
+Medication Cost: $X.XX
+Shipping: $X.XX
+Oversight & Monitoring: $X.XX (only shown if > 0)
+Total: $X.XX (large bold green text)
+Total = patientPrice + (shippingFeeCents / 100) + (profitCents / 100)
+Grouped prescription view:
+
+Header shows "X items in group" badge (blue)
+Each medication listed with price and "+$X.XX ship" if shipping > 0
+Currently selected medication highlighted with green-100 background
+Separator line
+Shipping & Handling subtotal
+Oversight & Monitoring subtotal
+Group Total: $X.XX (bold green)
+Total = sum of all (patientPrice) + sum of all (shippingFeeCents/100) + sum of all (profitCents/100)
+Section 6: Shipping Address
+Gray-50 background card:
+
+MapPin icon + full address: "street, city, state, zipCode"
+If custom address: amber badge "Custom address for this order"
+If no address: amber text "No shipping address on file"
+"Edit Shipping Address" button → expands inline form:
+
+Fields: Street Address, City, State, Zip Code, Country
+Pre-filled with current address (custom if exists, otherwise patient's)
+Two save options:
+"Save to Patient Record & Prescription" — updates both prescription custom_address AND patient.physical_address
+"This Prescription Only" — only updates prescription custom_address
+Cancel button
+After save: if pharmacy was notified, shows green success banner: "Pharmacy notified via email — Sent to: [email list]"
+Section 7: Payment Actions
+Only visible when status is pending_payment. Blue-50 background card.
+
+Shows patient email and two action buttons:
+
+Button 1: "Send Payment Link to Patient"
+
+Disabled if no patient email or no price set
+For groups: "Send Payment Link (X items)"
+Validates ALL group members have prices set
+Calls /api/payments/generate-link with all group member IDs
+Shows total across all group members (medication + shipping + oversight)
+Success/error message shown below
+Button 2: "Mark as Paid"
+
+Violet outline button
+For groups: "Mark All X Items as Paid"
+Calls /api/prescriptions/[id]/mark-paid
+On success: auto-submits to pharmacy + sends confirmation email
+Success toast: "Prescription marked as paid and sent to pharmacy!"
+Section 8: Submit to Pharmacy
+Only visible when no queue_id exists (prescription hasn't been sent to pharmacy yet).
+
+Warning if payment not received: "Payment not yet received — admin override will submit without payment confirmation."
+Button: "Submit to Pharmacy" (dark blue)
+Calls /api/prescriptions/[id]/submit-to-pharmacy
+Success message: "Submitted to pharmacy! Queue ID: [id]"
+Section 9: Manual Status / Tracking Override
+Always visible at bottom, collapsed by default.
+
+Collapsed: Orange outline button "Manual Status / Tracking Override" Expanded: Orange-50 background card with:
+
+Helper text: "Use this when the pharmacy confirms a status change but DigitalRx API hasn't updated. The patient will be notified automatically."
+Status dropdown (pre-filled with current):
+Submitted, Packed, Approved, Shipped / Picked Up, Delivered, Ready for Pickup, Cancelled
+Tracking Number input with truck icon
+Note input (optional) — e.g., "Confirmed by Leyla via email"
+Apply Override button (orange) + Cancel button
+Calls /api/prescriptions/[id]/admin-override
+Success: auto-closes modal after 1.5 seconds
+PART 6: TRACKING SYNC (AUTO)
+When a prescription detail modal opens:
+
+If prescription has a tracking number AND status is NOT "delivered"
+Automatically calls POST /api/prescriptions/sync-tracking
+If tracking data changed (new carrier status, delivery confirmation), reloads the full list
+This provides near-real-time tracking updates every time admin views a prescription
+PART 7: KEY BUSINESS RULES
+Group Payment Rule
+When generating a payment link or marking as paid for a grouped prescription:
+
+ALL unpaid items in the group are included in one payment
+Total = SUM of all (patient_price + shipping_fee_cents + profit_cents) across the group
+One payment link covers all items
+One mark-paid action processes all items
+One confirmation email lists ALL medications
+Price Calculation (CRITICAL)
+Patient sees and pays:
+
+Total = Σ(patient_price) + Σ(shipping_fee_cents/100) + Σ(profit_cents/100)
+
+patient_price = medication cost in dollars
+shipping_fee_cents = shipping in cents
+profit_cents = "Oversight & Monitoring" fee in cents (NOT profit — this IS a patient-facing charge)
+Submit to Pharmacy Flow
+mark-paid → FOR EACH rx in group:
+  1. Set status = "payment_received", payment_status = "paid"
+  2. Create/update payment_transaction
+  3. Submit to DigitalRx API
+  4. Set status = "submitted", save queue_id
+  5. Send confirmation email (once, listing ALL medications)
+
+DOB Format
+MUST be YYYY-MM-DD for DigitalRx API. Never use MM/DD/YYYY.
+
+Phone Format
+Strip to 10 digits only. No area code blocking. Function: formatPhoneForDigitalRx().
+
+Drug Name Prefix
+All medications sent to DigitalRx get prefixed with "AIM-" if not already.
+
+API Key Encryption
+Pharmacy API keys may be encrypted. The system checks isEncrypted() and decrypts via decryptApiKey() if needed.
+
+PART 8: ENVIRONMENT VARIABLES
+NEXT_PUBLIC_SITE_URL         - App base URL
+NEXT_PUBLIC_DIGITALRX_BASE_URL - DigitalRx API base (default: https://www.dbswebserver.com/DBSRestApi/API)
+NEXT_PUBLIC_VENDOR_NAME      - Vendor name sent to pharmacy API
+INTERNAL_API_KEY             - Server-to-server auth for email endpoints
+INTERNAL_API_SECRET          - Server-to-server auth for pharmacy submission
+SENDGRID_API_KEY             - Email sending
+SENDGRID_FROM_EMAIL          - From address
+SENDGRID_FROM_NAME           - From display name
+PHARMACY_NOTIFICATION_EMAILS - Fallback comma-separated emails for address updates
+ADMIN_ALERT_EMAIL            - Admin alert recipient
+EASYPOST_API_KEY             - Tracking via EasyPost
+
+PART 9: COMPONENT DEPENDENCIES
+UI Components Used (shadcn/ui)
+Dialog, DialogContent, DialogHeader, DialogTitle
+Table, TableBody, TableCell, TableHead, TableHeader, TableRow
+Badge
+Select, SelectContent, SelectItem, SelectTrigger, SelectValue
+Input
+Label
+Button
+Icons (lucide-react)
+Search, User, Calendar, Pill, Hash, FileText, RefreshCw, AlertCircle, Send, Mail, DollarSign, CheckCircle2, BadgeDollarSign, Truck, Package, Edit3, MapPin, Pencil, X, ClipboardList, CreditCard, ShieldCheck, PackageCheck, ExternalLink, Check, AlertTriangle
+
+Toast
+sonner library — toast.success(), toast.error(), toast.warning()
+
+Custom Component
+PrescriptionProgressTracker — located at app/(features)/prescriptions/_components/PrescriptionProgressTracker.tsx
+
+PART 10: FILE MAP
+Frontend:
+  app/(features)/admin/prescriptions/page.tsx          — Main page (1274 lines)
+  app/(features)/prescriptions/_components/
+    PrescriptionProgressTracker.tsx                     — Progress tracker component
+API Routes:
+  app/api/admin/prescriptions/route.ts                 — GET all prescriptions
+  app/api/payments/generate-link/route.ts              — Create payment link
+  app/api/prescriptions/[id]/mark-paid/route.ts        — Mark as paid + auto-submit
+  app/api/prescriptions/[id]/submit-to-pharmacy/route.ts — Submit to DigitalRx
+  app/api/prescriptions/[id]/admin-override/route.ts   — Manual status/tracking override
+  app/api/prescriptions/[id]/update-address/route.ts   — Update shipping address
+  app/api/prescriptions/[id]/check-status/route.ts     — Check pharmacy status
+  app/api/prescriptions/sync-tracking/route.ts         — On-demand tracking sync
+  app/api/prescriptions/submission-groups/route.ts     — Get group mappings
+Utilities:
+  core/utils/digitalrx-format.ts                       — formatPhoneForDigitalRx(), formatDobForDigitalRx()
+  core/security/encryption.ts                          — isEncrypted(), decryptApiKey()
+  core/services/storage/prescriptionPdfStorage.ts      — getPrescriptionPdfBase64()
+  app/api/prescriptions/_shared/tracking-sync.ts       — fetchAndApplyTracking() (EasyPost)
