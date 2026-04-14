@@ -381,7 +381,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error: `DigitalRx API error: ${digitalRxResponse.status} ${digitalRxResponse.statusText}`,
+            error: `Pharmacy API error: ${digitalRxResponse.status} ${digitalRxResponse.statusText}`,
             details: errorText,
           },
           { status: digitalRxResponse.status },
@@ -407,7 +407,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             {
               success: false,
-              error: `DigitalRx error: ${digitalRxData.Error}`,
+              error: `Pharmacy error: ${digitalRxData.Error}`,
               details: digitalRxData,
             },
             { status: 400 },
@@ -425,7 +425,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json(
           {
             success: false,
-            error: "DigitalRx did not return a QueueID",
+            error: "Pharmacy did not return a QueueID",
             details: digitalRxData,
           },
           { status: 500 },
@@ -492,7 +492,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           error:
-            "Prescription submitted to DigitalRx but failed to save locally",
+            "Prescription submitted to pharmacy but failed to save locally",
           error_details: prescriptionError,
           queue_id: queueId,
         },
@@ -526,10 +526,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: true,
-          message: "Prescription submitted to DigitalRx successfully",
+          message: "Prescription submitted to pharmacy successfully",
           queue_id: queueId,
           prescription_id: prescription.id,
-          digitalrx_response: digitalRxData,
+          pharmacy_response: digitalRxData,
           status: "submitted",
         },
         { status: 201 },

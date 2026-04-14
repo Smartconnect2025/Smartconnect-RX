@@ -132,14 +132,14 @@ async function submitToDigitalRx(
       const parsed = JSON.parse(errorText);
       detailMessage = parsed.Message || parsed.message || parsed.error || errorText;
     } catch { /* keep raw text */ }
-    return { success: false as const, error: `DigitalRx rejected the submission: ${detailMessage}`, status: digitalRxResponse.status };
+    return { success: false as const, error: `Pharmacy rejected the submission: ${detailMessage}`, status: digitalRxResponse.status };
   }
 
   const digitalRxData = await digitalRxResponse.json();
   const queueId = digitalRxData.QueueID || digitalRxData.queueId || digitalRxData.ID;
 
   if (!queueId) {
-    return { success: false as const, error: "DigitalRx did not return a QueueID", status: 500 };
+    return { success: false as const, error: "Pharmacy did not return a QueueID", status: 500 };
   }
 
   return { success: true as const, queueId, rxNumber, systemLabel: "DigitalRx" };
