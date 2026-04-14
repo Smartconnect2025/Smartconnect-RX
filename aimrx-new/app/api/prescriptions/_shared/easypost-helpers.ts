@@ -27,7 +27,7 @@ export function detectCarrier(trackingNumber: string): string {
 }
 
 const EASYPOST_CARRIER_MAP: Record<string, string> = {
-  FedEx: "FedEx",
+  FedEx: "FedExDefault",
   UPS: "UPS",
   USPS: "USPS",
   DHL: "DHLExpress",
