@@ -4,8 +4,9 @@ import { getPrescriptionPdfBase64 } from "@core/services/storage/prescriptionPdf
 import { isEncrypted, decryptApiKey } from "@core/security/encryption";
 import { getUser } from "@/core/auth/get-user";
 import { resolvePharmacyBackendAny, type ResolvedPharmacyBackend } from "../../_shared/pharmacy-dispatcher";
-import { submitPioneerRxEScript } from "../../_shared/pioneerrx-helpers";
+import { submitPioneerRxEScript, SIMULATION_MODE } from "../../_shared/pioneerrx-helpers";
 import { formatPhoneForDigitalRx, formatDobForDigitalRx } from "@core/utils/digitalrx-format";
+import { ensureTrackerRegistered } from "../../_shared/tracking-sync";
 
 const DEFAULT_DIGITALRX_BASE_URL =
   process.env.NEXT_PUBLIC_DIGITALRX_BASE_URL ||
@@ -503,12 +504,45 @@ export async function POST(
       status: "success",
     });
 
+    let demoTracking: { trackingNumber?: string; carrier?: string } = {};
+    if (SIMULATION_MODE) {
+      try {
+        const testTrackingNumber = `EZ1000000001`;
+        const demoCarrier = "USPS";
+        console.log(`[submit-to-pharmacy] SIMULATION: Auto-creating tracking ${testTrackingNumber} (${demoCarrier})`);
+
+        await supabaseAdmin
+          .from("prescriptions")
+          .update({
+            tracking_number: testTrackingNumber,
+            tracking_carrier: demoCarrier,
+            status: "picked_up",
+            order_progress: "shipped",
+            fedex_status: "In Transit",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", prescriptionId);
+
+        const trackerResult = await ensureTrackerRegistered(prescriptionId, testTrackingNumber, demoCarrier);
+        if (trackerResult.trackerId) {
+          console.log(`[submit-to-pharmacy] SIMULATION: EasyPost tracker created: ${trackerResult.trackerId}`);
+        } else {
+          console.warn(`[submit-to-pharmacy] SIMULATION: EasyPost tracker failed: ${trackerResult.error}`);
+        }
+
+        demoTracking = { trackingNumber: testTrackingNumber, carrier: demoCarrier };
+      } catch (trackingErr) {
+        console.error("[submit-to-pharmacy] SIMULATION: Auto-tracking error:", trackingErr);
+      }
+    }
+
     return NextResponse.json(
       {
         success: true,
         message: `Prescription submitted to pharmacy (${result.systemLabel}) successfully`,
         queue_id: result.queueId,
         system_type: result.systemLabel,
+        ...(demoTracking.trackingNumber ? { tracking_number: demoTracking.trackingNumber, tracking_carrier: demoTracking.carrier } : {}),
       },
       { status: 200 },
     );
