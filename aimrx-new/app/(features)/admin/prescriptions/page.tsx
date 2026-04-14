@@ -619,17 +619,17 @@ export default function AdminPrescriptionsPage() {
 
       <div className="bg-white border border-border rounded-lg overflow-hidden">
         <div className="overflow-x-auto">
-          <Table className="w-full table-fixed min-w-[800px]">
+          <Table className="w-full table-fixed">
             <colgroup>
-              <col className="w-[130px]" />
-              <col className="w-[120px]" />
-              <col className="w-[110px]" />
-              <col style={{ width: "22%" }} />
-              <col className="w-[70px]" />
-              <col className="w-[65px]" />
-              <col className="w-[90px]" />
-              <col style={{ width: "18%" }} />
-              <col className="w-[95px]" />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "12%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "7%" }} />
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "9%" }} />
             </colgroup>
             <TableHeader>
               <TableRow className="bg-gray-50">
