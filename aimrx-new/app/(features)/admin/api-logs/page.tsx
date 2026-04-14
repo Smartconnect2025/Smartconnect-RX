@@ -1218,7 +1218,7 @@ export default function APILogsPage() {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white rounded-lg border border-gray-200 mb-6">
+      <div className="bg-white rounded-lg border border-gray-200 mb-6 overflow-hidden">
         <div
           onClick={() => setRecentActivityExpanded(!recentActivityExpanded)}
           className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
@@ -1274,46 +1274,44 @@ export default function APILogsPage() {
                 filteredLogs.map((log) => (
                   <div
                     key={log.id}
-                    className="p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                    className="p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors overflow-hidden"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-start gap-3 flex-1">
-                        <div
-                          className={`mt-1 h-2 w-2 rounded-full flex-shrink-0 ${
-                            log.status === "success"
-                              ? "bg-green-500"
-                              : log.status === "error"
-                                ? "bg-red-500"
-                                : "bg-yellow-500"
-                          }`}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-sm font-medium text-gray-900">
-                              {log.action}
-                            </span>
-                            <span className="text-xs text-gray-500">by {log.user_name}</span>
-                          </div>
-                          <p className="text-sm text-gray-600 truncate">{log.details}</p>
-                          {log.queue_id && (
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-xs text-gray-500">Queue ID:</span>
-                              <code className="text-xs bg-gray-100 px-2 py-0.5 rounded">
-                                {log.queue_id}
-                              </code>
-                              <button
-                                onClick={() => copyToClipboard(log.queue_id!)}
-                                className="p-1 hover:bg-gray-200 rounded"
-                              >
-                                <Copy className="h-3 w-3 text-gray-400" />
-                              </button>
-                            </div>
-                          )}
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`mt-1.5 h-2 w-2 rounded-full flex-shrink-0 ${
+                          log.status === "success"
+                            ? "bg-green-500"
+                            : log.status === "error"
+                              ? "bg-red-500"
+                              : "bg-yellow-500"
+                        }`}
+                      />
+                      <div className="flex-1 min-w-0 overflow-hidden">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-sm font-medium text-gray-900 truncate">
+                            {log.action}
+                          </span>
+                          <span className="text-xs text-gray-500 flex-shrink-0">by {log.user_name}</span>
+                          <span className="text-xs text-gray-400 flex-shrink-0 ml-auto">
+                            {formatTimeAgo(log.created_at)}
+                          </span>
                         </div>
+                        <p className="text-sm text-gray-600 truncate" title={log.details}>{log.details}</p>
+                        {log.queue_id && (
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-xs text-gray-500">Queue ID:</span>
+                            <code className="text-xs bg-gray-100 px-2 py-0.5 rounded truncate max-w-[200px]">
+                              {log.queue_id}
+                            </code>
+                            <button
+                              onClick={() => copyToClipboard(log.queue_id!)}
+                              className="p-1 hover:bg-gray-200 rounded flex-shrink-0"
+                            >
+                              <Copy className="h-3 w-3 text-gray-400" />
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <span className="text-xs text-gray-500 ml-4 flex-shrink-0">
-                        {formatTimeAgo(log.created_at)}
-                      </span>
                     </div>
                   </div>
                 ))
