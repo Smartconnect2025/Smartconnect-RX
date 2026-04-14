@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { paymentToken, paymentMethodId } = body;
+    const { paymentToken, paymentMethodId, paymentIntentId } = body;
 
     if (!paymentToken) {
       return NextResponse.json(
@@ -97,10 +97,19 @@ export async function POST(request: NextRequest) {
       .from("payment_transactions")
       .update({ payment_status: "processing" })
       .eq("id", transaction.id)
-      .eq("payment_status", transaction.payment_status)
+      .in("payment_status", paymentIntentId ? ["pending", "processing"] : [transaction.payment_status])
       .select("id");
 
     if (!claimedRows || claimedRows.length === 0) {
+      if (paymentIntentId && transaction.payment_status === "completed") {
+        const cardLast4 = undefined;
+        return NextResponse.json({
+          success: true,
+          transactionId: paymentIntentId,
+          cardLastFour: cardLast4,
+          message: "Payment already processed",
+        });
+      }
       return NextResponse.json(
         { success: false, error: "This payment is already being processed" },
         { status: 409 },
@@ -134,6 +143,99 @@ export async function POST(request: NextRequest) {
 
     const stripe = new Stripe(stripeSecretKey);
     const totalAmountCents = transaction.total_amount_cents;
+
+    if (paymentIntentId) {
+      console.log(`[CHARGE-STRIPE] SCA finalization for PI ${paymentIntentId}`);
+      const pi = await stripe.paymentIntents.retrieve(paymentIntentId);
+      if (pi.status !== "succeeded") {
+        await supabase
+          .from("payment_transactions")
+          .update({ payment_status: "pending" })
+          .eq("id", claimedTransactionId);
+        claimedTransactionId = null;
+        return NextResponse.json(
+          { success: false, error: `Payment not completed (status: ${pi.status})` },
+          { status: 400 },
+        );
+      }
+
+      if (transaction.payment_status === "completed") {
+        claimedTransactionId = null;
+        const cardLast4 = typeof pi.latest_charge === "object" && pi.latest_charge
+          ? (pi.latest_charge as Stripe.Charge).payment_method_details?.card?.last4
+          : undefined;
+        return NextResponse.json({
+          success: true,
+          transactionId: pi.id,
+          cardLastFour: cardLast4,
+          message: "Payment already processed",
+        });
+      }
+
+      const now = new Date().toISOString();
+      const cardLast4 = typeof pi.latest_charge === "object" && pi.latest_charge
+        ? (pi.latest_charge as Stripe.Charge).payment_method_details?.card?.last4
+        : undefined;
+      const cardBrand = typeof pi.latest_charge === "object" && pi.latest_charge
+        ? (pi.latest_charge as Stripe.Charge).payment_method_details?.card?.brand
+        : undefined;
+
+      await supabase
+        .from("payment_transactions")
+        .update({
+          payment_status: "completed",
+          order_progress: "payment_received",
+          stripe_payment_intent_id: pi.id,
+          card_last_four: cardLast4,
+          card_type: cardBrand,
+          paid_at: now,
+        })
+        .eq("id", transaction.id);
+
+      const { data: linkedRxList } = await supabase
+        .from("prescriptions")
+        .select("id")
+        .eq("payment_transaction_id", transaction.id);
+
+      const rxIds = linkedRxList?.map((rx: { id: string }) => rx.id) || [];
+      if (rxIds.length === 0 && transaction.prescription_id) {
+        rxIds.push(transaction.prescription_id);
+      }
+
+      if (rxIds.length > 0) {
+        await supabase
+          .from("prescriptions")
+          .update({
+            payment_status: "paid",
+            order_progress: "payment_received",
+            status: "payment_received",
+          })
+          .in("id", rxIds);
+
+        for (const rxId of rxIds) {
+          try {
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+            await fetch(`${siteUrl}/api/prescriptions/${rxId}/submit-to-pharmacy`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-internal-secret": process.env.INTERNAL_API_SECRET || "",
+              },
+            });
+          } catch (err) {
+            console.error(`[CHARGE-STRIPE] SCA finalize - pharmacy submit error for ${rxId}:`, err instanceof Error ? err.message : "Unknown");
+          }
+        }
+      }
+
+      claimedTransactionId = null;
+      return NextResponse.json({
+        success: true,
+        transactionId: pi.id,
+        cardLastFour: cardLast4,
+        message: "Payment finalized after 3D Secure",
+      });
+    }
 
     let paymentIntent: Stripe.PaymentIntent;
     try {

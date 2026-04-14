@@ -779,10 +779,21 @@ export function BillPatientModal({
           return;
         }
         if (paymentIntent?.status === "succeeded") {
+          const finalizeResponse = await fetch("/api/payments/charge-stripe", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              paymentToken: currentPaymentToken,
+              paymentMethodId: pm.id,
+              paymentIntentId: paymentIntent.id,
+            }),
+          });
+          const finalizeData = await finalizeResponse.json();
           setChargeResult({
             success: true,
             transactionId: paymentIntent.id,
-            cardLastFour: pm.card?.last4,
+            cardLastFour: finalizeData.cardLastFour || pm.card?.last4,
           });
           toast.success("Payment processed successfully!", {
             icon: <CheckCircle2 className="h-5 w-5" />,

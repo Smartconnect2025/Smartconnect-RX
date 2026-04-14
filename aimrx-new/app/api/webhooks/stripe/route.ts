@@ -333,25 +333,135 @@ async function handlePaymentIntentSucceeded(
 ) {
   const { data: existing } = await supabase
     .from("payment_transactions")
-    .select("id, payment_status")
+    .select("*")
     .eq("stripe_payment_intent_id", paymentIntent.id)
     .single();
 
-  if (existing?.payment_status === "completed") {
-    console.log(`[STRIPE-WEBHOOK] PaymentIntent ${paymentIntent.id} already processed via checkout.session.completed`);
+  if (!existing) {
+    console.log(`[STRIPE-WEBHOOK] No payment transaction found for PI ${paymentIntent.id}`);
     return;
   }
 
-  if (existing) {
+  if (existing.payment_status === "completed") {
+    console.log(`[STRIPE-WEBHOOK] PaymentIntent ${paymentIntent.id} already processed — skipping`);
+    return;
+  }
+
+  const now = new Date().toISOString();
+
+  let cardLastFour: string | undefined;
+  let cardBrand: string | undefined;
+  const latestCharge = paymentIntent.latest_charge;
+  if (typeof latestCharge === "object" && latestCharge) {
+    cardLastFour = (latestCharge as Stripe.Charge).payment_method_details?.card?.last4 || undefined;
+    cardBrand = (latestCharge as Stripe.Charge).payment_method_details?.card?.brand || undefined;
+  }
+
+  const updateResult = await supabase
+    .from("payment_transactions")
+    .update({
+      payment_status: "completed",
+      order_progress: "payment_received",
+      card_last_four: cardLastFour,
+      card_type: cardBrand,
+      paid_at: now,
+      webhook_received_at: now,
+    })
+    .eq("id", existing.id)
+    .neq("payment_status", "completed")
+    .select("id");
+
+  if (!updateResult.data || updateResult.data.length === 0) {
+    console.log(`[STRIPE-WEBHOOK] PI ${paymentIntent.id} already processed by another handler — skipping`);
+    return;
+  }
+
+  console.log(`[STRIPE-WEBHOOK] PI ${paymentIntent.id} marked as completed — running post-payment flow`);
+
+  const { data: linkedRxList } = await supabase
+    .from("prescriptions")
+    .select("id")
+    .eq("payment_transaction_id", existing.id);
+
+  const rxIdsToUpdate = linkedRxList?.map((rx: { id: string }) => rx.id) || [];
+  if (rxIdsToUpdate.length === 0 && existing.prescription_id) {
+    rxIdsToUpdate.push(existing.prescription_id);
+  }
+
+  if (rxIdsToUpdate.length > 0) {
     await supabase
-      .from("payment_transactions")
+      .from("prescriptions")
       .update({
-        payment_status: "completed",
+        payment_status: "paid",
         order_progress: "payment_received",
-        paid_at: new Date().toISOString(),
-        webhook_received_at: new Date().toISOString(),
+        status: "payment_received",
       })
-      .eq("id", existing.id);
+      .in("id", rxIdsToUpdate);
+
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+    const internalSecret = process.env.INTERNAL_API_SECRET || "";
+    let anySubmitted = false;
+
+    for (const rxId of rxIdsToUpdate) {
+      try {
+        console.log(`[STRIPE-WEBHOOK] Auto-submitting prescription ${rxId} to pharmacy...`);
+        const submitResponse = await fetch(
+          `${siteUrl}/api/prescriptions/${rxId}/submit-to-pharmacy`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-internal-secret": internalSecret,
+            },
+          },
+        );
+
+        if (submitResponse.ok) {
+          console.log(`[STRIPE-WEBHOOK] Prescription ${rxId} submitted to pharmacy`);
+          anySubmitted = true;
+        } else {
+          const errorBody = await submitResponse.text().catch(() => "unable to read response");
+          console.error(`[STRIPE-WEBHOOK] Pharmacy submission failed for ${rxId}: HTTP ${submitResponse.status} — ${errorBody}`);
+        }
+      } catch (err) {
+        console.error(`[STRIPE-WEBHOOK] Pharmacy submission error for ${rxId}:`, err instanceof Error ? err.message : "Unknown");
+      }
+    }
+
+    if (anySubmitted) {
+      await supabase
+        .from("payment_transactions")
+        .update({ order_progress: "pharmacy_processing" })
+        .eq("id", existing.id);
+    }
+  }
+
+  if (existing.patient_email) {
+    try {
+      const internalApiKey = process.env.INTERNAL_API_KEY || "";
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+      await fetch(`${siteUrl}/api/payments/send-confirmation-email`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-internal-api-key": internalApiKey,
+        },
+        body: JSON.stringify({
+          patientEmail: existing.patient_email,
+          patientName: existing.patient_name,
+          providerName: existing.provider_name,
+          medication: existing.description,
+          totalAmount: (existing.total_amount_cents / 100).toFixed(2),
+          transactionId: paymentIntent.id,
+          paymentMethod: "Credit Card (Stripe)",
+          pharmacyName: existing.pharmacy_name,
+          prescriptionId: existing.prescription_id,
+        }),
+      });
+    } catch (err) {
+      console.error(`[STRIPE-WEBHOOK] Email error:`, err instanceof Error ? err.message : "Unknown");
+    }
   }
 }
 

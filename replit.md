@@ -54,8 +54,8 @@ The application utilizes Tailwind CSS and ShadCN UI for a modern, responsive, an
     *   DigitalRx API
     *   PioneerRx API (Enterprise API with HMAC-SHA512 authentication, RxEvents webhooks)
 *   **Payment Gateways:**
-    *   Authorize.Net API
-    *   Stripe API
+    *   Stripe API (primary — used for both "Send Link" and "Charge Now" flows)
+    *   Authorize.Net API (legacy fallback)
 *   **API Specification:** OpenAPI 3.1
 *   **API Client Generation:** Orval
 *   **Validation:** Zod
@@ -78,4 +78,19 @@ When `PIONEERRX_SIMULATION_MODE=true` is set (env var), all PioneerRx API calls 
 
 **Render env vars (11 total):** `INTERNAL_API_KEY`, `INTERNAL_API_SECRET`, `DATABASE_URL`, `EASYPOST_TEST_API_KEY`, `SENDGRID_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SUPABASE_URL`, `PIONEERRX_WEBHOOK_PASSWORD`, `PIONEERRX_WEBHOOK_USERNAME`, `PIONEERRX_SIMULATION_MODE`.
 
-**Still missing on Render:** `ENCRYPTION_KEY` (DigitalRx credential decryption), `AUTHNET_CLIENT_KEY` (Accept.js card forms).
+**Still missing on Render:** `ENCRYPTION_KEY` (DigitalRx credential decryption), `STRIPE_SECRET_KEY` (system-level Stripe secret), `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (system-level Stripe publishable key), `STRIPE_WEBHOOK_SECRET` (Stripe webhook signature validation).
+
+## Stripe Payment Flow
+
+**"Send Link" flow:** `generate-link` → patient page → `create-stripe-session` → Stripe Checkout → `webhooks/stripe` → marks paid → submits to pharmacy.
+
+**"Charge Now" flow (admin/provider direct charge):** BillPatientModal loads Stripe Elements → `createPaymentMethod` → `charge-stripe` API creates PaymentIntent server-side with `confirm: true` → marks paid → submits to pharmacy → sends confirmation email.
+
+**Key files:**
+- `/api/payments/charge-stripe/route.ts` — Server-side Stripe PaymentIntent creation + confirmation
+- `/api/payments/create-stripe-session/route.ts` — Stripe Checkout Session for patient links
+- `/api/webhooks/stripe/route.ts` — Handles checkout.session.completed, refunds, failures
+- `/api/payments/pharmacy-gateway/route.ts` — Returns pharmacy gateway type + Stripe publishable key
+- `components/billing/BillPatientModal.tsx` — Stripe Elements card form for "Charge Now"
+
+**Per-pharmacy credentials:** Stored encrypted in `pharmacy_payment_configs` table. System-level fallback via `STRIPE_SECRET_KEY` env var.
