@@ -1458,7 +1458,8 @@ export default function PrescriptionStep2Page() {
               </div>
             </div>
 
-            {/* Medication Oversight & Monitoring Fee */}
+            {/* Medication Oversight & Monitoring Fee - Hidden */}
+            {false && oversightFees.length >= 0 && (
             <div className="pt-4 border-t border-gray-200">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-md font-semibold text-gray-900">
@@ -1571,6 +1572,7 @@ export default function PrescriptionStep2Page() {
               )}
             </div>
           </div>
+          )}
 
           {/* Cart Panel */}
           {cart.length > 0 && (

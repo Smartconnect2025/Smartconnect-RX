@@ -114,23 +114,7 @@ export function ProviderFinancialDashboard() {
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        {/* Total Oversight Fees */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-              <DollarSign className="h-6 w-6 text-green-700" />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">
-                Total Consultation Fees — {MONTH_NAMES[monthFilter.month]}{" "}
-                {monthFilter.year}
-              </p>
-              <p className="text-3xl font-bold text-gray-900">
-                {formatCentsToDollars(totalProfitCents)}
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* Total Oversight Fees - Hidden */}
 
       </div>
 
@@ -154,7 +138,7 @@ export function ProviderFinancialDashboard() {
                 <TableHead>Medication</TableHead>
                 <TableHead className="w-[120px]">Payment Status</TableHead>
                 <TableHead className="text-right w-[130px]">Medication Price</TableHead>
-                <TableHead className="text-right w-[110px]">Oversight Fee</TableHead>
+                {/* Oversight Fee column - Hidden */}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -196,9 +180,7 @@ export function ProviderFinancialDashboard() {
                         ? formatCentsToDollars(basePrice)
                         : "—"}
                     </TableCell>
-                    <TableCell className="text-right font-semibold">
-                      {formatCentsToDollars(rx.profit_cents)}
-                    </TableCell>
+                    {/* Oversight Fee cell - Hidden */}
                   </TableRow>
                 );
               })}

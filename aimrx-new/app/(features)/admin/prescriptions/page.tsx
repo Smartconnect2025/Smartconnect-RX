@@ -1009,12 +1009,7 @@ export default function AdminPrescriptionsPage() {
                           <span>Shipping & Handling</span>
                           <span>${(groupRxs.reduce((s, p) => s + (p.shippingFeeCents || 0), 0) / 100).toFixed(2)}</span>
                         </div>
-                        {groupRxs.reduce((s, p) => s + (p.profitCents || 0), 0) > 0 && (
-                          <div className="flex justify-between text-sm">
-                            <span>Oversight & Monitoring</span>
-                            <span>${(groupRxs.reduce((s, p) => s + (p.profitCents || 0), 0) / 100).toFixed(2)}</span>
-                          </div>
-                        )}
+                        {/* Oversight & Monitoring - Hidden */}
                         <div className="flex justify-between font-bold text-green-700 text-lg pt-1">
                           <span>Group Total</span>
                           <span>${total.toFixed(2)}</span>
@@ -1031,12 +1026,7 @@ export default function AdminPrescriptionsPage() {
                         <span>Shipping</span>
                         <span>${((selectedPrescription.shippingFeeCents || 0) / 100).toFixed(2)}</span>
                       </div>
-                      {(selectedPrescription.profitCents || 0) > 0 && (
-                        <div className="flex justify-between text-sm">
-                          <span>Oversight & Monitoring</span>
-                          <span>${((selectedPrescription.profitCents || 0) / 100).toFixed(2)}</span>
-                        </div>
-                      )}
+                      {/* Oversight & Monitoring - Hidden */}
                       <div className="flex justify-between font-bold text-green-700 text-lg border-t border-green-300 pt-2">
                         <span>Total</span>
                         <span>${total.toFixed(2)}</span>

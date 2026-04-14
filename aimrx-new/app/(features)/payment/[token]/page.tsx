@@ -292,10 +292,6 @@ export default function PaymentPage() {
 
               <div className="space-y-3">
                 <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-gray-700">Consultation Fee</span>
-                  <span className="font-semibold">${consultationFee}</span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b">
                   <span className="text-gray-700">Medication Cost</span>
                   <span className="font-semibold">${medicationCost}</span>
                 </div>

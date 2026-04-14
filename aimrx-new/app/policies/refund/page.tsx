@@ -25,14 +25,7 @@ export default function RefundPolicyPage() {
                 </p>
               </section>
 
-              <section>
-                <h2 className="text-xl font-semibold text-[#1E3A8A] mb-3">
-                  Consultation Fees
-                </h2>
-                <p>
-                  [Add your consultation fee refund policy here. For example: Consultation fees are non-refundable once the consultation has been completed. If a consultation is cancelled at least 24 hours in advance, a full refund will be issued.]
-                </p>
-              </section>
+              {/* Consultation Fees section - Hidden */}
 
               <section>
                 <h2 className="text-xl font-semibold text-[#1E3A8A] mb-3">

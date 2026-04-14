@@ -560,23 +560,7 @@ export function PrescriptionModals({
                             : "0.00"}
                         </span>
                       </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-gray-600 print-text-sm">
-                          Consultation Fee
-                          {selectedPrescription.consultationReason
-                            ? ` (${CONSULTATION_REASON_LABELS[selectedPrescription.consultationReason] || selectedPrescription.consultationReason})`
-                            : ""}
-                          :
-                        </span>
-                        <span className="text-sm font-semibold text-gray-900 print-text-sm">
-                          $
-                          {selectedPrescription.profitCents
-                            ? (
-                                selectedPrescription.profitCents / 100
-                              ).toFixed(2)
-                            : "0.00"}
-                        </span>
-                      </div>
+                      {/* Consultation Fee - Hidden */}
                       <div className="flex justify-between pt-2 border-t border-gray-300">
                         <span className="text-base font-semibold text-gray-900 print-text">
                           Total:

@@ -107,10 +107,6 @@ function PaymentFormFields({
       {/* Cost Breakdown */}
       <div className="bg-gray-50 rounded-lg p-4 space-y-3">
         <div className="flex justify-between">
-          <span className="text-sm text-gray-600">Consultation Fee</span>
-          <span className="font-medium">${consultationFeeDollars}</span>
-        </div>
-        <div className="flex justify-between">
           <span className="text-sm text-gray-600">Medication Cost</span>
           <span className="font-medium">${medicationCostDollars}</span>
         </div>
@@ -243,10 +239,6 @@ function PaymentLinkResultView({
           <span className="text-lg font-bold text-gray-900">
             ${totalAmount}
           </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-sm text-gray-600">Consultation Fee:</span>
-          <span className="font-medium">${consultationFeeDollars}</span>
         </div>
         <div className="flex justify-between">
           <span className="text-sm text-gray-600">Medication Cost:</span>

@@ -345,7 +345,7 @@ export default function Step4PaymentPage() {
               <span className="text-gray-600">Medication Cost</span>
               <span className="font-medium">${(totalMedicationCents / 100).toFixed(2)}</span>
             </div>
-            {totalProfitCents > 0 && (
+            {false && totalProfitCents > 0 && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">Consultation Fee</span>
                 <span className="font-medium">${(totalProfitCents / 100).toFixed(2)}</span>

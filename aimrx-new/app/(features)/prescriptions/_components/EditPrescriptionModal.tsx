@@ -453,47 +453,7 @@ export function EditPrescriptionModal({
               />
             </div>
 
-            {/* Consultation Fee + Reason */}
-            <div className="pt-3 border-t border-gray-200 space-y-3">
-              <Label className="text-sm font-semibold text-gray-700">
-                Consultation Fee
-              </Label>
-              <div className="grid grid-cols-[1fr_2fr] gap-3">
-                <div>
-                  <Label className="text-xs">Fee ($)</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={formData.profitFee}
-                    onChange={(e) =>
-                      setFormData({ ...formData, profitFee: e.target.value })
-                    }
-                  />
-                </div>
-                <div>
-                  <Label className="text-xs">Reason</Label>
-                  <select
-                    value={formData.consultationReason}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        consultationReason: e.target.value,
-                      })
-                    }
-                    className="h-9 w-full rounded-md border border-gray-300 bg-white px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">Select reason...</option>
-                    {CONSULTATION_REASONS.map((r) => (
-                      <option key={r.value} value={r.value}>
-                        {r.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
+            {/* Consultation Fee + Reason - Hidden */}
           </div>
 
           {/* Action Buttons */}

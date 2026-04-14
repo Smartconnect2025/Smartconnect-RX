@@ -1092,7 +1092,7 @@ export default function PrescriptionStep3Page() {
             </div>
           )}
 
-          {Array.isArray(displayFees.oversightFees) && displayFees.oversightFees.length > 0 && (
+          {false && Array.isArray(displayFees.oversightFees) && displayFees.oversightFees.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-gray-900">Clinical Services & Fulfillment.</h3>
               <div className="space-y-3">
@@ -1118,11 +1118,11 @@ export default function PrescriptionStep3Page() {
             <div className="space-y-3">
               <div className="border-t border-dashed border-gray-300" />
 
-              {(totalOversightFees > 0 || totalShipping > 0) && (
+              {totalShipping > 0 && (
                 <div className="bg-green-50 rounded-lg p-4 border border-green-200">
                   <div className="flex justify-between items-center">
-                    <p className="font-semibold text-gray-900">Total Service & Delivery Fees</p>
-                    <p className="text-xl font-bold text-green-700">${(totalOversightFees + totalShipping).toFixed(2)}</p>
+                    <p className="font-semibold text-gray-900">Total Delivery Fees</p>
+                    <p className="text-xl font-bold text-green-700">${totalShipping.toFixed(2)}</p>
                   </div>
                 </div>
               )}
