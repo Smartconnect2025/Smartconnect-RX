@@ -184,6 +184,8 @@ export default function AdminPrescriptionsPage() {
   const [overrideNote, setOverrideNote] = useState("");
   const [isApplyingOverride, setIsApplyingOverride] = useState(false);
 
+  const sendingRef = useRef(false);
+
   const groupColorMap = useMemo(() => {
     const map = new Map<string, number>();
     let colorIdx = 0;
@@ -317,39 +319,87 @@ export default function AdminPrescriptionsPage() {
   };
 
   const handleSendPaymentLink = async (rx: AdminPrescription) => {
+    if (sendingRef.current) return;
+    if (!rx.patientEmail) {
+      setPaymentLinkResult({ success: false, message: "No patient email on file" });
+      return;
+    }
+    if (rx.patientPrice == null) {
+      setPaymentLinkResult({ success: false, message: "No price set for this prescription" });
+      return;
+    }
+    sendingRef.current = true;
     setIsSendingPaymentLink(true);
     setPaymentLinkResult(null);
     try {
-      const groupRxs = rx.submissionGroupId
-        ? prescriptions.filter((p) => p.submissionGroupId === rx.submissionGroupId)
+      const allGroupMembers = rx.submissionGroupId
+        ? prescriptions.filter(
+            (p) =>
+              p.submissionGroupId === rx.submissionGroupId &&
+              p.paymentStatus !== "paid"
+          )
         : [rx];
 
-      const totalMedCents = groupRxs.reduce((sum, p) => sum + ((p.patientPrice || 0) * 100), 0);
-      const totalShipCents = groupRxs.reduce((sum, p) => sum + (p.shippingFeeCents || 0), 0);
-      const totalProfitCents = groupRxs.reduce((sum, p) => sum + (p.profitCents || 0), 0);
+      const missingPrice = allGroupMembers.filter((p) => p.patientPrice == null);
+      if (missingPrice.length > 0) {
+        setPaymentLinkResult({
+          success: false,
+          message: `${missingPrice.length} item(s) in this group have no price set: ${missingPrice.map((p) => p.medication).join(", ")}`,
+        });
+        sendingRef.current = false;
+        setIsSendingPaymentLink(false);
+        return;
+      }
+
+      const prescriptionIds = allGroupMembers.map((p) => p.id);
+      let totalMedicationCostCents = 0;
+      let totalShippingFeeCents = 0;
+      let totalOversightFeeCents = 0;
+      const medNames: string[] = [];
+      for (const grx of allGroupMembers) {
+        totalMedicationCostCents += Math.round((grx.patientPrice ?? 0) * 100);
+        totalShippingFeeCents += grx.shippingFeeCents ?? 0;
+        totalOversightFeeCents += grx.profitCents ?? 0;
+        medNames.push(grx.medication);
+      }
+
+      const description = allGroupMembers.length > 1
+        ? `Payment for ${allGroupMembers.length} medications: ${medNames.join(", ")}`
+        : `Payment for ${rx.medication} prescription`;
 
       const response = await fetch("/api/payments/generate-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
-          prescriptionIds: groupRxs.map((p) => p.id),
-          medicationCostCents: totalMedCents,
-          shippingFeeCents: totalShipCents,
-          consultationFeeCents: totalProfitCents,
-          description: `Payment for ${groupRxs.length} medication(s): ${groupRxs.map((p) => p.medication).join(", ")}`,
+          prescriptionIds,
+          consultationFeeCents: totalOversightFeeCents,
+          medicationCostCents: totalMedicationCostCents,
+          shippingFeeCents: totalShippingFeeCents,
+          description,
           patientEmail: rx.patientEmail,
           sendEmail: true,
         }),
       });
       const data = await response.json();
-      if (data.success || data.paymentUrl) {
-        setPaymentLinkResult({ success: true, message: "Payment link sent to patient!" });
+      if (response.ok && (data.success || data.paymentLink)) {
+        const itemCount = allGroupMembers.length;
+        setPaymentLinkResult({
+          success: true,
+          message: data.existing
+            ? `Existing payment link resent to ${rx.patientEmail}`
+            : itemCount > 1
+              ? `Payment link for ${itemCount} items created and sent to ${rx.patientEmail}`
+              : `Payment link created and sent to ${rx.patientEmail}`,
+        });
+        loadPrescriptions();
       } else {
-        setPaymentLinkResult({ success: false, message: data.error || "Failed to generate payment link" });
+        setPaymentLinkResult({ success: false, message: data.error || "Failed to send payment link" });
       }
     } catch {
       setPaymentLinkResult({ success: false, message: "Network error — please try again" });
     } finally {
+      sendingRef.current = false;
       setIsSendingPaymentLink(false);
     }
   };
@@ -665,24 +715,77 @@ export default function AdminPrescriptionsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPrescriptions.map((prescription, idx) => {
+                (() => {
+                  const batchKeys: string[] = [];
+                  const groupIdMap: Record<string, string> = {};
+                  let groupCounter = 0;
+                  const txIdMap: Record<string, string> = {};
+                  for (let i = 0; i < filteredPrescriptions.length; i++) {
+                    const curr = filteredPrescriptions[i] as AdminPrescription & { paymentTransactionId?: string };
+                    const sgId = curr.submissionGroupId;
+                    const txId = curr.paymentTransactionId;
+                    if (sgId) {
+                      if (!groupIdMap[sgId]) {
+                        groupCounter++;
+                        groupIdMap[sgId] = `g${groupCounter}`;
+                      }
+                      batchKeys.push(groupIdMap[sgId]);
+                    } else if (txId) {
+                      if (!txIdMap[txId]) {
+                        groupCounter++;
+                        txIdMap[txId] = `t${groupCounter}`;
+                      }
+                      batchKeys.push(txIdMap[txId]);
+                    } else {
+                      groupCounter++;
+                      batchKeys.push(`g${groupCounter}`);
+                    }
+                  }
+                  const shippingPerGroup: Record<string, number> = {};
+                  for (let i = 0; i < filteredPrescriptions.length; i++) {
+                    const fee = (filteredPrescriptions[i] as any).shippingFeeCents ?? 0;
+                    if (fee > 0) {
+                      shippingPerGroup[batchKeys[i]] = (shippingPerGroup[batchKeys[i]] || 0) + 1;
+                    }
+                  }
+                  const invalidGroups = new Set(
+                    Object.entries(shippingPerGroup)
+                      .filter(([, count]) => count > 1)
+                      .map(([key]) => key)
+                  );
+                  for (let i = 0; i < batchKeys.length; i++) {
+                    if (invalidGroups.has(batchKeys[i])) {
+                      groupCounter++;
+                      batchKeys[i] = `solo${groupCounter}`;
+                    }
+                  }
+                  const keyCounts: Record<string, number> = {};
+                  batchKeys.forEach(k => { keyCounts[k] = (keyCounts[k] || 0) + 1; });
+                  let colorCounter = 0;
+                  const keyColorMap: Record<string, number> = {};
+                  Object.entries(keyCounts).forEach(([key, count]) => {
+                    if (count > 1 && !(key in keyColorMap)) {
+                      keyColorMap[key] = colorCounter % GROUP_BG_COLORS.length;
+                      colorCounter++;
+                    }
+                  });
+                  const seenKeys = new Set<string>();
+                  return filteredPrescriptions.map((prescription, idx) => {
                   const { datePart, timePart } = formatDateTime(prescription.submittedAt);
-                  const groupIdx = prescription.submissionGroupId
-                    ? groupColorMap.get(prescription.submissionGroupId)
-                    : undefined;
-                  const isGrouped = groupIdx !== undefined;
-                  const isFirstInGroup = groupFirstIds.has(prescription.id);
-                  const groupCount = prescription.submissionGroupId
-                    ? groupCounts.get(prescription.submissionGroupId) || 0
-                    : 0;
+                  const key = batchKeys[idx];
+                  const isMultiBatch = keyCounts[key] > 1;
+                  const isFirstInBatch = isMultiBatch && !seenKeys.has(key);
+                  seenKeys.add(key);
+                  const batchSize = keyCounts[key];
+                  const colorIdx = keyColorMap[key] ?? 0;
 
                   return (
                   <TableRow
                     key={prescription.id}
                     className="cursor-pointer transition-colors hover:bg-blue-50/50"
-                    style={isGrouped ? {
-                      backgroundColor: GROUP_BG_COLORS[groupIdx!],
-                      borderLeft: `4px solid ${GROUP_BORDER_COLORS[groupIdx!]}`,
+                    style={isMultiBatch ? {
+                      backgroundColor: GROUP_BG_COLORS[colorIdx],
+                      borderLeft: `4px solid ${GROUP_BORDER_COLORS[colorIdx]}`,
                     } : {
                       backgroundColor: idx % 2 === 0 ? "#FFFFFF" : "#FAFAFA",
                     }}
@@ -698,12 +801,12 @@ export default function AdminPrescriptionsPage() {
                     <TableCell className="text-sm py-3 px-3">
                       <div className="flex items-center gap-1.5">
                         <span className="font-medium">{prescription.patientName}</span>
-                        {isFirstInGroup && groupCount > 1 && (
+                        {isFirstInBatch && isMultiBatch && (
                           <span
-                            className="text-[10px] px-1.5 py-0.5 rounded-full text-white font-bold whitespace-nowrap"
-                            style={{ backgroundColor: GROUP_BORDER_COLORS[groupIdx!] }}
+                            className="ml-1 inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white"
+                            style={{ backgroundColor: GROUP_BORDER_COLORS[colorIdx] }}
                           >
-                            {groupCount} items
+                            {batchSize} items
                           </span>
                         )}
                       </div>
@@ -760,7 +863,8 @@ export default function AdminPrescriptionsPage() {
                     </TableCell>
                   </TableRow>
                   );
-                })
+                });
+                })()
               )}
             </TableBody>
           </Table>
@@ -1052,56 +1156,76 @@ export default function AdminPrescriptionsPage() {
                 </div>
 
                 {/* Section 7: Payment Actions */}
-                {effectiveStatus === "pending_payment" && (
+                {effectiveStatus === "pending_payment" && (() => {
+                  const payGroupMembers = selectedPrescription.submissionGroupId
+                    ? prescriptions.filter(p => p.submissionGroupId === selectedPrescription.submissionGroupId && p.paymentStatus !== "paid")
+                    : [selectedPrescription];
+                  const payIsGrouped = payGroupMembers.length > 1;
+                  return (
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-3">
-                    <h4 className="font-semibold text-sm text-gray-900 flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-blue-600" />
+                    <h4 className="font-semibold text-sm text-blue-900 flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
                       Payment Actions
+                      {payIsGrouped && (
+                        <Badge variant="outline" className="ml-1 text-xs bg-blue-100 text-blue-800 border-blue-300">
+                          Applies to all {payGroupMembers.length} items
+                        </Badge>
+                      )}
                     </h4>
-                    {selectedPrescription.patientEmail && (
-                      <p className="text-xs text-muted-foreground">Patient email: {selectedPrescription.patientEmail}</p>
-                    )}
-                    <div className="flex gap-2 flex-wrap">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <p className="text-xs text-muted-foreground">Patient Email</p>
+                        <p className="text-sm font-medium" data-testid="text-patient-email">
+                          {selectedPrescription.patientEmail || "Not on file"}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="space-y-2 pt-2">
                       <Button
                         onClick={() => handleSendPaymentLink(selectedPrescription)}
-                        disabled={isSendingPaymentLink || !selectedPrescription.patientEmail || !selectedPrescription.patientPrice}
-                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                        disabled={isSendingPaymentLink || !selectedPrescription.patientEmail || selectedPrescription.patientPrice == null}
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        data-testid="button-send-payment-link"
                       >
                         {isSendingPaymentLink ? (
-                          <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Sending...</>
+                          <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Sending Payment Link...</>
                         ) : (
                           <><Mail className="h-4 w-4 mr-2" />
-                            {isGrouped ? `Send Payment Link (${groupRxs.length} items)` : "Send Payment Link to Patient"}
+                            {payIsGrouped ? `Send Payment Link (${payGroupMembers.length} items)` : "Send Payment Link to Patient"}
                           </>
                         )}
                       </Button>
                       <Button
-                        variant="outline"
                         onClick={() => handleMarkPaid(selectedPrescription.id)}
                         disabled={isMarkingPaid}
-                        className="border-violet-300 text-violet-700 hover:bg-violet-50"
+                        variant="outline"
+                        className="w-full border-violet-300 text-violet-700 hover:bg-violet-50"
+                        data-testid="button-mark-as-paid"
                       >
                         {isMarkingPaid ? (
-                          <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Processing...</>
+                          <><RefreshCw className="h-4 w-4 mr-2 animate-spin" />Marking as Paid...</>
                         ) : (
                           <><CheckCircle2 className="h-4 w-4 mr-2" />
-                            {isGrouped ? `Mark All ${groupRxs.length} Items as Paid` : "Mark as Paid"}
+                            {payIsGrouped ? `Mark All ${payGroupMembers.length} Items as Paid` : "Mark as Paid"}
                           </>
                         )}
                       </Button>
                     </div>
                     {paymentLinkResult && (
-                      <p className={`text-sm ${paymentLinkResult.success ? "text-green-600" : "text-red-600"}`}>
+                      <div className={`flex items-center gap-2 text-sm mt-2 ${paymentLinkResult.success ? "text-green-600" : "text-red-600"}`}>
+                        {paymentLinkResult.success ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
                         {paymentLinkResult.message}
-                      </p>
+                      </div>
                     )}
                     {markPaidResult && (
-                      <p className={`text-sm ${markPaidResult.success ? "text-green-600" : "text-red-600"}`}>
+                      <div className={`flex items-center gap-2 text-sm mt-2 ${markPaidResult.success ? "text-green-600" : "text-red-600"}`}>
+                        {markPaidResult.success ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
                         {markPaidResult.message}
-                      </p>
+                      </div>
                     )}
                   </div>
-                )}
+                  );
+                })()}
 
                 {/* Section 8: Submit to Pharmacy */}
                 {(!selectedPrescription.queueId || selectedPrescription.queueId === "N/A") && (
