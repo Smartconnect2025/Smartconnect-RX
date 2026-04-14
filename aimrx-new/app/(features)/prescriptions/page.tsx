@@ -389,71 +389,28 @@ export default function PrescriptionsPage() {
     signature: false,
   });
 
-  // Load prescriptions from Supabase with real-time updates
+  // Load prescriptions via API route (bypasses RLS)
   const loadPrescriptions = useCallback(async () => {
     if (!user?.id) {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("prescriptions")
-      .select(
-        `
-        id,
-        queue_id,
-        submitted_at,
-        medication,
-        dosage,
-        dosage_amount,
-        dosage_unit,
-        vial_size,
-        form,
-        quantity,
-        refills,
-        sig,
-        dispense_as_written,
-        pharmacy_notes,
-        patient_price,
-        profit_cents,
-        consultation_reason,
-        refill_frequency_days,
-        shipping_fee_cents,
-        total_paid_cents,
-        status,
-        payment_status,
-        tracking_number,
-        fedex_status,
-        tracking_carrier,
-        estimated_delivery,
-        pharmacy_id,
-        pdf_storage_path,
-        order_group_id,
-        patient_id,
-        has_custom_address,
-        custom_address,
-        patient:patients(first_name, last_name, date_of_birth, email),
-        pharmacy:pharmacies(name, primary_color, logo_url, address, phone),
-        payment_transactions(id)
-      `,
-      )
-      .eq("prescriber_id", user.id)
-      .eq("prescription_type", "prescription")
-      .neq("status", "cancelled")
-      .order("submitted_at", { ascending: false });
+    let data = null;
+    let providerData = null;
 
-    if (error) {
-      console.error("❌ Error loading prescriptions:", error);
-    }
-
-    // Also fetch doctor name
-    const { data: providerData } = await supabase
-      .from("providers")
-      .select("first_name, last_name")
-      .eq("user_id", user.id)
-      .single();
-
-    if (error) {
-      console.error("Error loading prescriptions:", error);
+    try {
+      const response = await fetch("/api/prescriptions/list", {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        console.error("❌ Error loading prescriptions:", response.statusText);
+        return;
+      }
+      const result = await response.json();
+      data = result.prescriptions;
+      providerData = result.provider;
+    } catch (err) {
+      console.error("❌ Error loading prescriptions:", err);
       return;
     }
 
