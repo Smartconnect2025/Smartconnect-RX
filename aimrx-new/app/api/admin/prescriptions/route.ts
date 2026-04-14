@@ -55,29 +55,19 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "No pharmacy assigned to your account" }, { status: 403 });
     }
 
-    const selectFields = [
-      "id", "queue_id", "submitted_at", "medication", "dosage", "quantity",
-      "refills", "sig", "status", "payment_status", "patient_price",
-      "shipping_fee_cents", "profit_cents", "tracking_number", "fedex_status",
-      "estimated_delivery", "has_custom_address", "custom_address",
-      "payment_transaction_id", "prescriber_id", "pharmacy_id", "patient_id",
-      "patient:patients(first_name, last_name, email, physical_address)",
-      "pharmacy:pharmacies(name, primary_color)",
-    ];
-
-    let hasOrderGroupId = true;
-    {
-      const probe = await supabase
-        .from("prescriptions")
-        .select("order_group_id")
-        .limit(0);
-      if (probe.error) hasOrderGroupId = false;
-    }
-    if (hasOrderGroupId) selectFields.splice(selectFields.indexOf("payment_transaction_id"), 0, "order_group_id");
+    const baseSelect = `
+      id, queue_id, submitted_at, medication, dosage, quantity,
+      refills, sig, status, payment_status, patient_price,
+      shipping_fee_cents, profit_cents, tracking_number, fedex_status,
+      estimated_delivery, has_custom_address, custom_address,
+      payment_transaction_id, prescriber_id, pharmacy_id, patient_id,
+      patient:patients(first_name, last_name, email, physical_address),
+      pharmacy:pharmacies(name, primary_color)
+    `;
 
     let query = supabase
       .from("prescriptions")
-      .select(selectFields.join(", "))
+      .select(baseSelect)
       .neq("status", "cancelled")
       .order("submitted_at", { ascending: false });
 
@@ -90,6 +80,19 @@ export async function GET(request: NextRequest) {
     if (prescriptionsError) {
       console.error("Error loading prescriptions:", prescriptionsError);
       return NextResponse.json({ error: prescriptionsError.message }, { status: 500 });
+    }
+
+    let orderGroupMap = new Map<string, string>();
+    try {
+      const { data: groupData } = await (supabase.from("prescriptions") as any)
+        .select("id, order_group_id")
+        .not("order_group_id", "is", null);
+      if (groupData) {
+        for (const row of groupData) {
+          if (row.order_group_id) orderGroupMap.set(row.id, row.order_group_id);
+        }
+      }
+    } catch {
     }
 
     const prescriberIds = [
@@ -160,7 +163,7 @@ export async function GET(request: NextRequest) {
         patientPrice: rx.patient_price,
         shippingFeeCents: rx.shipping_fee_cents,
         profitCents: rx.profit_cents || 0,
-        submissionGroupId: rx.order_group_id || null,
+        submissionGroupId: orderGroupMap.get(rx.id) || null,
         trackingNumber: rx.tracking_number,
         pharmacyName: (pharmacy as { name?: string })?.name,
         pharmacyColor: (pharmacy as { primary_color?: string })?.primary_color,

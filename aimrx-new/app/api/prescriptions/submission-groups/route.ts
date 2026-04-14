@@ -21,16 +21,7 @@ export async function GET() {
 
     const supabase = createAdminClient();
 
-    const probe = await supabase
-      .from("prescriptions")
-      .select("order_group_id")
-      .limit(0);
-    if (probe.error) {
-      return NextResponse.json({ success: true, groups: {} });
-    }
-
-    let query = supabase
-      .from("prescriptions")
+    let query = (supabase.from("prescriptions") as any)
       .select("id, order_group_id")
       .not("order_group_id", "is", null);
 
@@ -59,9 +50,9 @@ export async function GET() {
     }
 
     const groups: Record<string, string> = {};
-    for (const row of data || []) {
-      if ((row as Record<string, unknown>).order_group_id) {
-        groups[row.id] = (row as Record<string, unknown>).order_group_id as string;
+    for (const row of (data || []) as any[]) {
+      if (row.order_group_id) {
+        groups[row.id] = row.order_group_id;
       }
     }
 
