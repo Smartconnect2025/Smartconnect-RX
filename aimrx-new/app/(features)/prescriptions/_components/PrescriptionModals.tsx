@@ -44,6 +44,9 @@ interface Prescription {
   pharmacyId?: string;
   pharmacyName?: string;
   pharmacyColor?: string;
+  pharmacyLogoUrl?: string;
+  pharmacyAddress?: string;
+  pharmacyPhone?: string;
   profitCents?: number;
   shippingFeeCents?: number;
   totalPaidCents?: number;
@@ -108,7 +111,7 @@ const printReceipt = () => {
     <!DOCTYPE html>
     <html>
     <head>
-      <title>SmartConnect RX Receipt</title>
+      <title>Prescription Receipt</title>
       <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; padding: 12px; color: #333; font-size: 0.86rem; }
@@ -211,11 +214,11 @@ export function PrescriptionModals({
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto print:max-w-full">
           {selectedPrescription && (
             <div className="space-y-6 print-container" id="rx-receipt">
-              {/* SmartConnect Logo */}
+              {/* Pharmacy Logo */}
               <div className="text-center pt-4">
                 <img
-                  src="/logo-header.png"
-                  alt="SmartConnect RX"
+                  src={selectedPrescription.pharmacyLogoUrl || "/logo-header.png"}
+                  alt={selectedPrescription.pharmacyName || "Pharmacy"}
                   className="h-[80px] mx-auto print-logo"
                 />
               </div>
@@ -223,10 +226,14 @@ export function PrescriptionModals({
               {/* Letterhead */}
               <div className="text-center text-sm text-gray-600 border-b pb-4 print-letterhead">
                 <p className="font-semibold text-gray-900">
-                  SmartConnect RX
+                  {selectedPrescription.pharmacyName || "Pharmacy"}
                 </p>
-                <p>106 E 6th St, Suite 900 · Austin, TX 78701</p>
-                <p>(512) 377-9898 · Mon–Fri 9AM–6PM CST</p>
+                {selectedPrescription.pharmacyAddress && (
+                  <p>{selectedPrescription.pharmacyAddress}</p>
+                )}
+                {selectedPrescription.pharmacyPhone && (
+                  <p>{selectedPrescription.pharmacyPhone}</p>
+                )}
               </div>
 
               {/* Success Checkmark & Headline */}
@@ -562,17 +569,24 @@ export function PrescriptionModals({
                       Fulfilling Pharmacy
                     </h3>
                     <p className="font-semibold text-gray-900 print-text">
-                      {selectedPrescription.pharmacyName || "SmartConnect RX"}
+                      {selectedPrescription.pharmacyName || "Pharmacy"}
                     </p>
-                    <a
-                      href="https://maps.google.com/?q=106+E+6th+St+Suite+900+Austin+TX+78701"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm hover:underline inline-block mt-1 print-text-sm"
-                      style={{ color: "#00AEEF" }}
-                    >
-                      106 E 6th St, Suite 900, Austin, TX 78701 →
-                    </a>
+                    {selectedPrescription.pharmacyAddress && (
+                      <a
+                        href={`https://maps.google.com/?q=${encodeURIComponent(selectedPrescription.pharmacyAddress)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm hover:underline inline-block mt-1 print-text-sm"
+                        style={{ color: selectedPrescription.pharmacyColor || "#00AEEF" }}
+                      >
+                        {selectedPrescription.pharmacyAddress} →
+                      </a>
+                    )}
+                    {selectedPrescription.pharmacyPhone && (
+                      <p className="text-sm text-gray-600 mt-1 print-text-sm">
+                        {selectedPrescription.pharmacyPhone}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

@@ -251,6 +251,9 @@ interface Prescription {
   pharmacyId?: string;
   pharmacyName?: string;
   pharmacyColor?: string;
+  pharmacyLogoUrl?: string;
+  pharmacyAddress?: string;
+  pharmacyPhone?: string;
   profitCents?: number;
   shippingFeeCents?: number;
   totalPaidCents?: number;
@@ -413,7 +416,7 @@ export default function PrescriptionsPage() {
         pdf_storage_path,
         order_group_id,
         patient:patients(first_name, last_name, date_of_birth, email),
-        pharmacy:pharmacies(name, primary_color),
+        pharmacy:pharmacies(name, primary_color, logo_url, address, phone),
         payment_transactions(id)
       `,
       )
@@ -475,6 +478,9 @@ export default function PrescriptionsPage() {
           pharmacyId: rx.pharmacy_id,
           pharmacyName: pharmacy?.name,
           pharmacyColor: pharmacy?.primary_color,
+          pharmacyLogoUrl: pharmacy?.logo_url,
+          pharmacyAddress: pharmacy?.address,
+          pharmacyPhone: pharmacy?.phone,
           profitCents: rx.profit_cents,
           consultationReason: rx.consultation_reason as string | undefined,
           refillFrequencyDays: rx.refill_frequency_days ?? null,
