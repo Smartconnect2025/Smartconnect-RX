@@ -264,8 +264,21 @@ interface Prescription {
   carrierStatus?: string;
   trackingCarrier?: string;
   estimatedDelivery?: string;
+  patientId?: string;
+  hasCustomAddress?: boolean;
+  customAddress?: AddressData | null;
+  patientAddress?: AddressData | null;
   submissionGroupId?: string | null;
   paymentTransactionId?: string | null;
+}
+
+interface AddressData {
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  zip?: string;
+  country?: string;
 }
 
 const getStatusColor = (status: string) => {
@@ -415,7 +428,10 @@ export default function PrescriptionsPage() {
         pharmacy_id,
         pdf_storage_path,
         order_group_id,
-        patient:patients(first_name, last_name, date_of_birth, email),
+        patient_id,
+        has_custom_address,
+        custom_address,
+        patient:patients(first_name, last_name, date_of_birth, email, physical_address),
         pharmacy:pharmacies(name, primary_color, logo_url, address, phone),
         payment_transactions(id)
       `,
@@ -491,6 +507,10 @@ export default function PrescriptionsPage() {
           carrierStatus: rx.fedex_status,
           trackingCarrier: rx.tracking_carrier,
           estimatedDelivery: rx.estimated_delivery,
+          patientId: rx.patient_id,
+          hasCustomAddress: rx.has_custom_address || false,
+          customAddress: rx.custom_address as any || null,
+          patientAddress: patient?.physical_address as any || null,
           submissionGroupId: (rx as any).order_group_id || null,
           paymentTransactionId: (() => {
             const txs = (rx as any).payment_transactions;
@@ -719,7 +739,10 @@ export default function PrescriptionsPage() {
         tracking_carrier,
         estimated_delivery,
         pdf_storage_path,
-        patient:patients(first_name, last_name, date_of_birth)
+        refill_frequency_days,
+        has_custom_address,
+        custom_address,
+        patient:patients(first_name, last_name, date_of_birth, physical_address)
       `,
       )
       .eq("id", prescription.id)
@@ -754,6 +777,13 @@ export default function PrescriptionsPage() {
         carrierStatus: freshData.fedex_status,
         trackingCarrier: freshData.tracking_carrier,
         estimatedDelivery: freshData.estimated_delivery,
+        refillFrequencyDays: freshData.refill_frequency_days ?? null,
+        hasCustomAddress: freshData.has_custom_address || false,
+        customAddress: freshData.custom_address as any || null,
+        patientAddress: (() => {
+          const p = Array.isArray(freshData.patient) ? freshData.patient[0] : freshData.patient;
+          return p?.physical_address as any || prescription.patientAddress || null;
+        })(),
       };
 
       setSelectedPrescription(freshPrescription);
@@ -1012,7 +1042,7 @@ export default function PrescriptionsPage() {
                           key={prescription.id}
                           style={isMultiBatch ? {
                             backgroundColor: groupBgs[colorIdx],
-                            borderLeft: `4px solid ${groupBorders[colorIdx]}`,
+                            borderLeft: `3px solid ${groupBorders[colorIdx]}`,
                           } : {
                             backgroundColor: idx % 2 === 0 ? "white" : "#FAFAFA",
                           }}

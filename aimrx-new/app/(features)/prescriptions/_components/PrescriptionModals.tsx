@@ -12,7 +12,10 @@ import {
   DollarSign,
   FileText,
   Pencil,
+  Truck,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { BillPatientModal } from "@/components/billing/BillPatientModal";
 import { EditPrescriptionModal } from "./EditPrescriptionModal";
@@ -57,6 +60,19 @@ interface Prescription {
   carrierStatus?: string;
   trackingCarrier?: string;
   estimatedDelivery?: string;
+  patientId?: string;
+  hasCustomAddress?: boolean;
+  customAddress?: AddressData | null;
+  patientAddress?: AddressData | null;
+}
+
+interface AddressData {
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  zip?: string;
+  country?: string;
 }
 
 const CONSULTATION_REASON_LABELS: Record<string, string> = {
@@ -206,6 +222,69 @@ export function PrescriptionModals({
   hideEdit,
 }: PrescriptionModalsProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+  const [addressForm, setAddressForm] = useState({
+    street: "",
+    city: "",
+    state: "",
+    zipCode: "",
+  });
+  const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [addressNotified, setAddressNotified] = useState(false);
+
+  const formatAddress = (addr: AddressData | null | undefined): string => {
+    if (!addr) return "";
+    const parts = [addr.street, addr.city, addr.state, addr.zipCode || addr.zip].filter(Boolean);
+    return parts.join(", ");
+  };
+
+  const openAddressEditor = () => {
+    const addr = selectedPrescription?.customAddress || selectedPrescription?.patientAddress;
+    setAddressForm({
+      street: addr?.street || "",
+      city: addr?.city || "",
+      state: addr?.state || "",
+      zipCode: addr?.zipCode || addr?.zip || "",
+    });
+    setAddressNotified(false);
+    setIsEditingAddress(true);
+  };
+
+  const saveAddress = async (saveToPatient: boolean) => {
+    if (!selectedPrescription) return;
+    setIsSavingAddress(true);
+    try {
+      const response = await fetch(`/api/prescriptions/${selectedPrescription.id}/update-address`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          address: addressForm,
+          save_to_patient: saveToPatient,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        toast.error(data.error || "Failed to update address");
+        return;
+      }
+      toast.success("Shipping address updated");
+      setSelectedPrescription({
+        ...selectedPrescription,
+        hasCustomAddress: true,
+        customAddress: addressForm,
+        ...(saveToPatient ? { patientAddress: addressForm } : {}),
+      });
+      setIsEditingAddress(false);
+      if (data.pharmacy_notified) {
+        setAddressNotified(true);
+      }
+      onPrescriptionUpdated?.();
+    } catch {
+      toast.error("Failed to update address");
+    } finally {
+      setIsSavingAddress(false);
+    }
+  };
 
   return (
     <>
@@ -526,6 +605,121 @@ export function PrescriptionModals({
                       </div>
                     </div>
                   </div>
+                </div>
+              </div>
+
+              {/* Shipping Address */}
+              <div className="space-y-3">
+                <h3
+                  className="font-semibold text-lg flex items-center gap-2 print-details-title"
+                  style={{ color: "#00AEEF" }}
+                >
+                  <Truck className="w-5 h-5 print-hide" />
+                  Shipping Address
+                </h3>
+                <div className="bg-gray-50 rounded-lg p-4 space-y-3 print-section">
+                  {addressNotified && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-2">
+                      <p className="text-sm text-green-800 font-medium flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4" />
+                        Pharmacy notified via email
+                      </p>
+                    </div>
+                  )}
+
+                  {isEditingAddress ? (
+                    <div className="space-y-3">
+                      <div>
+                        <Label htmlFor="addr-street" className="text-sm text-gray-600">Street</Label>
+                        <Input
+                          id="addr-street"
+                          value={addressForm.street}
+                          onChange={(e) => setAddressForm(prev => ({ ...prev, street: e.target.value }))}
+                          placeholder="123 Main St"
+                        />
+                      </div>
+                      <div className="grid grid-cols-3 gap-3">
+                        <div>
+                          <Label htmlFor="addr-city" className="text-sm text-gray-600">City</Label>
+                          <Input
+                            id="addr-city"
+                            value={addressForm.city}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, city: e.target.value }))}
+                            placeholder="Miami"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="addr-state" className="text-sm text-gray-600">State</Label>
+                          <Input
+                            id="addr-state"
+                            value={addressForm.state}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, state: e.target.value }))}
+                            placeholder="FL"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="addr-zip" className="text-sm text-gray-600">ZIP Code</Label>
+                          <Input
+                            id="addr-zip"
+                            value={addressForm.zipCode}
+                            onChange={(e) => setAddressForm(prev => ({ ...prev, zipCode: e.target.value }))}
+                            placeholder="33101"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <Button
+                          onClick={() => saveAddress(true)}
+                          disabled={isSavingAddress}
+                          size="sm"
+                          className="bg-[#1E3A8A] hover:bg-[#1E3A8A]/90 text-white"
+                        >
+                          {isSavingAddress ? "Saving..." : "Save to Patient Record & Prescription"}
+                        </Button>
+                        <Button
+                          onClick={() => saveAddress(false)}
+                          disabled={isSavingAddress}
+                          size="sm"
+                          variant="outline"
+                          className="border-[#1E3A8A] text-[#1E3A8A]"
+                        >
+                          {isSavingAddress ? "Saving..." : "This Prescription Only"}
+                        </Button>
+                        <Button
+                          onClick={() => setIsEditingAddress(false)}
+                          size="sm"
+                          variant="ghost"
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-start gap-2">
+                        <MapPin className="w-5 h-5 text-gray-500 mt-0.5 shrink-0" />
+                        <div>
+                          <p className="font-medium text-gray-900 print-text">
+                            {formatAddress(selectedPrescription.customAddress || selectedPrescription.patientAddress) || "No address on file"}
+                          </p>
+                          {selectedPrescription.hasCustomAddress && selectedPrescription.customAddress && (
+                            <p className="text-xs text-blue-600 mt-0.5">Custom address for this order</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="pt-2 border-t border-gray-200 print-hide">
+                        <Button
+                          onClick={openAddressEditor}
+                          variant="outline"
+                          size="sm"
+                          className="border-[#1E3A8A]/60 text-[#1E3A8A]/80 hover:bg-[#1E3A8A]/5"
+                        >
+                          <Pencil className="h-4 w-4 mr-1" />
+                          Edit Shipping Address
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 
