@@ -41,6 +41,7 @@ interface SubmitPrescriptionRequest {
   profit_cents?: number; // Provider oversight/monitoring fees in cents
   consultation_reason?: string; // Reason for the consultation fee
   shipping_fee_cents?: number; // Shipping fee in cents
+  submission_group_id?: string; // Group ID for multi-item orders
   refill_frequency_days?: number; // Days between refills
   has_custom_address?: boolean;
   custom_address?: {

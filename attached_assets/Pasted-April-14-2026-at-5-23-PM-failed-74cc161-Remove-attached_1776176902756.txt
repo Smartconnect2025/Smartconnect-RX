@@ -1,0 +1,56 @@
+April 14, 2026 at 5:23 PM
+failed
+74cc161
+Remove attached_assets from repo, add to gitignore. Fix pharmacy branding in provider receipt modal.
+
+Rollback
+Exited with status 1 while building your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Apr 14, 5:22 PM - 5:27 PM
+GMT+3
+
+
+
+up to date, audited 854 packages in 2s
+312 packages are looking for funding
+  run `npm fund` for details
+19 vulnerabilities (1 low, 9 moderate, 7 high, 2 critical)
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+Some issues need review, and may require choosing
+a different dependency.
+Run `npm audit` for details.
+> rx-portal-pro-101@1.0.0 build
+> next build
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
+ ⚠ Warning: Found multiple lockfiles. Selecting /opt/render/project/src/pnpm-lock.yaml.
+   Consider removing the lockfiles at:
+   * /opt/render/project/src/aimrx-new/package-lock.json
+   ▲ Next.js 15.4.10
+   Creating an optimized production build ...
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
+ ✓ Compiled successfully in 17.0s
+   Skipping linting
+   Checking validity of types ...
+Failed to compile.
+./app/api/prescriptions/submit/route.ts:469:30
+Menu
+Type error: Property 'submission_group_id' does not exist on type 'SubmitPrescriptionRequest'.
+  467 |         pharmacy_id: body.pharmacy_id || null,
+  468 |         medication_id: body.medication_id || null,
+> 469 |         order_group_id: body.submission_group_id || null,
+      |                              ^
+  470 |         profit_cents: body.profit_cents || 0,
+  471 |         consultation_reason: body.consultation_reason || null,
+  472 |         shipping_fee_cents: body.shipping_fee_cents || 0,
+Next.js build worker exited with code: 1 and signal: null
+==> Build failed 😞
