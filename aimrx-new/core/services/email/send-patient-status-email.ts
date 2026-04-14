@@ -35,8 +35,8 @@ export async function sendPatientStatusEmail(params: PatientStatusEmailParams): 
       .from("prescriptions")
       .select(`
         id, medication, queue_id, pharmacy_id, tracking_number,
-        patients(first_name, last_name, email),
-        providers(first_name, last_name)
+        patient_id, prescriber_id,
+        patients(first_name, last_name, email)
       `)
       .eq("id", params.prescriptionId)
       .single();
@@ -52,10 +52,17 @@ export async function sendPatientStatusEmail(params: PatientStatusEmailParams): 
       return;
     }
 
-    const provider = rx.providers as { first_name?: string; last_name?: string } | null;
-    const providerName = provider
-      ? `Dr. ${provider.first_name || ""} ${provider.last_name || ""}`.trim()
-      : "Your Provider";
+    let providerName = "Your Provider";
+    if (rx.prescriber_id) {
+      const { data: prov } = await supabase
+        .from("providers")
+        .select("first_name, last_name")
+        .eq("id", rx.prescriber_id)
+        .maybeSingle();
+      if (prov) {
+        providerName = `Dr. ${prov.first_name || ""} ${prov.last_name || ""}`.trim();
+      }
+    }
 
     const patientName = `${patient.first_name || ""} ${patient.last_name || ""}`.trim() || "there";
 
