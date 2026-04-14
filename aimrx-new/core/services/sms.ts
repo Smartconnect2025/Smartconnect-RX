@@ -6,6 +6,7 @@ export function isSmsConfigured(): boolean {
 
 async function getTwilioClient() {
   if (!isSmsConfigured()) return null;
+  // @ts-ignore - twilio is an optional dependency, only loaded when configured
   const twilio = await import("twilio");
   return twilio.default(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
 }

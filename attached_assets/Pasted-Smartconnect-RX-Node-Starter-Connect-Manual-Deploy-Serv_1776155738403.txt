@@ -1,0 +1,72 @@
+Smartconnect-RX
+Node
+Starter
+
+Connect
+
+Manual Deploy
+Service ID:
+srv-d6sdcnndiees73cao140
+
+Smartconnect2025 / Smartconnect-RX
+main
+https://smartconnect-rx.onrender.com
+
+April 14, 2026 at 11:28 AM
+failed
+49a2f1d
+Fix: scoped catch vars, dedup markers, pharmacy-scoped comms logs
+
+Rollback
+Exited with status 1 while building your code.
+Read our docs for common ways to troubleshoot your deploy.
+
+All logs
+Search
+Search
+
+Apr 14, 11:27 AM - 11:33 AM
+GMT+3
+
+
+
+up to date, audited 854 packages in 3s
+312 packages are looking for funding
+  run `npm fund` for details
+19 vulnerabilities (1 low, 9 moderate, 7 high, 2 critical)
+To address issues that do not require attention, run:
+  npm audit fix
+To address all issues possible (including breaking changes), run:
+  npm audit fix --force
+Some issues need review, and may require choosing
+a different dependency.
+Run `npm audit` for details.
+> rx-portal-pro-101@1.0.0 build
+> next build
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
+ ⚠ Warning: Found multiple lockfiles. Selecting /opt/render/project/src/pnpm-lock.yaml.
+   Consider removing the lockfiles at:
+   * /opt/render/project/src/aimrx-new/package-lock.json
+   ▲ Next.js 15.4.10
+   Creating an optimized production build ...
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
+ ⚠ Found lockfile missing swc dependencies, run next locally to automatically patch
+ ✓ Compiled successfully in 19.0s
+   Skipping linting
+Menu
+   Checking validity of types ...
+Failed to compile.
+./core/services/sms.ts:9:31
+Type error: Cannot find module 'twilio' or its corresponding type declarations.
+   7 | async function getTwilioClient() {
+   8 |   if (!isSmsConfigured()) return null;
+>  9 |   const twilio = await import("twilio");
+     |                               ^
+  10 |   return twilio.default(process.env.TWILIO_ACCOUNT_SID!, process.env.TWILIO_AUTH_TOKEN!);
+  11 | }
+  12 |
+Next.js build worker exited with code: 1 and signal: null
+==> Build failed 😞
+==> Common ways to troubleshoot your deploy: https://render.com/docs/troubleshooting-deploys
+Need better ways to work with logs? Try th
