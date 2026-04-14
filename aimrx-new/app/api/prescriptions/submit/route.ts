@@ -466,10 +466,11 @@ export async function POST(request: NextRequest) {
           : null,
         pharmacy_id: body.pharmacy_id || null,
         medication_id: body.medication_id || null,
-        profit_cents: body.profit_cents || 0, // Provider oversight/monitoring fees
-        consultation_reason: body.consultation_reason || null, // Reason for the consultation fee
-        shipping_fee_cents: body.shipping_fee_cents || 0, // Shipping fee
-        total_paid_cents: totalPaidCents, // Medication price in cents
+        order_group_id: body.submission_group_id || null,
+        profit_cents: body.profit_cents || 0,
+        consultation_reason: body.consultation_reason || null,
+        shipping_fee_cents: body.shipping_fee_cents || 0,
+        total_paid_cents: totalPaidCents,
         refill_frequency_days:
           (body.refills > 0 && (body.refill_frequency_days ?? 0) > 0)
             ? body.refill_frequency_days!

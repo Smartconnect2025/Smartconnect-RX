@@ -261,6 +261,8 @@ interface Prescription {
   carrierStatus?: string;
   trackingCarrier?: string;
   estimatedDelivery?: string;
+  submissionGroupId?: string | null;
+  paymentTransactionId?: string | null;
 }
 
 const getStatusColor = (status: string) => {
@@ -409,8 +411,10 @@ export default function PrescriptionsPage() {
         estimated_delivery,
         pharmacy_id,
         pdf_storage_path,
+        order_group_id,
         patient:patients(first_name, last_name, date_of_birth, email),
-        pharmacy:pharmacies(name, primary_color)
+        pharmacy:pharmacies(name, primary_color),
+        payment_transactions(id)
       `,
       )
       .eq("prescriber_id", user.id)
@@ -481,6 +485,12 @@ export default function PrescriptionsPage() {
           carrierStatus: rx.fedex_status,
           trackingCarrier: rx.tracking_carrier,
           estimatedDelivery: rx.estimated_delivery,
+          submissionGroupId: (rx as any).order_group_id || null,
+          paymentTransactionId: (() => {
+            const txs = (rx as any).payment_transactions;
+            if (Array.isArray(txs) && txs.length > 0) return txs[0].id;
+            return null;
+          })(),
         };
       });
 
@@ -933,86 +943,156 @@ export default function PrescriptionsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPrescriptions.map((prescription) => {
-                    const { datePart, timePart } = formatDateTime(prescription.dateTime);
-                    return (
-                    <TableRow
-                      key={prescription.id}
-                      className="hover:bg-gray-50"
-                    >
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {prescription.id.slice(-4).toUpperCase()}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        <div>{datePart}</div>
-                        <div className="text-xs text-muted-foreground">{timePart}</div>
-                      </TableCell>
-                      <TableCell className="font-medium text-sm truncate" title={prescription.patientName}>
-                        {prescription.patientName}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col min-w-0">
-                          <span className="text-sm font-medium truncate" title={prescription.medication}>
-                            {prescription.medication}
-                          </span>
-                          <span className="text-xs text-muted-foreground truncate" title={prescription.strength}>
-                            {prescription.strength}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col text-sm">
-                          <span>Qty: {prescription.quantity}</span>
-                          <span className="text-xs text-muted-foreground">
-                            Refills: {prescription.refills}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="truncate text-sm" title={prescription.pharmacyName || ""}>
-                        {prescription.pharmacyName ? (
-                          <span
-                            className="font-medium"
-                            style={{
-                              color: prescription.pharmacyColor || "#1E3A8A",
-                            }}
-                          >
-                            {prescription.pharmacyName}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">
-                            Not specified
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-col">
-                          <Badge
-                            variant="outline"
-                            className={`${getStatusColor(prescription.status)} text-xs px-2 py-1`}
-                          >
-                            {formatStatusLabel(prescription.status)}
-                          </Badge>
-                          {prescription.queueId &&
-                            prescription.queueId !== "N/A" && (
-                              <span className="text-xs text-muted-foreground">
-                                Queue: {prescription.queueId}
+                  {(() => {
+                    const groupBgs = ["#EFF6FF", "#F5F3FF", "#FFFBEB", "#ECFDF5", "#FFF1F2"];
+                    const groupBorders = ["#3B82F6", "#8B5CF6", "#F59E0B", "#10B981", "#F43F5E"];
+
+                    const batchKeys: string[] = [];
+                    const groupIdMap: Record<string, string> = {};
+                    let groupCounter = 0;
+                    const txIdMap: Record<string, string> = {};
+
+                    for (let i = 0; i < filteredPrescriptions.length; i++) {
+                      const curr = filteredPrescriptions[i];
+                      const sgId = curr.submissionGroupId;
+                      const txId = curr.paymentTransactionId;
+                      if (sgId) {
+                        if (!groupIdMap[sgId]) { groupCounter++; groupIdMap[sgId] = `g${groupCounter}`; }
+                        batchKeys.push(groupIdMap[sgId]);
+                      } else if (txId) {
+                        if (!txIdMap[txId]) { groupCounter++; txIdMap[txId] = `t${groupCounter}`; }
+                        batchKeys.push(txIdMap[txId]);
+                      } else {
+                        groupCounter++;
+                        batchKeys.push(`s${groupCounter}`);
+                      }
+                    }
+
+                    const shippingPerGroup: Record<string, number> = {};
+                    for (let i = 0; i < filteredPrescriptions.length; i++) {
+                      const fee = filteredPrescriptions[i].shippingFeeCents ?? 0;
+                      if (fee > 0) shippingPerGroup[batchKeys[i]] = (shippingPerGroup[batchKeys[i]] || 0) + 1;
+                    }
+                    const invalidGroups = new Set(
+                      Object.entries(shippingPerGroup).filter(([, count]) => count > 1).map(([key]) => key)
+                    );
+                    for (let i = 0; i < batchKeys.length; i++) {
+                      if (invalidGroups.has(batchKeys[i])) { groupCounter++; batchKeys[i] = `solo${groupCounter}`; }
+                    }
+
+                    const keyCounts: Record<string, number> = {};
+                    batchKeys.forEach(k => { keyCounts[k] = (keyCounts[k] || 0) + 1; });
+                    let colorCounter = 0;
+                    const keyColorMap: Record<string, number> = {};
+                    Object.entries(keyCounts).forEach(([key, count]) => {
+                      if (count > 1 && !(key in keyColorMap)) {
+                        keyColorMap[key] = colorCounter % groupBgs.length;
+                        colorCounter++;
+                      }
+                    });
+
+                    const seenKeys = new Set<string>();
+                    return filteredPrescriptions.map((prescription, idx) => {
+                      const { datePart, timePart } = formatDateTime(prescription.dateTime);
+                      const key = batchKeys[idx];
+                      const isMultiBatch = keyCounts[key] > 1;
+                      const isFirstInBatch = isMultiBatch && !seenKeys.has(key);
+                      seenKeys.add(key);
+                      const batchSize = keyCounts[key];
+                      const colorIdx = keyColorMap[key] ?? 0;
+
+                      return (
+                        <TableRow
+                          key={prescription.id}
+                          style={isMultiBatch ? {
+                            backgroundColor: groupBgs[colorIdx],
+                            borderLeft: `4px solid ${groupBorders[colorIdx]}`,
+                          } : {
+                            backgroundColor: idx % 2 === 0 ? "white" : "#FAFAFA",
+                          }}
+                        >
+                          <TableCell className="font-mono text-xs text-muted-foreground">
+                            {prescription.id.slice(-4).toUpperCase()}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            <div>{datePart}</div>
+                            <div className="text-xs text-muted-foreground">{timePart}</div>
+                          </TableCell>
+                          <TableCell className="font-medium text-sm truncate" title={prescription.patientName}>
+                            {prescription.patientName}
+                            {isFirstInBatch && isMultiBatch && (
+                              <span
+                                style={{ backgroundColor: groupBorders[colorIdx] }}
+                                className="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white inline-block"
+                              >
+                                {batchSize} items
                               </span>
                             )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleViewDetails(prescription)}
-                          className="border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white"
-                        >
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                    );
-                  })}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col min-w-0">
+                              <span className="text-sm font-medium truncate" title={prescription.medication}>
+                                {prescription.medication}
+                              </span>
+                              <span className="text-xs text-muted-foreground truncate" title={prescription.strength}>
+                                {prescription.strength}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col text-sm">
+                              <span>Qty: {prescription.quantity}</span>
+                              <span className="text-xs text-muted-foreground">
+                                Refills: {prescription.refills}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="truncate text-sm" title={prescription.pharmacyName || ""}>
+                            {prescription.pharmacyName ? (
+                              <span
+                                className="font-medium"
+                                style={{
+                                  color: prescription.pharmacyColor || "#1E3A8A",
+                                }}
+                              >
+                                {prescription.pharmacyName}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground text-xs">
+                                Not specified
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <Badge
+                                variant="outline"
+                                className={`${getStatusColor(prescription.status)} text-xs px-2 py-1`}
+                              >
+                                {formatStatusLabel(prescription.status)}
+                              </Badge>
+                              {prescription.queueId &&
+                                prescription.queueId !== "N/A" && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Queue: {prescription.queueId}
+                                  </span>
+                                )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewDetails(prescription)}
+                              className="border-[#1E3A8A] text-[#1E3A8A] hover:bg-[#1E3A8A] hover:text-white"
+                            >
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    });
+                  })()}
                 </TableBody>
               </Table>
             </div>

@@ -63,7 +63,7 @@ export async function POST(
     const { data: rxList, error: rxFetchError } = await supabaseAdmin
       .from("prescriptions")
       .select(
-        "id, prescriber_id, status, payment_status, payment_transaction_id, patient_id, patient_price, profit_cents, shipping_fee_cents, total_paid_cents, pharmacy_id",
+        "id, prescriber_id, status, payment_status, payment_transaction_id, patient_id, patient_price, profit_cents, shipping_fee_cents, total_paid_cents, pharmacy_id, medication",
       )
       .in("id", explicitIds);
 
@@ -291,6 +291,17 @@ export async function POST(
 
         const internalApiKey = process.env.INTERNAL_API_KEY || "";
 
+        const medNames = rxList.map((rx) => rx.medication || "Prescription medication");
+        const medications = rxList.map((rx) => {
+          const item: { name: string; price?: string; shippingFee?: string } = {
+            name: rx.medication || "Prescription medication",
+          };
+          if (rx.patient_price != null) item.price = parseFloat(String(rx.patient_price)).toFixed(2);
+          if ((rx.shipping_fee_cents ?? 0) > 0) item.shippingFee = ((rx.shipping_fee_cents ?? 0) / 100).toFixed(2);
+          return item;
+        });
+        const totalOversightDollars = (combinedProfitCents / 100).toFixed(2);
+
         await fetch(`${siteUrl}/api/payments/send-confirmation-email`, {
           method: "POST",
           headers: {
@@ -301,7 +312,9 @@ export async function POST(
             patientEmail: patientData.email,
             patientName: `${patientData.first_name} ${patientData.last_name}`,
             providerName: provider ? `${provider.first_name} ${provider.last_name}` : "Your Provider",
-            medication: allRxIds.length > 1 ? `${allRxIds.length} medications` : "Prescription medication",
+            medication: medNames.join(", "),
+            medications,
+            oversightFee: parseFloat(totalOversightDollars) > 0 ? totalOversightDollars : undefined,
             totalAmount: (combinedTotal / 100).toFixed(2),
             paymentMethod: "Manual Payment",
             pharmacyName: pharmacy?.name,

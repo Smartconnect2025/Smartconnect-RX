@@ -311,6 +311,7 @@ export default function PrescriptionStep3Page() {
       signatureUrl?: string;
       address?: AddressData | null;
     },
+    submissionGroupId?: string,
   ) => {
     const totalOversightFeesCents = isFirstItem && Array.isArray(fees.oversightFees)
       ? fees.oversightFees.reduce((sum, f) => sum + (parseFloat(f.fee) || 0) * 100, 0)
@@ -355,6 +356,7 @@ export default function PrescriptionStep3Page() {
       consultation_reason: consultationReason,
       shipping_fee_cents: shippingFeeCents,
       refill_frequency_days: refillFreq ? parseInt(refillFreq) : null,
+      submission_group_id: submissionGroupId || null,
       has_custom_address: useCustomAddress,
       custom_address: useCustomAddress ? customAddress : null,
       patient: {
@@ -477,13 +479,15 @@ export default function PrescriptionStep3Page() {
         const total = cartItems.length;
         setSubmitProgress({ current: startIndex, total });
 
+        const submissionGroupId = crypto.randomUUID();
+
         for (let i = startIndex; i < cartItems.length; i++) {
           const item = cartItems[i];
           const isFirst = i === 0;
 
           setSubmitProgress({ current: i + 1, total });
 
-          const payload = await buildSubmissionPayload(item, isFirst, sharedFees, providerData);
+          const payload = await buildSubmissionPayload(item, isFirst, sharedFees, providerData, submissionGroupId);
 
           const response = await fetch("/api/prescriptions/submit", {
             method: "POST",
