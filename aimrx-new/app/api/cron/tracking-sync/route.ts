@@ -4,12 +4,25 @@ import { fetchAndApplyTracking } from "@/app/api/prescriptions/_shared/tracking-
 
 const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || process.env.CRON_SECRET;
 
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const encoder = new TextEncoder();
+  const bufA = encoder.encode(a);
+  const bufB = encoder.encode(b);
+  let mismatch = 0;
+  for (let i = 0; i < bufA.length; i++) {
+    mismatch |= bufA[i] ^ bufB[i];
+  }
+  return mismatch === 0;
+}
+
 function isAuthorized(request: NextRequest): boolean {
   if (!INTERNAL_SECRET) return false;
   const authHeader = request.headers.get("authorization");
-  const urlSecret = request.nextUrl.searchParams.get("secret");
-  const providedSecret = authHeader?.replace("Bearer ", "") || urlSecret;
-  return providedSecret === INTERNAL_SECRET;
+  if (!authHeader?.startsWith("Bearer ")) return false;
+  const providedSecret = authHeader.slice(7);
+  if (!providedSecret) return false;
+  return timingSafeEqual(providedSecret, INTERNAL_SECRET);
 }
 
 export async function GET(request: NextRequest) {

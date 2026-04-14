@@ -19,12 +19,12 @@ async function wasNotificationAlreadySent(
   prescriptionId: string,
   statusType: string,
 ): Promise<boolean> {
+  const dedupToken = `tracking_${statusType}_${prescriptionId}`;
   const { data } = await supabase
     .from("system_logs")
     .select("id")
     .eq("action", "PATIENT_STATUS_EMAIL_SENT")
-    .ilike("details", `%${prescriptionId}%`)
-    .ilike("details", `%${statusType}%`)
+    .eq("details", dedupToken)
     .limit(1);
   return (data && data.length > 0) || false;
 }
@@ -35,12 +35,13 @@ async function recordNotificationSent(
   statusType: string,
   recipientEmail: string,
 ) {
+  const dedupToken = `tracking_${statusType}_${prescriptionId}`;
   await supabase.from("system_logs").insert({
     user_id: null,
-    user_email: "system@aimrx.com",
+    user_email: recipientEmail,
     user_name: "Patient Notification",
     action: "PATIENT_STATUS_EMAIL_SENT",
-    details: `${statusType} email sent for ${prescriptionId} to ${recipientEmail}`,
+    details: dedupToken,
     status: "success",
   });
 }

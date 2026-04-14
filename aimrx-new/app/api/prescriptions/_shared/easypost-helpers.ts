@@ -18,9 +18,11 @@ export function detectCarrier(trackingNumber: string): string {
   if (!trackingNumber) return "unknown";
   const tn = trackingNumber.trim().toUpperCase();
 
-  if (/^\d{12,22}$/.test(tn) || /^\d{34}$/.test(tn)) return "FedEx";
   if (/^1Z[A-Z0-9]{16}$/.test(tn)) return "UPS";
-  if (/^(94|93|92|91|70|23|13)\d{18,22}$/.test(tn) || /^\d{20,30}$/.test(tn)) return "USPS";
+  if (/^(94|93|92|91|70|23|13)\d{18,22}$/.test(tn)) return "USPS";
+  if (/^\d{20,30}$/.test(tn)) return "USPS";
+  if (/^\d{34}$/.test(tn)) return "FedEx";
+  if (/^\d{12,15}$/.test(tn)) return "FedEx";
   if (/^\d{10,11}$/.test(tn)) return "DHL";
 
   return "FedEx";
