@@ -431,7 +431,7 @@ export default function PrescriptionsPage() {
         patient_id,
         has_custom_address,
         custom_address,
-        patient:patients(first_name, last_name, date_of_birth, email, physical_address),
+        patient:patients(first_name, last_name, date_of_birth, email),
         pharmacy:pharmacies(name, primary_color, logo_url, address, phone),
         payment_transactions(id)
       `,
@@ -510,7 +510,7 @@ export default function PrescriptionsPage() {
           patientId: rx.patient_id,
           hasCustomAddress: rx.has_custom_address || false,
           customAddress: rx.custom_address as any || null,
-          patientAddress: patient?.physical_address as any || null,
+          patientAddress: null,
           submissionGroupId: (rx as any).order_group_id || null,
           paymentTransactionId: (() => {
             const txs = (rx as any).payment_transactions;
@@ -742,7 +742,7 @@ export default function PrescriptionsPage() {
         refill_frequency_days,
         has_custom_address,
         custom_address,
-        patient:patients(first_name, last_name, date_of_birth, physical_address)
+        patient:patients(first_name, last_name, date_of_birth)
       `,
       )
       .eq("id", prescription.id)
@@ -780,10 +780,7 @@ export default function PrescriptionsPage() {
         refillFrequencyDays: freshData.refill_frequency_days ?? null,
         hasCustomAddress: freshData.has_custom_address || false,
         customAddress: freshData.custom_address as any || null,
-        patientAddress: (() => {
-          const p = Array.isArray(freshData.patient) ? freshData.patient[0] : freshData.patient;
-          return p?.physical_address as any || prescription.patientAddress || null;
-        })(),
+        patientAddress: prescription.patientAddress || null,
       };
 
       setSelectedPrescription(freshPrescription);
