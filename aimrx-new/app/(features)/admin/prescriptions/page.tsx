@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -429,9 +429,13 @@ export default function AdminPrescriptionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const hasLoadedOnce = useRef(false);
+
   const loadPrescriptions = useCallback(async (signal?: AbortSignal) => {
     try {
-      setIsLoading(true);
+      if (!hasLoadedOnce.current) {
+        setIsLoading(true);
+      }
       setLoadError(null);
       const params = new URLSearchParams();
       if (selectedPharmacy && selectedPharmacy !== "all") {
@@ -450,10 +454,13 @@ export default function AdminPrescriptionsPage() {
       }
 
       setPrescriptions(data.prescriptions || []);
+      hasLoadedOnce.current = true;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") return;
       console.error("Error loading prescriptions:", error);
-      setLoadError("Failed to connect to server");
+      if (!hasLoadedOnce.current) {
+        setLoadError("Failed to connect to server");
+      }
     } finally {
       if (!signal?.aborted) {
         setIsLoading(false);
