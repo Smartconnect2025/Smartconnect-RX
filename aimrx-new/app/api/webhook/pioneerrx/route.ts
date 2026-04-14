@@ -33,6 +33,7 @@ const RX_STATUS_TEXT_MAP: Record<string, string> = {
   "verified": "approved",
   "ready for pickup": "ready_for_pickup",
   "ready for delivery": "ready_for_pickup",
+  "ready for shipping": "ready_for_pickup",
   "will call": "ready_for_pickup",
   "out for delivery": "picked_up",
   "in transit": "picked_up",
@@ -60,7 +61,7 @@ function mapToOrderProgress(status: string): string {
   const s = status.toLowerCase().replace(/[\s_-]/g, "");
   if (s === "delivered" || s === "completed" || s === "complete") return "delivered";
   if (s === "shipped" || s === "pickedup" || s === "intransit") return "picked_up";
-  if (s === "readyforpickup" || s === "readyfordelivery" || s === "willcall") return "ready_for_pickup";
+  if (s === "readyforpickup" || s === "readyfordelivery" || s === "readyforshipping" || s === "willcall") return "ready_for_pickup";
   if (s === "approved" || s === "verified") return "approved";
   if (s === "packed" || s === "filled" || s === "dispensed") return "packed";
   if (s === "cancelled" || s === "canceled" || s === "rejected") return "cancelled";
