@@ -62,7 +62,6 @@ expertMode = true
 SENDGRID_FROM_EMAIL = "support@aimrx.com"
   SENDGRID_FROM_NAME = "SmartConnect RX"
 RENDER_API_KEY = "rnd_pRL9b2T9xUbI9E3r5A9OFKmmNhSc"
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY = "pk_test_51TM4aCJrkM1hgizXZIFiiAjCx5UQiyro1Do2M2qfGiVMcPqOwkvTZA9aAEiJZxvnBmXV5PsMgKuM4ZPVxvCwhtQL008wWsJgTc"
 
 [userenv.development]
 PIONEERRX_SIMULATION_MODE = "true"
