@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
         estimated_delivery,
         pharmacy_id,
         pdf_storage_path,
-        order_group_id,
         patient_id,
         has_custom_address,
         custom_address,
