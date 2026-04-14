@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
       id, queue_id, submitted_at, medication, dosage, quantity,
       refills, sig, status, payment_status, patient_price,
       shipping_fee_cents, profit_cents, tracking_number, fedex_status,
-      estimated_delivery, has_custom_address, custom_address,
+      estimated_delivery, tracking_carrier, has_custom_address, custom_address,
       payment_transaction_id, prescriber_id, pharmacy_id, patient_id,
       patient:patients(first_name, last_name, email, physical_address),
       pharmacy:pharmacies(name, primary_color)
@@ -168,6 +168,7 @@ export async function GET(request: NextRequest) {
         pharmacyName: (pharmacy as { name?: string })?.name,
         pharmacyColor: (pharmacy as { primary_color?: string })?.primary_color,
         carrierStatus: rx.fedex_status,
+        trackingCarrier: rx.tracking_carrier,
         estimatedDelivery: rx.estimated_delivery,
         patientId: rx.patient_id,
         hasCustomAddress: rx.has_custom_address,

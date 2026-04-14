@@ -54,6 +54,7 @@ interface AdminPrescription {
   profitCents?: number;
   submissionGroupId?: string | null;
   trackingNumber?: string;
+  trackingCarrier?: string;
   pharmacyName?: string;
   pharmacyColor?: string;
   carrierStatus?: string;
@@ -828,6 +829,9 @@ export default function AdminPrescriptionsPage() {
                 <PrescriptionProgressTracker
                   status={effectiveStatus}
                   trackingNumber={selectedPrescription.trackingNumber}
+                  trackingCarrier={selectedPrescription.trackingCarrier}
+                  carrierStatus={selectedPrescription.carrierStatus}
+                  estimatedDelivery={selectedPrescription.estimatedDelivery}
                   pharmacyName={selectedPrescription.pharmacyName}
                   billingStatus={selectedPrescription.billingStatus}
                   patientCopay={selectedPrescription.patientCopay}
