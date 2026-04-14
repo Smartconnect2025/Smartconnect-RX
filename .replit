@@ -63,6 +63,9 @@ SENDGRID_FROM_EMAIL = "support@aimrx.com"
   SENDGRID_FROM_NAME = "SmartConnect RX"
 RENDER_API_KEY = "rnd_pRL9b2T9xUbI9E3r5A9OFKmmNhSc"
 
+[userenv.development]
+PIONEERRX_SIMULATION_MODE = "true"
+
   [nix]
   channel = "stable-25_05"
   

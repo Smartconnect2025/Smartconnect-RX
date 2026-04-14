@@ -2,6 +2,100 @@ import crypto from "crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { decryptApiKey, isEncrypted } from "@/core/security/encryption";
 
+const SIMULATION_MODE = process.env.PIONEERRX_SIMULATION_MODE === "true";
+
+function simulateMethod(
+  methodName: string,
+  params: Array<{ Name: string; Value: string }>,
+): { success: true; data: PioneerRxMethodResponse } | null {
+  if (!SIMULATION_MODE) return null;
+
+  console.log(`[pioneerrx-sim] 🧪 SIMULATION: ${methodName}`);
+
+  const getParam = (name: string) => params.find(p => p.Name === name)?.Value || "";
+
+  switch (methodName) {
+    case "PatientSearch": {
+      const firstName = getParam("FirstName");
+      const lastName = getParam("LastName");
+      return {
+        success: true,
+        data: {
+          results: {
+            patientSearchResults: [
+              { personID: `SIM-PAT-${Date.now()}`, PersonID: `SIM-PAT-${Date.now()}`, firstName, lastName },
+            ],
+          },
+        },
+      };
+    }
+    case "PatientAdd": {
+      const patId = `SIM-PAT-${Date.now()}`;
+      return {
+        success: true,
+        data: {
+          results: {
+            patient: [{ personID: patId, PersonID: patId }],
+          },
+        },
+      };
+    }
+    case "PrescriberSearch": {
+      const presId = `SIM-PRE-${Date.now()}`;
+      return {
+        success: true,
+        data: {
+          results: {
+            prescriberSearchResults: [
+              { personID: presId, PersonID: presId, npi: getParam("NPI") },
+            ],
+          },
+        },
+      };
+    }
+    case "RxAddOnHold": {
+      const txId = `SIM-TX-${Date.now()}`;
+      const rxId = `SIM-RX-${Date.now()}`;
+      console.log(`[pioneerrx-sim] 🧪 Rx submitted successfully — rxTransactionID: ${txId}`);
+      return {
+        success: true,
+        data: {
+          results: {
+            rxTransaction: [
+              { rxTransactionID: txId, rxID: rxId, rxNumber: Math.floor(Math.random() * 900000) + 100000, refillNumber: 0 },
+            ],
+          },
+        },
+      };
+    }
+    case "GetRxTransaction": {
+      const simTxId = getParam("RxTransactionID");
+      console.log(`[pioneerrx-sim] 🧪 Status check for ${simTxId} → returning "verified" (approved)`);
+      return {
+        success: true,
+        data: {
+          results: {
+            rxTransaction: [
+              {
+                rxTransactionID: simTxId,
+                currentRxStatusText: "Verified",
+                currentRxTransactionStatusText: "Verified",
+                currentRxStatusID: 5,
+                fillState: "Verified",
+              },
+            ],
+          },
+        },
+      };
+    }
+    case "Test": {
+      return { success: true, data: { results: {} } };
+    }
+    default:
+      return { success: true, data: { results: {} } };
+  }
+}
+
 interface PharmacyBackendRow {
   pharmacy_id?: string;
   api_key_encrypted: string;
@@ -108,6 +202,9 @@ export async function callPioneerRxMethod(
     Version: options?.version || "1.0",
     ParameterCollection: params,
   };
+
+  const simulated = simulateMethod(methodName, params);
+  if (simulated) return simulated;
 
   try {
     console.log(`[pioneerrx] Calling ${methodName} at ${url}`);
@@ -326,7 +423,12 @@ export async function resolvePioneerRxBackendsBatch(
 
 export async function testPioneerRxConnection(
   backend: PioneerRxBackend,
-): Promise<{ success: boolean; authenticated?: boolean; error?: string; details?: string }> {
+): Promise<{ success: boolean; authenticated?: boolean; error?: string; details?: string; simulated?: boolean }> {
+  if (SIMULATION_MODE) {
+    console.log("[pioneerrx-sim] 🧪 SIMULATION: testPioneerRxConnection — returning success");
+    return { success: true, authenticated: true, details: "SIMULATION MODE — PioneerRx API calls are simulated", simulated: true };
+  }
+
   try {
     const headers = generatePioneerRxHeaders(backend.apiKey, backend.sharedSecret);
     const authUrl = `${backend.baseUrl}/api/enterprise/isAuthenticated`;
