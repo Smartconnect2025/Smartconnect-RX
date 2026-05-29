@@ -1,1 +1,0 @@
-ALTER TABLE "pharmacy_medications" ALTER COLUMN "category" SET DEFAULT 'Standard Formulations';

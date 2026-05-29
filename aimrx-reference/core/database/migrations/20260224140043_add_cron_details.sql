@@ -1,1 +1,0 @@
-ALTER TABLE "cron_job_runs" ADD COLUMN "details" jsonb;

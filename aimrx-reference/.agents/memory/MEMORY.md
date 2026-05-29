@@ -1,1 +1,0 @@
-- [Greenwich Active_Rx reject guard](greenwich-active-rx-guard.md) — reject keywords from DigitalRx must require Active_Rx=0; truthy/absent → preserve current status. Webhook + reconcile cron both gated.

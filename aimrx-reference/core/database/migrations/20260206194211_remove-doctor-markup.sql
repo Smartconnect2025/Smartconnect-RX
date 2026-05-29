@@ -1,1 +1,0 @@
-ALTER TABLE "pharmacy_medications" DROP COLUMN "doctor_markup_percent";

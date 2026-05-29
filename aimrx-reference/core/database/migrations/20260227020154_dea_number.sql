@@ -1,1 +1,0 @@
-ALTER TABLE "pharmacies" ADD COLUMN "dea_number" text;
