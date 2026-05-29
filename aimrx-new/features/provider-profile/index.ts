@@ -8,7 +8,7 @@ export { CompleteProfileModal } from "./components/CompleteProfileModal";
 export { ProfileForm } from "./components/forms/ProfileForm";
 export { ProfessionalInfoForm } from "./components/forms/ProfessionalInfoForm";
 export { PracticeDetailsForm } from "./components/forms/PracticeDetailsForm";
-
+export { PaymentBillingForm } from "./components/forms/PaymentBillingForm";
 
 // Hooks
 export { useProviderProfile } from "./hooks/use-provider-profile";

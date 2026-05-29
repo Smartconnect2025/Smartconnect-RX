@@ -1,0 +1,11 @@
+--- aimrx-new/features/provider-profile/index.ts	2026-03-26 18:30:45.931033618 +0000
++++ aimrx-reference/features/provider-profile/index.ts	2026-05-29 12:38:58.329923717 +0000
+@@ -8,7 +8,7 @@
+ export { ProfileForm } from "./components/forms/ProfileForm";
+ export { ProfessionalInfoForm } from "./components/forms/ProfessionalInfoForm";
+ export { PracticeDetailsForm } from "./components/forms/PracticeDetailsForm";
+-
++export { PaymentBillingForm } from "./components/forms/PaymentBillingForm";
+ 
+ // Hooks
+ export { useProviderProfile } from "./hooks/use-provider-profile";

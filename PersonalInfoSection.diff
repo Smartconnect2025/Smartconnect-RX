@@ -1,0 +1,105 @@
+--- aimrx-new/features/provider-profile/components/profile/PersonalInfoSection.tsx	2026-03-23 17:14:05.449328159 +0000
++++ aimrx-reference/features/provider-profile/components/profile/PersonalInfoSection.tsx	2026-05-29 12:38:58.325842607 +0000
+@@ -20,10 +20,12 @@
+ 
+ interface PersonalInfoSectionProps {
+   form: UseFormReturn<ProfileFormValues>;
++  tierLevel?: string;
+ }
+ 
+ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({
+   form,
++  tierLevel = "Not set",
+ }) => {
+   const { user } = useUser();
+   const { updateAvatarUrl, refreshProfile } = useProviderProfile();
+@@ -99,21 +101,26 @@
+         />
+       </div>
+ 
+-      {/* Name Fields - Read-only */}
+-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
++      {/* Prefix + Name Fields */}
++      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+         <FormField
+           control={form.control}
+-          name="firstName"
++          name="prefix"
+           render={({ field }) => (
+             <FormItem>
+-              <FormLabel>First Name</FormLabel>
++              <FormLabel>Prefix</FormLabel>
+               <FormControl>
+                 <Input
+                   {...field}
+-                  disabled
+-                  className="bg-gray-50 cursor-not-allowed"
++                  value={field.value ?? ""}
++                  placeholder="Dr."
++                  maxLength={10}
++                  data-testid="input-provider-prefix"
+                 />
+               </FormControl>
++              <p className="text-xs text-gray-500 mt-1">
++                e.g. Dr., NP, PA, RN
++              </p>
+               <FormMessage />
+             </FormItem>
+           )}
+@@ -121,10 +128,10 @@
+ 
+         <FormField
+           control={form.control}
+-          name="lastName"
++          name="firstName"
+           render={({ field }) => (
+             <FormItem>
+-              <FormLabel>Last Name</FormLabel>
++              <FormLabel>First Name</FormLabel>
+               <FormControl>
+                 <Input
+                   {...field}
+@@ -137,29 +144,36 @@
+           )}
+         />
+ 
+-      </div>
+-
+-      {/* Company Name - Read-only */}
+-      <div className="grid grid-cols-1 gap-6">
+         <FormField
+           control={form.control}
+-          name="companyName"
++          name="lastName"
+           render={({ field }) => (
+             <FormItem>
+-              <FormLabel>Company Name</FormLabel>
++              <FormLabel>Last Name</FormLabel>
+               <FormControl>
+                 <Input
+                   {...field}
+                   disabled
+                   className="bg-gray-50 cursor-not-allowed"
+-                  placeholder="Not set"
+                 />
+               </FormControl>
+               <FormMessage />
+             </FormItem>
+           )}
+         />
++
++        <FormItem>
++          <FormLabel>Tier Level</FormLabel>
++          <FormControl>
++            <Input
++              value={tierLevel}
++              disabled
++              className="bg-gray-50 cursor-not-allowed"
++            />
++          </FormControl>
++        </FormItem>
+       </div>
++
+     </div>
+   );
+ };

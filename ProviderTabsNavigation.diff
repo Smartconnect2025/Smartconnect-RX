@@ -1,0 +1,56 @@
+--- aimrx-new/features/provider-profile/components/ProviderTabsNavigation.tsx	2026-03-26 18:27:58.256039763 +0000
++++ aimrx-reference/features/provider-profile/components/ProviderTabsNavigation.tsx	2026-05-29 12:38:58.301888699 +0000
+@@ -7,17 +7,26 @@
+ 
+ import { Button } from "@/components/ui/button";
+ import { cn } from "@/utils/tailwind-utils";
++import { useUser } from "@core/auth";
+ 
+ const PROVIDER_TABS = [
+   {
+     href: "/provider/profile",
+     label: "Profile",
+   },
++  {
++    href: "/provider/provider-assistance",
++    label: "Provider Assistance",
++    providersOnly: true,
++  },
+ ];
+ 
+ export function ProviderTabsNavigation() {
+   const pathname = usePathname();
+   const [isMenuOpen, setIsMenuOpen] = useState(false);
++  const { userRole } = useUser();
++  const isDelegate = userRole === "delegate";
++  const tabs = PROVIDER_TABS.filter((t) => !(t.providersOnly && isDelegate));
+ 
+   const toggleMenu = () => {
+     setIsMenuOpen(!isMenuOpen);
+@@ -29,7 +38,7 @@
+       <div className="w-full border-b border-gray-200 bg-white sticky top-[65px] z-40 hidden md:block">
+         <div className="container mx-auto">
+           <div className="flex justify-center space-x-6">
+-            {PROVIDER_TABS.map((route) => (
++            {tabs.map((route) => (
+               <Link
+                 key={route.href}
+                 href={route.href}
+@@ -52,7 +61,7 @@
+         <div className="container mx-auto px-4">
+           <div className="flex justify-between items-center py-3">
+             <h2 className="text-lg font-semibold">
+-              {PROVIDER_TABS.find((route) => route.href === pathname)?.label ||
++              {tabs.find((route) => route.href === pathname)?.label ||
+                 "Provider Dashboard"}
+             </h2>
+             <Button
+@@ -77,7 +86,7 @@
+             )}
+           >
+             <div className="py-4 flex flex-col space-y-4 border-t border-gray-200">
+-              {PROVIDER_TABS.map((route) => (
++              {tabs.map((route) => (
+                 <Link
+                   key={route.href}
+                   href={route.href}

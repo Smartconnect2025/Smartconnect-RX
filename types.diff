@@ -1,0 +1,28 @@
+--- aimrx-new/features/provider-profile/components/profile/types.ts	2026-03-26 18:18:50.320060009 +0000
++++ aimrx-reference/features/provider-profile/components/profile/types.ts	2026-05-29 12:38:58.327650373 +0000
+@@ -2,6 +2,7 @@
+ import { PASSWORD_REGEX } from "@/core/auth/constants";
+ 
+ export const profileFormValidationSchema = z.object({
++  prefix: z.string().optional(), // Display title (e.g. "Dr.", "NP", "PA")
+   firstName: z.string().optional(), // Read-only field
+   lastName: z.string().optional(), // Read-only field
+   email: z.string().min(1, "Email is required").email("Invalid email"),
+@@ -15,12 +16,12 @@
+     state: z.string().min(1, "State is required"),
+   })).optional(),
+   physicalAddress: z.object({
+-    street: z.string().optional(),
+-    city: z.string().optional(),
+-    state: z.string().optional(),
+-    zipCode: z.string().optional(),
++    street: z.string().min(1, "Street is required"),
++    city: z.string().min(1, "City is required"),
++    state: z.string().min(1, "State is required"),
++    zipCode: z.string().min(5, "ZIP code is required"),
+     country: z.string().optional(),
+-  }).optional(),
++  }),
+   billingAddress: z.object({
+     street: z.string().optional(),
+     city: z.string().optional(),

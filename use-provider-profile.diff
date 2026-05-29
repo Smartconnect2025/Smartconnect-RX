@@ -1,0 +1,49 @@
+--- aimrx-new/features/provider-profile/hooks/use-provider-profile.ts	2026-03-16 13:06:58.000000000 +0000
++++ aimrx-reference/features/provider-profile/hooks/use-provider-profile.ts	2026-05-29 12:38:58.328721805 +0000
+@@ -13,6 +13,7 @@
+   id: string;
+   user_id: string;
+   // Personal Information
++  prefix?: string;
+   first_name?: string;
+   last_name?: string;
+   date_of_birth?: string;
+@@ -127,7 +128,11 @@
+       return true;
+     } catch (err) {
+       console.error("Error updating personal info:", err);
+-      toast.error("Failed to update personal information");
++      toast.error(
++        err instanceof Error && err.message
++          ? err.message
++          : "Failed to update personal information",
++      );
+       return false;
+     } finally {
+       setIsSubmitting(false);
+@@ -207,7 +212,11 @@
+       return true;
+     } catch (err) {
+       console.error("Error updating professional info:", err);
+-      toast.error("Failed to update professional information");
++      toast.error(
++        err instanceof Error && err.message
++          ? err.message
++          : "Failed to update professional information",
++      );
+       return false;
+     } finally {
+       setIsSubmitting(false);
+@@ -231,7 +240,11 @@
+       return true;
+     } catch (err) {
+       console.error("Error updating practice details:", err);
+-      toast.error("Failed to update practice details");
++      toast.error(
++        err instanceof Error && err.message
++          ? err.message
++          : "Failed to update practice details",
++      );
+       return false;
+     } finally {
+       setIsSubmitting(false);

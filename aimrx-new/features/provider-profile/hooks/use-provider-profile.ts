@@ -13,6 +13,7 @@ export interface ProviderProfile {
   id: string;
   user_id: string;
   // Personal Information
+  prefix?: string;
   first_name?: string;
   last_name?: string;
   date_of_birth?: string;
@@ -127,7 +128,11 @@ export function useProviderProfile() {
       return true;
     } catch (err) {
       console.error("Error updating personal info:", err);
-      toast.error("Failed to update personal information");
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Failed to update personal information",
+      );
       return false;
     } finally {
       setIsSubmitting(false);
@@ -207,7 +212,11 @@ export function useProviderProfile() {
       return true;
     } catch (err) {
       console.error("Error updating professional info:", err);
-      toast.error("Failed to update professional information");
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Failed to update professional information",
+      );
       return false;
     } finally {
       setIsSubmitting(false);
@@ -231,7 +240,11 @@ export function useProviderProfile() {
       return true;
     } catch (err) {
       console.error("Error updating practice details:", err);
-      toast.error("Failed to update practice details");
+      toast.error(
+        err instanceof Error && err.message
+          ? err.message
+          : "Failed to update practice details",
+      );
       return false;
     } finally {
       setIsSubmitting(false);

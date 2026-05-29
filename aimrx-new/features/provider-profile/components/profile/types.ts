@@ -2,6 +2,7 @@ import { z } from "zod";
 import { PASSWORD_REGEX } from "@/core/auth/constants";
 
 export const profileFormValidationSchema = z.object({
+  prefix: z.string().optional(), // Display title (e.g. "Dr.", "NP", "PA")
   firstName: z.string().optional(), // Read-only field
   lastName: z.string().optional(), // Read-only field
   email: z.string().min(1, "Email is required").email("Invalid email"),

@@ -1,0 +1,745 @@
+--- aimrx-new/features/provider-profile/components/forms/ProfileForm.tsx	2026-03-26 18:30:41.592689546 +0000
++++ aimrx-reference/features/provider-profile/components/forms/ProfileForm.tsx	2026-05-29 12:38:58.306935760 +0000
+@@ -4,13 +4,13 @@
+ import { useForm } from "react-hook-form";
+ import { useFormPersistence } from "@/hooks/useFormPersistence";
+ 
+-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
++import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+ import { Separator } from "@/components/ui/separator";
+ import { zodResolver } from "@hookform/resolvers/zod";
+ 
+ import { ContactInfoSection } from "../profile/ContactInfoSection";
+ import { PersonalInfoSection } from "../profile/PersonalInfoSection";
+-import { MedicalLicenseSection } from "../profile/MedicalLicenseSection";
++import { MedicalLicenseSection, type NpiVerificationStatus } from "../profile/MedicalLicenseSection";
+ import { SignatureSection } from "../profile/SignatureSection";
+ import {
+   profileFormValidationSchema,
+@@ -20,29 +20,33 @@
+ import { Button } from "@/components/ui/button";
+ import { Input } from "@/components/ui/input";
+ import { Label } from "@/components/ui/label";
+-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+ import { PasswordChangeForm } from "./PasswordChangeForm";
+ import { NotificationPreferences } from "../NotificationPreferences";
++import { AchSection } from "../profile/AchSection";
+ import { Loader2 } from "lucide-react";
+ import { useUser } from "@core/auth";
+ import { useDemoGuard } from "@/hooks/use-demo-guard";
+ import { createClient } from "@core/supabase";
+-import { toast } from "sonner";
++import { Checkbox } from "@/components/ui/checkbox";
+ 
+ export function ProfileForm() {
+   const { user } = useUser();
+   const { guardAction } = useDemoGuard();
+   const { profile, updatePersonalInfo, isSubmitting } = useProviderProfile();
++  const [tierLevel, setTierLevel] = useState<string>("Not set");
+   const [groupInfo, setGroupInfo] = useState<{
+     name: string;
+     platform_manager_name: string | null;
+   } | null>(null);
+   const hasResetFromDbRef = useRef(false);
+-  const [billingSameAsPhysical, setBillingSameAsPhysical] = useState(true);
++  const [billingSameAsPhysical, setBillingSameAsPhysical] = useState(false);
++  const [npiStatus, setNpiStatus] = useState<NpiVerificationStatus>("idle");
++  const [npiMessage, setNpiMessage] = useState("");
+ 
+   const form = useForm<ProfileFormValues>({
+     resolver: zodResolver(profileFormValidationSchema),
+     defaultValues: {
++      prefix: "Dr.",
+       firstName: "",
+       lastName: "",
+       email: "",
+@@ -90,6 +94,29 @@
+     disabled: !user?.id,
+   });
+ 
++  // Fetch tier level from API for the current provider
++  useEffect(() => {
++    async function fetchTierLevel() {
++      if (!profile?.id) return;
++
++      try {
++        // Use the provider-specific endpoint (doesn't require admin access)
++        const response = await fetch("/api/provider/tier");
++        if (response.ok) {
++          const data = await response.json();
++          if (data.tier_level) {
++            setTierLevel(data.tier_level);
++          }
++        }
++      } catch (error) {
++        console.error("Failed to fetch tier level:", error);
++      }
++    }
++
++    fetchTierLevel();
++  }, [profile?.id]);
++
++  // Fetch group info when profile loads
+   useEffect(() => {
+     async function fetchGroup() {
+       if (!profile?.group_id) {
+@@ -125,6 +152,7 @@
+     if (profile && !hasResetFromDbRef.current) {
+       hasResetFromDbRef.current = true;
+ 
++      // Check for persisted localStorage data
+       const storageKey = `provider-profile-${user?.id || "draft"}`;
+       let persistedData: Partial<ProfileFormValues> = {};
+       try {
+@@ -136,6 +164,7 @@
+         console.error("Failed to parse persisted data:", e);
+       }
+ 
++      // Parse medical licenses from database
+       let medicalLicenses: Array<{ licenseNumber: string; state: string }> = [];
+       if (profile.medical_licenses) {
+         try {
+@@ -149,7 +178,9 @@
+         }
+       }
+ 
++      // Build DB values
+       const dbValues: ProfileFormValues = {
++        prefix: profile.prefix || "Dr.",
+         firstName: profile.first_name || "",
+         lastName: profile.last_name || "",
+         email: profile.email || "",
+@@ -169,16 +200,16 @@
+             country: addr?.country || "USA",
+           };
+         })(),
+-        billingAddress: (profile.billing_address as unknown as Record<
+-          string,
+-          string
+-        > | null) || {
+-          street: "",
+-          city: "",
+-          state: "",
+-          zipCode: "",
+-          country: "USA",
+-        },
++        billingAddress: (() => {
++          const addr = profile.billing_address as { street?: string; city?: string; state?: string; zipCode?: string; zip_code?: string; country?: string } | null;
++          return {
++            street: addr?.street || "",
++            city: addr?.city || "",
++            state: addr?.state || "",
++            zipCode: addr?.zipCode || addr?.zip_code || "",
++            country: addr?.country || "USA",
++          };
++        })(),
+         taxId: profile.tax_id || "",
+         paymentMethod: profile.payment_method || "bank_transfer",
+         paymentSchedule: profile.payment_schedule || "monthly",
+@@ -216,75 +247,159 @@
+       };
+ 
+       form.reset(mergedValues);
+-
+-      const phys = mergedValues.physicalAddress;
+-      const bill = mergedValues.billingAddress;
+-      if (phys && bill &&
+-        phys.street === bill.street &&
+-        phys.city === bill.city &&
+-        phys.state === bill.state &&
+-        phys.zipCode === bill.zipCode &&
+-        (phys.country || "USA") === (bill.country || "USA")) {
+-        setBillingSameAsPhysical(true);
+-      } else if (bill && (bill.street || bill.city || bill.state || bill.zipCode)) {
+-        setBillingSameAsPhysical(false);
+-      }
+     }
+   }, [profile, form, user?.id]);
+ 
+-  const handleBillingSameAsPhysical = (checked: boolean) => {
+-    setBillingSameAsPhysical(checked);
+-    if (checked) {
+-      const phys = form.getValues("physicalAddress");
+-      if (phys) {
+-        form.setValue("billingAddress", { ...phys });
+-      }
++  const watchedPhysical = form.watch("physicalAddress");
++  useEffect(() => {
++    if (billingSameAsPhysical && watchedPhysical) {
++      form.setValue("billingAddress.street", watchedPhysical.street);
++      form.setValue("billingAddress.city", watchedPhysical.city);
++      form.setValue("billingAddress.state", watchedPhysical.state);
++      form.setValue("billingAddress.zipCode", watchedPhysical.zipCode);
++      form.setValue("billingAddress.country", watchedPhysical.country || "USA");
+     }
+-  };
++  }, [billingSameAsPhysical, watchedPhysical, form]);
+ 
+-  const physicalAddress = form.watch("physicalAddress");
+-  useEffect(() => {
+-    if (billingSameAsPhysical && physicalAddress) {
+-      const currentBilling = form.getValues("billingAddress");
+-      if (!currentBilling ||
+-        currentBilling.street !== physicalAddress.street ||
+-        currentBilling.city !== physicalAddress.city ||
+-        currentBilling.state !== physicalAddress.state ||
+-        currentBilling.zipCode !== physicalAddress.zipCode ||
+-        currentBilling.country !== physicalAddress.country) {
+-        form.setValue("billingAddress", { ...physicalAddress });
++  async function verifyNpiForSubmit(npi: string): Promise<boolean> {
++    setNpiStatus("checking");
++    setNpiMessage("Verifying NPI...");
++    try {
++      const res = await fetch(`/api/provider/verify-npi?npi=${encodeURIComponent(npi)}`);
++      if (!res.ok) {
++        setNpiStatus("failed");
++        setNpiMessage("Unable to verify NPI at this time. Please try again later.");
++        return false;
+       }
++      const result = await res.json();
++      if (result.valid) {
++        setNpiStatus("verified");
++        setNpiMessage(result.message);
++        return true;
++      } else {
++        setNpiStatus("failed");
++        setNpiMessage(result.message);
++        return false;
++      }
++    } catch {
++      setNpiStatus("failed");
++      setNpiMessage("Unable to verify NPI at this time. Please try again later.");
++      return false;
+     }
+-  }, [billingSameAsPhysical, physicalAddress, form]);
++  }
+ 
+   async function onSubmit(data: ProfileFormValues) {
+-    const success = await updatePersonalInfo(data);
++    const trimmedNpi = data.npiNumber?.trim() || "";
++
++    if (trimmedNpi && trimmedNpi !== profile?.npi_number) {
++      const npiValid = await verifyNpiForSubmit(trimmedNpi);
++      if (!npiValid) return;
++    }
++
++    const success = await updatePersonalInfo({ ...data, npiNumber: trimmedNpi });
+     if (success) {
+       clearPersistedData();
+       form.reset(form.getValues());
++
++      // Refetch tier level after successful save
++      try {
++        const response = await fetch("/api/provider/tier");
++        if (response.ok) {
++          const tierData = await response.json();
++          if (tierData.tier_level) {
++            setTierLevel(tierData.tier_level);
++          }
++        }
++      } catch (error) {
++        console.error("Failed to refresh tier level:", error);
++      }
+     }
+   }
+ 
++  const delegateMeta = profile as unknown as {
++    is_delegate_view?: boolean;
++    authorizing_provider_prefix?: string;
++    authorizing_provider_first_name?: string;
++    authorizing_provider_last_name?: string;
++    delegate_title?: string;
++    npi_number?: string;
++    first_name?: string;
++    last_name?: string;
++    email?: string;
++    phone_number?: string;
++  } | null;
++  const isDelegateView = Boolean(delegateMeta?.is_delegate_view);
++  const authorizingProviderName = (() => {
++    if (!delegateMeta) return "";
++    return [
++      delegateMeta.authorizing_provider_first_name,
++      delegateMeta.authorizing_provider_last_name,
++    ]
++      .filter(Boolean)
++      .join(" ")
++      .trim();
++  })();
++  const assistantFullName = [delegateMeta?.first_name, delegateMeta?.last_name]
++    .filter(Boolean)
++    .join(" ")
++    .trim();
++
+   return (
+     <div className="space-y-8">
++      {isDelegateView && (
++        <div
++          className="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4 space-y-3"
++          data-testid="banner-delegate-profile"
++        >
++          <div className="font-semibold text-base">
++            Provider Assistant
++            {assistantFullName ? `: ${assistantFullName}` : ""}
++            {delegateMeta?.delegate_title ? ` (${delegateMeta.delegate_title})` : ""}
++          </div>
++          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
++            <div>
++              <div className="text-xs uppercase tracking-wide text-blue-700">Authorizing Provider</div>
++              <div className="font-medium" data-testid="text-authorizing-provider">
++                {authorizingProviderName ? `${delegateMeta?.authorizing_provider_prefix || "Dr."} ${authorizingProviderName}` : "—"}
++              </div>
++            </div>
++            <div>
++              <div className="text-xs uppercase tracking-wide text-blue-700">Provider NPI (used on every Rx)</div>
++              <div className="font-medium" data-testid="text-authorizing-npi">
++                {delegateMeta?.npi_number || "—"}
++              </div>
++            </div>
++            <div>
++              <div className="text-xs uppercase tracking-wide text-blue-700">Your email</div>
++              <div className="font-medium">{delegateMeta?.email || "—"}</div>
++            </div>
++            <div>
++              <div className="text-xs uppercase tracking-wide text-blue-700">Your phone</div>
++              <div className="font-medium">{delegateMeta?.phone_number || "—"}</div>
++            </div>
++          </div>
++          <div className="text-xs text-blue-800/80">
++            Every prescription you submit is legally written under the
++            authorizing provider&apos;s NPI. The clinical fields below
++            (addresses, billing, payment) belong to the provider and are
++            read-only here.
++          </div>
++        </div>
++      )}
+       <div className="bg-white rounded-lg shadow-sm">
+         <div className="p-6 border-b border-gray-200">
+-          <h2 className="text-xl font-semibold text-gray-900">Profile</h2>
++          <h2 className="text-xl font-semibold text-gray-900">
++            {isDelegateView ? "Provider Profile (Read-only)" : "Profile"}
++          </h2>
+         </div>
+ 
+         <Form {...form}>
+           <form
+             id="profile-form"
+-            onSubmit={form.handleSubmit(
+-              (data) => guardAction(() => onSubmit(data)),
+-              (errors) => {
+-                const fieldNames = Object.keys(errors);
+-                toast.error(`Please fix the following fields: ${fieldNames.join(", ")}`);
+-              }
+-            )}
++            onSubmit={form.handleSubmit((data) => guardAction(() => onSubmit(data)))}
+             className="p-6 space-y-6"
+           >
+-            <PersonalInfoSection form={form} />
++            <PersonalInfoSection form={form} tierLevel={tierLevel} />
+ 
+             <Separator className="bg-gray-200" />
+ 
+@@ -322,7 +437,14 @@
+ 
+             <Separator className="bg-gray-200" />
+ 
+-            <MedicalLicenseSection form={form} />
++            <MedicalLicenseSection
++              form={form}
++              npiStatus={npiStatus}
++              onNpiStatusChange={setNpiStatus}
++              npiMessage={npiMessage}
++              onNpiMessageChange={setNpiMessage}
++              savedNpi={profile?.npi_number || ""}
++            />
+ 
+             <Separator className="bg-gray-200" />
+ 
+@@ -330,201 +452,186 @@
+ 
+             <Separator className="bg-gray-200" />
+ 
+-            <Card>
+-              <CardHeader>
+-                <CardTitle>Physical Address</CardTitle>
+-                <CardDescription>Your primary practice or office location</CardDescription>
+-              </CardHeader>
+-              <CardContent className="space-y-4">
++            <div className="space-y-4">
++              <h3 className="text-base font-semibold" data-testid="heading-physical-address">Physical Address</h3>
++              <p className="text-sm text-muted-foreground">Your primary practice or office location</p>
++              <FormField
++                control={form.control}
++                name="physicalAddress.street"
++                render={({ field }) => (
++                  <FormItem>
++                    <FormLabel>Street Address</FormLabel>
++                    <FormControl>
++                      <Input placeholder="123 Main St" {...field} data-testid="input-physical-street" />
++                    </FormControl>
++                    <FormMessage />
++                  </FormItem>
++                )}
++              />
++              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                 <FormField
+                   control={form.control}
+-                  name="physicalAddress.street"
++                  name="physicalAddress.city"
+                   render={({ field }) => (
+                     <FormItem>
+-                      <FormLabel>Street Address</FormLabel>
++                      <FormLabel>City</FormLabel>
+                       <FormControl>
+-                        <Input {...field} value={field.value || ""} placeholder="123 Main St" />
++                        <Input placeholder="New York" {...field} data-testid="input-physical-city" />
+                       </FormControl>
++                      <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+-                <div className="grid grid-cols-4 gap-4">
+-                  <FormField
+-                    control={form.control}
+-                    name="physicalAddress.city"
+-                    render={({ field }) => (
+-                      <FormItem>
+-                        <FormLabel>City</FormLabel>
+-                        <FormControl>
+-                          <Input {...field} value={field.value || ""} placeholder="New York" />
+-                        </FormControl>
+-                      </FormItem>
+-                    )}
+-                  />
+-                  <FormField
+-                    control={form.control}
+-                    name="physicalAddress.state"
+-                    render={({ field }) => (
+-                      <FormItem>
+-                        <FormLabel>State</FormLabel>
+-                        <FormControl>
+-                          <Input {...field} value={field.value || ""} placeholder="NY" />
+-                        </FormControl>
+-                      </FormItem>
+-                    )}
+-                  />
+-                  <FormField
+-                    control={form.control}
+-                    name="physicalAddress.zipCode"
+-                    render={({ field }) => (
+-                      <FormItem>
+-                        <FormLabel>ZIP</FormLabel>
+-                        <FormControl>
+-                          <Input {...field} value={field.value || ""} placeholder="10001" />
+-                        </FormControl>
+-                      </FormItem>
+-                    )}
+-                  />
+-                  <FormField
+-                    control={form.control}
+-                    name="physicalAddress.country"
+-                    render={({ field }) => (
+-                      <FormItem>
+-                        <FormLabel>Country</FormLabel>
+-                        <FormControl>
+-                          <Input {...field} value={field.value || ""} placeholder="USA" />
+-                        </FormControl>
+-                      </FormItem>
+-                    )}
+-                  />
+-                </div>
+-              </CardContent>
+-            </Card>
++                <FormField
++                  control={form.control}
++                  name="physicalAddress.state"
++                  render={({ field }) => (
++                    <FormItem>
++                      <FormLabel>State</FormLabel>
++                      <FormControl>
++                        <Input placeholder="NY" {...field} data-testid="input-physical-state" />
++                      </FormControl>
++                      <FormMessage />
++                    </FormItem>
++                  )}
++                />
++                <FormField
++                  control={form.control}
++                  name="physicalAddress.zipCode"
++                  render={({ field }) => (
++                    <FormItem>
++                      <FormLabel>ZIP</FormLabel>
++                      <FormControl>
++                        <Input placeholder="10001" {...field} data-testid="input-physical-zip" />
++                      </FormControl>
++                      <FormMessage />
++                    </FormItem>
++                  )}
++                />
++                <FormField
++                  control={form.control}
++                  name="physicalAddress.country"
++                  render={({ field }) => (
++                    <FormItem>
++                      <FormLabel>Country</FormLabel>
++                      <FormControl>
++                        <Input placeholder="USA" {...field} data-testid="input-physical-country" />
++                      </FormControl>
++                      <FormMessage />
++                    </FormItem>
++                  )}
++                />
++              </div>
++            </div>
+ 
+-            <Card>
+-              <CardHeader>
+-                <CardTitle>Billing Address</CardTitle>
+-                <CardDescription>Where you would like to receive payments</CardDescription>
+-              </CardHeader>
+-              <CardContent className="space-y-4">
+-                <div className="flex items-center space-x-2 pb-2">
+-                  <input
+-                    type="checkbox"
+-                    id="sameAsPhysical"
+-                    checked={billingSameAsPhysical}
+-                    onChange={(e) => handleBillingSameAsPhysical(e.target.checked)}
+-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+-                  />
+-                  <Label htmlFor="sameAsPhysical" className="text-sm font-normal cursor-pointer">
+-                    Same as Physical Address
+-                  </Label>
+-                </div>
++            <Separator className="bg-gray-200" />
++
++            <div className="space-y-4">
++              <h3 className="text-base font-semibold" data-testid="heading-billing-address">Billing Address</h3>
++              <p className="text-sm text-muted-foreground">Where you would like to receive payments</p>
++              <div className="flex items-center space-x-2">
++                <Checkbox
++                  id="sameAsPhysical"
++                  checked={billingSameAsPhysical}
++                  onCheckedChange={(checked) => {
++                    const isChecked = checked === true;
++                    setBillingSameAsPhysical(isChecked);
++                    if (isChecked) {
++                      const physical = form.getValues("physicalAddress");
++                      form.setValue("billingAddress.street", physical.street);
++                      form.setValue("billingAddress.city", physical.city);
++                      form.setValue("billingAddress.state", physical.state);
++                      form.setValue("billingAddress.zipCode", physical.zipCode);
++                      form.setValue("billingAddress.country", physical.country);
++                    }
++                  }}
++                  data-testid="checkbox-same-as-physical"
++                />
++                <Label htmlFor="sameAsPhysical" className="text-sm font-normal cursor-pointer">
++                  Same as Physical Address
++                </Label>
++              </div>
++              <FormField
++                control={form.control}
++                name="billingAddress.street"
++                render={({ field }) => (
++                  <FormItem>
++                    <FormLabel>Street Address</FormLabel>
++                    <FormControl>
++                      <Input placeholder="123 Main St" {...field} disabled={billingSameAsPhysical} className={billingSameAsPhysical ? "bg-gray-100" : ""} data-testid="input-billing-street" />
++                    </FormControl>
++                    <FormMessage />
++                  </FormItem>
++                )}
++              />
++              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                 <FormField
+                   control={form.control}
+-                  name="billingAddress.street"
++                  name="billingAddress.city"
+                   render={({ field }) => (
+                     <FormItem>
+-                      <FormLabel>Street Address</FormLabel>
++                      <FormLabel>City</FormLabel>
+                       <FormControl>
+-                        <Input
+-                          {...field}
+-                          value={field.value || ""}
+-                          placeholder="123 Main St"
+-                          disabled={billingSameAsPhysical}
+-                          className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+-                        />
++                        <Input placeholder="New York" {...field} disabled={billingSameAsPhysical} className={billingSameAsPhysical ? "bg-gray-100" : ""} data-testid="input-billing-city" />
+                       </FormControl>
++                      <FormMessage />
++                    </FormItem>
++                  )}
++                />
++                <FormField
++                  control={form.control}
++                  name="billingAddress.state"
++                  render={({ field }) => (
++                    <FormItem>
++                      <FormLabel>State</FormLabel>
++                      <FormControl>
++                        <Input placeholder="NY" {...field} disabled={billingSameAsPhysical} className={billingSameAsPhysical ? "bg-gray-100" : ""} data-testid="input-billing-state" />
++                      </FormControl>
++                      <FormMessage />
++                    </FormItem>
++                  )}
++                />
++                <FormField
++                  control={form.control}
++                  name="billingAddress.zipCode"
++                  render={({ field }) => (
++                    <FormItem>
++                      <FormLabel>ZIP</FormLabel>
++                      <FormControl>
++                        <Input placeholder="10001" {...field} disabled={billingSameAsPhysical} className={billingSameAsPhysical ? "bg-gray-100" : ""} data-testid="input-billing-zip" />
++                      </FormControl>
++                      <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+-                <div className="grid grid-cols-4 gap-4">
+-                  <FormField
+-                    control={form.control}
+-                    name="billingAddress.city"
+-                    render={({ field }) => (
+-                      <FormItem>
+-                        <FormLabel>City</FormLabel>
+-                        <FormControl>
+-                          <Input
+-                            {...field}
+-                            value={field.value || ""}
+-                            placeholder="New York"
+-                            disabled={billingSameAsPhysical}
+-                            className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+-                          />
+-                        </FormControl>
+-                      </FormItem>
+-                    )}
+-                  />
+-                  <FormField
+-                    control={form.control}
+-                    name="billingAddress.state"
+-                    render={({ field }) => (
+-                      <FormItem>
+-                        <FormLabel>State</FormLabel>
+-                        <FormControl>
+-                          <Input
+-                            {...field}
+-                            value={field.value || ""}
+-                            placeholder="NY"
+-                            disabled={billingSameAsPhysical}
+-                            className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+-                          />
+-                        </FormControl>
+-                      </FormItem>
+-                    )}
+-                  />
+-                  <FormField
+-                    control={form.control}
+-                    name="billingAddress.zipCode"
+-                    render={({ field }) => (
+-                      <FormItem>
+-                        <FormLabel>ZIP</FormLabel>
+-                        <FormControl>
+-                          <Input
+-                            {...field}
+-                            value={field.value || ""}
+-                            placeholder="10001"
+-                            disabled={billingSameAsPhysical}
+-                            className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+-                          />
+-                        </FormControl>
+-                      </FormItem>
+-                    )}
+-                  />
+-                  <FormField
+-                    control={form.control}
+-                    name="billingAddress.country"
+-                    render={({ field }) => (
+-                      <FormItem>
+-                        <FormLabel>Country</FormLabel>
+-                        <FormControl>
+-                          <Input
+-                            {...field}
+-                            value={field.value || ""}
+-                            placeholder="USA"
+-                            disabled={billingSameAsPhysical}
+-                            className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+-                          />
+-                        </FormControl>
+-                      </FormItem>
+-                    )}
+-                  />
+-                </div>
+                 <FormField
+                   control={form.control}
+-                  name="taxId"
++                  name="billingAddress.country"
+                   render={({ field }) => (
+                     <FormItem>
+-                      <FormLabel>Tax ID / EIN</FormLabel>
++                      <FormLabel>Country</FormLabel>
+                       <FormControl>
+-                        <Input {...field} value={field.value || ""} placeholder="XX-XXXXXXX" />
++                        <Input placeholder="USA" {...field} disabled={billingSameAsPhysical} className={billingSameAsPhysical ? "bg-gray-100" : ""} data-testid="input-billing-country" />
+                       </FormControl>
++                      <FormMessage />
+                     </FormItem>
+                   )}
+                 />
+-              </CardContent>
+-            </Card>
++              </div>
++              <FormField
++                control={form.control}
++                name="taxId"
++                render={({ field }) => (
++                  <FormItem>
++                    <FormLabel>Tax ID / EIN</FormLabel>
++                    <FormControl>
++                      <Input placeholder="XX-XXXXXXX" {...field} data-testid="input-tax-id" />
++                    </FormControl>
++                    <FormMessage />
++                  </FormItem>
++                )}
++              />
++            </div>
+ 
+             <Separator className="bg-gray-200" />
+ 
+@@ -533,7 +640,8 @@
+                 type="submit"
+                 variant="default"
+                 className="px-6"
+-                disabled={isSubmitting}
++                disabled={isSubmitting || npiStatus === "checking" || isDelegateView}
++                data-testid="button-save-profile"
+               >
+                 {isSubmitting ? (
+                   <>
+@@ -541,7 +649,7 @@
+                     Saving...
+                   </>
+                 ) : (
+-                  "Save changes"
++                  "Save Profile"
+                 )}
+               </Button>
+             </div>
+@@ -549,6 +657,14 @@
+         </Form>
+       </div>
+ 
++      {!isDelegateView && (
++        <div className="bg-white rounded-lg shadow-sm">
++          <div className="p-6">
++            <AchSection />
++          </div>
++        </div>
++      )}
++
+       <NotificationPreferences />
+ 
+       <PasswordChangeForm />

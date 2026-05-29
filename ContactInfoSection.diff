@@ -1,0 +1,35 @@
+--- aimrx-new/features/provider-profile/components/profile/ContactInfoSection.tsx	2026-03-16 13:06:58.000000000 +0000
++++ aimrx-reference/features/provider-profile/components/profile/ContactInfoSection.tsx	2026-05-29 12:38:58.323721805 +0000
+@@ -44,29 +44,9 @@
+         )}
+       />
+ 
+-      {/* Default Shipping Fee */}
+-      <FormField
+-        control={form.control}
+-        name="defaultShippingFee"
+-        render={({ field }) => (
+-          <FormItem>
+-            <FormLabel>Default Shipping Fee ($)</FormLabel>
+-            <FormControl>
+-              <Input
+-                {...field}
+-                type="number"
+-                min={0}
+-                placeholder="40"
+-                onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+-              />
+-            </FormControl>
+-            <p className="text-sm text-gray-500 mt-1">
+-              Default shipping fee applied to prescriptions
+-            </p>
+-            <FormMessage />
+-          </FormItem>
+-        )}
+-      />
++      {/* Default Shipping Fee field removed: shipping fee is now controlled
++          per-pharmacy by admins (see Pharmacy Management → Shipping Fee
++          column). Providers no longer set a personal shipping fee. */}
+ 
+       {/* Email Address - Read-only */}
+       <FormField

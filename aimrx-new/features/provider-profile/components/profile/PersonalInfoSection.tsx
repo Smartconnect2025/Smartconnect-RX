@@ -20,10 +20,12 @@ import { ProfileFormValues } from "./types";
 
 interface PersonalInfoSectionProps {
   form: UseFormReturn<ProfileFormValues>;
+  tierLevel?: string;
 }
 
 export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({
   form,
+  tierLevel = "Not set",
 }) => {
   const { user } = useUser();
   const { updateAvatarUrl, refreshProfile } = useProviderProfile();
@@ -99,8 +101,31 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({
         />
       </div>
 
-      {/* Name Fields - Read-only */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Prefix + Name Fields */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <FormField
+          control={form.control}
+          name="prefix"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Prefix</FormLabel>
+              <FormControl>
+                <Input
+                  {...field}
+                  value={field.value ?? ""}
+                  placeholder="Dr."
+                  maxLength={10}
+                  data-testid="input-provider-prefix"
+                />
+              </FormControl>
+              <p className="text-xs text-gray-500 mt-1">
+                e.g. Dr., NP, PA, RN
+              </p>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="firstName"
@@ -137,29 +162,18 @@ export const PersonalInfoSection: React.FC<PersonalInfoSectionProps> = ({
           )}
         />
 
+        <FormItem>
+          <FormLabel>Tier Level</FormLabel>
+          <FormControl>
+            <Input
+              value={tierLevel}
+              disabled
+              className="bg-gray-50 cursor-not-allowed"
+            />
+          </FormControl>
+        </FormItem>
       </div>
 
-      {/* Company Name - Read-only */}
-      <div className="grid grid-cols-1 gap-6">
-        <FormField
-          control={form.control}
-          name="companyName"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Company Name</FormLabel>
-              <FormControl>
-                <Input
-                  {...field}
-                  disabled
-                  className="bg-gray-50 cursor-not-allowed"
-                  placeholder="Not set"
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-      </div>
     </div>
   );
 };

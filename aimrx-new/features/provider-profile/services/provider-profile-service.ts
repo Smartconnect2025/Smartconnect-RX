@@ -101,6 +101,52 @@ export class ProviderProfileService {
     return result.provider;
   }
 
+  async updateAchInfo(input: {
+    bank_name?: string | null;
+    account_holder?: string | null;
+    routing_number?: string | null;
+    account_number?: string | null;
+    account_type?: string | null;
+    fmv_disclosure_accepted?: boolean;
+  }) {
+    const response = await fetch("/api/provider/ach", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const errorMsg = result?.error || "Failed to save banking info";
+      toast.error(errorMsg);
+      throw new Error(errorMsg);
+    }
+    return result;
+  }
+
+  async verifyNpi(npi: string): Promise<{ valid: boolean; message: string }> {
+    try {
+      const res = await fetch(
+        `/api/provider/verify-npi?npi=${encodeURIComponent(npi)}`,
+      );
+      if (!res.ok) {
+        return {
+          valid: false,
+          message: "Unable to verify NPI at this time. Please try again later.",
+        };
+      }
+      const data = await res.json();
+      return {
+        valid: !!data.valid,
+        message: data.message || "Verification failed",
+      };
+    } catch {
+      return {
+        valid: false,
+        message: "Unable to verify NPI at this time. Please try again later.",
+      };
+    }
+  }
+
   async updateAvatarUrl(userId: string, avatarUrl: string) {
     const response = await fetch("/api/provider/profile", {
       method: "PUT",

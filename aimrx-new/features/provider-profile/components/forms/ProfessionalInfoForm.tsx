@@ -15,7 +15,7 @@ import { BoardCertificationSection } from "../professional-info/BoardCertificati
 import { EducationTrainingSection } from "../professional-info/EducationTrainingSection";
 import { LanguagesSpokenSection } from "../professional-info/LanguagesSpokenSection";
 import { MedicalLicenseSection } from "../professional-info/MedicalLicenseSection";
-import { NPISection } from "../professional-info/NPISection";
+import { NPISection, type NpiVerificationStatus } from "../professional-info/NPISection";
 import { ProfessionalAssociationsSection } from "../professional-info/ProfessionalAssociationsSection";
 import { ProfessionalBioSection } from "../professional-info/ProfessionalBioSection";
 import {
@@ -40,6 +40,8 @@ export function ProfessionalInfoForm() {
     useProviderProfile();
   const { guardAction } = useDemoGuard();
   const [groupInfo, setGroupInfo] = useState<GroupInfo | null>(null);
+  const [npiStatus, setNpiStatus] = useState<NpiVerificationStatus>("idle");
+  const [npiMessage, setNpiMessage] = useState("");
 
   // Fetch group info when profile loads
   useEffect(() => {
@@ -143,8 +145,46 @@ export function ProfessionalInfoForm() {
     }
   }, [profile, form]);
 
+  async function verifyNpiForSubmit(npi: string): Promise<boolean> {
+    setNpiStatus("checking");
+    setNpiMessage("Verifying NPI...");
+    try {
+      const res = await fetch(`/api/provider/verify-npi?npi=${encodeURIComponent(npi)}`);
+      if (!res.ok) {
+        setNpiStatus("failed");
+        setNpiMessage("Unable to verify NPI at this time. Please try again later.");
+        form.setError("npiNumber", { message: "Unable to verify NPI. Please try again." });
+        return false;
+      }
+      const result = await res.json();
+      if (result.valid) {
+        setNpiStatus("verified");
+        setNpiMessage(result.message);
+        form.clearErrors("npiNumber");
+        return true;
+      } else {
+        setNpiStatus("failed");
+        setNpiMessage(result.message);
+        form.setError("npiNumber", { message: result.message });
+        return false;
+      }
+    } catch {
+      setNpiStatus("failed");
+      setNpiMessage("Unable to verify NPI at this time. Please try again later.");
+      form.setError("npiNumber", { message: "Unable to verify NPI. Please try again." });
+      return false;
+    }
+  }
+
   async function onSubmit(data: ProfessionalInfoValues) {
-    const success = await updateProfessionalInfo(data);
+    const trimmedNpi = data.npiNumber?.trim() || "";
+
+    if (trimmedNpi && trimmedNpi !== profile?.npi_number) {
+      const npiValid = await verifyNpiForSubmit(trimmedNpi);
+      if (!npiValid) return;
+    }
+
+    const success = await updateProfessionalInfo({ ...data, npiNumber: trimmedNpi });
     if (success) {
       clearPersistedData();
       form.reset(form.getValues());
@@ -195,7 +235,14 @@ export function ProfessionalInfoForm() {
             </>
           )}
 
-          <NPISection form={form} />
+          <NPISection
+            form={form}
+            npiStatus={npiStatus}
+            onNpiStatusChange={setNpiStatus}
+            npiMessage={npiMessage}
+            onNpiMessageChange={setNpiMessage}
+            savedNpi={profile?.npi_number || ""}
+          />
 
           <Separator className="bg-gray-200" />
 
@@ -234,7 +281,7 @@ export function ProfessionalInfoForm() {
               type="submit"
               variant="default"
               className="px-6"
-              disabled={isSubmitting}
+              disabled={isSubmitting || npiStatus === "checking"}
             >
               {isSubmitting ? (
                 <>

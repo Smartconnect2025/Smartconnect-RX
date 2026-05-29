@@ -4,14 +4,15 @@ import React, { useEffect, useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { useFormPersistence } from "@/hooks/useFormPersistence";
 
-import { Form, FormField, FormItem, FormLabel, FormControl } from "@/components/ui/form";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Separator } from "@/components/ui/separator";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { ContactInfoSection } from "../profile/ContactInfoSection";
 import { PersonalInfoSection } from "../profile/PersonalInfoSection";
-import { MedicalLicenseSection } from "../profile/MedicalLicenseSection";
+import { MedicalLicenseSection, type NpiVerificationStatus } from "../profile/MedicalLicenseSection";
 import { SignatureSection } from "../profile/SignatureSection";
+import { AchSection } from "../profile/AchSection";
 import {
   profileFormValidationSchema,
   ProfileFormValues,
@@ -21,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PasswordChangeForm } from "./PasswordChangeForm";
 import { NotificationPreferences } from "../NotificationPreferences";
 import { Loader2 } from "lucide-react";
@@ -33,16 +35,20 @@ export function ProfileForm() {
   const { user } = useUser();
   const { guardAction } = useDemoGuard();
   const { profile, updatePersonalInfo, isSubmitting } = useProviderProfile();
+  const [tierLevel, setTierLevel] = useState<string>("Not set");
   const [groupInfo, setGroupInfo] = useState<{
     name: string;
     platform_manager_name: string | null;
   } | null>(null);
   const hasResetFromDbRef = useRef(false);
   const [billingSameAsPhysical, setBillingSameAsPhysical] = useState(true);
+  const [npiStatus, setNpiStatus] = useState<NpiVerificationStatus>("idle");
+  const [npiMessage, setNpiMessage] = useState("");
 
   const form = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormValidationSchema),
     defaultValues: {
+      prefix: "Dr.",
       firstName: "",
       lastName: "",
       email: "",
@@ -89,6 +95,25 @@ export function ProfileForm() {
     excludeFields: ["paymentDetails"] as (keyof ProfileFormValues)[],
     disabled: !user?.id,
   });
+
+  // Fetch tier level from API for the current provider
+  useEffect(() => {
+    async function fetchTierLevel() {
+      if (!profile?.id) return;
+      try {
+        const response = await fetch("/api/provider/tier");
+        if (response.ok) {
+          const data = await response.json();
+          if (data.tier_level) {
+            setTierLevel(data.tier_level);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch tier level:", error);
+      }
+    }
+    fetchTierLevel();
+  }, [profile?.id]);
 
   useEffect(() => {
     async function fetchGroup() {
@@ -150,6 +175,7 @@ export function ProfileForm() {
       }
 
       const dbValues: ProfileFormValues = {
+        prefix: profile.prefix || "Dr.",
         firstName: profile.first_name || "",
         lastName: profile.last_name || "",
         email: profile.email || "",
@@ -169,16 +195,16 @@ export function ProfileForm() {
             country: addr?.country || "USA",
           };
         })(),
-        billingAddress: (profile.billing_address as unknown as Record<
-          string,
-          string
-        > | null) || {
-          street: "",
-          city: "",
-          state: "",
-          zipCode: "",
-          country: "USA",
-        },
+        billingAddress: (() => {
+          const addr = profile.billing_address as { street?: string; city?: string; state?: string; zipCode?: string; zip_code?: string; country?: string } | null;
+          return {
+            street: addr?.street || "",
+            city: addr?.city || "",
+            state: addr?.state || "",
+            zipCode: addr?.zipCode || addr?.zip_code || "",
+            country: addr?.country || "USA",
+          };
+        })(),
         taxId: profile.tax_id || "",
         paymentMethod: profile.payment_method || "bank_transfer",
         paymentSchedule: profile.payment_schedule || "monthly",
@@ -257,19 +283,135 @@ export function ProfileForm() {
     }
   }, [billingSameAsPhysical, physicalAddress, form]);
 
-  async function onSubmit(data: ProfileFormValues) {
-    const success = await updatePersonalInfo(data);
-    if (success) {
-      clearPersistedData();
-      form.reset(form.getValues());
+  async function verifyNpiForSubmit(npi: string): Promise<boolean> {
+    setNpiStatus("checking");
+    setNpiMessage("Verifying NPI...");
+    try {
+      const res = await fetch(`/api/provider/verify-npi?npi=${encodeURIComponent(npi)}`);
+      if (!res.ok) {
+        setNpiStatus("failed");
+        setNpiMessage("Unable to verify NPI at this time. Please try again later.");
+        return false;
+      }
+      const result = await res.json();
+      if (result.valid) {
+        setNpiStatus("verified");
+        setNpiMessage(result.message);
+        return true;
+      } else {
+        setNpiStatus("failed");
+        setNpiMessage(result.message);
+        return false;
+      }
+    } catch {
+      setNpiStatus("failed");
+      setNpiMessage("Unable to verify NPI at this time. Please try again later.");
+      return false;
     }
   }
 
+  async function onSubmit(data: ProfileFormValues) {
+    const trimmedNpi = data.npiNumber?.trim() || "";
+
+    if (trimmedNpi && trimmedNpi !== profile?.npi_number) {
+      const npiValid = await verifyNpiForSubmit(trimmedNpi);
+      if (!npiValid) return;
+    }
+
+    const success = await updatePersonalInfo({ ...data, npiNumber: trimmedNpi });
+    if (success) {
+      clearPersistedData();
+      form.reset(form.getValues());
+
+      try {
+        const response = await fetch("/api/provider/tier");
+        if (response.ok) {
+          const tierData = await response.json();
+          if (tierData.tier_level) {
+            setTierLevel(tierData.tier_level);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to refresh tier level:", error);
+      }
+    }
+  }
+
+  const delegateMeta = profile as unknown as {
+    is_delegate_view?: boolean;
+    authorizing_provider_prefix?: string;
+    authorizing_provider_first_name?: string;
+    authorizing_provider_last_name?: string;
+    delegate_title?: string;
+    npi_number?: string;
+    first_name?: string;
+    last_name?: string;
+    email?: string;
+    phone_number?: string;
+  } | null;
+  const isDelegateView = Boolean(delegateMeta?.is_delegate_view);
+  const authorizingProviderName = (() => {
+    if (!delegateMeta) return "";
+    return [
+      delegateMeta.authorizing_provider_first_name,
+      delegateMeta.authorizing_provider_last_name,
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+  })();
+  const assistantFullName = [delegateMeta?.first_name, delegateMeta?.last_name]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
   return (
     <div className="space-y-8">
+      {isDelegateView && (
+        <div
+          className="bg-blue-50 border border-blue-200 text-blue-900 rounded-lg p-4 space-y-3"
+          data-testid="banner-delegate-profile"
+        >
+          <div className="font-semibold text-base">
+            Provider Assistant
+            {assistantFullName ? `: ${assistantFullName}` : ""}
+            {delegateMeta?.delegate_title ? ` (${delegateMeta.delegate_title})` : ""}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div>
+              <div className="text-xs uppercase tracking-wide text-blue-700">Authorizing Provider</div>
+              <div className="font-medium" data-testid="text-authorizing-provider">
+                {authorizingProviderName ? `${delegateMeta?.authorizing_provider_prefix || "Dr."} ${authorizingProviderName}` : "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-blue-700">Provider NPI (used on every Rx)</div>
+              <div className="font-medium" data-testid="text-authorizing-npi">
+                {delegateMeta?.npi_number || "—"}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-blue-700">Your email</div>
+              <div className="font-medium">{delegateMeta?.email || "—"}</div>
+            </div>
+            <div>
+              <div className="text-xs uppercase tracking-wide text-blue-700">Your phone</div>
+              <div className="font-medium">{delegateMeta?.phone_number || "—"}</div>
+            </div>
+          </div>
+          <div className="text-xs text-blue-800/80">
+            Every prescription you submit is legally written under the
+            authorizing provider&apos;s NPI. The clinical fields below
+            (addresses, billing, payment) belong to the provider and are
+            read-only here.
+          </div>
+        </div>
+      )}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="p-6 border-b border-gray-200">
-          <h2 className="text-xl font-semibold text-gray-900">Profile</h2>
+          <h2 className="text-xl font-semibold text-gray-900">
+            {isDelegateView ? "Provider Profile (Read-only)" : "Profile"}
+          </h2>
         </div>
 
         <Form {...form}>
@@ -284,7 +426,7 @@ export function ProfileForm() {
             )}
             className="p-6 space-y-6"
           >
-            <PersonalInfoSection form={form} />
+            <PersonalInfoSection form={form} tierLevel={tierLevel} />
 
             <Separator className="bg-gray-200" />
 
@@ -322,7 +464,14 @@ export function ProfileForm() {
 
             <Separator className="bg-gray-200" />
 
-            <MedicalLicenseSection form={form} />
+            <MedicalLicenseSection
+              form={form}
+              npiStatus={npiStatus}
+              onNpiStatusChange={setNpiStatus}
+              npiMessage={npiMessage}
+              onNpiMessageChange={setNpiMessage}
+              savedNpi={profile?.npi_number || ""}
+            />
 
             <Separator className="bg-gray-200" />
 
@@ -332,7 +481,7 @@ export function ProfileForm() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Physical Address</CardTitle>
+                <CardTitle data-testid="heading-physical-address">Physical Address</CardTitle>
                 <CardDescription>Your primary practice or office location</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -343,8 +492,9 @@ export function ProfileForm() {
                     <FormItem>
                       <FormLabel>Street Address</FormLabel>
                       <FormControl>
-                        <Input {...field} value={field.value || ""} placeholder="123 Main St" />
+                        <Input {...field} value={field.value || ""} placeholder="123 Main St" data-testid="input-physical-street" />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -356,8 +506,9 @@ export function ProfileForm() {
                       <FormItem>
                         <FormLabel>City</FormLabel>
                         <FormControl>
-                          <Input {...field} value={field.value || ""} placeholder="New York" />
+                          <Input {...field} value={field.value || ""} placeholder="New York" data-testid="input-physical-city" />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -368,8 +519,9 @@ export function ProfileForm() {
                       <FormItem>
                         <FormLabel>State</FormLabel>
                         <FormControl>
-                          <Input {...field} value={field.value || ""} placeholder="NY" />
+                          <Input {...field} value={field.value || ""} placeholder="NY" data-testid="input-physical-state" />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -380,8 +532,9 @@ export function ProfileForm() {
                       <FormItem>
                         <FormLabel>ZIP</FormLabel>
                         <FormControl>
-                          <Input {...field} value={field.value || ""} placeholder="10001" />
+                          <Input {...field} value={field.value || ""} placeholder="10001" data-testid="input-physical-zip" />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -392,8 +545,9 @@ export function ProfileForm() {
                       <FormItem>
                         <FormLabel>Country</FormLabel>
                         <FormControl>
-                          <Input {...field} value={field.value || ""} placeholder="USA" />
+                          <Input {...field} value={field.value || ""} placeholder="USA" data-testid="input-physical-country" />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -403,17 +557,16 @@ export function ProfileForm() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Billing Address</CardTitle>
+                <CardTitle data-testid="heading-billing-address">Billing Address</CardTitle>
                 <CardDescription>Where you would like to receive payments</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center space-x-2 pb-2">
-                  <input
-                    type="checkbox"
+                  <Checkbox
                     id="sameAsPhysical"
                     checked={billingSameAsPhysical}
-                    onChange={(e) => handleBillingSameAsPhysical(e.target.checked)}
-                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                    onCheckedChange={(checked) => handleBillingSameAsPhysical(checked === true)}
+                    data-testid="checkbox-same-as-physical"
                   />
                   <Label htmlFor="sameAsPhysical" className="text-sm font-normal cursor-pointer">
                     Same as Physical Address
@@ -432,8 +585,10 @@ export function ProfileForm() {
                           placeholder="123 Main St"
                           disabled={billingSameAsPhysical}
                           className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+                          data-testid="input-billing-street"
                         />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -451,8 +606,10 @@ export function ProfileForm() {
                             placeholder="New York"
                             disabled={billingSameAsPhysical}
                             className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+                            data-testid="input-billing-city"
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -469,8 +626,10 @@ export function ProfileForm() {
                             placeholder="NY"
                             disabled={billingSameAsPhysical}
                             className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+                            data-testid="input-billing-state"
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -487,8 +646,10 @@ export function ProfileForm() {
                             placeholder="10001"
                             disabled={billingSameAsPhysical}
                             className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+                            data-testid="input-billing-zip"
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -505,8 +666,10 @@ export function ProfileForm() {
                             placeholder="USA"
                             disabled={billingSameAsPhysical}
                             className={billingSameAsPhysical ? "bg-gray-100 cursor-not-allowed" : ""}
+                            data-testid="input-billing-country"
                           />
                         </FormControl>
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -518,8 +681,9 @@ export function ProfileForm() {
                     <FormItem>
                       <FormLabel>Tax ID / EIN</FormLabel>
                       <FormControl>
-                        <Input {...field} value={field.value || ""} placeholder="XX-XXXXXXX" />
+                        <Input {...field} value={field.value || ""} placeholder="XX-XXXXXXX" data-testid="input-tax-id" />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -533,7 +697,8 @@ export function ProfileForm() {
                 type="submit"
                 variant="default"
                 className="px-6"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDelegateView || npiStatus === "checking"}
+                data-testid="button-save-profile"
               >
                 {isSubmitting ? (
                   <>
@@ -548,6 +713,8 @@ export function ProfileForm() {
           </form>
         </Form>
       </div>
+
+      {!isDelegateView && <AchSection />}
 
       <NotificationPreferences />
 

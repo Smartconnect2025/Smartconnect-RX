@@ -1,0 +1,10 @@
+--- aimrx-new/features/provider-profile/components/ProviderProfile.tsx	2026-03-16 13:06:58.000000000 +0000
++++ aimrx-reference/features/provider-profile/components/ProviderProfile.tsx	2026-05-29 12:38:58.300956862 +0000
+@@ -4,6 +4,7 @@
+ import React from "react";
+ import { PracticeDetailsForm } from "./forms/PracticeDetailsForm";
+ import { ProfessionalInfoForm } from "./forms/ProfessionalInfoForm";
++
+ import { ProviderTabsNavigation } from "./ProviderTabsNavigation";
+ import { AvailabilityCard } from "./AvailabilityCard";
+ import { ProfileForm } from "./forms/ProfileForm";
