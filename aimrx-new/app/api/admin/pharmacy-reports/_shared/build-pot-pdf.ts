@@ -84,7 +84,7 @@ export function buildPayOnTermsPdf(input: PotPdfInput): PotPdfOutput {
   // Header
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("AIM Rx — Pay-on-Terms Report", margin, 50);
+  doc.text("SmartConnect RX — Pay-on-Terms Report", margin, 50);
 
   doc.setFontSize(10);
   doc.setFont("helvetica", "normal");
@@ -283,6 +283,6 @@ export function buildPayOnTermsPdf(input: PotPdfInput): PotPdfOutput {
 
   const arrBuf = doc.output("arraybuffer");
   const base64 = Buffer.from(arrBuf).toString("base64");
-  const filename = `aimrx-pot-${reportWindow.shortLabel.replace(/[^A-Za-z0-9]+/g, "-")}.pdf`;
+  const filename = `smartconnect-pot-${reportWindow.shortLabel.replace(/[^A-Za-z0-9]+/g, "-")}.pdf`;
   return { filename, base64 };
 }

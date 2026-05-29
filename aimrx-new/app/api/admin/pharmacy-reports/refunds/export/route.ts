@@ -218,7 +218,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "text/csv; charset=utf-8",
-        "Content-Disposition": `attachment; filename="aimrx-refunds-${today}.csv"`,
+        "Content-Disposition": `attachment; filename="smartconnect-refunds-${today}.csv"`,
       },
     });
   } catch (error) {

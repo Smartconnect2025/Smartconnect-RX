@@ -404,7 +404,7 @@ async function handle(req: NextRequest) {
   try {
     await sgMail.send({
       to: recipients,
-      from: { email: FROM_EMAIL, name: "AIM Rx Reports" },
+      from: { email: FROM_EMAIL, name: "SmartConnect RX Reports" },
       subject,
       html,
     });

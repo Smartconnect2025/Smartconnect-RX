@@ -25,3 +25,19 @@ CODE=Git (Render runs it, source of truth), DATA=Supabase (separate, not in git)
 
 ## Merge scope snapshot
 ~148 new files, ~294 changed, ~53 SmartConnect-only. 8 feature groups: new MFA, delegate accounts, pay-on-terms, refunds reporting, provider profile+ACH, cron jobs, admin tools, tiers/pricing. User approved ALL. Do safest self-contained first, MFA last; build+test after each batch before pushing.
+
+## Branding cross-wiring (CRITICAL — user flagged "don't mix the two systems")
+When copying AimRx route code into SmartConnect, swap user-facing AimRx branding to SmartConnect:
+- Logos: app.aimrx.com/logo-header.png -> app.smartconnects.com/logo-header.png (SmartConnect public/logo-header.png exists)
+- Brand name "AIM Rx"/"AIM Rx Reports" -> "SmartConnect RX"/"SmartConnect RX Reports"
+- Email subjects "[AIM Rx]" -> "[SmartConnect RX]"; footer links app.aimrx.com -> app.smartconnects.com
+- Export filenames aimrx-*.pdf/.csv -> smartconnect-*
+DO NOT change (NOT branding):
+- DB column `aimrx_site_pricing_cents` (real column in pharmacy_medications, verified exists)
+- FROM_EMAIL fallback `process.env.SENDGRID_FROM_EMAIL || "noreply@aimrx.com"` — this is SmartConnect's OWN existing convention (its other routes use same pattern); SENDGRID_FROM_EMAIL is set in prod so fallback never used live. Changing risks SendGrid sender-verification breakage.
+Code connections are safe: copied code uses @core/* aliases -> SmartConnect's own envConfig/Supabase/keys. No AimRx DB/credentials cross-wired.
+
+## DB reality (corrects earlier "missing tables" notes)
+Live SmartConnect DB (pxehuvreezdpiusgwbct) already HAS most tables thought missing: provider_ach_info, delegations, delegate_profiles, trusted_devices, provider_pharmacy_links, pay_on_terms_email_recipients, pay_on_terms_email_schedule, pharmacy_admins, app_settings, user_roles, tiers, payment_transactions, mfa_codes, pharmacy_payment_configs.
+Only confirmed-created-by-us: prescription_refunds (ran via Supabase SQL Editor — table+RLS only, no backfill; ensureRefundRowsExist creates rows on demand).
+Method that works for DDL: Supabase Dashboard SQL Editor (no password needed). REST/service-role for verification.

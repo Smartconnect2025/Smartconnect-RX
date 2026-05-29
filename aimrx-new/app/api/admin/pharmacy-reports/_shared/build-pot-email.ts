@@ -11,11 +11,11 @@
  * reconcile what was newly billed in that period.
  */
 
-// Use the same hosted logo as every other AIM Rx outbound email
+// Use the same hosted logo as every other SmartConnect RX outbound email
 // (admin-alerts, mfa, cancellation, trusted-device). The previous
 // Supabase storage URL pointed at a file that does not exist there,
 // so the email rendered with a broken-image placeholder.
-const AIM_LOGO = "https://app.aimrx.com/logo-header.png";
+const AIM_LOGO = "https://app.smartconnects.com/logo-header.png";
 
 function fmtUsd(cents: number): string {
   return `$${(cents / 100).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
@@ -339,7 +339,7 @@ export function buildPayOnTermsEmail(input: PotEmailInput): PotEmailOutput {
           }</p>
         </div>`;
 
-  const subject = `[AIM Rx] Pay-on-Terms Report — ${window.shortLabel} — ${fmtUsd(totalCents)} across ${providerCount} provider${providerCount === 1 ? "" : "s"}`;
+  const subject = `[SmartConnect RX] Pay-on-Terms Report — ${window.shortLabel} — ${fmtUsd(totalCents)} across ${providerCount} provider${providerCount === 1 ? "" : "s"}`;
 
   const detailSection =
     rxCount === 0
@@ -362,7 +362,7 @@ export function buildPayOnTermsEmail(input: PotEmailInput): PotEmailOutput {
   const html = `
     <div style="font-family:Arial,sans-serif;max-width:760px;margin:0 auto;background:#ffffff;">
       <div style="background:#1E3A8A;padding:16px 24px;text-align:center;">
-        <img src="${AIM_LOGO}" alt="AIM Rx" style="height:40px;" />
+        <img src="${AIM_LOGO}" alt="SmartConnect RX" style="height:40px;" />
       </div>
       <div style="padding:24px;">
         <h2 style="color:#1E3A8A;margin:0 0 4px 0;font-size:20px;">Pay-on-Terms Report — ${escapeHtml(window.shortLabel)}</h2>
@@ -377,7 +377,7 @@ export function buildPayOnTermsEmail(input: PotEmailInput): PotEmailOutput {
           This email mirrors the Payment on Terms tab on screen at the moment the report was sent — same date range, same filters, same "Show settled" state. Each row is tagged Outstanding, Settled, or Card paid.
           This is a per-period reconciliation report, <strong>not</strong> a cumulative outstanding balance.<br/>
           Patient name + DOB included for accounting reconciliation — treat as PHI.<br/>
-          Generated ${escapeHtml(generatedAt.toUTCString())} from <a href="https://app.aimrx.com/admin/pharmacy-reports" style="color:#1E3A8A;">app.aimrx.com/admin/pharmacy-reports</a> → Payment on Terms tab.
+          Generated ${escapeHtml(generatedAt.toUTCString())} from <a href="https://app.smartconnects.com/admin/pharmacy-reports" style="color:#1E3A8A;">app.smartconnects.com/admin/pharmacy-reports</a> → Payment on Terms tab.
         </p>
       </div>
     </div>`;
