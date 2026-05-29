@@ -1,0 +1,472 @@
+# AIM RX Portal — Complete Email Templates Guide
+
+## Global Configuration
+
+| Setting | Value |
+|---------|-------|
+| **Email Provider** | SendGrid |
+| **From Email** | `support@aimrx.com` (env: `SENDGRID_FROM_EMAIL`) |
+| **From Name** | `AIM RX Portal` (env: `SENDGRID_FROM_NAME`) |
+| **Logo URL** | `https://app.aimrx.com/logo-header.png` |
+| **Support Phone** | (769) 304-1830 |
+| **Support Hours** | Mon–Fri 9AM–6PM CST |
+| **Support Email** | support@aimrx.com |
+| **App URL** | https://app.aimrx.com |
+| **Login URL** | https://app.aimrx.com/auth/login |
+
+---
+
+## Design System (Shared Across All Emails)
+
+### Colors
+| Color | Hex | Usage |
+|-------|-----|-------|
+| **Primary Navy** | `#1E3A8A` | Headers, headings, buttons, provider name text |
+| **Primary Blue** | `#2563EB` | Gradients, info callout borders |
+| **AIM Cyan** | `#00AEEF` | Gradients, links, amount highlights, CTA buttons |
+| **Green Success** | `#10B981` | Payment confirmed headers, completed step indicators |
+| **Green Dark** | `#059669` | Green gradient secondary |
+| **Warning Amber** | `#F59E0B` | Warning borders, pending step indicators |
+| **Critical Red** | `#DC2626` | Critical admin alerts |
+| **Body Text** | `#334155` | Main paragraph text |
+| **Secondary Text** | `#475569` | Support info text |
+| **Label Text** | `#64748b` | Uppercase section labels |
+| **Muted Text** | `#94a3b8` | Footer text, faint links |
+| **Light Text** | `#9CA3AF` | Incomplete step indicators |
+| **Dark Text** | `#1e293b` | Bold detail values |
+| **Background** | `#f1f5f9` | Page background |
+| **Card Background** | `#ffffff` | Email card |
+| **Section Background** | `#f8fafc` | Detail section headers, footer |
+| **Info Blue BG** | `#f0f9ff` | "What Happens Next" boxes |
+| **Info Blue Border** | `#bae6fd` | Info box borders |
+| **Tracking BG** | `#eff6ff` | Tracking number box |
+| **Tracking Border** | `#bfdbfe` | Tracking number border |
+| **Warning BG** | `#fffbeb` | Pending step highlight |
+| **Success BG** | `#f0fdf4` | Current completed step |
+| **Callout Blue BG** | `#DBEAFE` | Info callout boxes |
+| **Warning Notice BG** | `#FEF3C7` | Security warning boxes |
+| **Admin Panel BG** | `#F3F4F6` | Admin alert info panel |
+
+### Typography
+| Element | Font | Size | Weight | Color |
+|---------|------|------|--------|-------|
+| **Font Family** | `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif` | — | — | — |
+| **Email Heading** | Same | 24px | 700 | `#ffffff` |
+| **Body Text** | Same | 16px | 400 | `#334155` |
+| **Section Labels** | Same | 12px | 600 | `#64748b` (uppercase, 0.5px letter spacing) |
+| **Detail Labels** | Same | 13px | 400 | `#64748b` |
+| **Detail Values** | Same | 15px | 600 | `#1e293b` |
+| **Amount (Large)** | Same | 22px | 700 | Varies by context |
+| **MFA Code** | `'Courier New', monospace` | 40px | 800 | `#1e3a8a` (12px letter spacing) |
+| **Transaction ID** | `monospace` | 14px | 600 | `#1e293b` |
+| **Tracking Number** | `monospace` | 16px | 700 | `#1e3a8a` |
+| **Footer Text** | Same | 11-12px | 400 | `#94a3b8` |
+
+### Layout Structure (All Patient Emails)
+```
+┌──────────────────────────────────────────────┐
+│              Page Background (#f1f5f9)        │
+│  ┌────────────────────────────────────────┐  │
+│  │     HEADER (gradient background)       │  │
+│  │     Logo (60px height, centered)       │  │
+│  │     Heading (24px, white, bold)        │  │
+│  ├────────────────────────────────────────┤  │
+│  │     CONTENT AREA                       │  │
+│  │     Greeting ("Hi {name},")            │  │
+│  │     Message paragraph                  │  │
+│  │     ┌────────────────────────────────┐ │  │
+│  │     │  Details Card                  │ │  │
+│  │     │  (bordered, rounded, sections) │ │  │
+│  │     └────────────────────────────────┘ │  │
+│  │     [CTA Button] (if applicable)       │  │
+│  │     [Info/Security Box] (if applicable)│  │
+│  │     Progress Steps (vertical tracker)  │  │
+│  ├────────────────────────────────────────┤  │
+│  │     SUPPORT BOX                        │  │
+│  │     "Need Help?"                       │  │
+│  │     Phone + Hours + Email              │  │
+│  ├────────────────────────────────────────┤  │
+│  │     FOOTER (#f8fafc background)        │  │
+│  │     "Thank you for trusting AIM..."    │  │
+│  │     © Year AIM Medical Technologies    │  │
+│  └────────────────────────────────────────┘  │
+└──────────────────────────────────────────────┘
+
+Card: 600px wide, 12px border-radius, shadow: 0 4px 12px rgba(0,0,0,0.08)
+Padding: 40px horizontal, 36-40px vertical per section
+```
+
+### Layout Structure (Admin/Welcome Emails)
+```
+┌──────────────────────────────────────────────┐
+│  ┌────────────────────────────────────────┐  │
+│  │     HEADER (gradient background)       │  │
+│  │     Logo (80px height, centered)       │  │
+│  │     Heading (24px, white, bold)        │  │
+│  ├────────────────────────────────────────┤  │
+│  │     CONTENT AREA (#f9fafb bg)          │  │
+│  │     Greeting                           │  │
+│  │     Message paragraph                  │  │
+│  │     ┌────────────────────────────────┐ │  │
+│  │     │  Credentials Card              │ │  │
+│  │     │  (2px navy border)             │ │  │
+│  │     └────────────────────────────────┘ │  │
+│  │     [Info Callout Box]                 │  │
+│  │     [Security Warning Box]             │  │
+│  │     [CTA Button]                       │  │
+│  │     Sign-off                           │  │
+│  ├────────────────────────────────────────┤  │
+│  │     FOOTER                             │  │
+│  │     © Year AIM Medical Technologies    │  │
+│  └────────────────────────────────────────┘  │
+└──────────────────────────────────────────────┘
+
+Card: 600px, 10px border-radius on header, body with 1px #e5e7eb border
+Logo: 80px height (larger than patient emails)
+```
+
+### Header Gradients
+| Email Type | Gradient |
+|------------|----------|
+| **Payment Request** | `linear-gradient(135deg, #1E3A8A 0%, #00AEEF 100%)` |
+| **Payment Confirmed** | `linear-gradient(135deg, #10B981 0%, #059669 100%)` |
+| **Pharmacy Processing** | `linear-gradient(135deg, #1E3A8A 0%, #00AEEF 100%)` |
+| **Shipped** | `linear-gradient(135deg, #1E3A8A 0%, #00AEEF 100%)` |
+| **Delivered** | `linear-gradient(135deg, #10B981 0%, #059669 100%)` |
+| **Ready for Pickup** | `linear-gradient(135deg, #10B981 0%, #059669 100%)` |
+| **MFA Verification** | `linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)` |
+| **Welcome/Invite** | `linear-gradient(135deg, #1E3A8A 0%, #2563EB 50%, #00AEEF 100%)` |
+| **Admin Alert** | Solid `#1E3A8A` |
+
+### Progress Tracker Component
+Used in: Payment Request, Payment Confirmed, Status Update emails.
+
+Each step is a horizontal bar with:
+- **Left border**: 3px solid (green `#10B981` if done, gray `#E5E7EB` if not)
+- **Background**: `#f0fdf4` if current step, `#fafafa` if done, `#f9fafb` if pending
+- **Icon**: ✓ if done, ○ if not
+- **Text**: 14px, bold 700 if current, 600 otherwise. Green `#10B981` if done, gray `#9CA3AF` if not
+- **Current step marker**: " ← You are here" appended
+- **Spacing**: 8px margin-bottom between steps, 4px border-radius
+
+### CTA Buttons
+| Button | Style |
+|--------|-------|
+| **Patient Payment CTA** | `padding: 16px 52px`, `background: linear-gradient(135deg, #1E3A8A 0%, #00AEEF 100%)`, white text 17px bold, 8px radius, shadow `0 4px 12px rgba(30,58,138,0.3)` |
+| **Track Package** | `padding: 12px 28px`, same gradient, white text 14px 600 weight, 6px radius |
+| **Admin/Welcome Login CTA** | `padding: 12px 30px`, solid `#1E3A8A`, white text bold, 6px radius |
+
+---
+
+## Email Templates (10 Total)
+
+---
+
+### 1. Payment Request Email
+**File:** `app/api/payments/send-payment-email/route.ts`
+**Sent to:** Patient
+**Trigger:** Provider generates payment link for prescription
+**Subject:** `Action Needed: Complete Payment for Your {medication} Prescription`
+
+**Header:** Navy-to-cyan gradient, logo 60px, heading "Complete Your Prescription Payment"
+
+**Content Sections:**
+1. **Greeting:** "Hi {patientName},"
+2. **Message:** "Your prescription for **{medication}**, prescribed by **{providerName}**, is ready for payment..."
+3. **Details Card** ("Prescription Details"):
+   - Prescribing Clinician → navy bold
+   - Medication(s) → bullet list if multiple, with individual prices
+   - Total Amount Due → 22px bold cyan `#00AEEF`
+4. **CTA Button:** "Complete Secure Payment" (large gradient button)
+5. **Fallback link** in small text below button
+6. **Security Box** (light blue bg `#f0f9ff`, `#bae6fd` border): "Secure Payment: This link directs you to Authorize.Net..."
+7. **Progress Tracker** (5 steps):
+   - ✓ Prescription Received (done)
+   - ○ Payment Pending ← You are here (current, amber)
+   - ○ Pharmacy Processing (pending)
+   - ○ Shipped with Tracking (pending)
+   - ○ Delivered (pending)
+8. **Support Box:** "Need Help?" with phone, hours, email
+9. **Footer:** "This payment link expires in 7 days." + copyright
+
+**Also sends SMS** if patient phone is available and Twilio is configured.
+
+---
+
+### 2. Payment Confirmation Email
+**File:** `app/api/payments/send-confirmation-email/route.ts`
+**Sent to:** Patient
+**Trigger:** Payment successfully processed
+**Subject:** `Payment Confirmed: {medication} Prescription`
+
+**Header:** Green gradient (`#10B981 → #059669`), logo 60px, heading "Payment Confirmed"
+
+**Content Sections:**
+1. **Greeting + thank you message**
+2. **Details Card** ("Transaction Details"):
+   - Transaction ID → monospace
+   - Prescribing Clinician → navy bold
+   - Medication(s) → bullet list if multiple
+   - Fulfilling Pharmacy (if provided)
+   - Fulfillment Method → "Pharmacy Pickup" / "Local Delivery" / "Shipping with Tracking"
+   - Amount Paid → 22px bold green `#10B981`
+3. **"What Happens Next" Box** (light blue): Dynamic text based on delivery method:
+   - Pickup: "pharmacy will notify you when ready"
+   - Delivery: "pharmacy will deliver to your address"
+   - Shipping: "pharmacy will ship, you'll get tracking"
+4. **Progress Tracker** (5 steps):
+   - ✓ Prescription Received (done)
+   - ✓ Payment Confirmed ← You are here (current, green)
+   - ○ Pharmacy Processing (pending)
+   - ○ {Shipped/Ready for Pickup} (pending)
+   - ○ Delivered / Completed (pending)
+5. **Support Box**
+6. **Footer:** Thank you message + Transaction ID + copyright
+
+**Also sends SMS** confirmation.
+
+---
+
+### 3. Status Update Email (4 variants)
+**File:** `app/api/payments/send-status-email/route.ts`
+**Sent to:** Patient
+**Trigger:** Prescription status changes (webhook from DigitalRx or tracking updates)
+
+#### 3a. Pharmacy Processing
+**Subject:** `Prescription Update: {medication} Is Being Prepared`
+**Header:** Navy-to-cyan gradient, heading "Your Prescription Is Being Prepared"
+**Message:** "{pharmacy} has received your prescription for {medication}... and has begun preparing your order."
+**Next Steps:** "We will notify you as soon as your order ships with full tracking details."
+**Progress:** Steps 1-3 done, current = "Pharmacy Preparing Your Order"
+
+#### 3b. Shipped
+**Subject:** `Your {medication} Prescription Has Shipped!`
+**Header:** Navy-to-cyan gradient, heading "Your Prescription Has Shipped!"
+**Message:** "Great news! Your prescription... has been shipped by {pharmacy} and is on its way to you."
+**Next Steps:** Shows tracking number if available + "allow 3–5 business days"
+**Extra:** Tracking number box (blue bg `#eff6ff`) with "Track Package" button linking to tracking URL
+**Progress:** Steps 1-4 done, current = "Shipped with Tracking"
+
+#### 3c. Delivered
+**Subject:** `Delivery Confirmed: {medication} Prescription`
+**Header:** Green gradient, heading "Your Prescription Has Been Delivered!"
+**Message:** "...has been successfully delivered. Please check your delivery location."
+**Next Steps:** Contact info for questions, refills, or if package not found
+**Progress:** All 5 steps done, current = "Delivered"
+
+#### 3d. Ready for Pickup
+**Subject:** `Your {medication} Prescription Is Ready for Pickup`
+**Header:** Green gradient, heading "Your Prescription Is Ready for Pickup!"
+**Message:** "...is ready to be picked up at {pharmacy}."
+**Next Steps:** "Bring valid photo ID" + pharmacy address and phone
+**Progress:** 4 steps (no shipped step), current = "Ready for Pickup"
+
+**All variants include:**
+- Prescription Details card (Clinician + Medication)
+- Pharmacy Contact section (if pharmacy info provided): name, phone, address
+- "What Happens Next" info box
+- Progress Tracker
+- Support Box + Footer
+
+**Also sends SMS** for each status type.
+
+---
+
+### 4. MFA Email Verification Code
+**File:** `core/services/mfa/mfaService.ts`
+**Sent to:** User (any role)
+**Trigger:** User chooses email MFA at login
+**Subject:** `Your Verification Code`
+
+**Header:** Navy-to-blue gradient (`#1e3a8a → #2563eb`), logo 60px, heading "Verification Code", subtext "Secure login to AIM RX Portal"
+
+**Content Sections:**
+1. **Instruction:** "Enter the following code to complete your login:"
+2. **Code Box:** Large centered code display
+   - Background: gradient `#f0f9ff → #e0f2fe`
+   - Border: 2px solid `#bae6fd`, 12px radius
+   - Code: 40px, 800 weight, monospace, navy `#1e3a8a`, 12px letter spacing
+3. **Expiry Warning** (amber left-border box): "This code expires in 10 minutes. Do not share this code with anyone."
+4. **Ignore notice:** "If you didn't request this code, you can safely ignore this email."
+5. **Security Notice Box:** "AIM RX will never ask for your verification code via phone or text."
+6. **Footer:** Thank you + copyright
+
+**MFA Settings:**
+- Code: 6 digits (random 100000-999999)
+- Expires: 10 minutes
+- Max attempts: 5
+- Lockout: 15 minutes after 5 failures
+
+---
+
+### 5. Provider Welcome/Invite Email
+**File:** `app/api/admin/invite-doctor/route.ts`
+**Sent to:** New provider
+**Trigger:** Admin creates a provider account
+**Subject:** `Welcome to AIM RX Portal - Your Provider Account`
+
+**Header:** 3-color gradient (`#1E3A8A → #2563EB → #00AEEF`), logo **80px**, heading "Welcome to AIM RX Portal"
+
+**Content Sections:**
+1. **Greeting:** "Hello Dr. {lastName},"
+2. **Message:** "Your provider account has been successfully created!"
+3. **Credentials Card** (white bg, 2px navy border, 8px radius):
+   - Portal URL → cyan link
+   - Username (Email) → plain
+   - Temporary Password → `<code>` styled (gray bg `#f3f4f6`)
+4. **Next Steps Callout** (blue bg `#DBEAFE`, left border `#2563EB`):
+   - Numbered list: Log in → Settings/Profile → NPI/license → Addresses → Change password
+5. **Security Warning** (amber bg `#FEF3C7`, left border `#F59E0B`):
+   - "This is a temporary password. Change it immediately..."
+6. **Activation Notice** (light blue bg `#E0F2FE`, left border `#0284C7`):
+   - "Our team will review your NPI and credentials..."
+7. **CTA Button:** "Log In to Portal" (solid navy)
+8. **Support link** + sign-off "Best regards, AIM RX Portal Team"
+9. **Footer:** copyright
+
+---
+
+### 6. Pharmacy Admin Welcome Email
+**File:** `app/api/admin/pharmacy-admins/route.ts`
+**Sent to:** New pharmacy admin
+**Trigger:** Admin creates a pharmacy admin account
+**Subject:** `Welcome to AIM RX Portal - Pharmacy Admin Account Created`
+
+**Same layout as Provider Welcome, but:**
+- Greeting: "Hello {fullName},"
+- Message: "Your pharmacy administrator account has been successfully created for **{pharmacyName}**!"
+- Credentials Card includes **Pharmacy** name field
+- No "Next Steps" numbered list
+- Security Warning only (no activation notice)
+- CTA: "Log In to Portal"
+
+---
+
+### 7. Super Admin Welcome Email
+**File:** `app/api/admin/super-admins/route.ts`
+**Sent to:** New super admin
+**Trigger:** Admin creates a super admin account
+**Subject:** `Welcome to AIM RX Portal - Super Admin Account Created`
+
+**Same layout, but:**
+- Message: "Your **Platform Super Admin** account has been created! You now have full access to manage {pharmacyNames}, providers, medications, and platform settings."
+- **Access Level Callout** (blue): "Platform Super Admin — you can manage all pharmacies, invite providers, view all prescriptions..."
+- Security Warning
+- CTA: "Log In to Portal"
+
+---
+
+### 8. Access Request Confirmation (to Applicant)
+**File:** `app/api/access-requests/route.ts` → `sendConfirmationEmailToApplicant()`
+**Sent to:** Doctor or pharmacy that submitted an access request
+**Trigger:** Access request form submission
+**Subject:** `Thank you for your interest in AIM Medical Marketplace`
+
+**Header:** 3-color gradient, logo 80px, heading "Request Received"
+
+**Content:**
+1. **Greeting:** "Hello {firstName},"
+2. **Thank you message**
+3. **"What's next?" Callout** (blue): "Our team is currently reviewing your application..."
+4. **Timeline:** "expect to receive an update within **24 to 48 hours**"
+5. **Sign-off:** "Best regards, AIM RX Portal Team"
+6. **Footer:** copyright
+
+---
+
+### 9. Access Request Notification (to Admin) — Provider
+**File:** `app/api/access-requests/route.ts`
+**Sent to:** `support@aimrx.com`
+**Trigger:** Doctor submits access request
+**Subject:** `New Provider Access Request - {firstName} {lastName}`
+
+**Header:** 3-color gradient, logo 80px, heading "New Provider Access Request"
+
+**Content:** Multiple detail cards (white bg, 2px navy border):
+1. **Personal Information:** Name, Email, Phone, Company Name
+2. **Medical Credentials:** NPI Number, Medical License, License State, Specialty
+3. **Practice Information:** Address, Years in Practice
+4. **Additional Information:** Patients/month, Interested In, How heard about us, Additional info
+5. **Action Required Callout** (blue): "Please review this application and set up the provider account if approved."
+
+---
+
+### 10. Access Request Notification (to Admin) — Pharmacy
+**File:** `app/api/access-requests/route.ts`
+**Sent to:** `support@aimrx.com`
+**Trigger:** Pharmacy submits access request
+**Subject:** `New Pharmacy Network Application - {pharmacyName}`
+
+**Header:** 3-color gradient, logo 80px, heading "New Pharmacy Network Application"
+
+**Content:** Multiple detail cards:
+1. **Pharmacy Information:** Name, Owner/Director, Email, Phone
+2. **Licensing & Credentials:** License Number, State, DEA Number, NCPDP, Accreditations
+3. **Location Information:** Full address
+4. **Compounding Capabilities:** Years in business, Experience, Monthly capacity, Specializations
+5. **System & Integration:** Current system, Version, Preferred integration type
+6. **Additional Information:** How heard, additional info
+7. **Action Required Callout**
+
+---
+
+### 11. Admin Alert Emails
+**File:** `core/services/admin-alerts.ts`
+**Sent to:** Admin alert email (env: `ADMIN_ALERT_EMAIL`, default: `joseph@smartconnects.com`)
+**From Name:** `AIM Rx Alerts`
+
+**Layout:** Simpler design than patient emails
+- **Header:** Solid navy `#1E3A8A`, logo 40px (smaller)
+- **Severity Badge:** Inline block, white text, rounded:
+  - WARNING: amber `#F59E0B`
+  - CRITICAL: red `#DC2626`
+- **Subject prefix:** `[AIM Rx WARNING]` or `[AIM Rx CRITICAL]`
+- **Headline:** Navy `#1E3A8A`, 18px
+- **Info Panel** (gray bg `#F3F4F6`): Patient, Medication, Queue ID, Prescription ID
+- **Details:** Bulleted list, 14px, `#374151`
+- **Footer link:** "Log in to app.aimrx.com to take action."
+
+**Alert Types:**
+1. **Unknown DigitalRx Status:** Unrecognized status from pharmacy API
+2. **Stuck Order:** Prescription submitted but no progress for X hours (warning at <72h, critical at ≥72h)
+3. **Bad Tracking Number:** EasyPost couldn't identify carrier for tracking number
+
+---
+
+## Email Deduplication System
+
+All patient-facing emails use a dedup guard (`checkEmailDedup`) to prevent duplicate sends:
+- **Payment Request:** 30-minute window
+- **Payment Confirmation:** 30-minute window
+- **Status Updates:** 60-minute window
+
+If the same email type + dedup key was sent within the window, the send is silently skipped.
+
+---
+
+## SMS Notifications (Parallel to Emails)
+
+When Twilio is configured (`TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`), SMS messages are also sent alongside emails for:
+1. **Payment Request** → Payment link + amount
+2. **Payment Confirmation** → Amount + transaction ID
+3. **Pharmacy Processing** → Status update
+4. **Shipped** → Status + tracking number
+5. **Delivered** → Delivery confirmation
+6. **Ready for Pickup** → Pickup notification
+
+All SMS include: "Reply STOP to opt out."
+
+---
+
+## Environment Variables Required
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `SENDGRID_API_KEY` | SendGrid API key | (required) |
+| `SENDGRID_FROM_EMAIL` | Sender email address | `support@aimrx.com` |
+| `SENDGRID_FROM_NAME` | Sender display name | `AIM RX Portal` |
+| `INTERNAL_API_KEY` | API key for internal email triggers | (required for payment emails) |
+| `ADMIN_ALERT_EMAIL` | Admin alert recipient | `joseph@smartconnects.com` |
+| `TWILIO_ACCOUNT_SID` | Twilio account (for SMS) | (optional) |
+| `TWILIO_AUTH_TOKEN` | Twilio auth (for SMS) | (optional) |
+| `TWILIO_PHONE_NUMBER` | Twilio sender number | (optional) |

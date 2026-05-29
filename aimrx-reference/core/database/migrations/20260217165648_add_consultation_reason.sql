@@ -1,0 +1,1 @@
+ALTER TABLE "prescriptions" ADD COLUMN "consultation_reason" text;

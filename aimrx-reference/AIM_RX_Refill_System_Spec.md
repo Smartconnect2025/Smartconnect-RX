@@ -1,0 +1,829 @@
+# AIM Rx — Refill System Spec
+
+> Complete documentation of the automated refill lifecycle as currently implemented.
+> Covers: database schema, cron automation, provider UI (Refills page), admin monitoring (Refill Engine), and all supporting API routes.
+
+---
+
+## Table of Contents
+
+1. [System Overview](#1-system-overview)
+2. [Database Schema](#2-database-schema)
+3. [Refill Lifecycle — End to End](#3-refill-lifecycle--end-to-end)
+4. [Step 1 — Provider Creates Original Prescription](#4-step-1--provider-creates-original-prescription)
+5. [Step 2 — Pharmacy Submission Sets the Clock](#5-step-2--pharmacy-submission-sets-the-clock)
+6. [Step 3 — Cron Job: `refill-check`](#6-step-3--cron-job-refill-check)
+7. [Step 4 — Patient Pays & Refill Goes to Pharmacy](#7-step-4--patient-pays--refill-goes-to-pharmacy)
+8. [Provider Refills Page (`/refills`)](#8-provider-refills-page-refills)
+9. [Provider Actions — Skip & Cancel](#9-provider-actions--skip--cancel)
+10. [Admin Refill Engine Page (`/admin/refill-engine`)](#10-admin-refill-engine-page-adminrefill-engine)
+11. [Cron Infrastructure](#11-cron-infrastructure)
+12. [Safety Mechanisms](#12-safety-mechanisms)
+13. [File Reference](#13-file-reference)
+14. [Flow Diagram](#14-flow-diagram)
+
+---
+
+## 1. System Overview
+
+The refill system automates recurring prescriptions. A provider sets a refill count and frequency when writing the original prescription. Once that prescription is submitted to the pharmacy, a timer starts. A daily cron job checks for prescriptions whose timer has elapsed, creates a new `refill` prescription row, generates a PDF, and emails the patient a payment link. After the patient pays, the refill is submitted to the pharmacy just like any original prescription.
+
+**Key principle:** Refills reuse the same `prescriptions` table — distinguished by `prescription_type = 'refill'` and linked to the original via `parent_prescription_id`.
+
+---
+
+## 2. Database Schema
+
+All refill data lives in the `prescriptions` table (`core/database/schema/prescriptions.ts`).
+
+### 2.1 Prescription Type Enum
+
+```sql
+CREATE TYPE prescription_type AS ENUM ('prescription', 'refill');
+```
+
+| Value          | Meaning                        |
+|----------------|--------------------------------|
+| `prescription` | Original prescription (parent) |
+| `refill`       | Auto-generated refill (child)  |
+
+### 2.2 Refill-Specific Columns
+
+| Column                    | Type                          | Default        | Description                                                                                  |
+|---------------------------|-------------------------------|----------------|----------------------------------------------------------------------------------------------|
+| `prescription_type`       | `prescription_type` (enum)    | `'prescription'` | Distinguishes originals from refills                                                         |
+| `parent_prescription_id`  | `uuid` (nullable)             | `null`         | Self-referencing FK — links a refill row back to the original prescription it was created from |
+| `refills`                 | `integer`                     | `0`            | Total number of refills authorized by the provider (e.g. `3` means 3 refills after the original) |
+| `refill_frequency_days`   | `integer` (nullable)          | `null`         | Days between each refill cycle (e.g. `30` = monthly, `90` = quarterly)                       |
+| `next_refill_date`        | `timestamp with time zone`    | `null`         | When the next refill is due — set after first pharmacy submission, updated by cron each cycle |
+| `total_refills_to_date`   | `integer`                     | `0`            | How many refills have been created so far — incremented by cron each cycle                    |
+
+### 2.3 Columns Copied to Refill Rows
+
+When the cron job creates a refill, it copies these columns from the parent:
+
+| Column               | Notes                                              |
+|----------------------|----------------------------------------------------|
+| `medication`         | Drug name                                          |
+| `dosage`             | Strength string (e.g. "10mg")                      |
+| `dosage_amount`      | Numeric part (e.g. "10")                           |
+| `dosage_unit`        | Unit part (e.g. "mg")                              |
+| `vial_size`          | e.g. "5mL"                                         |
+| `form`               | e.g. "Injectable", "Tablet"                        |
+| `quantity`           | Number of units                                    |
+| `refills`            | Total authorized (copied for reference)            |
+| `sig`                | Patient instructions                               |
+| `dispense_as_written`| DAW flag                                           |
+| `pharmacy_notes`     | Special instructions                               |
+| `patient_price`      | Medication cost                                    |
+| `pharmacy_id`        | Which pharmacy to use                              |
+| `medication_id`      | FK to medication catalog                           |
+| `profit_cents`       | Provider consultation fee                          |
+| `consultation_reason`| Why the fee was charged                            |
+| `shipping_fee_cents` | Shipping cost                                      |
+| `total_paid_cents`   | Expected total (copied from parent)                |
+| `has_custom_address` | Whether patient has a custom shipping address      |
+| `custom_address`     | The custom address JSON                            |
+| `backend_id`         | Which pharmacy backend to use                      |
+| `prescriber_id`      | Provider who wrote the original                    |
+| `patient_id`         | Patient FK                                         |
+| `encounter_id`       | Original encounter context                         |
+| `appointment_id`     | Original appointment context                       |
+
+### 2.4 Columns Set Fresh on Refill Rows
+
+| Column              | Value Set                    | Why                                        |
+|---------------------|------------------------------|--------------------------------------------|
+| `prescription_type` | `'refill'`                   | Marks it as a refill                       |
+| `parent_prescription_id` | Parent's `id`           | Links back to original                     |
+| `queue_id`          | `null`                       | Not yet submitted to pharmacy              |
+| `status`            | `'pending_payment'`          | Awaiting patient payment                   |
+| `payment_status`    | `'pending'`                  | No payment yet                             |
+| `pdf_storage_path`  | `null` (set after PDF gen)   | Filled in after PDF upload                 |
+| `pdf_document_id`   | `null`                       | Filled in after PDF upload                 |
+
+---
+
+## 3. Refill Lifecycle — End to End
+
+```
+Provider writes Rx             Patient pays              Cron creates refill
+with refills=3,         →  Rx submitted to pharmacy  →  (next cycle)  →  Patient gets
+frequency=30 days              ↓                                          payment email
+                         next_refill_date = now+30d                        ↓
+                                                                      Patient pays
+                                                                           ↓
+                                                                      Refill submitted
+                                                                      to pharmacy
+                                                                           ↓
+                                                                      Repeat until
+                                                                      refills exhausted
+```
+
+**Lifecycle states for the parent prescription's refill columns:**
+
+| Event                      | `total_refills_to_date` | `next_refill_date`            | `refills` |
+|----------------------------|------------------------|-------------------------------|-----------|
+| Prescription created       | `0`                    | `null`                        | `3`       |
+| Submitted to pharmacy      | `0`                    | `now + 30 days`               | `3`       |
+| Cron fires refill #1       | `1`                    | `previous + 30 days`          | `3`       |
+| Cron fires refill #2       | `2`                    | `previous + 30 days`          | `3`       |
+| Cron fires refill #3 (last)| `3`                    | `null` (no more refills)      | `3`       |
+
+---
+
+## 4. Step 1 — Provider Creates Original Prescription
+
+**File:** `app/api/prescriptions/submit/route.ts`
+
+When a provider creates a prescription through the wizard, the submit route saves:
+
+```typescript
+{
+  refills: body.refills,                    // e.g. 3
+  refill_frequency_days:
+    (body.refills > 0 && body.refill_frequency_days > 0)
+      ? body.refill_frequency_days          // e.g. 30
+      : null,
+  next_refill_date: null,                   // NOT set yet — only set after pharmacy submission
+}
+```
+
+**Key point:** `next_refill_date` is intentionally `null` at creation. The refill clock does NOT start until the prescription is actually submitted to the pharmacy and the patient has paid. This prevents the timer from running on prescriptions that were created but never fulfilled.
+
+---
+
+## 5. Step 2 — Pharmacy Submission Sets the Clock
+
+**File:** `app/api/prescriptions/[id]/submit-to-pharmacy/route.ts` (lines 479-496)
+
+After a prescription is successfully submitted to DigitalRx and a `QueueID` is returned, the route calculates and sets `next_refill_date`:
+
+```typescript
+const nextRefillDate =
+  prescription.refill_frequency_days && prescription.refills > 0
+    ? new Date(Date.now() + prescription.refill_frequency_days * 86400000).toISOString()
+    : null;
+
+await supabaseAdmin.from("prescriptions").update({
+  queue_id: queueId,
+  status: "submitted",
+  rx_number: rxNumber,
+  submitted_to_pharmacy_at: submittedAt,
+  ...(nextRefillDate ? { next_refill_date: nextRefillDate } : {}),
+}).eq("id", prescriptionId);
+```
+
+**Example:** If `refill_frequency_days = 30` and submitted on April 6, then `next_refill_date = May 6`.
+
+This is the moment the refill clock starts ticking.
+
+---
+
+## 6. Step 3 — Cron Job: `refill-check`
+
+**File:** `core/cron/jobs/refill-check.ts` (274 lines)
+
+### 6.1 Schedule
+
+Runs daily at **06:00 UTC** (production only).
+
+```typescript
+// core/cron/index.ts
+cron.schedule("0 6 * * *", () => checkRefills(), { timezone: "UTC" });
+```
+
+Only runs when `NODE_ENV === "production"` or `process.env.RENDER` is set.
+
+### 6.2 Query — Find Eligible Prescriptions
+
+```typescript
+const { data } = await supabase
+  .from("prescriptions")
+  .select("*")
+  .lte("next_refill_date", now)           // Due date has passed
+  .eq("prescription_type", "prescription") // Only parent prescriptions
+  .not("next_refill_date", "is", null);    // Has a scheduled date
+```
+
+Then filters client-side:
+
+```typescript
+const eligible = data.filter(
+  (rx) => (rx.total_refills_to_date ?? 0) < (rx.refills ?? 0)
+);
+```
+
+This ensures we only process prescriptions that still have remaining refills.
+
+### 6.3 Duplicate Guard
+
+Before processing each prescription, the cron checks if there's already an active refill in progress:
+
+```typescript
+const { data: existingRefills } = await supabase
+  .from("prescriptions")
+  .select("id, status")
+  .eq("parent_prescription_id", rx.id)
+  .eq("prescription_type", "refill")
+  .in("status", ["pending_payment", "pending", "submitted", "processing"]);
+
+if (existingRefills && existingRefills.length > 0) {
+  console.log(`Skipping — active refill already exists`);
+  continue;
+}
+```
+
+This prevents creating a second refill when the previous one hasn't been completed yet (patient hasn't paid, or pharmacy is still processing).
+
+### 6.4 Optimistic Locking — Update Parent
+
+```typescript
+const { data: updatedRows } = await supabase
+  .from("prescriptions")
+  .update({
+    total_refills_to_date: newTotalRefills,
+    next_refill_date: newRefillDate,         // null if last refill
+  })
+  .eq("id", rx.id)
+  .eq("total_refills_to_date", rx.total_refills_to_date ?? 0)  // <-- LOCK
+  .select("id");
+```
+
+The `.eq("total_refills_to_date", currentValue)` acts as an optimistic lock. If another cron instance already incremented the counter, this update returns 0 rows and the refill is skipped. This prevents double-processing.
+
+**Next refill date calculation:**
+
+```typescript
+const isLastRefill = newTotalRefills >= (rx.refills ?? 0);
+const newRefillDate = isLastRefill
+  ? null                                    // No more refills
+  : new Date(
+      new Date(rx.next_refill_date).getTime() +
+        (rx.refill_frequency_days ?? 0) * 86400000
+    ).toISOString();
+```
+
+### 6.5 Insert Refill Row
+
+Creates a new `prescriptions` row with `prescription_type = 'refill'`:
+
+```typescript
+const { data: refill } = await supabase
+  .from("prescriptions")
+  .insert({
+    prescription_type: "refill",
+    parent_prescription_id: rx.id,
+    status: "pending_payment",
+    payment_status: "pending",
+    queue_id: null,
+    pdf_storage_path: null,
+    pdf_document_id: null,
+    // ... all medication/patient/pharmacy fields copied from parent
+  })
+  .select("id")
+  .single();
+```
+
+### 6.6 Rollback on Insert Failure
+
+If the insert fails, the parent's counters are rolled back:
+
+```typescript
+if (insertError) {
+  await supabase
+    .from("prescriptions")
+    .update({
+      total_refills_to_date: rx.total_refills_to_date ?? 0,  // Restore original
+      next_refill_date: rx.next_refill_date,                  // Restore original
+    })
+    .eq("id", rx.id)
+    .eq("total_refills_to_date", newTotalRefills);
+}
+```
+
+### 6.7 PDF Generation
+
+After inserting the refill row, the cron:
+
+1. Fetches the patient record (name, DOB, address, phone, gender)
+2. Fetches the provider record (name, NPI, address, phone, signature URL)
+3. Calls `generatePrescriptionPdf()` with all data
+4. Uploads the PDF via `uploadPrescriptionPdf()` to the `patient-files` bucket
+5. Tracks success/failure in the cron run details
+
+```typescript
+const { blob, filename } = await generatePrescriptionPdf({
+  patient: { firstName, lastName, dob, sex, street, city, state, zip, phone },
+  doctor:  { firstName, lastName, npi, street, city, state, zip, phone },
+  rx:      { drugName, qty, dateWritten, refills, instructions, notes, daw },
+  signatureUrl: provider?.signature_url,
+});
+```
+
+### 6.8 Payment Link Generation
+
+After PDF is created (whether or not PDF succeeded), the cron fires a payment link request:
+
+```typescript
+fetch(`${appUrl}/api/payments/generate-link`, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
+  },
+  body: JSON.stringify({
+    prescriptionId: refill.id,
+    consultationFeeCents: rx.profit_cents || 0,
+    medicationCostCents: Math.round(parseFloat(rx.patient_price || "0") * 100),
+    shippingFeeCents: rx.shipping_fee_cents || 0,
+    sendEmail: true,                    // <-- Emails the patient automatically
+  }),
+});
+```
+
+**Important:** This is a fire-and-forget call (not awaited). The `sendEmail: true` flag tells the payment link route to immediately email the patient with their payment link.
+
+### 6.9 Logging
+
+Each cron run is tracked via `logCronRun("refill-check")` which writes to the `cron_job_runs` table:
+
+- `run.trackSuccess({ rxId, refillId })` — records each successful refill
+- `run.trackFailure({ rxId, step, error })` — records each failure with the step that failed
+- `run.success(count)` — marks the run as complete with total count
+- `run.error(message)` — marks the run as failed with error message
+
+Step labels used in failure tracking:
+| Step Label          | Meaning                                    |
+|--------------------|--------------------------------------------|
+| `update_parent`    | Failed to update parent's counters         |
+| `insert`           | Failed to insert the refill row            |
+| `pdf_patient_fetch`| Failed to fetch patient data for PDF       |
+| `pdf_upload`       | PDF generated but upload failed            |
+| `pdf_generation`   | PDF generation threw an error              |
+
+---
+
+## 7. Step 4 — Patient Pays & Refill Goes to Pharmacy
+
+After the cron creates the refill and emails the patient:
+
+1. Patient clicks payment link in email
+2. Payment page shows the refill details and amount
+3. Patient pays via Authorize.Net
+4. Payment webhook updates `payment_status` to `'paid'` and `order_progress` to `'payment_received'`
+5. Provider sees the refill on the Refills page with status `pending_payment` → then `submitted` after pharmacy submission
+6. Provider (or auto-submit logic) submits the refill to the pharmacy via the same `submit-to-pharmacy` route
+7. Refill follows the same DigitalRx lifecycle: submitted → billing → approved → processing → shipped → delivered
+
+---
+
+## 8. Provider Refills Page (`/refills`)
+
+**File:** `app/(features)/refills/page.tsx` (1061 lines)
+
+### 8.1 Layout
+
+- **Route:** `/refills`
+- **Auth:** Provider only (queries by `prescriber_id = user.id`)
+- **Layout:** `DefaultLayout` wrapper
+- **Search bar** at top — filters by patient name, medication, or Rx ref (last 4 chars of parent ID)
+- **"View Prescriptions" button** — links to `/prescriptions`
+- **Two tabs:** "In Progress" and "Scheduled"
+
+### 8.2 Tab: In Progress
+
+Shows all refill prescriptions (`prescription_type = 'refill'`) for the current provider.
+
+**Query:**
+
+```typescript
+supabase.from("prescriptions")
+  .select(`
+    id, queue_id, submitted_at, medication, dosage, ...,
+    parent_prescription_id,
+    patient:patients(first_name, last_name, date_of_birth, email),
+    pharmacy:pharmacies(name, primary_color)
+  `)
+  .eq("prescriber_id", user.id)
+  .eq("prescription_type", "refill")
+  .order("submitted_at", { ascending: false });
+```
+
+**Exclusion:** Delivered refills are filtered out client-side (`status !== 'delivered'`).
+
+**Table columns:**
+
+| Column                      | Source                                          |
+|-----------------------------|-------------------------------------------------|
+| Rx Ref                      | Last 4 chars of `parent_prescription_id` (uppercase) |
+| Date & Time                 | `submitted_at` formatted                        |
+| Patient Name                | From joined `patients` table                    |
+| Refill #                    | Calculated position among siblings (see below)  |
+| Medication + Strength/Dosage| `medication` + `dosage`                         |
+| Pharmacy                    | From joined `pharmacies` table (colored)        |
+| Status                      | Badge with color-coded status                   |
+| Actions                     | "View" button → opens detail modal              |
+
+**Refill number calculation:**
+
+```typescript
+// 1. Collect all refill IDs grouped by parent_prescription_id
+// 2. Sort by submitted_at ascending
+// 3. Index position + 1 = refill number
+const sorted = [...data].sort((a, b) =>
+  new Date(a.submitted_at).getTime() - new Date(b.submitted_at).getTime()
+);
+for (const rx of sorted) {
+  if (rx.parent_prescription_id) {
+    parentRefillCounts[rx.parent_prescription_id].push(rx.id);
+  }
+}
+// For each refill:
+refillNumber = parentRefillCounts[parentId].indexOf(rx.id) + 1;
+```
+
+This produces "Refill 1", "Refill 2", "Refill 3" labels.
+
+**Status colors:**
+
+| Status      | Badge Colors                                |
+|-------------|---------------------------------------------|
+| Submitted   | Blue bg, blue text, blue border             |
+| Billing     | Yellow bg, yellow text, yellow border       |
+| Approved    | Green bg, green text, green border          |
+| Processing  | Purple bg, purple text, purple border       |
+| Shipped     | Indigo bg, indigo text, indigo border       |
+| Delivered   | Emerald bg, emerald text, emerald border    |
+| Default     | Gray bg, gray text, gray border             |
+
+**DigitalRx status polling:**
+
+Every 30 seconds, the page calls `POST /api/prescriptions/status-batch` with the user's ID to fetch real-time status updates from DigitalRx. The response maps DigitalRx fields to display statuses:
+
+```typescript
+if (statusData.DeliveredDate)  → "Delivered"  + tracking
+if (statusData.PickupDate)     → "Shipped"    + tracking
+if (statusData.ApprovedDate)   → "Approved"
+if (statusData.PackDateTime)   → "Processing"
+if (statusData.BillingStatus)  → "Billing"
+else                           → "Submitted"
+```
+
+**Detail modal:** Clicking "View" fetches fresh data from Supabase and opens the shared `PrescriptionModals` component (same as the prescriptions page, with `hideEdit` prop set to prevent editing refills).
+
+**Submit to pharmacy:** The detail modal includes a "Submit to Pharmacy" action that calls `POST /api/prescriptions/{id}/submit-to-pharmacy`.
+
+### 8.3 Tab: Scheduled
+
+Shows original prescriptions (`prescription_type = 'prescription'`) that have a future `next_refill_date` and remaining refills.
+
+**Query:**
+
+```typescript
+supabase.from("prescriptions")
+  .select(`
+    id, medication, dosage, next_refill_date, total_refills_to_date, refills,
+    patient:patients(first_name, last_name),
+    pharmacy:pharmacies(name, primary_color)
+  `)
+  .eq("prescriber_id", user.id)
+  .eq("prescription_type", "prescription")
+  .not("next_refill_date", "is", null)
+  .gte("next_refill_date", new Date().toISOString())    // Future dates only
+  .order("next_refill_date", { ascending: true });       // Soonest first
+```
+
+**Client-side filter:** Only shows rows where `total_refills_to_date < refills` (still has remaining refills).
+
+**Table columns:**
+
+| Column                      | Source                                           |
+|-----------------------------|--------------------------------------------------|
+| Rx Ref                      | Last 4 chars of prescription `id` (uppercase)    |
+| Patient Name                | From joined `patients` table                     |
+| Medication + Strength/Dosage| `medication` + `dosage`                          |
+| Next Refill                 | Badge: "Today" (red) or "Tomorrow" (amber)       |
+| Refills Used                | Badge: `{total_refills_to_date} of {refills}`    |
+| Pharmacy                    | From joined `pharmacies` table (colored)         |
+| Actions                     | "Manage" button → opens action modal             |
+
+**Date badges:** The "Next Refill" column shows:
+- **"Today"** (red badge) — if the refill date matches today's date
+- **"Tomorrow"** (amber badge) — for all other future dates (note: the label says "Tomorrow" for any future date, even if it's next week)
+
+### 8.4 Real-Time Updates
+
+The page subscribes to Supabase Realtime for live updates:
+
+```typescript
+supabase.channel("refills-changes")
+  .on("postgres_changes", {
+    event: "*",
+    schema: "public",
+    table: "prescriptions",
+    filter: `prescriber_id=eq.${user.id}`,
+  }, () => {
+    loadRefills();
+    loadScheduledRefills();
+  })
+  .subscribe();
+```
+
+Any insert, update, or delete on the prescriptions table for this provider triggers a refresh of both tabs.
+
+---
+
+## 9. Provider Actions — Skip & Cancel
+
+The Scheduled tab's "Manage" button opens a modal with two actions:
+
+### 9.1 Skip This Refill
+
+**What it does:** Advances `next_refill_date` by one frequency period. Does NOT change the refill count.
+
+```typescript
+const handleSkipRefill = async (rx) => {
+  // Fetch current parent data
+  const { data: parent } = await supabase
+    .from("prescriptions")
+    .select("id, next_refill_date, refill_frequency_days, prescription_type")
+    .eq("id", rx.id)
+    .eq("prescription_type", "prescription")
+    .single();
+
+  // Calculate new date: current + frequency
+  const currentDate = new Date(parent.next_refill_date);
+  const newDate = new Date(
+    currentDate.getTime() + (parent.refill_frequency_days ?? 0) * 86400000
+  ).toISOString();
+
+  // Update
+  await supabase.from("prescriptions")
+    .update({ next_refill_date: newDate })
+    .eq("id", parent.id);
+};
+```
+
+**Example:** If next refill is May 6 with 30-day frequency, after skip it becomes June 5. The patient still has the same number of remaining refills — only the timing shifts.
+
+**UI feedback:** Toast: "Refill skipped — next refill moved forward"
+
+### 9.2 Cancel All Future Refills
+
+**What it does:** Sets `refills = total_refills_to_date` (so remaining = 0) and clears `next_refill_date`.
+
+```typescript
+const handleCancelAllRefills = async (rx) => {
+  const { data: parent } = await supabase
+    .from("prescriptions")
+    .select("id, total_refills_to_date, prescription_type")
+    .eq("id", rx.id)
+    .eq("prescription_type", "prescription")
+    .single();
+
+  await supabase.from("prescriptions")
+    .update({
+      refills: parent.total_refills_to_date ?? 0,  // No remaining
+      next_refill_date: null,                       // Remove from schedule
+    })
+    .eq("id", parent.id);
+};
+```
+
+**Effect:** The prescription disappears from the Scheduled tab. The cron will never pick it up again because `total_refills_to_date >= refills`.
+
+**UI feedback:** Toast: "All future refills have been cancelled"
+
+**Important:** This is described as permanent ("This cannot be undone") in the modal. To re-enable refills, someone would need to manually update the database.
+
+---
+
+## 10. Admin Refill Engine Page (`/admin/refill-engine`)
+
+**File:** `app/(features)/admin/refill-engine/page.tsx` (367 lines)
+
+### 10.1 Purpose
+
+Admin-only monitoring dashboard for the `refill-check` cron job. Shows execution history, success rates, and per-run details.
+
+### 10.2 Data Source
+
+Reads from the `cron_job_runs` table:
+
+```typescript
+supabase.from("cron_job_runs")
+  .select("*")
+  .eq("job_name", "refill-check")
+  .order("started_at", { ascending: false })
+  .limit(50);
+```
+
+### 10.3 Summary Cards (Top Row)
+
+| Card            | Value                                              |
+|-----------------|----------------------------------------------------|
+| Total Runs      | Count of last 50 executions                        |
+| Success Rate    | `(successRuns / totalRuns) * 100`%                 |
+| Total Processed | Sum of `records_processed` across all runs         |
+| Last Run        | Time-ago string + duration of most recent run      |
+
+### 10.4 Execution History (Accordion List)
+
+Each run shows:
+
+**Collapsed view:**
+- Status icon (green check / yellow warning / red X / blue spinner)
+- Date/time of execution
+- Status badge (`Success` / `Partial` / `Error` / `Running`)
+- Records processed count
+- Duration (e.g. "1.2s")
+- Failed count badge (if any)
+
+**Expanded view:**
+- **Error message** (if the run had a global error) — red box with the message
+- **Successful items** — green box with list of `rxId → refillId` pairs (truncated to 8 chars)
+- **Failed items** — red boxes with `rxId`, step label, and error message for each failure
+
+### 10.5 Status Types
+
+| Status    | Meaning                                          |
+|-----------|--------------------------------------------------|
+| `success` | All eligible prescriptions processed successfully |
+| `partial` | Some succeeded, some failed                      |
+| `error`   | Fatal error — cron job crashed                   |
+| `running` | Currently executing (shouldn't persist)          |
+
+### 10.6 CronJobRun Schema
+
+```typescript
+interface CronJobRun {
+  id: string;
+  job_name: string;          // "refill-check"
+  status: string;            // "success" | "partial" | "error" | "running"
+  error_message: string | null;
+  records_processed: number;
+  details: {
+    processed: Array<{ rxId: string; refillId?: string }>;
+    failed: Array<{ rxId: string; step?: string; error?: string }>;
+  } | null;
+  started_at: string;
+  finished_at: string | null;
+  duration_ms: number | null;
+}
+```
+
+---
+
+## 11. Cron Infrastructure
+
+**File:** `core/cron/index.ts`
+
+### 11.1 All Scheduled Jobs
+
+| Job                  | Schedule          | Description                              |
+|----------------------|-------------------|------------------------------------------|
+| `refill-check`       | `0 6 * * *`       | Daily at 06:00 UTC — process due refills |
+| `tracking-reconcile` | `*/30 * * * *`    | Every 30 min — update tracking statuses  |
+| `digitalrx-reconcile`| `*/5 * * * *`     | Every 5 min — sync DigitalRx statuses    |
+| `payment-reconcile`  | `*/10 * * * *`    | Every 10 min — reconcile payment states  |
+
+### 11.2 Production Guard
+
+```typescript
+const isProduction = process.env.NODE_ENV === "production" || !!process.env.RENDER;
+
+export function startCronJobs() {
+  if (started) return;       // Singleton guard
+  started = true;
+  if (!isProduction) {
+    console.log("Skipping cron jobs — not on production");
+    return;
+  }
+  // ... schedule all jobs
+}
+```
+
+### 11.3 Admin Manual Trigger
+
+The cron can be manually triggered via `POST /api/admin/trigger-cron` by an admin user.
+
+---
+
+## 12. Safety Mechanisms
+
+### 12.1 Optimistic Locking (Prevent Double Processing)
+
+The cron updates the parent with `.eq("total_refills_to_date", currentValue)`. If two cron instances run simultaneously, only one succeeds — the other gets 0 rows and skips.
+
+### 12.2 Active Refill Guard (Prevent Stacking)
+
+Before creating a new refill, the cron checks if there's already a refill in `pending_payment`, `pending`, `submitted`, or `processing` status. If so, it skips. This prevents creating refill #2 while refill #1 hasn't been completed.
+
+### 12.3 Insert Rollback
+
+If the refill row insert fails after the parent was already updated, the cron rolls back the parent's `total_refills_to_date` and `next_refill_date` to their original values.
+
+### 12.4 RLS + Admin Client
+
+The cron uses `createCronClient()` which creates a Supabase admin client that bypasses RLS. This is necessary because cron jobs run without a user context.
+
+### 12.5 Fire-and-Forget Payment Link
+
+The payment link generation is intentionally not awaited. If it fails, the refill row still exists in `pending_payment` status and can be manually processed.
+
+---
+
+## 13. File Reference
+
+| File                                                        | Purpose                                               |
+|-------------------------------------------------------------|-------------------------------------------------------|
+| `core/database/schema/prescriptions.ts`                     | Schema: all columns, types, RLS policies              |
+| `app/api/prescriptions/submit/route.ts`                     | Creates original Rx with `refills` + `refill_frequency_days` |
+| `app/api/prescriptions/[id]/submit-to-pharmacy/route.ts`    | Sets `next_refill_date` on first pharmacy submission  |
+| `core/cron/jobs/refill-check.ts`                            | Daily cron: finds due Rx, creates refill rows, generates PDFs, sends payment emails |
+| `core/cron/index.ts`                                        | Cron scheduler: registers all jobs with schedules     |
+| `app/(features)/refills/page.tsx`                           | Provider UI: In Progress + Scheduled tabs, skip/cancel actions |
+| `app/(features)/admin/refill-engine/page.tsx`               | Admin UI: cron execution history + success/failure details |
+| `utils/generatePrescriptionPdf.ts`                          | PDF generation utility (shared with original Rx flow) |
+| `core/services/storage/prescriptionPdfStorage.ts`           | PDF upload to Supabase storage bucket                 |
+| `app/(features)/prescriptions/_components/PrescriptionModals.tsx` | Shared detail/bill/submit modal (used by refills page with `hideEdit`) |
+| `app/api/payments/generate-link/route.ts`                   | Creates payment link + optionally emails patient      |
+| `app/api/prescriptions/status-batch/route.ts`               | Batch status check against DigitalRx (used for 30s polling) |
+
+---
+
+## 14. Flow Diagram
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                     PROVIDER CREATES PRESCRIPTION                    │
+│                                                                      │
+│  POST /api/prescriptions/submit                                      │
+│  ├─ refills = 3                                                      │
+│  ├─ refill_frequency_days = 30                                       │
+│  └─ next_refill_date = null  (clock not started yet)                │
+└───────────────────────────────┬──────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                PATIENT PAYS → PHARMACY SUBMISSION                    │
+│                                                                      │
+│  POST /api/prescriptions/{id}/submit-to-pharmacy                     │
+│  ├─ Sends to DigitalRx → gets QueueID                               │
+│  ├─ Sets status = "submitted"                                        │
+│  └─ Sets next_refill_date = now + 30 days  ← CLOCK STARTS          │
+└───────────────────────────────┬──────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│              CRON: refill-check (daily 06:00 UTC)                    │
+│                                                                      │
+│  1. Query: next_refill_date <= now AND type = 'prescription'         │
+│  2. Filter: total_refills_to_date < refills                          │
+│  3. For each eligible Rx:                                            │
+│     ├─ Check: no active refill already exists                        │
+│     ├─ Optimistic lock: update parent counters                       │
+│     ├─ Insert new row: type='refill', status='pending_payment'       │
+│     ├─ Generate PDF (patient + provider + Rx data)                   │
+│     ├─ Upload PDF to storage                                         │
+│     └─ Fire POST /api/payments/generate-link (sendEmail: true)       │
+│                                                                      │
+│  4. Log results to cron_job_runs table                               │
+└───────────────────────────────┬──────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                    PATIENT RECEIVES EMAIL                            │
+│                                                                      │
+│  Email contains payment link for the refill                          │
+│  Patient clicks → pays via Authorize.Net                             │
+│  Payment webhook updates: payment_status='paid'                      │
+└───────────────────────────────┬──────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│              REFILL SUBMITTED TO PHARMACY                            │
+│                                                                      │
+│  Same submit-to-pharmacy route as original Rx                        │
+│  DigitalRx processes: submitted → billing → approved → shipped       │
+│  Provider tracks on /refills "In Progress" tab                       │
+└──────────────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────┐
+│                    CYCLE REPEATS                                     │
+│                                                                      │
+│  Parent's next_refill_date was already advanced by cron              │
+│  Next day cron runs → finds next due date → creates refill #2        │
+│  ... until total_refills_to_date >= refills                          │
+│                                                                      │
+│  Provider can intervene anytime via /refills Scheduled tab:          │
+│  ├─ "Skip" → advances date by one cycle, count unchanged            │
+│  └─ "Cancel All" → sets refills = total_refills_to_date, clears date│
+└──────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+*Generated from source code as of the current codebase state.*

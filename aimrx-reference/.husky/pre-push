@@ -1,0 +1,33 @@
+#!/usr/bin/env sh
+# Production-build gate (Task #54 / Step 9 spec requirement).
+#
+# Blocks `git push` to any branch unless `npm run build` (i.e. the same
+# `next build` that Render runs) succeeds locally first. This exists
+# because Render's clean tsc has caught implicit-any and other strict
+# type errors that local incremental builds silently skip — see the
+# Step 9 redo incident (May 2026), where `let lookup;` in the
+# trust-check route compiled locally but failed Render's
+# "Checking validity of types ..." phase.
+#
+# Bypass with `git push --no-verify` ONLY in genuine emergencies.
+
+set -e
+
+if [ "$SKIP_BUILD_GATE" = "1" ]; then
+  echo "[pre-push] SKIP_BUILD_GATE=1 set — skipping prod-build gate."
+  exit 0
+fi
+
+echo "[pre-push] Running prod-build gate (npm run build) ..."
+echo "[pre-push] This must pass before code reaches main/production."
+
+if npm run build; then
+  echo "[pre-push] ✓ Build passed. Proceeding with push."
+  exit 0
+else
+  echo ""
+  echo "[pre-push] ✗ BUILD FAILED — push blocked."
+  echo "[pre-push] Fix the build errors above and try again."
+  echo "[pre-push] To bypass in an emergency: SKIP_BUILD_GATE=1 git push"
+  exit 1
+fi

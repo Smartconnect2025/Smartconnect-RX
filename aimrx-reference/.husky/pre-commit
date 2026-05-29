@@ -1,0 +1,56 @@
+#!/usr/bin/env sh
+# Pre-commit guard — runs lint-staged, then blocks accidental commits of
+# secrets and Replit Secrets-panel pastes.
+#
+# Added after the May 22 2026 SendGrid leak incident (CheekyCow/Smartconnect
+# fork): a March 14 2026 Replit-chat paste of the Secrets panel made it into
+# attached_assets/ and was eventually exposed publicly. .gitignore alone is
+# not enough — we also enforce at commit time.
+#
+# Bypass with `git commit --no-verify` ONLY in genuine emergencies.
+
+set -e
+
+# 1) Existing behavior — keep lint-staged running.
+npx lint-staged
+
+# 2) Block Replit Secrets-panel paste filenames.
+PASTE_HITS=$(git diff --cached --name-only --diff-filter=AM | grep -E 'Pasted-(Skip-to-content|.*Library-Search-Other-Documents-Secrets)' || true)
+if [ -n "$PASTE_HITS" ]; then
+  echo ""
+  echo "[pre-commit] ✗ BLOCKED — Replit Secrets-panel paste detected:"
+  echo "$PASTE_HITS" | sed 's/^/  /'
+  echo "[pre-commit] These filenames are the exact fingerprint of pasting the"
+  echo "[pre-commit] Replit Secrets panel into chat. They almost certainly contain"
+  echo "[pre-commit] live API keys. Unstage and delete them:"
+  echo "    git restore --staged <file>"
+  echo "    rm <file>"
+  exit 1
+fi
+
+# 3) Block anything inside attached_assets/ from being committed.
+ATTACHED_HITS=$(git diff --cached --name-only --diff-filter=AM | grep -E '^attached_assets/' || true)
+if [ -n "$ATTACHED_HITS" ]; then
+  echo ""
+  echo "[pre-commit] ✗ BLOCKED — attached_assets/ files should never be committed:"
+  echo "$ATTACHED_HITS" | sed 's/^/  /'
+  echo "[pre-commit] attached_assets/ is gitignored — it holds chat artifacts that"
+  echo "[pre-commit] often contain secrets. Unstage:"
+  echo "    git restore --staged attached_assets/"
+  exit 1
+fi
+
+# 4) Scan staged content for known live-secret patterns.
+SECRET_HITS=$(git diff --cached -U0 2>/dev/null | grep -E '^\+' | grep -oE '(SG\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}|eyJ[A-Za-z0-9_-]{20,}\.eyJ[A-Za-z0-9_-]{50,}\.[A-Za-z0-9_-]{20,}|sk_live_[A-Za-z0-9]{20,}|rk_live_[A-Za-z0-9]{20,}|AKIA[A-Z0-9]{16}|ghp_[A-Za-z0-9]{30,}|AC[a-f0-9]{32})' | sort -u || true)
+if [ -n "$SECRET_HITS" ]; then
+  echo ""
+  echo "[pre-commit] ✗ BLOCKED — staged changes contain what looks like a live secret:"
+  echo "$SECRET_HITS" | sed -E 's/(.{12}).*/  \1.../'
+  echo "[pre-commit] Patterns matched: SendGrid (SG.*), Supabase JWT (eyJ.*.eyJ.*.*),"
+  echo "[pre-commit] Stripe live (sk_live_/rk_live_), AWS (AKIA*), GitHub PAT (ghp_*),"
+  echo "[pre-commit] Twilio SID (AC<hex32>)."
+  echo "[pre-commit] If this is a false positive, bypass with: git commit --no-verify"
+  exit 1
+fi
+
+exit 0

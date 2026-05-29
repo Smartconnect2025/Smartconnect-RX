@@ -1,0 +1,112 @@
+import { NextRequest, NextResponse } from "next/server";
+import { createAdminClient } from "@core/database/client";
+import { fetchAndApplyTracking } from "@/app/api/prescriptions/_shared/tracking-sync";
+
+const INTERNAL_SECRET = process.env.INTERNAL_API_SECRET || process.env.CRON_SECRET;
+
+function isAuthorized(request: NextRequest): boolean {
+  if (!INTERNAL_SECRET) return false;
+  const authHeader = request.headers.get("authorization");
+  const urlSecret = request.nextUrl.searchParams.get("secret");
+  const providedSecret = authHeader?.replace("Bearer ", "") || urlSecret;
+  return providedSecret === INTERNAL_SECRET;
+}
+
+export async function GET(request: NextRequest) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return runTrackingSync();
+}
+
+export async function POST(request: NextRequest) {
+  if (!isAuthorized(request)) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return runTrackingSync();
+}
+
+async function runTrackingSync() {
+  const supabase = createAdminClient();
+  const results: Array<{ id: string; queueId: string; tracking: string; result: string }> = [];
+
+  try {
+    const { data: prescriptions, error } = await supabase
+      .from("prescriptions")
+      .select("id, queue_id, tracking_number, easypost_tracker_id, status")
+      .not("tracking_number", "is", null)
+      .not("tracking_number", "eq", "")
+      .not("status", "in", "(delivered,cancelled)")
+      .order("updated_at", { ascending: true })
+      .limit(50);
+
+    if (error) {
+      console.error("[cron/tracking-sync] Query error:", error.message);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!prescriptions || prescriptions.length === 0) {
+      return NextResponse.json({
+        success: true,
+        message: "No prescriptions need tracking updates",
+        synced: 0,
+      });
+    }
+
+    console.log(`[cron/tracking-sync] Syncing ${prescriptions.length} prescriptions`);
+
+    for (const rx of prescriptions) {
+      try {
+        const result = await fetchAndApplyTracking(
+          rx.id,
+          rx.tracking_number!,
+          rx.easypost_tracker_id,
+        );
+
+        results.push({
+          id: rx.id,
+          queueId: rx.queue_id || "N/A",
+          tracking: rx.tracking_number!,
+          result: result.updated ? "updated" : result.error || "no_change",
+        });
+
+        console.log(
+          `[cron/tracking-sync] ${rx.queue_id}: ${result.updated ? "UPDATED" : "no change"} ${result.error || ""}`,
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[cron/tracking-sync] Error syncing ${rx.id}:`, msg);
+        results.push({
+          id: rx.id,
+          queueId: rx.queue_id || "N/A",
+          tracking: rx.tracking_number!,
+          result: `error: ${msg}`,
+        });
+      }
+    }
+
+    const updated = results.filter((r) => r.result === "updated").length;
+
+    await supabase.from("system_logs").insert({
+      user_id: null,
+      user_email: "system@aimrx.com",
+      user_name: "Tracking Sync",
+      action: "CRON_TRACKING_SYNC",
+      details: `Synced ${prescriptions.length} prescriptions: ${updated} updated, ${prescriptions.length - updated} unchanged`,
+      status: "success",
+    });
+
+    return NextResponse.json({
+      success: true,
+      total: prescriptions.length,
+      updated,
+      results,
+    });
+  } catch (error) {
+    console.error("[cron/tracking-sync] Fatal error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
