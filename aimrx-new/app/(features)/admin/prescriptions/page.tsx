@@ -43,6 +43,7 @@ interface AdminPrescription {
   id: string;
   queueId: string;
   submittedAt: string;
+  sentToPharmacyAt?: string | null;
   providerName: string;
   patientName: string;
   patientEmail: string | null;
@@ -923,13 +924,14 @@ export default function AdminPrescriptionsPage() {
           <Table className="w-full">
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="font-semibold text-sm px-3 w-[140px] whitespace-nowrap">Date</TableHead>
+                <TableHead className="font-semibold text-sm px-3 w-[140px] whitespace-nowrap">Ordered / Paid</TableHead>
                 <TableHead className="font-semibold text-sm px-3">Provider</TableHead>
                 <TableHead className="font-semibold text-sm px-3">Patient</TableHead>
                 <TableHead className="font-semibold text-sm px-3 max-w-[200px]">Medication</TableHead>
                 <TableHead className="font-semibold text-sm px-3 w-[100px] whitespace-nowrap">Qty/Refills</TableHead>
                 <TableHead className="font-semibold text-sm px-3 w-[80px]">Price</TableHead>
                 <TableHead className="font-semibold text-sm px-3">Pharmacy</TableHead>
+                <TableHead className="font-semibold text-sm px-3 w-[110px] whitespace-nowrap">Queue ID</TableHead>
                 <TableHead className="font-semibold text-sm px-3 max-w-[180px]">SIG</TableHead>
                 <TableHead className="font-semibold text-sm px-3 w-[150px]">Status</TableHead>
               </TableRow>
@@ -937,7 +939,7 @@ export default function AdminPrescriptionsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
+                  <TableCell colSpan={10} className="text-center py-8">
                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                       <RefreshCw className="h-4 w-4 animate-spin" />
                       Loading prescriptions...
@@ -946,7 +948,7 @@ export default function AdminPrescriptionsPage() {
                 </TableRow>
               ) : loadError ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
+                  <TableCell colSpan={10} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2 text-red-600">
                       <AlertCircle className="h-5 w-5" />
                       <p className="text-sm font-medium">{loadError}</p>
@@ -958,7 +960,7 @@ export default function AdminPrescriptionsPage() {
                 </TableRow>
               ) : filteredPrescriptions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
+                  <TableCell colSpan={10} className="text-center py-8">
                     <p className="text-muted-foreground">
                       No prescriptions found matching your filters
                     </p>
@@ -1043,7 +1045,44 @@ export default function AdminPrescriptionsPage() {
                     data-testid={`row-prescription-${prescription.id}`}
                   >
                     <TableCell className="text-sm whitespace-nowrap py-3 px-3">
-                      {datePart}, {timePart}
+                      {(() => {
+                        const ordered = prescription.submittedAt ? new Date(prescription.submittedAt) : null;
+                        const paid = prescription.sentToPharmacyAt ? new Date(prescription.sentToPharmacyAt) : null;
+                        const isPaid = prescription.paymentStatus === "paid";
+
+                        const paidLabel = (() => {
+                          if (paid && ordered) {
+                            const diffMs = paid.getTime() - ordered.getTime();
+                            const diffH = Math.floor(diffMs / (1000 * 60 * 60));
+                            const diffD = Math.floor(diffH / 24);
+                            if (diffD >= 1) return `Sent to pharmacy ${diffD}d later`;
+                            if (diffH >= 1) return `Sent to pharmacy ${diffH}h later`;
+                            return "Sent to pharmacy same day";
+                          }
+                          if (isPaid) return "Pending pharmacy submission";
+                          return "Awaiting payment";
+                        })();
+
+                        const labelColor = paid
+                          ? "text-muted-foreground"
+                          : isPaid
+                            ? "text-amber-600"
+                            : "text-red-600";
+
+                        return (
+                          <div className="flex flex-col leading-tight gap-0.5">
+                            <span data-testid={`text-ordered-${prescription.id}`}>
+                              {ordered ? `${datePart}, ${timePart}` : "—"}
+                            </span>
+                            <span
+                              className={`text-[11px] ${labelColor}`}
+                              data-testid={`text-paid-${prescription.id}`}
+                            >
+                              {paidLabel}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell className="text-sm font-medium py-3 px-3">
                       {prescription.providerName}
@@ -1097,6 +1136,15 @@ export default function AdminPrescriptionsPage() {
                       ) : (
                         <span className="text-muted-foreground text-sm">Not specified</span>
                       )}
+                    </TableCell>
+                    <TableCell className="py-3 px-3 w-[110px] whitespace-nowrap">
+                      <span className="text-sm font-mono font-semibold" data-testid={`text-queue-id-${prescription.id}`}>
+                        {prescription.queueId && prescription.queueId !== "N/A" ? (
+                          prescription.queueId
+                        ) : (
+                          <span className="text-muted-foreground font-sans font-normal">—</span>
+                        )}
+                      </span>
                     </TableCell>
                     <TableCell className="py-3 px-3 max-w-[180px] overflow-hidden">
                       <p className="text-sm truncate cursor-help" title={prescription.sig}>
