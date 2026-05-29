@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     }
 
     const baseSelect = `
-      id, queue_id, submitted_at, submitted_to_pharmacy_at, medication, dosage, quantity,
+      id, queue_id, submitted_at, submitted_to_pharmacy_at, updated_at, medication, dosage, quantity,
       refills, sig, status, payment_status, patient_price,
       shipping_fee_cents, profit_cents, tracking_number, fedex_status,
       estimated_delivery, tracking_carrier, has_custom_address, custom_address,
@@ -147,6 +147,7 @@ export async function GET(request: NextRequest) {
         queueId: rx.queue_id || "N/A",
         submittedAt: rx.submitted_at,
         sentToPharmacyAt: rx.submitted_to_pharmacy_at || null,
+        statusUpdatedAt: rx.updated_at || null,
         providerName: provider
           ? `Dr. ${provider.first_name} ${provider.last_name}`
           : "Unknown Provider",

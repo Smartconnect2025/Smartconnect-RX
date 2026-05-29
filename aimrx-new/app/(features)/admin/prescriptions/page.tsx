@@ -44,6 +44,7 @@ interface AdminPrescription {
   queueId: string;
   submittedAt: string;
   sentToPharmacyAt?: string | null;
+  statusUpdatedAt?: string | null;
   providerName: string;
   patientName: string;
   patientEmail: string | null;
@@ -924,16 +925,16 @@ export default function AdminPrescriptionsPage() {
           <Table className="w-full">
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="font-semibold text-sm px-3 w-[140px] whitespace-nowrap">Ordered / Paid</TableHead>
-                <TableHead className="font-semibold text-sm px-3">Provider</TableHead>
-                <TableHead className="font-semibold text-sm px-3">Patient</TableHead>
-                <TableHead className="font-semibold text-sm px-3 max-w-[200px]">Medication</TableHead>
-                <TableHead className="font-semibold text-sm px-3 w-[100px] whitespace-nowrap">Qty/Refills</TableHead>
-                <TableHead className="font-semibold text-sm px-3 w-[80px]">Price</TableHead>
-                <TableHead className="font-semibold text-sm px-3">Pharmacy</TableHead>
-                <TableHead className="font-semibold text-sm px-3 w-[110px] whitespace-nowrap">Queue ID</TableHead>
-                <TableHead className="font-semibold text-sm px-3 max-w-[180px]">SIG</TableHead>
-                <TableHead className="font-semibold text-sm px-3 w-[150px]">Status</TableHead>
+                <TableHead className="font-semibold w-[140px]">Ordered / Paid</TableHead>
+                <TableHead className="font-semibold">Provider</TableHead>
+                <TableHead className="font-semibold">Patient</TableHead>
+                <TableHead className="font-semibold">Medication</TableHead>
+                <TableHead className="font-semibold w-[100px]">Qty/Refills</TableHead>
+                <TableHead className="font-semibold w-[80px]">Price</TableHead>
+                <TableHead className="font-semibold">Pharmacy</TableHead>
+                <TableHead className="font-semibold w-[110px]">Queue ID</TableHead>
+                <TableHead className="font-semibold">SIG</TableHead>
+                <TableHead className="font-semibold w-[150px]">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -1044,7 +1045,7 @@ export default function AdminPrescriptionsPage() {
                     onClick={() => openPrescriptionDetail(prescription)}
                     data-testid={`row-prescription-${prescription.id}`}
                   >
-                    <TableCell className="text-sm whitespace-nowrap py-3 px-3">
+                    <TableCell className="whitespace-nowrap text-sm">
                       {(() => {
                         const ordered = prescription.submittedAt ? new Date(prescription.submittedAt) : null;
                         const paid = prescription.sentToPharmacyAt ? new Date(prescription.sentToPharmacyAt) : null;
@@ -1084,80 +1085,100 @@ export default function AdminPrescriptionsPage() {
                         );
                       })()}
                     </TableCell>
-                    <TableCell className="text-sm font-medium py-3 px-3">
+                    <TableCell className="font-medium">
                       {prescription.providerName}
                     </TableCell>
-                    <TableCell className="text-sm py-3 px-3">
+                    <TableCell className="font-medium">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-medium">{prescription.patientName}</span>
+                        {prescription.patientName}
                         {isFirstInBatch && isMultiBatch && (
-                          <span
-                            className="ml-1 inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white"
-                            style={{ backgroundColor: GROUP_BORDER_COLORS[colorIdx] }}
-                          >
+                          <span className="ml-1 inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: GROUP_BORDER_COLORS[colorIdx] }}>
                             {batchSize} items
                           </span>
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="py-3 px-3 max-w-[200px] overflow-hidden">
-                      <div className="overflow-hidden">
-                        <span className="text-sm font-medium truncate block" title={prescription.medication}>
+                    <TableCell className="max-w-[200px]">
+                      <div className="flex flex-col">
+                        <span
+                          className="font-medium truncate"
+                          title={prescription.medication}
+                        >
                           {prescription.medication}
                         </span>
-                        <span className="text-xs text-muted-foreground truncate block">
+                        <span className="text-sm text-muted-foreground truncate">
                           {prescription.strength}
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm whitespace-nowrap py-3 px-3">
-                      <div>
-                        <div>Qty: {prescription.quantity}</div>
-                        <div className="text-muted-foreground">Ref: {prescription.refills}</div>
+                    <TableCell className="text-sm">
+                      <div className="flex flex-col">
+                        <span>Qty: {prescription.quantity}</span>
+                        <span className="text-muted-foreground">
+                          Ref: {prescription.refills}
+                        </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-sm py-3 px-3 w-[80px]">
+                    <TableCell className="text-sm" data-testid={`text-price-${prescription.id}`}>
                       {prescription.patientPrice != null ? (
-                        <div>
-                          <div className="font-semibold text-green-700">${Number(prescription.patientPrice).toFixed(2)}</div>
-                          {(prescription.shippingFeeCents || 0) > 0 && (
-                            <div className="text-[10px] text-muted-foreground">+${((prescription.shippingFeeCents || 0) / 100).toFixed(2)} ship</div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-green-700">${Number(prescription.patientPrice).toFixed(2)}</span>
+                          {(prescription.shippingFeeCents ?? 0) > 0 && (
+                            <span className="text-[10px] text-muted-foreground">
+                              +${((prescription.shippingFeeCents ?? 0) / 100).toFixed(2)} ship
+                            </span>
                           )}
                         </div>
                       ) : (
-                        <span className="text-muted-foreground">--</span>
+                        <span className="text-muted-foreground text-xs">--</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-3 px-3 overflow-hidden">
+                    <TableCell>
                       {prescription.pharmacyName ? (
-                        <span className="font-medium text-sm truncate block" style={{ color: prescription.pharmacyColor || "#1E3A8A" }} title={prescription.pharmacyName}>
+                        <span className="font-medium text-sm" style={{ color: prescription.pharmacyColor || "#1E3A8A" }}>
                           {prescription.pharmacyName}
                         </span>
                       ) : (
-                        <span className="text-muted-foreground text-sm">Not specified</span>
+                        <span className="text-muted-foreground text-xs">Not specified</span>
                       )}
                     </TableCell>
-                    <TableCell className="py-3 px-3 w-[110px] whitespace-nowrap">
-                      <span className="text-sm font-mono font-semibold" data-testid={`text-queue-id-${prescription.id}`}>
+                    <TableCell data-testid={`text-queue-id-${prescription.id}`}>
+                      <div className="flex flex-col items-start gap-1">
                         {prescription.queueId && prescription.queueId !== "N/A" ? (
-                          prescription.queueId
+                          <span className="font-mono text-sm font-semibold text-gray-800">
+                            {prescription.queueId}
+                          </span>
                         ) : (
-                          <span className="text-muted-foreground font-sans font-normal">—</span>
+                          <span className="text-muted-foreground text-xs">--</span>
                         )}
-                      </span>
+                      </div>
                     </TableCell>
-                    <TableCell className="py-3 px-3 max-w-[180px] overflow-hidden">
-                      <p className="text-sm truncate cursor-help" title={prescription.sig}>
+                    <TableCell className="max-w-[180px]">
+                      <p
+                        className="text-sm truncate cursor-help"
+                        title={prescription.sig}
+                      >
                         {prescription.sig}
                       </p>
                     </TableCell>
-                    <TableCell className="py-3 px-3 w-[150px]">
-                      <Badge
-                        variant="outline"
-                        className={`${getStatusColor(getEffectiveStatus(prescription))} text-xs px-2 py-1 whitespace-nowrap`}
-                      >
-                        {getEffectiveStatus(prescription).charAt(0).toUpperCase() + getEffectiveStatus(prescription).slice(1).replace(/_/g, " ")}
-                      </Badge>
+                    <TableCell>
+                      <div className="flex flex-col items-start gap-1">
+                        <Badge
+                          variant="outline"
+                          className={`${getStatusColor(getEffectiveStatus(prescription))} text-xs px-2 py-1 whitespace-nowrap`}
+                        >
+                          {formatStatusLabel(getEffectiveStatus(prescription))}
+                        </Badge>
+                        {prescription.statusUpdatedAt && (
+                          <span
+                            className="text-[11px] text-muted-foreground whitespace-nowrap"
+                            data-testid={`text-status-date-${prescription.id}`}
+                            title={`Status last changed at ${new Date(prescription.statusUpdatedAt).toLocaleString()}`}
+                          >
+                            since {new Date(prescription.statusUpdatedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}, {new Date(prescription.statusUpdatedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                          </span>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                   );
