@@ -83,7 +83,8 @@ function getStepIndex(status: string, billingStatus?: string): number {
     normalized === "packed" ||
     normalized === "processing" ||
     normalized === "pharmacyprocessing" ||
-    normalized === "compounding"
+    normalized === "compounding" ||
+    normalized === "paused"
   )
     return 3;
 

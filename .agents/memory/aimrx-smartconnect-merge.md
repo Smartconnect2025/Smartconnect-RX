@@ -70,3 +70,10 @@ SmartConnect uses a multi-pharmacy dispatcher; AimRx's `/api/admin/digitalrx-rec
 
 ## tier-assignment null contract
 `/api/admin/providers/tier-assignment` must accept `tierCode: null` (clears tier_level) — guard on `tierCode === undefined`, NOT `!tierCode`, or "Unassigned"/clear from Provider Assistance UI 400s.
+
+## Incoming Queue (admin/prescriptions) feature parity
+SmartConnect's admin prescriptions page lagged the AimRx reference. Ported (multi-pharmacy-safe): Cancel Order button + confirm dialog (type patient last name) calling existing /api/prescriptions/[id]/admin-override status:cancelled then /api/admin/prescriptions/[id]/notify-cancellation (new); toolbar Late-only toggle + Print late report link + /admin/prescriptions/late-report page; "paused"→"In Production" step in PrescriptionProgressTracker; defensive pricing (Oversight & Monitoring line, clamp negative profit_cents to 0 — the Greenwich/Rahmany incident remediation); address-notification banner.
+Adaptations: "Pull from pharmacy" button (NOT "Greenwich") calls existing /api/admin/trigger-cron with job "prescription-status-sync" (reference's digitalrx-reconcile doesn't exist here). late-report falls back to submittedAt because sent_to_pharmacy_at/status_updated_at aren't in SmartConnect's admin API. cancellation emails resolve pharmacy name from prescription.pharmacy_id — never hardcode a pharmacy.
+
+## Admin notify endpoints need pharmacy-scope, not just role
+Any admin endpoint that acts on a specific prescription (cancel, notify, override) MUST enforce per-pharmacy scope: for role "admin", require pharmacy_admins.pharmacy_id === prescription.pharmacy_id; "super_admin" is global. Pattern lives in /api/prescriptions/[id]/admin-override. Checking only userRole lets a pharmacy admin act on other pharmacies' orders by guessing IDs.

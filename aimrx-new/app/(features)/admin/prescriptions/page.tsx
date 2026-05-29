@@ -23,14 +23,18 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import {
   Search, User, Calendar, Pill, Hash, FileText, RefreshCw, AlertCircle,
   Send, Mail, DollarSign, CheckCircle2, Truck, MapPin, Pencil, X,
-  ExternalLink, AlertTriangle, Package,
+  ExternalLink, AlertTriangle, Package, Flag, Printer, XCircle,
 } from "lucide-react";
+import Link from "next/link";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { PrescriptionProgressTracker } from "@/app/(features)/prescriptions/_components/PrescriptionProgressTracker";
 import { createClient } from "@core/supabase";
 import { useUser } from "@core/auth";
@@ -82,11 +86,37 @@ const STATUS_OPTIONS = [
   "pending_payment",
   "payment_received",
   "packed",
+  "paused",
   "approved",
   "picked_up",
   "shipped",
   "delivered",
 ];
+
+// Orders are "late" if they were submitted >72h ago and have not yet reached a
+// terminal status. Computed client-side so it stays in sync with whatever the
+// admin API exposes (multi-pharmacy aware — no per-pharmacy hardcoding).
+const LATE_THRESHOLD_HOURS = 72;
+const TERMINAL_STATUSES = new Set([
+  "shipped",
+  "delivered",
+  "cancelled",
+  "picked_up",
+  "rejected",
+]);
+const isOrderLate = (rx: AdminPrescription): boolean => {
+  const ref = rx.submittedAt;
+  if (!ref) return false;
+  if (TERMINAL_STATUSES.has((rx.status || "").toLowerCase())) return false;
+  const hrs = (Date.now() - new Date(ref).getTime()) / 3600000;
+  return hrs >= LATE_THRESHOLD_HOURS;
+};
+
+const formatStatusLabel = (status: string): string => {
+  const s = (status || "").toLowerCase();
+  if (s === "paused") return "In Production \u2B50";
+  return (status || "").charAt(0).toUpperCase() + (status || "").slice(1).replace(/_/g, " ");
+};
 
 const getStatusColor = (status: string) => {
   switch (status.toLowerCase()) {
@@ -98,6 +128,8 @@ const getStatusColor = (status: string) => {
       return "bg-teal-100 text-teal-800 border-teal-200";
     case "packed":
       return "bg-purple-100 text-purple-800 border-purple-200";
+    case "paused":
+      return "bg-amber-100 text-amber-800 border-amber-200";
     case "approved":
       return "bg-green-100 text-green-800 border-green-200";
     case "picked_up":
@@ -183,6 +215,26 @@ export default function AdminPrescriptionsPage() {
   const [overrideTracking, setOverrideTracking] = useState("");
   const [overrideNote, setOverrideNote] = useState("");
   const [isApplyingOverride, setIsApplyingOverride] = useState(false);
+
+  // Cancel-order dialog state (ported from aimrx-reference). The cancellingRef
+  // guards against double-submission while the network calls are in flight.
+  const [cancelTarget, setCancelTarget] = useState<AdminPrescription | null>(null);
+  const [cancelReason, setCancelReason] = useState<string>("");
+  const [cancelNote, setCancelNote] = useState<string>("");
+  const [cancelConfirmName, setCancelConfirmName] = useState<string>("");
+  const [isCancelling, setIsCancelling] = useState(false);
+  const cancellingRef = useRef(false);
+
+  // Toolbar additions
+  const [lateOnly, setLateOnly] = useState(false);
+  const [isPulling, setIsPulling] = useState(false);
+
+  // Shown after a successful address edit when the API confirms the pharmacy
+  // was notified by email. Multi-pharmacy: recipients come from the API which
+  // looks them up by the prescription's pharmacy_id.
+  const [addressNotification, setAddressNotification] = useState<
+    { recipients: string[] } | null
+  >(null);
 
   const sendingRef = useRef(false);
 
@@ -424,6 +476,14 @@ export default function AdminPrescriptionsPage() {
             ? "Address updated for prescription and patient record. Pharmacy notified."
             : "Address updated for this prescription only. Pharmacy notified.",
         });
+        // Multi-pharmacy: the update-address endpoint returns the actual list
+        // of pharmacy contact emails it notified (looked up per pharmacy_id).
+        // Surface them in the banner if present.
+        if (data.pharmacyNotified && Array.isArray(data.notifiedRecipients) && data.notifiedRecipients.length > 0) {
+          setAddressNotification({ recipients: data.notifiedRecipients });
+        } else {
+          setAddressNotification(null);
+        }
         setShowAddressEdit(false);
         loadPrescriptions();
       } else {
@@ -460,6 +520,118 @@ export default function AdminPrescriptionsPage() {
       // silent
     } finally {
       setIsApplyingOverride(false);
+    }
+  };
+
+  const closeCancelDialog = () => {
+    if (cancellingRef.current) return;
+    setCancelTarget(null);
+    setCancelReason("");
+    setCancelNote("");
+    setCancelConfirmName("");
+  };
+
+  const openCancelDialog = (rx: AdminPrescription) => {
+    setCancelTarget(rx);
+    setCancelReason("");
+    setCancelNote("");
+    setCancelConfirmName("");
+  };
+
+  // Ported from aimrx-reference: cancel an order via the existing admin-override
+  // endpoint (which marks the row cancelled + stops polling) and then fire the
+  // patient/provider/admin notification emails. Multi-pharmacy safe — both
+  // downstream endpoints look up pharmacy_id from the prescription row.
+  const handleCancelOrder = async (rx: AdminPrescription) => {
+    if (cancellingRef.current) return;
+    if (!cancelReason) {
+      toast.error("Choose a cancellation reason");
+      return;
+    }
+    cancellingRef.current = true;
+    setIsCancelling(true);
+    try {
+      const noteParts: string[] = [`reason: ${cancelReason}`];
+      if (cancelNote.trim()) noteParts.push(cancelNote.trim());
+      const overrideRes = await fetch(
+        `/api/prescriptions/${rx.id}/admin-override`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            status: "cancelled",
+            note: noteParts.join(" | "),
+          }),
+        },
+      );
+      const overrideData = await overrideRes.json().catch(() => ({}));
+      if (!overrideRes.ok || overrideData?.success === false) {
+        throw new Error(overrideData?.error || "Failed to cancel order");
+      }
+
+      let notified = false;
+      try {
+        const notifyRes = await fetch(
+          `/api/admin/prescriptions/${rx.id}/notify-cancellation`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason: cancelReason }),
+          },
+        );
+        notified = notifyRes.ok;
+        if (!notifyRes.ok) {
+          console.warn("[cancel] notify-cancellation returned", notifyRes.status);
+        }
+      } catch (notifyErr) {
+        console.warn("[cancel] notify-cancellation failed:", notifyErr);
+      }
+
+      toast.success(
+        notified
+          ? "Order cancelled — polling stopped, notifications sent"
+          : "Order cancelled — polling stopped, but notification emails failed to send",
+      );
+      cancellingRef.current = false;
+      setIsCancelling(false);
+      setCancelTarget(null);
+      setCancelReason("");
+      setCancelNote("");
+      setCancelConfirmName("");
+      setSelectedPrescription(null);
+      loadPrescriptions();
+    } catch (err) {
+      console.error("[cancel] error:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to cancel order");
+      cancellingRef.current = false;
+      setIsCancelling(false);
+    }
+  };
+
+  // "Pull from pharmacy" — triggers the prescription-status-sync cron which
+  // reconciles status across ALL pharmacies the platform talks to. SmartConnect
+  // is multi-pharmacy, so the button is labeled generically rather than after
+  // any single pharmacy.
+  const handlePullFromPharmacy = async () => {
+    if (isPulling) return;
+    setIsPulling(true);
+    try {
+      const res = await fetch("/api/admin/trigger-cron", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ job: "prescription-status-sync" }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data?.success === false) {
+        throw new Error(data?.error || "Pull failed");
+      }
+      toast.success("Pull complete — reloading prescriptions");
+      loadPrescriptions();
+    } catch (err) {
+      console.error("[pull] error:", err);
+      toast.error(err instanceof Error ? err.message : "Pull failed");
+    } finally {
+      setIsPulling(false);
     }
   };
 
@@ -548,6 +720,11 @@ export default function AdminPrescriptionsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [prescriptions]);
 
+  const lateCount = useMemo(
+    () => prescriptions.filter((p) => isOrderLate(p)).length,
+    [prescriptions],
+  );
+
   const filteredPrescriptions = prescriptions.filter((prescription) => {
     const matchesSearch =
       prescription.patientName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -559,7 +736,9 @@ export default function AdminPrescriptionsPage() {
     const matchesStatus =
       statusFilter === "All" || effectiveStatus.toLowerCase() === statusFilter.toLowerCase();
 
-    return matchesSearch && matchesStatus;
+    const matchesLate = !lateOnly || isOrderLate(prescription);
+
+    return matchesSearch && matchesStatus && matchesLate;
   });
 
   const getStatusCount = (status: string) => {
@@ -572,11 +751,31 @@ export default function AdminPrescriptionsPage() {
     return prescriptions.filter((p) => p.submissionGroupId === rx.submissionGroupId);
   };
 
+  // Defensive total math (ported from aimrx-reference). Negative profit_cents
+  // — which has historically appeared in production after partial-payment
+  // incidents — must NEVER reduce the patient-facing total, so it is clamped
+  // to zero. Pricing sources are unchanged (SmartConnect's own DB columns).
   const computeTotal = (rx: AdminPrescription): number => {
     const groupRxs = getGroupRxs(rx);
     return groupRxs.reduce((sum, p) => {
-      return sum + (p.patientPrice || 0) + ((p.shippingFeeCents || 0) / 100) + ((p.profitCents || 0) / 100);
+      const price = Number(p.patientPrice) || 0;
+      const ship = Number(p.shippingFeeCents) || 0;
+      const profit = Number(p.profitCents);
+      const oversight = Number.isFinite(profit) && profit > 0 ? profit : 0;
+      return sum + price + ship / 100 + oversight / 100;
     }, 0);
+  };
+
+  const groupOversightCents = (rx: AdminPrescription): number => {
+    return getGroupRxs(rx).reduce((sum, p) => {
+      const profit = Number(p.profitCents);
+      return sum + (Number.isFinite(profit) && profit > 0 ? profit : 0);
+    }, 0);
+  };
+
+  const singleOversightCents = (rx: AdminPrescription): number => {
+    const profit = Number(rx.profitCents);
+    return Number.isFinite(profit) && profit > 0 ? profit : 0;
   };
 
   const openPrescriptionDetail = (rx: AdminPrescription) => {
@@ -634,8 +833,8 @@ export default function AdminPrescriptionsPage() {
         </div>
       )}
 
-      <div className="flex items-center gap-4 mb-6">
-        <div className="relative flex-1">
+      <div className="flex items-center gap-4 mb-6 flex-wrap">
+        <div className="relative flex-1 min-w-[260px]">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search by patient, provider, medication, or Queue ID..."
@@ -654,12 +853,63 @@ export default function AdminPrescriptionsPage() {
             <SelectContent>
               {STATUS_OPTIONS.map((status) => (
                 <SelectItem key={status} value={status}>
-                  {status === "All" ? status : status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, " ")} ({getStatusCount(status)})
+                  {status === "All" ? status : formatStatusLabel(status)} ({getStatusCount(status)})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+
+        {/* Late-only toggle — flags orders stuck >72h since submission. */}
+        <Button
+          type="button"
+          variant={lateOnly ? "default" : "outline"}
+          size="sm"
+          onClick={() => setLateOnly((v) => !v)}
+          className={lateOnly ? "bg-red-600 hover:bg-red-700 text-white" : "border-red-300 text-red-700 hover:bg-red-50"}
+          data-testid="toggle-late-only"
+        >
+          <Flag className="h-4 w-4 mr-1.5" />
+          Late only ({lateCount})
+        </Button>
+
+        <Link
+          href="/admin/prescriptions/late-report"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:text-blue-900 hover:underline"
+          data-testid="link-print-late-report"
+        >
+          <Printer className="h-4 w-4" />
+          Print late report
+        </Link>
+
+        {/*
+          "Pull from pharmacy" — SmartConnect is multi-pharmacy, so this is
+          intentionally not labeled after any single pharmacy. It triggers the
+          prescription-status-sync cron job which reconciles statuses across
+          every pharmacy the platform talks to.
+        */}
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handlePullFromPharmacy}
+          disabled={isPulling}
+          data-testid="button-pull-from-pharmacy"
+        >
+          {isPulling ? (
+            <>
+              <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" />
+              Pulling…
+            </>
+          ) : (
+            <>
+              <RefreshCw className="h-4 w-4 mr-1.5" />
+              Pull from pharmacy
+            </>
+          )}
+        </Button>
       </div>
 
       <div className="mb-4">
@@ -1009,10 +1259,18 @@ export default function AdminPrescriptionsPage() {
                           <span>Shipping & Handling</span>
                           <span>${(groupRxs.reduce((s, p) => s + (p.shippingFeeCents || 0), 0) / 100).toFixed(2)}</span>
                         </div>
-                        {/* Oversight & Monitoring - Hidden */}
+                        {/* Oversight & Monitoring: only render when non-zero
+                            after the negative-clamp. Prevents corrupted rows
+                            from silently zeroing the patient total. */}
+                        {groupOversightCents(selectedPrescription) > 0 && (
+                          <div className="flex justify-between text-sm">
+                            <span>Oversight & Monitoring</span>
+                            <span>${(groupOversightCents(selectedPrescription) / 100).toFixed(2)}</span>
+                          </div>
+                        )}
                         <div className="flex justify-between font-bold text-green-700 text-lg pt-1">
                           <span>Group Total</span>
-                          <span>${total.toFixed(2)}</span>
+                          <span data-testid="text-group-total">${total.toFixed(2)}</span>
                         </div>
                       </div>
                     </div>
@@ -1026,7 +1284,12 @@ export default function AdminPrescriptionsPage() {
                         <span>Shipping</span>
                         <span>${((selectedPrescription.shippingFeeCents || 0) / 100).toFixed(2)}</span>
                       </div>
-                      {/* Oversight & Monitoring - Hidden */}
+                      {singleOversightCents(selectedPrescription) > 0 && (
+                        <div className="flex justify-between text-sm">
+                          <span>Oversight & Monitoring</span>
+                          <span>${(singleOversightCents(selectedPrescription) / 100).toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between font-bold text-green-700 text-lg border-t border-green-300 pt-2">
                         <span>Total</span>
                         <span>${total.toFixed(2)}</span>
@@ -1143,6 +1406,23 @@ export default function AdminPrescriptionsPage() {
                       {addressResult.message}
                     </p>
                   )}
+
+                  {addressNotification && addressNotification.recipients.length > 0 && (
+                    <div
+                      className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3 flex items-start gap-2"
+                      data-testid="address-notification-banner"
+                    >
+                      <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-green-800">
+                          Pharmacy notified via email
+                        </p>
+                        <p className="text-xs text-green-700 mt-0.5">
+                          Sent to: {addressNotification.recipients.join(", ")}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Section 7: Payment Actions */}
@@ -1246,7 +1526,7 @@ export default function AdminPrescriptionsPage() {
                 )}
 
                 {/* Section 9: Manual Status / Tracking Override */}
-                <div className="pt-2">
+                <div className="pt-2 flex flex-wrap gap-2">
                   {!showOverride ? (
                     <Button
                       variant="outline"
@@ -1319,9 +1599,170 @@ export default function AdminPrescriptionsPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Cancel Order — stops all polling AND fires the patient/
+                      provider/admin notification emails. Mirrors the reference
+                      flow (admin-override → notify-cancellation). */}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => openCancelDialog(selectedPrescription)}
+                    className="border-red-300 text-red-700 hover:bg-red-50"
+                    data-testid="button-open-cancel-order"
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Cancel Order (stop all polling + notify)
+                  </Button>
                 </div>
               </div>
             </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Cancel Order confirmation dialog (ported from aimrx-reference). The
+          admin must type the patient's last name to confirm. Multi-pharmacy
+          safe — handler talks to the existing admin-override + the new
+          notify-cancellation endpoints, both of which look pharmacy info up
+          by prescription pharmacy_id. */}
+      <Dialog
+        open={!!cancelTarget}
+        onOpenChange={(open) => {
+          if (!open && !isCancelling) closeCancelDialog();
+        }}
+      >
+        <DialogContent className="max-w-lg" data-testid="modal-cancel-order">
+          {cancelTarget && (() => {
+            const lastName =
+              (cancelTarget.patientName || "").trim().split(/\s+/).slice(-1)[0] || "";
+            const lastNameMatch =
+              lastName.length > 0 &&
+              cancelConfirmName.trim().toLowerCase() === lastName.toLowerCase();
+            const canSubmit = !!cancelReason && lastNameMatch && !isCancelling;
+            const isPaid = cancelTarget.paymentStatus === "paid";
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl text-red-700" data-testid="text-cancel-title">
+                    Cancel Order
+                  </DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 py-2">
+                  <div
+                    className="rounded-md bg-gray-50 border border-gray-200 p-3 text-sm space-y-1"
+                    data-testid="text-cancel-summary"
+                  >
+                    <div>
+                      <span className="text-muted-foreground">Patient: </span>
+                      <span className="font-medium">{cancelTarget.patientName}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Medication: </span>
+                      <span className="font-medium">
+                        {cancelTarget.medication}
+                        {cancelTarget.strength ? ` ${cancelTarget.strength}` : ""}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Quantity: </span>
+                      <span className="font-medium">{cancelTarget.quantity}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Pharmacy: </span>
+                      <span className="font-medium">{cancelTarget.pharmacyName || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Payment: </span>
+                      <span className="font-medium">
+                        {cancelTarget.paymentStatus || "unpaid"}
+                        {isPaid && cancelTarget.patientPrice != null
+                          ? ` — $${Number(cancelTarget.patientPrice).toFixed(2)}`
+                          : ""}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cancel-reason">
+                      Reason <span className="text-red-600">*</span>
+                    </Label>
+                    <Select value={cancelReason} onValueChange={setCancelReason}>
+                      <SelectTrigger id="cancel-reason" data-testid="select-cancel-reason">
+                        <SelectValue placeholder="Choose a reason" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Out of Stock">Out of Stock</SelectItem>
+                        <SelectItem value="Patient Request">Patient Request</SelectItem>
+                        <SelectItem value="Clinical Hold">Clinical Hold</SelectItem>
+                        <SelectItem value="Pharmacy Rejection">Pharmacy Rejection</SelectItem>
+                        <SelectItem value="Duplicate Order">Duplicate Order</SelectItem>
+                        <SelectItem value="Other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cancel-note">
+                      Internal note{" "}
+                      <span className="text-muted-foreground text-xs font-normal">
+                        (optional, logged but not emailed)
+                      </span>
+                    </Label>
+                    <Textarea
+                      id="cancel-note"
+                      value={cancelNote}
+                      onChange={(e) => setCancelNote(e.target.value)}
+                      rows={2}
+                      placeholder="Anything else worth recording…"
+                      data-testid="input-cancel-note"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="cancel-confirm">
+                      Type the patient&apos;s last name (
+                      <span className="font-mono text-foreground">{lastName}</span>) to confirm{" "}
+                      <span className="text-red-600">*</span>
+                    </Label>
+                    <Input
+                      id="cancel-confirm"
+                      value={cancelConfirmName}
+                      onChange={(e) => setCancelConfirmName(e.target.value)}
+                      placeholder="Patient's last name"
+                      autoComplete="off"
+                      data-testid="input-cancel-confirm"
+                    />
+                  </div>
+                </div>
+                <DialogFooter className="gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={closeCancelDialog}
+                    disabled={isCancelling}
+                    data-testid="button-cancel-nevermind"
+                  >
+                    Nevermind
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    onClick={() => handleCancelOrder(cancelTarget)}
+                    disabled={!canSubmit}
+                    data-testid="button-cancel-confirm"
+                  >
+                    {isCancelling ? (
+                      <>
+                        <RefreshCw className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                        Cancelling…
+                      </>
+                    ) : (
+                      "Cancel order"
+                    )}
+                  </Button>
+                </DialogFooter>
+              </>
             );
           })()}
         </DialogContent>
