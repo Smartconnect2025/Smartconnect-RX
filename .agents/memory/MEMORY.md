@@ -1,0 +1,1 @@
+- [AimRx->SmartConnect merge](aimrx-smartconnect-merge.md) — cherry-pick upstream features into live app; MFA conflict (otplib vs twilio) is the landmine, do it last.
