@@ -61,3 +61,12 @@ Full app typecheck = 0 errors. Live app boots clean. New: AchSection.tsx, Provid
 ## STATUS / NEXT
 Live site NOT pushed yet (untouched). Done: T001,T002,T003,T004,T005, T006(5/7 jobs), T007(5/6 tools). 
 NEEDS USER DECISION before continuing: (1) push merged work to GitHub->Render (live deploy consent); (2) deferred submission-coupled items (payment-janitor, digitalrx-reconcile, digitalrx-reconcile-now) — adapt to SmartConnect pharmacy-dispatcher or leave out; (3) T008 MFA needs explicit sign-off + coexistence plan (otplib live users vs twilio).
+
+## Super-admin command center nav
+The "one main admin" the user wants = the super-admin branch of `AdminHeader.tsx` `mainNavLinks` (the `else` branch when NOT isPharmacyAdmin). It aggregates ALL pharmacies via the shared admin APIs (/api/admin/providers, /delegations, /tiers). Pharmacy-admin (single-pharmacy) menu is the other branch — keep nav additions out of it unless intended.
+
+## DigitalRx system-mixing boundary
+SmartConnect uses a multi-pharmacy dispatcher; AimRx's `/api/admin/digitalrx-reconcile-now` (single-pharmacy "Greenwich" sweep) is intentionally NOT merged — it bypasses the dispatcher. When cloning AimRx admin pages, strip any reconcile-now UI; keep only `/api/admin/digitalrx-debug` (queue-ID lookup) which exists. `digitalrx-debug` still defaults to a hardcoded pharmacy when pharmacyId omitted — acceptable for a lookup tool, but a true all-pharmacy view would need a pharmacy selector.
+
+## tier-assignment null contract
+`/api/admin/providers/tier-assignment` must accept `tierCode: null` (clears tier_level) — guard on `tierCode === undefined`, NOT `!tierCode`, or "Unassigned"/clear from Provider Assistance UI 400s.

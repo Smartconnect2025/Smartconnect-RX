@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { providerId, tierCode } = body;
 
-    if (!providerId || !tierCode) {
+    if (!providerId || tierCode === undefined) {
       return NextResponse.json(
         { error: "Missing providerId or tierCode" },
         { status: 400 }
