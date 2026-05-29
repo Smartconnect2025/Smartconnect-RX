@@ -28,6 +28,7 @@ interface PharmacyBranding {
 export function AdminHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isPharmacyAdmin, setIsPharmacyAdmin] = useState(false);
+  const [pendingDelegationCount, setPendingDelegationCount] = useState(0);
   const [pharmacyBranding, setPharmacyBranding] = useState<PharmacyBranding | null>(null);
   const [logoLoadError, setLogoLoadError] = useState(false);
   const [headerReady, setHeaderReady] = useState(false);
@@ -72,6 +73,43 @@ export function AdminHeader() {
     checkPharmacyAdmin();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  // Poll pending Provider Assistance delegations so admins see new
+  // requests from anywhere in the portal (only for non-pharmacy admins).
+  useEffect(() => {
+    if (!user?.id || isPharmacyAdmin) {
+      setPendingDelegationCount(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadPending = async () => {
+      try {
+        const res = await fetch(
+          "/api/admin/delegations?status=pending_admin",
+          { cache: "no-store" },
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+        const list = Array.isArray(data?.delegations) ? data.delegations : [];
+        const count = list.filter(
+          (d: { status?: string }) => d?.status === "pending_admin",
+        ).length;
+        setPendingDelegationCount(count);
+      } catch {
+        // silent — badge just won't update on this poll
+      }
+    };
+
+    loadPending();
+    const interval = setInterval(loadPending, 30_000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [user?.id, isPharmacyAdmin]);
 
   const handleLoginRedirect = () => {
     router.push("/auth");
@@ -172,18 +210,31 @@ export function AdminHeader() {
                     ? pathname === "/admin"
                     : pathname.startsWith(link.href);
 
+                  const showPendingBadge =
+                    link.href === "/admin/provider-assistance" &&
+                    pendingDelegationCount > 0;
+
                   return (
                     <Link
                       key={link.href}
                       href={link.href}
                       className={cn(
-                        "text-sm font-medium transition-all duration-200 px-3 py-2 rounded-md relative z-10 text-gray-700",
+                        "text-sm font-medium transition-all duration-200 px-3 py-2 rounded-md relative z-10 text-gray-700 inline-flex items-center gap-2",
                         isActive
                           ? "bg-gray-100"
                           : "hover:bg-gray-50",
                       )}
+                      data-testid={`nav-link-${link.href.replace(/\//g, "-")}`}
                     >
                       {link.label}
+                      {showPendingBadge && (
+                        <Badge
+                          className="bg-amber-500 text-white hover:bg-amber-500 px-1.5 py-0 h-5 min-w-[1.25rem] flex items-center justify-center text-xs font-semibold rounded-full"
+                          data-testid="badge-pending-delegations-desktop"
+                        >
+                          {pendingDelegationCount}
+                        </Badge>
+                      )}
                       {isActive && (
                         <span
                           className="absolute bottom-0 left-0 right-0 h-0.5 rounded-full"
@@ -334,19 +385,31 @@ export function AdminHeader() {
                         ? pathname === "/admin"
                         : pathname.startsWith(link.href);
 
+                      const showPendingBadge =
+                        link.href === "/admin/provider-assistance" &&
+                        pendingDelegationCount > 0;
+
                       return (
                         <li key={link.href}>
                           <Link
                             href={link.href}
                             className={cn(
-                              "block px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 relative",
+                              "flex items-center justify-between gap-2 px-3 py-2 text-sm font-medium rounded-md transition-all duration-200 relative",
                               isActive
                                 ? "text-white bg-white/10"
                                 : "text-white/80 hover:text-white hover:bg-white/5",
                             )}
                             onClick={() => setMobileMenuOpen(false)}
                           >
-                            {link.label}
+                            <span>{link.label}</span>
+                            {showPendingBadge && (
+                              <Badge
+                                className="bg-amber-500 text-white hover:bg-amber-500 px-1.5 py-0 h-5 min-w-[1.25rem] flex items-center justify-center text-xs font-semibold rounded-full"
+                                data-testid="badge-pending-delegations-mobile"
+                              >
+                                {pendingDelegationCount}
+                              </Badge>
+                            )}
                             {isActive && (
                               <span
                                 className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[calc(100%-1.5rem)] h-0.5 rounded-full"

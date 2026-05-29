@@ -1,1 +1,2 @@
 - [AimRx->SmartConnect merge](aimrx-smartconnect-merge.md) — cherry-pick upstream features into live app; MFA conflict (otplib vs twilio) is the landmine, do it last.
+- [SmartConnect live DB access](aimrx-smartconnect-db-access.md) — live DB = Supabase via REST (no DDL); DATABASE_URL=empty Helium dev; AIMRX_PROD_DB_URL is the UPSTREAM AimRx DB, never use it for SmartConnect DDL.
