@@ -65,3 +65,24 @@ The guide is .NET/SDK-first and has hard external dependencies. Key facts:
 **Why this matters:** the integration cannot be flipped on from a config form alone —
 it needs Emporos-side onboarding + an integrator-operated OIDC service + (for Node)
 HTTP contracts Emporos hasn't published. Don't wire the live patient flow until those exist.
+
+## Stage-2 framework wiring (built, flag-gated off)
+- **Connector seam:** all RedSail transport goes through `IRedSailClient`
+  (`core/services/redsail/`). `getRedsailClient()` selects by `REDSAIL_ADAPTER`
+  (default `mock`); the real Emporos .NET-SDK/OIDC transport plugs in there with
+  no caller changes. Mock is deterministic and only reports "connected" when real
+  credentials are present.
+- **Migration-before-flag rule:** the new redsail columns + `redsail_webhook_events`
+  table do NOT exist in the live Supabase yet, and DDL can't be applied from the
+  Replit env (direct host IPv6-only, port 5432 times out). Apply
+  `core/database/migrations/20260603_redsail_framework.sql` (via Supabase SQL
+  editor) BEFORE setting `REDSAIL_ENABLED=true`. All runtime writes to those new
+  columns live only in the flag-gated path, so an un-applied migration is safe
+  while the flag is off.
+- **ENCRYPTION_KEY is now a hard prod prerequisite:** `core/security/encryption.ts`
+  throws in `NODE_ENV=production` when `ENCRYPTION_KEY` is unset (no more shared dev
+  fallback). **Why:** a shared deterministic key makes stored credentials trivially
+  decryptable. **Caution:** this affects the EXISTING Stripe/Authorize.Net credential
+  encrypt/decrypt paths too — if prod was silently running on the dev fallback,
+  stored secrets were encrypted with it; set `ENCRYPTION_KEY` to that same value (or
+  re-enter credentials) before deploying, or live credential decryption will break.

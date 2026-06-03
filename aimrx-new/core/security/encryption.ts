@@ -6,9 +6,19 @@ const IV_LENGTH = 16;
 function getEncryptionKey(): string {
   const key = process.env.ENCRYPTION_KEY;
   if (!key) {
+    // Fail loud in production: a deterministic dev fallback key would mean every
+    // deployment shares the same key, making stored credentials trivially
+    // decryptable. Refuse to encrypt/decrypt rather than provide false security.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "[SECURITY] ENCRYPTION_KEY is required in production. Refusing to use " +
+          "the insecure development fallback key. Set ENCRYPTION_KEY to a " +
+          "32-byte (64 hex char) secret.",
+      );
+    }
     console.warn(
       "[SECURITY] ENCRYPTION_KEY not set — using development fallback. " +
-      "Set ENCRYPTION_KEY env var for production security."
+        "Set ENCRYPTION_KEY env var for production security.",
     );
     return crypto
       .createHash("sha256")

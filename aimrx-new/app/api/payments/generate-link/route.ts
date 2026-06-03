@@ -3,6 +3,7 @@ import { createAdminClient } from "@core/database/client";
 import { getUser } from "@/core/auth/get-user";
 import { envConfig } from "@/core/config/envConfig";
 import { getActivePaymentConfig } from "@/core/services/pharmacyPaymentConfigService";
+import { getActiveRedsailConfig } from "@/core/services/redsailPaymentConfigService";
 import crypto from "crypto";
 
 const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
@@ -324,15 +325,32 @@ export async function POST(request: NextRequest) {
       ? await getActivePaymentConfig(prescription.pharmacy_id)
       : null;
 
-    let paymentGateway: "stripe" | "authorizenet";
-    if (pharmacyConfig) {
+    let paymentGateway: "stripe" | "authorizenet" | "redsail";
+
+    // RedSail takes priority ONLY when the feature flag is on AND the pharmacy
+    // has an active, verified RedSail connection. Flag is off by default, so the
+    // existing Stripe / Authorize.Net selection below is unchanged in production.
+    let redsailConfig = null;
+    if (envConfig.REDSAIL_ENABLED && prescription.pharmacy_id) {
+      const rs = await getActiveRedsailConfig(prescription.pharmacy_id);
+      if (rs && rs.isActive && rs.isConnected) {
+        redsailConfig = rs;
+      }
+    }
+
+    if (redsailConfig) {
+      paymentGateway = "redsail";
+    } else if (pharmacyConfig) {
       paymentGateway = pharmacyConfig.gateway;
     } else {
       const rawGateway = body.paymentGateway || "authorizenet";
       paymentGateway = rawGateway === "stripe" ? "stripe" : "authorizenet";
     }
 
-    if (paymentGateway === "authorizenet") {
+    if (paymentGateway === "redsail") {
+      // RedSail config was already verified (active + connected) above; no extra
+      // gateway-credential check needed here.
+    } else if (paymentGateway === "authorizenet") {
       const hasPharmacyAuthnet = pharmacyConfig?.gateway === "authorizenet" && pharmacyConfig.authnetApiLoginId && pharmacyConfig.authnetTransactionKey;
       const hasSystemAuthnet = envConfig.AUTHNET_API_LOGIN_ID && envConfig.AUTHNET_TRANSACTION_KEY;
       if (!hasPharmacyAuthnet && !hasSystemAuthnet) {
@@ -418,7 +436,8 @@ export async function POST(request: NextRequest) {
         pharmacy_name: pharmacy?.name,
         payment_token: paymentToken,
         payment_gateway: paymentGateway,
-        payment_config_id: pharmacyConfig?.id || null,
+        payment_config_id:
+          paymentGateway === "redsail" ? null : pharmacyConfig?.id || null,
         authnet_ref_id: authnetRefId,
         payment_status: "pending",
         order_progress: "payment_pending",

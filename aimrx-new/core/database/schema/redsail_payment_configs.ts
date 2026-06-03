@@ -43,10 +43,26 @@ export const redsailPaymentConfigs = pgTable(
     // Optional explicit API base URL override (otherwise derived from environment)
     apiBaseUrl: text("api_base_url"),
 
+    // OIDC token endpoint (client-credentials grant) for the integrator's own
+    // issuer. Optional; derived from environment when absent.
+    oidcTokenUrl: text("oidc_token_url"),
+
+    // Link to Pay authentication mode used for patient billing links.
+    // 'SingleUseToken' (no patient auth, one-time link) is the default for
+    // remote prescription billing.
+    linkToPayAuthMode: text("link_to_pay_auth_mode")
+      .default("SingleUseToken")
+      .notNull(),
+
     // OFF by default — never auto-route patients until an admin opts in
     isActive: boolean("is_active").default(false).notNull(),
     // Flipped true only after a successful live connection verification
     isConnected: boolean("is_connected").default(false).notNull(),
+
+    // Connection lifecycle bookkeeping
+    connectedAt: timestamp("connected_at", { withTimezone: true }),
+    lastTestedAt: timestamp("last_tested_at", { withTimezone: true }),
+    lastError: text("last_error"),
 
     label: text("label"),
 

@@ -73,7 +73,21 @@ export default function PaymentPage() {
     try {
       const gateway = paymentDetails?.paymentGateway || "authorizenet";
 
-      if (gateway === "stripe") {
+      if (gateway === "redsail") {
+        const response = await fetch("/api/payments/create-redsail-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentToken: token }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to initialize payment");
+        }
+
+        window.location.href = data.sessionUrl;
+      } else if (gateway === "stripe") {
         const response = await fetch("/api/payments/create-stripe-session", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

@@ -18,6 +18,11 @@ export const REDSAIL_BASE_URLS: Record<RedsailEnvironment, string> = {
   production: "https://payments.emporos.io",
 };
 
+export type RedsailLinkAuthMode =
+  | "SingleUseToken"
+  | "LastNameAndDob"
+  | "LastNameAndZipCode";
+
 export interface RedsailPaymentConfigInput {
   pharmacyId: string;
   environment?: RedsailEnvironment;
@@ -27,8 +32,10 @@ export interface RedsailPaymentConfigInput {
   stationId?: string;
   oidcClientId?: string;
   oidcClientSecret?: string;
+  oidcTokenUrl?: string;
   webhookAudience?: string;
   apiBaseUrl?: string;
+  linkToPayAuthMode?: RedsailLinkAuthMode;
   isActive?: boolean;
 }
 
@@ -44,9 +51,26 @@ export interface DecryptedRedsailConfig {
   stationId?: string;
   oidcClientId?: string;
   oidcClientSecret?: string;
+  oidcTokenUrl?: string;
   webhookAudience?: string;
   apiBaseUrl?: string;
+  linkToPayAuthMode: RedsailLinkAuthMode;
+  connectedAt?: string;
+  lastTestedAt?: string;
+  lastError?: string;
 }
+
+/** Fields whose change invalidates a prior successful connection. */
+const CONNECTIVITY_SENSITIVE_COLUMNS = [
+  "environment",
+  "tenant_id",
+  "site_id",
+  "station_id",
+  "oidc_client_id",
+  "oidc_token_url",
+  "webhook_audience",
+  "api_base_url",
+] as const;
 
 function decryptConfig(raw: Record<string, unknown>): DecryptedRedsailConfig {
   const config: DecryptedRedsailConfig = {
@@ -60,8 +84,14 @@ function decryptConfig(raw: Record<string, unknown>): DecryptedRedsailConfig {
     siteId: (raw.site_id as string) || undefined,
     stationId: (raw.station_id as string) || undefined,
     oidcClientId: (raw.oidc_client_id as string) || undefined,
+    oidcTokenUrl: (raw.oidc_token_url as string) || undefined,
     webhookAudience: (raw.webhook_audience as string) || undefined,
     apiBaseUrl: (raw.api_base_url as string) || undefined,
+    linkToPayAuthMode:
+      (raw.link_to_pay_auth_mode as RedsailLinkAuthMode) || "SingleUseToken",
+    connectedAt: (raw.connected_at as string) || undefined,
+    lastTestedAt: (raw.last_tested_at as string) || undefined,
+    lastError: (raw.last_error as string) || undefined,
   };
 
   if (
@@ -144,35 +174,66 @@ export async function upsertRedsailConfig(
   if (input.oidcClientSecret) {
     updateData.oidc_client_secret_encrypted = encryptApiKey(input.oidcClientSecret);
   }
+  // Only sent when explicitly provided so the payload stays compatible with
+  // databases where the newer columns have not been migrated yet.
+  if (input.oidcTokenUrl !== undefined)
+    updateData.oidc_token_url = input.oidcTokenUrl || null;
   if (input.webhookAudience !== undefined)
     updateData.webhook_audience = input.webhookAudience || null;
   if (input.apiBaseUrl !== undefined)
     updateData.api_base_url = input.apiBaseUrl || null;
+  if (input.linkToPayAuthMode !== undefined)
+    updateData.link_to_pay_auth_mode = input.linkToPayAuthMode;
 
-  // Credentials changed → require re-verification before going live.
-  updateData.is_connected = false;
   if (input.isActive !== undefined) {
     updateData.is_active = input.isActive;
   }
 
+  // Fetch the full existing row so we can decide whether the edit touched any
+  // connectivity-sensitive field. A pure label/cosmetic edit must NOT silently
+  // drop a verified connection.
   const { data: existingRows } = await supabase
     .from("redsail_payment_configs")
-    .select("id")
+    .select("*")
     .eq("pharmacy_id", input.pharmacyId)
     .order("created_at", { ascending: true })
     .limit(1);
 
-  const existing = existingRows?.[0];
+  const existing = existingRows?.[0] as Record<string, unknown> | undefined;
 
   if (existing) {
+    let connectivityChanged = false;
+    for (const col of CONNECTIVITY_SENSITIVE_COLUMNS) {
+      if (col in updateData) {
+        const next = updateData[col] ?? null;
+        const prev = (existing[col] as unknown) ?? null;
+        if (next !== prev) {
+          connectivityChanged = true;
+          break;
+        }
+      }
+    }
+    // A new/changed secret always counts as a connectivity change.
+    if ("oidc_client_secret_encrypted" in updateData) {
+      connectivityChanged = true;
+    }
+
+    // Only force re-verification when something that affects connectivity moved.
+    if (connectivityChanged) {
+      updateData.is_connected = false;
+    }
+
     const { error } = await supabase
       .from("redsail_payment_configs")
       .update(updateData)
-      .eq("id", existing.id);
+      .eq("id", existing.id as string);
 
     if (error) return { success: false, error: error.message };
-    return { success: true, configId: existing.id };
+    return { success: true, configId: existing.id as string };
   }
+
+  // Brand-new row: stays disconnected until verified (DB default is false).
+  updateData.is_connected = false;
 
   const { data: newConfig, error } = await supabase
     .from("redsail_payment_configs")
@@ -182,6 +243,49 @@ export async function upsertRedsailConfig(
 
   if (error) return { success: false, error: error.message };
   return { success: true, configId: newConfig.id };
+}
+
+/**
+ * Records the outcome of a connectivity verification. Writes the lifecycle
+ * columns (connected_at / last_tested_at / last_error) when they exist, but
+ * degrades gracefully on databases where that migration has not yet been
+ * applied — it retries with just `is_connected` so a verification can never be
+ * blocked by a pending migration.
+ */
+export async function setRedsailConnected(
+  configId: string,
+  connected: boolean,
+  errorMessage?: string,
+): Promise<{ success: boolean; error?: string }> {
+  const supabase = createAdminClient();
+  const now = new Date().toISOString();
+
+  const fullUpdate: Record<string, unknown> = {
+    is_connected: connected,
+    last_tested_at: now,
+    last_error: connected ? null : errorMessage || "Connection check failed",
+    updated_at: now,
+  };
+  if (connected) fullUpdate.connected_at = now;
+
+  const { error } = await supabase
+    .from("redsail_payment_configs")
+    .update(fullUpdate)
+    .eq("id", configId);
+
+  if (!error) return { success: true };
+
+  // Newer lifecycle columns missing → fall back to the always-present ones.
+  if (error.code === "PGRST204" || /column/i.test(error.message)) {
+    const { error: fallbackError } = await supabase
+      .from("redsail_payment_configs")
+      .update({ is_connected: connected, updated_at: now })
+      .eq("id", configId);
+    if (fallbackError) return { success: false, error: fallbackError.message };
+    return { success: true };
+  }
+
+  return { success: false, error: error.message };
 }
 
 export async function setRedsailActive(

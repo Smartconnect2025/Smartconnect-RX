@@ -4,14 +4,21 @@ import {
   getRedsailConfigsForPharmacy,
   upsertRedsailConfig,
   setRedsailActive,
+  setRedsailConnected,
   maskCredential,
   type RedsailEnvironment,
 } from "@/core/services/redsailPaymentConfigService";
+import { getRedsailClient } from "@/core/services/redsail/client";
 import { getPharmacyAdminScope } from "@/core/auth/api-guards";
 
 const VALID_ENVIRONMENTS: RedsailEnvironment[] = ["ftr1", "prv", "production"];
 const GUID_REGEX =
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
+
+/** Platform-level admins (global admin or super admin) bypass pharmacy scoping. */
+function isPlatformAdmin(role: string | null | undefined): boolean {
+  return role === "admin" || role === "super_admin";
+}
 
 async function authorize(request: NextRequest) {
   const supabase = await createServerClient();
@@ -46,7 +53,7 @@ export async function GET(request: NextRequest) {
     if (!pharmacyId) {
       return NextResponse.json({ error: "pharmacyId is required" }, { status: 400 });
     }
-    if (userRole?.role !== "admin" && !scope.isPharmacyAdmin) {
+    if (!isPlatformAdmin(userRole?.role) && !scope.isPharmacyAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -90,7 +97,7 @@ export async function POST(request: NextRequest) {
     if (!pharmacyId) {
       return NextResponse.json({ error: "pharmacyId is required" }, { status: 400 });
     }
-    if (userRole?.role !== "admin" && !scope.isPharmacyAdmin) {
+    if (!isPlatformAdmin(userRole?.role) && !scope.isPharmacyAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -165,8 +172,41 @@ export async function PUT(request: NextRequest) {
     if (!pharmacyId) {
       return NextResponse.json({ error: "pharmacyId is required" }, { status: 400 });
     }
-    if (userRole?.role !== "admin" && !scope.isPharmacyAdmin) {
+    if (!isPlatformAdmin(userRole?.role) && !scope.isPharmacyAdmin) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    if (action === "connect") {
+      // Run a connectivity verification through the active connector transport
+      // and persist the outcome. With the mock transport this confirms the
+      // configuration is complete; once the real Emporos transport is wired in,
+      // the same call performs a live credential check — no caller change needed.
+      const configs = await getRedsailConfigsForPharmacy(pharmacyId);
+      const config = body.configId
+        ? configs.find((c) => c.id === body.configId)
+        : configs[0];
+
+      if (!config) {
+        return NextResponse.json(
+          { success: false, error: "No RedSail configuration found to verify" },
+          { status: 404 },
+        );
+      }
+
+      const client = getRedsailClient(config);
+      const ping = await client.ping();
+      await setRedsailConnected(
+        config.id,
+        ping.connected,
+        ping.connected ? undefined : ping.message,
+      );
+
+      return NextResponse.json({
+        success: ping.connected,
+        connected: ping.connected,
+        message: ping.message,
+        transport: client.transport,
+      });
     }
 
     if (action === "test") {

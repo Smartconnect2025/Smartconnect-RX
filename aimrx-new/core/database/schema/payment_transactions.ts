@@ -73,6 +73,13 @@ export const paymentTransactions = pgTable(
     stripePaymentIntentId: text("stripe_payment_intent_id"),
     stripeSessionId: text("stripe_session_id"),
 
+    // RedSail Pay (Emporos Payments) correlation. Only set when a transaction is
+    // routed through RedSail; null for the existing Stripe / Authorize.Net flow.
+    redsailTransactionId: text("redsail_transaction_id"),
+    redsailLinkCode: text("redsail_link_code"),
+    redsailLastEventId: text("redsail_last_event_id"),
+    redsailPayload: jsonb("redsail_payload"),
+
     // Payment link (magic link)
     paymentToken: text("payment_token").notNull().unique(),
     paymentLinkUrl: text("payment_link_url"),
