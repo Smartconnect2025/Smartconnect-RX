@@ -140,6 +140,28 @@ export async function getRedsailConfigById(
   return decryptConfig(data);
 }
 
+/**
+ * Look up a config by its OIDC client id. Used by the integrator OIDC token
+ * endpoint to resolve the tenant a client-credentials request maps to and to
+ * validate the presented client secret. Returns the most-recently-updated match
+ * when more than one config shares a client id.
+ */
+export async function getRedsailConfigByOidcClientId(
+  oidcClientId: string,
+): Promise<DecryptedRedsailConfig | null> {
+  if (!oidcClientId) return null;
+  const supabase = createAdminClient();
+  const { data, error } = await supabase
+    .from("redsail_payment_configs")
+    .select("*")
+    .eq("oidc_client_id", oidcClientId)
+    .order("updated_at", { ascending: false })
+    .limit(1);
+
+  if (error || !data || data.length === 0) return null;
+  return decryptConfig(data[0]);
+}
+
 export async function getRedsailConfigsForPharmacy(
   pharmacyId: string,
 ): Promise<DecryptedRedsailConfig[]> {

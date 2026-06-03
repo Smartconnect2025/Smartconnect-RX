@@ -79,6 +79,28 @@ HTTP contracts Emporos hasn't published. Don't wire the live patient flow until 
   editor) BEFORE setting `REDSAIL_ENABLED=true`. All runtime writes to those new
   columns live only in the flag-gated path, so an un-applied migration is safe
   while the flag is off.
+- **Real `http` transport + integrator OIDC now exist (still opt-in):**
+  `getRedsailClient` selects `http` (`REDSAIL_ADAPTER=http`) → `HttpRedSailClient`;
+  default is still `mock`, so the live patient path is unchanged until the flag +
+  adapter are set AND a pharmacy is provisioned/connected. The integrator OIDC
+  server lives in-codebase at `/api/redsail/oidc` (discovery `.well-known/openid-configuration`,
+  `/jwks`, `/connect/token`); it signs RS256 client-credentials JWTs carrying
+  `aud:["payments-domain"]` + `tenant_id`, and the webhook verifies inbound tokens
+  against the same key. **The `tenant_id` claim (not the signature) is what binds a
+  webhook token to a pharmacy** — the signing key is shared across configs, so each
+  config only accepts tokens whose `tenant_id` == its Tenant GUID. The `/connect/token`
+  endpoint maps a client to its tenant via `redsail_payment_configs.oidc_client_id`.
+- **`REDSAIL_OIDC_PRIVATE_KEY` is a hard prod prerequisite for the `http` adapter:**
+  PKCS#8 RSA PEM (or base64 of one). **Why:** JWKS must be STABLE — a per-restart
+  ephemeral key (the dev fallback) would silently break Emporos token validation.
+  Prod throws if it's unset; dev auto-generates ephemeral + warns.
+- **Link-to-Pay HTTP path is NOT published by Emporos** (only the SDK shape +
+  `transaction/initialize` are documented). The adapter posts the documented
+  Transaction/Link-to-Pay body to `REDSAIL_LINK_TO_PAY_PATH` (templated
+  `{tenantId}/{siteId}`, sensible default) and **fails loudly** if the response has
+  no usable URL/code — it never fabricates a link. Optional `REDSAIL_PING_PATH`
+  enables a real reachability check in `ping()`; without it `ping()` only proves
+  token minting. Set these once Emporos confirms the real endpoints.
 - **ENCRYPTION_KEY is now a hard prod prerequisite:** `core/security/encryption.ts`
   throws in `NODE_ENV=production` when `ENCRYPTION_KEY` is unset (no more shared dev
   fallback). **Why:** a shared deterministic key makes stored credentials trivially
