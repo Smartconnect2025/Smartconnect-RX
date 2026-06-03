@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { AdminDashboardProps } from "./types";
 import { cn } from "@/utils/tailwind-utils";
-import { Users, Building2, Pill, ShieldCheck, LayoutGrid, TrendingUp, DollarSign, ShoppingCart } from "lucide-react";
+import { Users, Building2, Pill, ShieldCheck, LayoutGrid, TrendingUp, DollarSign, ShoppingCart, CreditCard } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -243,6 +243,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                         <div className="text-sm font-bold text-emerald-700">{formatCurrency(pharmacy.total_revenue_cents)}</div>
                       </div>
                     </div>
+                    <Link
+                      href={`/admin/redsail-payment-settings?pharmacyId=${pharmacy.id}`}
+                      className="mt-3 flex items-center justify-center gap-2 w-full rounded-lg border border-[#1D4E89]/20 bg-[#1D4E89]/5 px-3 py-2 text-sm font-medium text-[#1D4E89] hover:bg-[#1D4E89]/10 transition-colors"
+                    >
+                      <CreditCard className="h-4 w-4" />
+                      RedSail Pay Setup
+                    </Link>
                   </CardContent>
                 </Card>
               ))
