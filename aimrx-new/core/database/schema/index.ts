@@ -41,6 +41,7 @@ export * from "./pharmacy_medications";
 export * from "./provider_pharmacy_links";
 export * from "./pharmacy_admins";
 export * from "./pharmacy_payment_configs";
+export * from "./redsail_payment_configs";
 export * from "./tiers";
 
 // System monitoring

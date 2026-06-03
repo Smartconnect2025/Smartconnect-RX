@@ -78,6 +78,11 @@ export const envConfig = {
   // Klaviyo CRM Integration (Optional)
   KLAVIYO_API_KEY: process.env.KLAVIYO_API_KEY ?? "",
 
+  // RedSail Pay (Emporos Payments) — OFF by default. When "true", pharmacies
+  // with a saved AND connected RedSail config can route patients to RedSail.
+  // Until then the live Stripe / Authorize.Net flow is completely unaffected.
+  REDSAIL_ENABLED: (process.env.REDSAIL_ENABLED ?? "false") === "true",
+
   // Feature Flags (Optional)
   USE_SIGNATURE_CONSENT: process.env.NEXT_PUBLIC_USE_SIGNATURE_CONSENT ?? true,
 };
