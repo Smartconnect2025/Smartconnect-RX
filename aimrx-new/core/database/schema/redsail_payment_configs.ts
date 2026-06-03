@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm";
 import {
   pgTable,
   pgPolicy,
+  uniqueIndex,
   uuid,
   text,
   boolean,
@@ -57,6 +58,8 @@ export const redsailPaymentConfigs = pgTable(
       .notNull(),
   },
   (table) => [
+    // One RedSail config per pharmacy (deterministic upsert).
+    uniqueIndex("redsail_payment_configs_pharmacy_id_key").on(table.pharmacyId),
     pgPolicy("redsail_payment_configs_select_policy", {
       for: "select",
       to: authenticatedRole,

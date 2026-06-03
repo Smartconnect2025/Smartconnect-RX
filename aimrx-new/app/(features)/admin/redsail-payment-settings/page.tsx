@@ -179,8 +179,9 @@ export default function RedsailPaymentSettingsPage() {
           environment,
           tenantId,
           oidcClientId,
-          // Use the freshly typed secret if present, else rely on the stored one.
-          oidcClientSecret: oidcClientSecret || config?.oidcClientSecretMasked,
+          // Only send a freshly typed secret. The server checks for an existing
+          // stored secret itself — never echo the masked placeholder back.
+          oidcClientSecret: oidcClientSecret || undefined,
         }),
       });
       const data = await response.json();

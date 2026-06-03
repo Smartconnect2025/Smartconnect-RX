@@ -89,10 +89,11 @@ export async function getActiveRedsailConfig(
     .select("*")
     .eq("pharmacy_id", pharmacyId)
     .eq("is_active", true)
-    .maybeSingle();
+    .order("updated_at", { ascending: false })
+    .limit(1);
 
-  if (error || !data) return null;
-  return decryptConfig(data);
+  if (error || !data || data.length === 0) return null;
+  return decryptConfig(data[0]);
 }
 
 export async function getRedsailConfigById(
@@ -154,11 +155,14 @@ export async function upsertRedsailConfig(
     updateData.is_active = input.isActive;
   }
 
-  const { data: existing } = await supabase
+  const { data: existingRows } = await supabase
     .from("redsail_payment_configs")
     .select("id")
     .eq("pharmacy_id", input.pharmacyId)
-    .maybeSingle();
+    .order("created_at", { ascending: true })
+    .limit(1);
+
+  const existing = existingRows?.[0];
 
   if (existing) {
     const { error } = await supabase

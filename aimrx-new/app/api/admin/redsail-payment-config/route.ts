@@ -174,10 +174,16 @@ export async function PUT(request: NextRequest) {
       // Emporos .NET SDK + provisioned credentials, which are not yet available,
       // so we validate that everything needed is present and well-formed and
       // report clearly that live verification is pending RedSail provisioning.
+      // A secret may already be stored from a previous save. The page never
+      // sends the masked value back, so check the database rather than trusting
+      // a placeholder, which would make "test" misleadingly pass.
+      const existingConfigs = await getRedsailConfigsForPharmacy(pharmacyId);
+      const storedSecret = existingConfigs.some((c) => !!c.oidcClientSecret);
+
       const missing: string[] = [];
       if (!body.tenantId) missing.push("Tenant ID");
       if (!body.oidcClientId) missing.push("Client ID");
-      if (!body.oidcClientSecret) missing.push("Client Secret");
+      if (!body.oidcClientSecret && !storedSecret) missing.push("Client Secret");
 
       if (missing.length > 0) {
         return NextResponse.json(

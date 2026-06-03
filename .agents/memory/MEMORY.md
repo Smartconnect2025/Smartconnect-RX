@@ -1,3 +1,2 @@
-- [AimRx->SmartConnect merge](aimrx-smartconnect-merge.md) — cherry-pick upstream features into live app; MFA conflict (otplib vs twilio) is the landmine, do it last.
-- [SmartConnect live DB access](aimrx-smartconnect-db-access.md) — live DB = Supabase via REST (no DDL); DATABASE_URL=empty Helium dev; AIMRX_PROD_DB_URL is the UPSTREAM AimRx DB, never use it for SmartConnect DDL.
-- [Rx submission flow + API/Logs health](aimrx-prescription-submission-flow.md) — real pharmacy call is POST-payment via submit-to-pharmacy (two-way); /submit DigitalRx code is dead; both systems already live.
+- [SmartConnect DB topology](smartconnect-db-topology.md) — real data lives in the Supabase project (NEXT_PUBLIC_SUPABASE_URL); DATABASE_URL/AIMRX_PROD_DB_URL point elsewhere; direct host is IPv6-only.
+- [RedSail Pay groundwork](redsail-pay.md) — additive, flag-gated (REDSAIL_ENABLED off); never wired into patient flow until real Emporos creds + SDK provisioned.

@@ -27,7 +27,9 @@ CREATE TABLE IF NOT EXISTS redsail_payment_configs (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS redsail_payment_configs_pharmacy_id_idx
+-- One RedSail config per pharmacy. Unique so the upsert is deterministic and
+-- duplicate rows can never be created (e.g. via a race or manual insert).
+CREATE UNIQUE INDEX IF NOT EXISTS redsail_payment_configs_pharmacy_id_key
   ON redsail_payment_configs (pharmacy_id);
 
 ALTER TABLE redsail_payment_configs ENABLE ROW LEVEL SECURITY;
