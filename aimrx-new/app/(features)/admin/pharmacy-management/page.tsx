@@ -40,6 +40,7 @@ import {
   Trash2,
   RefreshCw,
   CreditCard,
+  Wallet,
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -1192,6 +1193,15 @@ export default function PharmacyManagementPage() {
                                     title="Payment Settings"
                                   >
                                     <CreditCard className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => router.push(`/admin/redsail-payment-settings?pharmacyId=${pharmacy.id}`)}
+                                    className="text-[#1D4E89] hover:text-[#163a66] hover:bg-[#1D4E89]/10 p-2"
+                                    title="RedSail Pay Setup"
+                                  >
+                                    <Wallet className="h-4 w-4" />
                                   </Button>
                                   <Button
                                     variant="ghost"
