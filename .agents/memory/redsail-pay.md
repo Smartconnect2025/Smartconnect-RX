@@ -29,3 +29,39 @@ live flow. So stage 1 = admin config groundwork only; stage 2 = wiring, after cr
 
 **Deploy:** app.smartconnects.com via Render (GitHub auto-deploy). Dev and prod
 share the same live Supabase, so creating the table once covers both.
+
+## Integration contract (from the Emporos Payments Domain Integrator Guide v1.8.0)
+The guide is .NET/SDK-first and has hard external dependencies. Key facts:
+- **Preferred path is a .NET SDK** (`Emporos.Payments.Sdk` NuGet, C#, .NET 8/Std2.0+).
+  SmartConnect is Node/TypeScript, so SDK is not directly usable.
+- **The HTTP API ("any language") is officially "Not Available Yet"** per the guide
+  ("API Documentation … TBD Later"). Only one endpoint shape is shown:
+  `POST /api/{tenantId}/sdk/transaction/initialize` (Bearer) → `{ urlCode }`, then
+  payment URL `https://{paymentsDomain}/{tenantId}/pay/{urlCode}`. Link-to-Pay's
+  HTTP endpoint/body is NOT documented (only the SDK method `CreateLinkToPayAsync`
+  → `response.Data.LinkToPayUrl` + `LinkToPayCode`). Building Node now = reverse-
+  engineering undocumented HTTP — risky on a LIVE payment path.
+- **Integrator must run its own OIDC server** (OAuth2 client-credentials, JWT signed,
+  `.well-known` at the configured level). JWT must carry `aud` containing
+  `payments-domain` and a `tenant_id` claim (= the Tenant GUID). Emporos calls YOUR
+  OIDC both for your outbound token AND to authenticate webhooks back to you.
+- **Onboarding is manual via Emporos**: send Tenant-Onboarding CSV(s); Emporos sets
+  gateway (GPI) credentials in test envs, adds your logo URL as a trusted source,
+  takes your theme CSS, webhook URL, and OIDC details. Creds are not self-serve.
+- **Hierarchy**: Integrator > Tenant(pharmacy, GUID) > Site(location, integrator sets
+  SiteId) > Station(register, integrator sets numeric 0-16 digit StationId). Config
+  precedence Station > Site > Tenant > Integrator.
+- **Patient remote-pay = Link to Pay** (matches SmartConnect's payment-link flow).
+  3 auth modes: LastNameAndDob, LastNameAndZipCode, SingleUseToken (no customer).
+- **Webhooks**: `POST {yourWebhook}/webhooks/payments`, Bearer token, body has
+  `eventName`/`eventId`/`eventDate`/`eventPayload`. Events: `payment.success`,
+  `link_to_pay.fully_paid`, `card.boarded`/`updated`/`unboarded`. Retries via Service
+  Bus + DLQ until 200.
+- **Test cards**: Visa 4012000033330026, MC 5121212121212124, Disc 6510000000000810,
+  Amex 3760000000000002 (cvv 1234), FSA 4005100001234504. CVV 123, any future exp.
+- **Env base URLs (corrected from guide p.7)**: FTR1 `https://empftr1-payments-dev.emporos.io`,
+  PRV `https://payments-prv.emporos.io` (code previously had wrong `empprv-payments`),
+  PROD `https://payments.emporos.io`.
+**Why this matters:** the integration cannot be flipped on from a config form alone —
+it needs Emporos-side onboarding + an integrator-operated OIDC service + (for Node)
+HTTP contracts Emporos hasn't published. Don't wire the live patient flow until those exist.

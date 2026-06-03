@@ -14,7 +14,7 @@ export type RedsailEnvironment = "ftr1" | "prv" | "production";
  */
 export const REDSAIL_BASE_URLS: Record<RedsailEnvironment, string> = {
   ftr1: "https://empftr1-payments-dev.emporos.io",
-  prv: "https://empprv-payments.emporos.io",
+  prv: "https://payments-prv.emporos.io",
   production: "https://payments.emporos.io",
 };
 
