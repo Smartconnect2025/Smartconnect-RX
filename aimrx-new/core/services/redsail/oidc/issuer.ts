@@ -1,5 +1,5 @@
 import { SignJWT, jwtVerify, createLocalJWKSet, type JWTPayload } from "jose";
-import { getOidcKeyMaterial } from "./keys";
+import { getOidcKeyMaterial, getOidcPublicJwks } from "./keys";
 
 /**
  * The integrator-operated OIDC token issuer for RedSail / Emporos Payments.
@@ -86,10 +86,15 @@ export interface VerifiedToken {
  * published JWKS, audience contains "payments-domain", and a `tenant_id` claim
  * is present. Throws on any failure. Callers (the webhook) additionally check
  * that `tenant_id` matches the pharmacy config they are processing for.
+ *
+ * Verification uses the full published JWKS (current signing key plus any
+ * previous keys still in their rollover window), so a token signed with a key
+ * we just rotated away from keeps verifying until it expires. `jwtVerify`
+ * selects the matching key by the token header's `kid`.
  */
 export async function verifyToken(jwt: string): Promise<VerifiedToken> {
-  const { publicJwk } = await getOidcKeyMaterial();
-  const jwks = createLocalJWKSet({ keys: [publicJwk] });
+  const keys = await getOidcPublicJwks();
+  const jwks = createLocalJWKSet({ keys });
 
   const { payload } = await jwtVerify(jwt, jwks, {
     issuer: getOidcIssuerUrl(),

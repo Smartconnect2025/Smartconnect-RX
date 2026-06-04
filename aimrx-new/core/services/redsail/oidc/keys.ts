@@ -18,9 +18,17 @@ import { createPublicKey } from "crypto";
  *   - the tokens Emporos mints (from our token endpoint) and presents back to
  *     our webhook — which we then verify locally with the public key.
  *
- * The private key is supplied via `REDSAIL_OIDC_PRIVATE_KEY` as a PKCS#8 PEM
- * (optionally base64-encoded so it survives single-line env storage). The public
- * JWKS is derived from it, so there is nothing else to configure.
+ * The CURRENT private key is supplied via `REDSAIL_OIDC_PRIVATE_KEY` as a
+ * PKCS#8 PEM (optionally base64-encoded so it survives single-line env storage).
+ * New tokens are always signed with this key.
+ *
+ * To rotate the key without downtime, the PREVIOUS key(s) are supplied via
+ * `REDSAIL_OIDC_PREVIOUS_PUBLIC_KEYS` — one or more public (SPKI) or private
+ * (PKCS#8) PEM blocks, concatenated (and optionally base64-encoded as a whole).
+ * Only the public material is used: their public JWKs are published alongside
+ * the current key (each keyed by its own `kid`) so tokens signed with a retired
+ * key keep verifying until they expire. Once the old tokens have aged out
+ * (token TTL), the previous key can be dropped from the env var.
  */
 
 const ALG = "RS256";
@@ -39,6 +47,7 @@ export interface OidcKeyMaterial {
 }
 
 let cached: Promise<OidcKeyMaterial> | null = null;
+let cachedPublicJwks: Promise<JWK[]> | null = null;
 
 function decodePrivateKeyPem(raw: string): string {
   const trimmed = raw.trim();
@@ -57,16 +66,44 @@ function decodePrivateKeyPem(raw: string): string {
   return trimmed;
 }
 
-async function buildFromPem(pem: string): Promise<OidcKeyMaterial> {
-  const privateKey = await importPKCS8(pem, ALG, { extractable: false });
-  // Derive the public key from the private key so JWKS always matches.
+/**
+ * Extract every PEM block from a raw env value. Accepts the value either as
+ * literal PEM text (one or more blocks) or as a single base64 encoding of that
+ * text. Returns one string per `-----BEGIN ...----- ... -----END ...-----`
+ * block so several keys can share one env var.
+ */
+function extractPemBlocks(raw: string): string[] {
+  let text = raw.trim();
+  if (!text.includes("-----BEGIN")) {
+    try {
+      const decoded = Buffer.from(text, "base64").toString("utf8");
+      if (decoded.includes("-----BEGIN")) text = decoded;
+    } catch {
+      /* fall through — no blocks found */
+    }
+  }
+  const matches = text.match(
+    /-----BEGIN [^-]+-----[\s\S]*?-----END [^-]+-----/g,
+  );
+  return matches ?? [];
+}
+
+/** Build the published public JWK (with kid/use/alg) from any PEM block. */
+async function publicJwkFromPem(pem: string): Promise<JWK> {
   const publicKeyObject = createPublicKey({ key: pem, format: "pem" });
   const publicJwk = await exportJWK(publicKeyObject);
   const kid = await calculateJwkThumbprint(publicJwk);
+  return { ...publicJwk, kid, use: "sig", alg: ALG };
+}
+
+async function buildFromPem(pem: string): Promise<OidcKeyMaterial> {
+  const privateKey = await importPKCS8(pem, ALG, { extractable: false });
+  // Derive the public key from the private key so JWKS always matches.
+  const publicJwk = await publicJwkFromPem(pem);
   return {
     privateKey,
-    publicJwk: { ...publicJwk, kid, use: "sig", alg: ALG },
-    kid,
+    publicJwk,
+    kid: publicJwk.kid as string,
     alg: ALG,
     ephemeral: false,
   };
@@ -93,7 +130,8 @@ async function buildEphemeral(): Promise<OidcKeyMaterial> {
 }
 
 /**
- * Resolve the OIDC key material (cached for the process lifetime).
+ * Resolve the CURRENT OIDC signing-key material (cached for the process
+ * lifetime). New tokens are always signed with this key.
  *
  * In production a missing `REDSAIL_OIDC_PRIVATE_KEY` is a hard error: a JWKS that
  * changes on every restart would silently break Emporos token validation. In dev
@@ -119,7 +157,60 @@ export function getOidcKeyMaterial(): Promise<OidcKeyMaterial> {
   return cached;
 }
 
+/**
+ * Resolve the public JWKs of any PREVIOUS signing keys still in their rollover
+ * window, supplied via `REDSAIL_OIDC_PREVIOUS_PUBLIC_KEYS`. Returns an empty
+ * array when none are configured or none parse. Failures are logged but never
+ * fatal — a bad previous key must not take down token issuance with the current
+ * one.
+ */
+async function getPreviousPublicJwks(): Promise<JWK[]> {
+  const raw = process.env.REDSAIL_OIDC_PREVIOUS_PUBLIC_KEYS?.trim();
+  if (!raw) return [];
+
+  const blocks = extractPemBlocks(raw);
+  const jwks: JWK[] = [];
+  for (const block of blocks) {
+    try {
+      jwks.push(await publicJwkFromPem(block));
+    } catch (err) {
+      console.error(
+        "[REDSAIL-OIDC] Skipping an unparseable key in " +
+          "REDSAIL_OIDC_PREVIOUS_PUBLIC_KEYS:",
+        err,
+      );
+    }
+  }
+  return jwks;
+}
+
+/**
+ * All public JWKs that should currently verify a token: the current signing key
+ * plus every previous key still inside its rollover window. Deduplicated by
+ * `kid` (the current key always wins). This is what the JWKS endpoint publishes
+ * and what `verifyToken` validates against.
+ */
+export function getOidcPublicJwks(): Promise<JWK[]> {
+  if (cachedPublicJwks) return cachedPublicJwks;
+
+  cachedPublicJwks = (async () => {
+    const current = await getOidcKeyMaterial();
+    const previous = await getPreviousPublicJwks();
+
+    const byKid = new Map<string, JWK>();
+    byKid.set(current.publicJwk.kid as string, current.publicJwk);
+    for (const jwk of previous) {
+      const kid = jwk.kid as string;
+      if (!byKid.has(kid)) byKid.set(kid, jwk);
+    }
+    return Array.from(byKid.values());
+  })();
+
+  return cachedPublicJwks;
+}
+
 /** Test-only: clear the cached key material. */
 export function __resetOidcKeyCacheForTests(): void {
   cached = null;
+  cachedPublicJwks = null;
 }

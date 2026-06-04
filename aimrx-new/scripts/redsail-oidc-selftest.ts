@@ -6,11 +6,16 @@
  * Run: npx tsx scripts/redsail-oidc-selftest.ts
  */
 import assert from "node:assert";
+import { generateKeyPair, exportPKCS8, exportSPKI } from "jose";
 import {
   issueToken,
   verifyToken,
   PAYMENTS_DOMAIN_AUDIENCE,
 } from "@/core/services/redsail/oidc/issuer";
+import {
+  getOidcPublicJwks,
+  __resetOidcKeyCacheForTests,
+} from "@/core/services/redsail/oidc/keys";
 import { HttpRedSailClient } from "@/core/services/redsail/httpAdapter";
 import type { DecryptedRedsailConfig } from "@/core/services/redsailPaymentConfigService";
 
@@ -89,7 +94,72 @@ async function main() {
   assert.equal(noAuth.valid, false, "missing bearer must be rejected");
   console.log("✓ webhook verify rejects missing bearer");
 
+  await rotationTests();
+
   console.log("\nALL REDSAIL OIDC SELF-TESTS PASSED");
+}
+
+/**
+ * Dual-key rollover: a token signed with the OLD key must keep verifying while
+ * the OLD public key is published as a "previous" key, and stop verifying once
+ * it is retired — all while the NEW key signs fresh tokens.
+ */
+async function rotationTests() {
+  // Generate two distinct, stable RSA key pairs as PEM (the env format).
+  const a = await generateKeyPair("RS256", { extractable: true });
+  const b = await generateKeyPair("RS256", { extractable: true });
+  const oldPrivatePem = await exportPKCS8(a.privateKey);
+  const oldPublicPem = await exportSPKI(a.publicKey);
+  const newPrivatePem = await exportPKCS8(b.privateKey);
+
+  // Phase 1: OLD key is the only (current) key. Mint a token with it.
+  process.env.REDSAIL_OIDC_PRIVATE_KEY = oldPrivatePem;
+  delete process.env.REDSAIL_OIDC_PREVIOUS_PUBLIC_KEYS;
+  __resetOidcKeyCacheForTests();
+  const oldToken = (await issueToken({ tenantId: TENANT, clientId: "c" }))
+    .accessToken;
+  await verifyToken(oldToken); // sanity: verifies under the old key
+  console.log("✓ rotation: token minted under the old key");
+
+  // Phase 2: rotate — NEW key becomes current, OLD public stays as previous.
+  process.env.REDSAIL_OIDC_PRIVATE_KEY = newPrivatePem;
+  process.env.REDSAIL_OIDC_PREVIOUS_PUBLIC_KEYS = oldPublicPem;
+  __resetOidcKeyCacheForTests();
+
+  // The in-flight old token still verifies during the rollover window.
+  const stillValid = await verifyToken(oldToken);
+  assert.equal(stillValid.tenantId, TENANT, "old token must still verify");
+  console.log("✓ rotation: old in-flight token still verifies during overlap");
+
+  // New tokens are signed with the new key and verify too.
+  const newToken = (await issueToken({ tenantId: TENANT, clientId: "c" }))
+    .accessToken;
+  const newVerified = await verifyToken(newToken);
+  assert.equal(newVerified.tenantId, TENANT, "new token must verify");
+  console.log("✓ rotation: new key signs and verifies fresh tokens");
+
+  // JWKS publishes BOTH keys (distinct kids) during the window.
+  const jwks = await getOidcPublicJwks();
+  assert.equal(jwks.length, 2, "JWKS should publish both keys during overlap");
+  const kids = new Set(jwks.map((k) => k.kid));
+  assert.equal(kids.size, 2, "the two published keys must have distinct kids");
+  console.log("✓ rotation: JWKS publishes both keys with distinct kids");
+
+  // Phase 3: retire the old key (its tokens have expired). Old token now fails.
+  delete process.env.REDSAIL_OIDC_PREVIOUS_PUBLIC_KEYS;
+  __resetOidcKeyCacheForTests();
+  await assert.rejects(
+    () => verifyToken(oldToken),
+    "retired old token must be rejected",
+  );
+  const afterRetire = await getOidcPublicJwks();
+  assert.equal(afterRetire.length, 1, "JWKS should publish only the new key");
+  console.log("✓ rotation: retired key no longer verifies or publishes");
+
+  // Clean up env so we don't leak into anything else.
+  delete process.env.REDSAIL_OIDC_PRIVATE_KEY;
+  delete process.env.REDSAIL_OIDC_PREVIOUS_PUBLIC_KEYS;
+  __resetOidcKeyCacheForTests();
 }
 
 main().catch((err) => {
