@@ -17,3 +17,9 @@ id = "-jXgS5KeZgc3Td_cdTCKM"
 uri = "file://aimrx-new/PioneerRX_Integration_Documentation.md"
 type = "text"
 title = "Pioneer RX Integration Documentation (Updated with API Spec)"
+
+[[outputs]]
+id = "1kWd6rz--JHCkq523ppvH"
+uri = "file://aimrx-new/docs/redsail/emporos-onboarding-request.md"
+type = "text"
+title = "Emporos (RedSail Pay) Onboarding Request"
