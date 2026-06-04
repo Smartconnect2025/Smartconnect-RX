@@ -1,3 +1,4 @@
 - [SmartConnect DB topology](smartconnect-db-topology.md) — real data lives in the Supabase project (NEXT_PUBLIC_SUPABASE_URL); DATABASE_URL/AIMRX_PROD_DB_URL point elsewhere; direct host is IPv6-only.
 - [RedSail Pay groundwork](redsail-pay.md) — additive, flag-gated (REDSAIL_ENABLED off); never wired into patient flow until real Emporos creds + SDK provisioned.
+- [Pay-on-terms checkout bypass](pay-on-terms-checkout.md) — net-terms providers auto-skip the checkout screen; invariant: pay-on-terms sends NO patient receipt (suppressPatientNotifications gate in mark-paid).
 - [Deploy & push workflow](deploy-and-push-workflow.md) — live site = Render auto-deploy from GitHub main; agent git pushes are guard-blocked + GitHub secret-scanning blocks history (leaked PAT in aimrx-reference/.replit).

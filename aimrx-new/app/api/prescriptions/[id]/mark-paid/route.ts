@@ -19,7 +19,7 @@ export async function POST(
     const { id: prescriptionId } = await params;
     const supabaseAdmin = createAdminClient();
 
-    let body: { prescriptionIds?: string[] } = {};
+    let body: { prescriptionIds?: string[]; suppressPatientNotifications?: boolean } = {};
     try {
       body = await request.json();
     } catch {
@@ -264,10 +264,11 @@ export async function POST(
       } catch (_) {}
     }
 
-    // Send confirmation email
+    // Send confirmation email (skipped when notifications are suppressed,
+    // e.g. pay-on-terms auto-bypass — the patient gets no receipt/email/SMS).
     let emailSent = false;
     const primaryRxPatient = rxList[0];
-    try {
+    if (!body.suppressPatientNotifications) try {
       const { data: patientData } = await supabaseAdmin
         .from("patients")
         .select("email, first_name, last_name")

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import DefaultLayout from "@/components/layout/DefaultLayout";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,6 +58,10 @@ export default function Step4PaymentPage() {
   const [initialPaymentMethod, setInitialPaymentMethod] = useState<"send-link" | "charge-now">("send-link");
   const [markingPaid, setMarkingPaid] = useState(false);
   const [paymentComplete, setPaymentComplete] = useState(false);
+  const [paidOnTerms, setPaidOnTerms] = useState(false);
+  // Guards the pay-on-terms auto-bypass so the mutating mark-paid call runs at
+  // most once per prescription-id set (React StrictMode / effect re-runs).
+  const bypassAttempted = useRef<string | null>(null);
 
   const loadPrescriptions = useCallback(async () => {
     if (allIds.length === 0) return;
@@ -107,6 +111,65 @@ export default function Step4PaymentPage() {
 
       if (orderedList.every((rx) => rx.status === "payment_received" || rx.status === "submitted")) {
         setPaymentComplete(true);
+        return;
+      }
+
+      // Pay-on-terms auto-bypass: if the prescribing provider is flagged
+      // pay_on_terms, skip the Collect Payment screen entirely. We auto-mark
+      // the prescriptions paid (manual-payment) and submit to the pharmacy,
+      // with no patient receipt/email/SMS. On any failure we fall through to
+      // the normal payment screen so payment can still be collected manually.
+      try {
+        const checkRes = await fetch("/api/prescriptions/check-pay-on-terms", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prescriptionIds: allIds }),
+        });
+        const checkJson = await checkRes.json().catch(() => ({}));
+        if (checkRes.ok && checkJson?.payOnTerms === true) {
+          // Run the mutating mark-paid at most once per id set.
+          const bypassKey = allIds.join(",");
+          if (bypassAttempted.current === bypassKey) return;
+          bypassAttempted.current = bypassKey;
+
+          const payRes = await fetch(`/api/prescriptions/${allIds[0]}/mark-paid`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              prescriptionIds: allIds,
+              suppressPatientNotifications: true,
+            }),
+          });
+          const payJson = await payRes.json().catch(() => ({}));
+          if (payRes.ok && !payJson?.error) {
+            // Payment recorded on terms. payJson.warning => some pharmacy
+            // submissions failed (logged server-side for manual follow-up);
+            // the orders are still paid, so we complete but flag the caveat.
+            setPaidOnTerms(true);
+            setPaymentComplete(true);
+            if (payJson?.warning) {
+              toast.warning(payJson.warning);
+            } else {
+              toast.success(
+                allIds.length > 1
+                  ? "Prescriptions auto-paid on terms — submitted to pharmacy. No patient receipt sent."
+                  : "Prescription auto-paid on terms — submitted to pharmacy. No patient receipt sent.",
+              );
+            }
+            return;
+          }
+          // Hard failure — allow a retry and fall through to the manual screen.
+          bypassAttempted.current = null;
+          toast.error(payJson?.error || "Auto-bill on terms failed — please collect payment manually.");
+        }
+      } catch (err) {
+        // Hard failure during the pay-on-terms check / mark-paid (e.g. network
+        // throw). Release the guard so a future reload can retry, and fall back
+        // to the normal payment screen.
+        bypassAttempted.current = null;
+        console.warn("[step4] pay-on-terms check failed; falling back to normal flow:", err);
       }
     } catch {
       toast.error("Error loading prescriptions");
@@ -191,11 +254,17 @@ export default function Step4PaymentPage() {
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 mb-6">
               <CheckCircle2 className="h-10 w-10 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Complete</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {paidOnTerms ? "Billed on Terms" : "Payment Complete"}
+            </h2>
             <p className="text-gray-600 mb-6">
-              {isMultiOrder
-                ? `All ${prescriptions.length} prescriptions have been submitted to the pharmacy for processing.`
-                : "The prescription has been submitted to the pharmacy for processing."}
+              {paidOnTerms
+                ? isMultiOrder
+                  ? `All ${prescriptions.length} prescriptions were billed on terms and submitted to the pharmacy. No patient receipt was sent.`
+                  : "The prescription was billed on terms and submitted to the pharmacy. No patient receipt was sent."
+                : isMultiOrder
+                  ? `All ${prescriptions.length} prescriptions have been submitted to the pharmacy for processing.`
+                  : "The prescription has been submitted to the pharmacy for processing."}
             </p>
             <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-8 max-w-md mx-auto">
               <div className="space-y-2 text-sm">
