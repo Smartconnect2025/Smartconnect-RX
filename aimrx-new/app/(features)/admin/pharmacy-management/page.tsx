@@ -244,7 +244,7 @@ export default function PharmacyManagementPage() {
     api_key: "",
     shared_secret: "",
     location_id: "",
-    payment_gateway: "none" as "none" | "stripe" | "authorizenet",
+    payment_gateway: "none" as "none" | "stripe" | "authorizenet" | "redsail",
     payment_environment: "sandbox" as "sandbox" | "production",
     stripe_secret_key: "",
     stripe_publishable_key: "",
@@ -252,6 +252,12 @@ export default function PharmacyManagementPage() {
     authnet_api_login_id: "",
     authnet_transaction_key: "",
     authnet_signature_key: "",
+    redsail_environment: "ftr1" as "ftr1" | "prv" | "production",
+    redsail_tenant_id: "",
+    redsail_oidc_client_id: "",
+    redsail_oidc_client_secret: "",
+    redsail_site_id: "",
+    redsail_station_id: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pharmacyGateways, setPharmacyGateways] = useState<Record<string, PharmacyGatewayInfo>>({});
@@ -317,6 +323,25 @@ export default function PharmacyManagementPage() {
             const data = await res.json();
             if (data.success) {
               gatewayResults[p.id] = { configured: data.configured, gateway: data.gateway, environment: data.environment };
+            }
+          } catch {
+            // ignore
+          }
+
+          // RedSail is stored separately from stripe/authnet, so check it too.
+          // An active RedSail config takes precedence for display/edit.
+          try {
+            const rsRes = await fetch(`/api/admin/redsail-payment-config?pharmacyId=${p.id}`);
+            const rsData = await rsRes.json();
+            if (rsRes.ok && rsData.success && Array.isArray(rsData.configs)) {
+              const active = rsData.configs.find((c: { isActive?: boolean }) => c.isActive);
+              if (active) {
+                gatewayResults[p.id] = {
+                  configured: true,
+                  gateway: "redsail",
+                  environment: active.environment,
+                };
+              }
             }
           } catch {
             // ignore
@@ -507,6 +532,12 @@ export default function PharmacyManagementPage() {
       authnet_api_login_id: "",
       authnet_transaction_key: "",
       authnet_signature_key: "",
+      redsail_environment: "ftr1",
+      redsail_tenant_id: "",
+      redsail_oidc_client_id: "",
+      redsail_oidc_client_secret: "",
+      redsail_site_id: "",
+      redsail_station_id: "",
     });
     setWizardStep(1);
     setIsPharmacyWizardOpen(true);
@@ -534,7 +565,7 @@ export default function PharmacyManagementPage() {
       api_key: "",
       shared_secret: "",
       location_id: backend?.location_id || "",
-      payment_gateway: (gatewayInfo?.configured ? gatewayInfo.gateway : "none") as "none" | "stripe" | "authorizenet",
+      payment_gateway: (gatewayInfo?.configured ? gatewayInfo.gateway : "none") as "none" | "stripe" | "authorizenet" | "redsail",
       payment_environment: (gatewayInfo?.environment || "sandbox") as "sandbox" | "production",
       stripe_secret_key: "",
       stripe_publishable_key: "",
@@ -542,6 +573,14 @@ export default function PharmacyManagementPage() {
       authnet_api_login_id: "",
       authnet_transaction_key: "",
       authnet_signature_key: "",
+      redsail_environment: (gatewayInfo?.gateway === "redsail"
+        ? gatewayInfo.environment || "ftr1"
+        : "ftr1") as "ftr1" | "prv" | "production",
+      redsail_tenant_id: "",
+      redsail_oidc_client_id: "",
+      redsail_oidc_client_secret: "",
+      redsail_site_id: "",
+      redsail_station_id: "",
     });
     setWizardStep(1);
     setIsPharmacyWizardOpen(true);
@@ -643,7 +682,43 @@ export default function PharmacyManagementPage() {
 
       const pharmacyId = editingPharmacy?.id || data.pharmacy?.id;
 
-      if (pharmacyId && pharmacyForm.payment_gateway !== "none") {
+      if (pharmacyId && pharmacyForm.payment_gateway === "redsail") {
+        const isNewGateway = !editingPharmacy;
+        const hasCredentials = !!(
+          pharmacyForm.redsail_tenant_id &&
+          pharmacyForm.redsail_oidc_client_id &&
+          pharmacyForm.redsail_oidc_client_secret
+        );
+
+        if (isNewGateway && !hasCredentials) {
+          toast.error("RedSail Tenant ID, Client ID and Client Secret are required when setting up RedSail Pay.");
+        } else if (hasCredentials) {
+          try {
+            const redsailBody: Record<string, string> = {
+              pharmacyId,
+              environment: pharmacyForm.redsail_environment,
+            };
+            if (pharmacyForm.redsail_tenant_id) redsailBody.tenantId = pharmacyForm.redsail_tenant_id;
+            if (pharmacyForm.redsail_oidc_client_id) redsailBody.oidcClientId = pharmacyForm.redsail_oidc_client_id;
+            if (pharmacyForm.redsail_oidc_client_secret) redsailBody.oidcClientSecret = pharmacyForm.redsail_oidc_client_secret;
+            if (pharmacyForm.redsail_site_id) redsailBody.siteId = pharmacyForm.redsail_site_id;
+            if (pharmacyForm.redsail_station_id) redsailBody.stationId = pharmacyForm.redsail_station_id;
+
+            const payRes = await fetch("/api/admin/redsail-payment-config", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(redsailBody),
+            });
+            const payData = await payRes.json();
+            if (!payRes.ok || !payData.success) {
+              toast.error(`RedSail config warning: ${payData.error || "Could not save RedSail settings"}`);
+            }
+          } catch (payError) {
+            console.error("Error saving RedSail config:", payError);
+            toast.error("Pharmacy saved but RedSail configuration failed. You can configure it later from Payment Settings.");
+          }
+        }
+      } else if (pharmacyId && pharmacyForm.payment_gateway !== "none") {
         const isNewGateway = !editingPharmacy;
         const hasCredentials = pharmacyForm.payment_gateway === "stripe"
           ? !!(pharmacyForm.stripe_secret_key && pharmacyForm.stripe_publishable_key)
@@ -689,16 +764,21 @@ export default function PharmacyManagementPage() {
         const currentGw = pharmacyGateways[editingPharmacy.id];
         if (currentGw?.configured) {
           try {
-            const deactivateRes = await fetch("/api/admin/pharmacy-payment-config", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                pharmacyId,
-                gateway: currentGw.gateway,
-                environment: currentGw.environment || "sandbox",
-                deactivate: true,
-              }),
-            });
+            const deactivateRes = await fetch(
+              currentGw.gateway === "redsail"
+                ? "/api/admin/redsail-payment-config"
+                : "/api/admin/pharmacy-payment-config",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  pharmacyId,
+                  gateway: currentGw.gateway,
+                  environment: currentGw.environment || "sandbox",
+                  deactivate: true,
+                }),
+              },
+            );
             if (deactivateRes.ok) {
               toast.success("Payment gateway deactivated");
             }
@@ -1147,7 +1227,11 @@ export default function PharmacyManagementPage() {
                                   if (gw?.configured && gw.gateway) {
                                     return (
                                       <Badge variant="outline" className="text-xs">
-                                        {gw.gateway === "stripe" ? "Stripe" : "Authorize.Net"}
+                                        {gw.gateway === "stripe"
+                                          ? "Stripe"
+                                          : gw.gateway === "redsail"
+                                            ? "RedSail Pay"
+                                            : "Authorize.Net"}
                                       </Badge>
                                     );
                                   }
@@ -1977,7 +2061,7 @@ export default function PharmacyManagementPage() {
                     <Select
                       value={pharmacyForm.payment_gateway}
                       onValueChange={(value) =>
-                        setPharmacyForm({ ...pharmacyForm, payment_gateway: value as "none" | "stripe" | "authorizenet" })
+                        setPharmacyForm({ ...pharmacyForm, payment_gateway: value as "none" | "stripe" | "authorizenet" | "redsail" })
                       }
                     >
                       <SelectTrigger>
@@ -1987,6 +2071,7 @@ export default function PharmacyManagementPage() {
                         <SelectItem value="none">No Payment Gateway (Skip)</SelectItem>
                         <SelectItem value="stripe">Stripe</SelectItem>
                         <SelectItem value="authorizenet">Authorize.Net</SelectItem>
+                        <SelectItem value="redsail">RedSail Pay</SelectItem>
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-gray-500">
@@ -1996,23 +2081,25 @@ export default function PharmacyManagementPage() {
 
                   {pharmacyForm.payment_gateway !== "none" && (
                     <>
-                      <div className="space-y-2">
-                        <Label>Environment</Label>
-                        <Select
-                          value={pharmacyForm.payment_environment}
-                          onValueChange={(value) =>
-                            setPharmacyForm({ ...pharmacyForm, payment_environment: value as "sandbox" | "production" })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
-                            <SelectItem value="production">Production (Live)</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      {pharmacyForm.payment_gateway !== "redsail" && (
+                        <div className="space-y-2">
+                          <Label>Environment</Label>
+                          <Select
+                            value={pharmacyForm.payment_environment}
+                            onValueChange={(value) =>
+                              setPharmacyForm({ ...pharmacyForm, payment_environment: value as "sandbox" | "production" })
+                            }
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
+                              <SelectItem value="production">Production (Live)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
 
                       {pharmacyForm.payment_gateway === "stripe" ? (
                         <>
@@ -2054,7 +2141,7 @@ export default function PharmacyManagementPage() {
                             />
                           </div>
                         </>
-                      ) : (
+                      ) : pharmacyForm.payment_gateway === "authorizenet" ? (
                         <>
                           <div className="space-y-2">
                             <Label htmlFor="authnet-login">API Login ID *</Label>
@@ -2093,6 +2180,90 @@ export default function PharmacyManagementPage() {
                               placeholder="Enter Signature Key (for webhooks)"
                             />
                           </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="space-y-2">
+                            <Label>Environment</Label>
+                            <Select
+                              value={pharmacyForm.redsail_environment}
+                              onValueChange={(value) =>
+                                setPharmacyForm({ ...pharmacyForm, redsail_environment: value as "ftr1" | "prv" | "production" })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ftr1">FTR1 (Testing)</SelectItem>
+                                <SelectItem value="prv">PRV (Preview)</SelectItem>
+                                <SelectItem value="production">Production (Live)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="redsail-tenant-id">Tenant ID *</Label>
+                            <Input
+                              id="redsail-tenant-id"
+                              value={pharmacyForm.redsail_tenant_id}
+                              onChange={(e) =>
+                                setPharmacyForm({ ...pharmacyForm, redsail_tenant_id: e.target.value })
+                              }
+                              placeholder="GUID provided by RedSail (e.g. 0000-0000-...)"
+                              required={!editingPharmacy}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="redsail-client-id">Client ID *</Label>
+                            <Input
+                              id="redsail-client-id"
+                              value={pharmacyForm.redsail_oidc_client_id}
+                              onChange={(e) =>
+                                setPharmacyForm({ ...pharmacyForm, redsail_oidc_client_id: e.target.value })
+                              }
+                              placeholder="OIDC Client ID provided by RedSail"
+                              required={!editingPharmacy}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="redsail-client-secret">Client Secret *</Label>
+                            <Input
+                              id="redsail-client-secret"
+                              type="password"
+                              value={pharmacyForm.redsail_oidc_client_secret}
+                              onChange={(e) =>
+                                setPharmacyForm({ ...pharmacyForm, redsail_oidc_client_secret: e.target.value })
+                              }
+                              placeholder="OIDC Client Secret provided by RedSail"
+                              required={!editingPharmacy}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="redsail-site-id">Site ID</Label>
+                            <Input
+                              id="redsail-site-id"
+                              value={pharmacyForm.redsail_site_id}
+                              onChange={(e) =>
+                                setPharmacyForm({ ...pharmacyForm, redsail_site_id: e.target.value })
+                              }
+                              placeholder="Optional — provided by RedSail"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="redsail-station-id">Station ID</Label>
+                            <Input
+                              id="redsail-station-id"
+                              value={pharmacyForm.redsail_station_id}
+                              onChange={(e) =>
+                                setPharmacyForm({ ...pharmacyForm, redsail_station_id: e.target.value })
+                              }
+                              placeholder="Optional — provided by RedSail"
+                            />
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            RedSail Pay stays switched off until the connection is verified from the
+                            Payment Settings page, even after you save these details.
+                          </p>
                         </>
                       )}
 
