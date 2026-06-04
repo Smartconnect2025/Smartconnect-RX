@@ -8,12 +8,32 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { user, userRole } = await getUser();
-    if (!user) {
-      return NextResponse.json(
-        { success: false, error: "Unauthorized" },
-        { status: 401 },
-      );
+    // Server-to-server (internal) calls — e.g. the pay-on-terms auto-fire in
+    // /api/prescriptions/submit — authenticate via the shared internal-secret
+    // header instead of a user session. Internal calls act with system
+    // (super_admin) authority. Same pattern used by other internal endpoints.
+    const INTERNAL_API_KEY = process.env.INTERNAL_API_KEY;
+    const internalKey = request.headers.get("x-internal-api-key");
+    const isInternalCall = !!(
+      INTERNAL_API_KEY &&
+      internalKey &&
+      internalKey === INTERNAL_API_KEY
+    );
+
+    let user: Awaited<ReturnType<typeof getUser>>["user"] = null;
+    let userRole: Awaited<ReturnType<typeof getUser>>["userRole"] = null;
+    if (isInternalCall) {
+      userRole = "super_admin";
+    } else {
+      const authed = await getUser();
+      user = authed.user;
+      userRole = authed.userRole;
+      if (!user) {
+        return NextResponse.json(
+          { success: false, error: "Unauthorized" },
+          { status: 401 },
+        );
+      }
     }
 
     const { id: prescriptionId } = await params;
@@ -88,7 +108,7 @@ export async function POST(
       const { data: pharmacyAdmin } = await supabaseAdmin
         .from("pharmacy_admins")
         .select("pharmacy_id")
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .single();
 
       for (const rx of rxList) {
@@ -102,7 +122,7 @@ export async function POST(
     }
 
     for (const rx of rxList) {
-      if (!isAdmin && rx.prescriber_id !== user.id) {
+      if (!isAdmin && rx.prescriber_id !== user!.id) {
         return NextResponse.json(
           { success: false, error: `Forbidden: you do not own prescription ${rx.id}` },
           { status: 403 },
@@ -254,8 +274,8 @@ export async function POST(
     if (anySubmitFailed) {
       try {
         await supabaseAdmin.from("system_logs").insert({
-          user_id: user.id,
-          user_email: user.email || "unknown",
+          user_id: user?.id ?? null,
+          user_email: user?.email || "internal@smartconnect",
           user_name: "System",
           action: "PHARMACY_SUBMISSION_FAILED",
           details: `Some prescriptions in order ${paymentTransactionId} failed to submit to pharmacy after mark-paid. Manual submission may be required.`,
@@ -279,7 +299,7 @@ export async function POST(
         const { data: provider } = await supabaseAdmin
           .from("providers")
           .select("first_name, last_name")
-          .eq("user_id", user.id)
+          .eq("user_id", user?.id ?? "")
           .single();
 
         const { data: pharmacy } = primaryRx?.pharmacy_id

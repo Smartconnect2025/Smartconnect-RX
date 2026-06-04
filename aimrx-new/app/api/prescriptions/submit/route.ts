@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
     const { data: provider, error: providerError } = await supabaseAdmin
       .from("providers")
       .select(
-        "id, is_active, payment_details, physical_address, billing_address, first_name, last_name, npi_number, dea_number, phone_number, signature_url",
+        "id, is_active, payment_details, physical_address, billing_address, first_name, last_name, npi_number, dea_number, phone_number, signature_url, pay_on_terms",
       )
       .eq("user_id", body.prescriber_id)
       .single();
@@ -510,6 +510,110 @@ export async function POST(request: NextRequest) {
       queue_id: queueId,
       status: "success",
     });
+
+    // ──────────────────────────────────────────────────────────────────────
+    // PAY-ON-TERMS AUTO-SUBMIT (server-side, matches AimRx)
+    // If the prescriber is on pay-on-terms, the patient is never charged at
+    // ordering time. Immediately mark the prescription paid (which also submits
+    // it to the pharmacy) so the order doesn't sit in pending_payment waiting
+    // for a frontend step that may never run.
+    //
+    // NOTE: SmartConnect's submit route only accepts provider / admin /
+    // super_admin (no delegate submissions), so AimRx's delegate "re-check the
+    // supervising provider's flag" logic (the Manning fix) does not apply here.
+    // ──────────────────────────────────────────────────────────────────────
+    const isPayOnTerms =
+      (provider as { pay_on_terms?: boolean | null }).pay_on_terms === true;
+
+    if (isPayOnTerms) {
+      try {
+        const siteUrl =
+          process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+        const internalApiKey = process.env.INTERNAL_API_KEY || "";
+        const markRes = await fetch(
+          `${siteUrl}/api/prescriptions/${prescription.id}/mark-paid`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-internal-api-key": internalApiKey,
+            },
+            body: JSON.stringify({ suppressPatientNotifications: true }),
+          },
+        );
+        const markJson = await markRes.json().catch(() => ({}));
+        if (!markRes.ok || !markJson?.success) {
+          console.error(
+            `[submit] pay-on-terms auto-mark-paid failed for rx ${prescription.id}:`,
+            markJson,
+          );
+          // Fall through — prescription still exists, will need manual mark-paid
+        } else {
+          // mark-paid returns success:true even when the inner submit-to-pharmacy
+          // call failed (it surfaces that via `warning`). If we don't inspect it,
+          // the Rx silently sits in payment_received with no queue_id and never
+          // reaches the pharmacy.
+          const pharmacyFailureMessage: string | undefined = markJson?.warning;
+          if (pharmacyFailureMessage) {
+            console.error(
+              `[submit] pay-on-terms mark-paid OK but pharmacy submit FAILED for rx ${prescription.id}: ${pharmacyFailureMessage}`,
+            );
+            // Loud, persistent alert so admins notice this stuck Rx instead of
+            // it disappearing into the "payment_received" bucket.
+            try {
+              await supabaseAdmin.from("system_logs").insert({
+                user_id: null,
+                user_email: "internal@smartconnect",
+                user_name: "System (Pay-on-Terms)",
+                action: "POT_AUTOSUBMIT_PHARMACY_FAILED",
+                details: `Pay-on-Terms rx ${prescription.id} was marked paid but pharmacy submission failed. Manual rescue required (admin → prescription detail → "Submit to Pharmacy"). Underlying error: ${pharmacyFailureMessage}`,
+                status: "error",
+              });
+            } catch (logErr) {
+              console.error(
+                `[submit] failed to write POT_AUTOSUBMIT_PHARMACY_FAILED log:`,
+                logErr,
+              );
+            }
+            return NextResponse.json(
+              {
+                success: true,
+                message:
+                  "Prescription created and marked paid (pay-on-terms), but pharmacy submission failed — manual resubmit required.",
+                prescription_id: prescription.id,
+                requires_payment: false,
+                paid_on_terms: true,
+                status: "payment_received_pharmacy_pending",
+                pharmacy_submission_failed: true,
+                pharmacy_error: pharmacyFailureMessage,
+              },
+              { status: 201 },
+            );
+          }
+          console.log(
+            `[submit] pay-on-terms auto-submitted rx ${prescription.id} to pharmacy`,
+          );
+          return NextResponse.json(
+            {
+              success: true,
+              message:
+                "Prescription created and auto-submitted to pharmacy (pay-on-terms)",
+              prescription_id: prescription.id,
+              requires_payment: false,
+              paid_on_terms: true,
+              status: "submitted",
+            },
+            { status: 201 },
+          );
+        }
+      } catch (err) {
+        console.error(
+          `[submit] pay-on-terms auto-mark-paid threw for rx ${prescription.id}:`,
+          err,
+        );
+        // Fall through to default response
+      }
+    }
 
     if (requiresPayment) {
       return NextResponse.json(
