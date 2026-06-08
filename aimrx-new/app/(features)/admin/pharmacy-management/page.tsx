@@ -76,6 +76,7 @@ interface PharmacyBackend {
   api_key_encrypted: string;
   store_id: string | null;
   location_id: string | null;
+  drug_name_prefix: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -201,6 +202,7 @@ export default function PharmacyManagementPage() {
     api_key: "",
     shared_secret: "",
     location_id: "",
+    drug_name_prefix: "",
     primary_color: "#1D4E89",
     tagline: "Your Trusted Pharmacy",
   });
@@ -244,6 +246,7 @@ export default function PharmacyManagementPage() {
     api_key: "",
     shared_secret: "",
     location_id: "",
+    drug_name_prefix: "",
     payment_gateway: "none" as "none" | "stripe" | "authorizenet" | "redsail",
     payment_environment: "sandbox" as "sandbox" | "production",
     stripe_secret_key: "",
@@ -524,6 +527,7 @@ export default function PharmacyManagementPage() {
       api_key: "",
       shared_secret: "",
       location_id: "",
+      drug_name_prefix: "",
       payment_gateway: "none",
       payment_environment: "sandbox",
       stripe_secret_key: "",
@@ -565,6 +569,7 @@ export default function PharmacyManagementPage() {
       api_key: "",
       shared_secret: "",
       location_id: backend?.location_id || "",
+      drug_name_prefix: backend?.drug_name_prefix || "",
       payment_gateway: (gatewayInfo?.configured ? gatewayInfo.gateway : "none") as "none" | "stripe" | "authorizenet" | "redsail",
       payment_environment: (gatewayInfo?.environment || "sandbox") as "sandbox" | "production",
       stripe_secret_key: "",
@@ -924,6 +929,7 @@ export default function PharmacyManagementPage() {
       api_key: "",
       shared_secret: "",
       location_id: "",
+      drug_name_prefix: "",
       primary_color: "#1D4E89",
       tagline: "Your Trusted Pharmacy",
     });
@@ -1914,6 +1920,26 @@ export default function PharmacyManagementPage() {
                   </div>
 
                   <div className="space-y-2">
+                    <Label htmlFor="pharmacy-drug-prefix">Drug Name Prefix</Label>
+                    <Input
+                      id="pharmacy-drug-prefix"
+                      value={pharmacyForm.drug_name_prefix}
+                      onChange={(e) =>
+                        setPharmacyForm({
+                          ...pharmacyForm,
+                          drug_name_prefix: e.target.value,
+                        })
+                      }
+                      placeholder="e.g., AIM-"
+                    />
+                    <p className="text-xs text-gray-500">
+                      Optional. Added to the front of every drug name sent to this
+                      pharmacy&apos;s system (e.g. &quot;AIM-&quot;). Leave blank to send
+                      drug names unchanged.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="pharmacy-api-url">API URL</Label>
                     <Input
                       id="pharmacy-api-url"
@@ -2851,6 +2877,25 @@ export default function PharmacyManagementPage() {
                       placeholder="LOC001"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2 mt-4">
+                  <Label htmlFor="approve-drug-prefix">Drug Name Prefix</Label>
+                  <Input
+                    id="approve-drug-prefix"
+                    value={approvalForm.drug_name_prefix}
+                    onChange={(e) =>
+                      setApprovalForm({
+                        ...approvalForm,
+                        drug_name_prefix: e.target.value,
+                      })
+                    }
+                    placeholder="e.g., AIM- (optional)"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Optional prefix added to drug names sent to this pharmacy&apos;s
+                    system. Leave blank to send unchanged.
+                  </p>
                 </div>
 
                 <div className="space-y-2 mt-4">

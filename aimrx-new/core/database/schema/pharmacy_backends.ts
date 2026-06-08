@@ -36,6 +36,7 @@ export const pharmacy_backends = pgTable(
     api_key_encrypted: text("api_key_encrypted"),
     store_id: text("store_id"),
     location_id: text("location_id"),
+    drug_name_prefix: text("drug_name_prefix"),
     is_active: boolean("is_active").default(true),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),

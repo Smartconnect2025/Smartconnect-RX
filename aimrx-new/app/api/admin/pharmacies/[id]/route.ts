@@ -151,6 +151,7 @@ export async function PUT(
       shared_secret,
       store_id,
       location_id,
+      drug_name_prefix,
     } = body;
 
     // Validate required fields
@@ -244,6 +245,9 @@ export async function PUT(
             location_id: location_id || null,
             updated_at: new Date().toISOString(),
           };
+          if (drug_name_prefix !== undefined) {
+            updateData.drug_name_prefix = drug_name_prefix || null;
+          }
           if (encryptedKey) {
             updateData.api_key_encrypted = encryptedKey;
           }
@@ -268,6 +272,7 @@ export async function PUT(
               api_key_encrypted: encryptedKey || ensureEncrypted(api_key),
               store_id: store_id || null,
               location_id: location_id || null,
+              drug_name_prefix: drug_name_prefix || null,
               is_active: true,
             });
           if (insertBeError) throw new Error(insertBeError.message);

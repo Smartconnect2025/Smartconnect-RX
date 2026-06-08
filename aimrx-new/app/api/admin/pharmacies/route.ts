@@ -45,7 +45,7 @@ export async function POST(request: Request) {
 
     // Parse request body
     const body = await request.json();
-    const { name, slug, logo_url, primary_color, tagline, address, npi, dea_number, ncpdp_number, phone, system_type, api_url, api_key, shared_secret, store_id, location_id } = body;
+    const { name, slug, logo_url, primary_color, tagline, address, npi, dea_number, ncpdp_number, phone, system_type, api_url, api_key, shared_secret, store_id, location_id, drug_name_prefix } = body;
 
     // Validate required fields
     if (!name || !slug) {
@@ -107,6 +107,7 @@ export async function POST(request: Request) {
           api_key_encrypted: encryptApiKey(credentialValue),
           store_id: store_id || null,
           location_id: location_id || null,
+          drug_name_prefix: drug_name_prefix || null,
           is_active: true,
         });
 

@@ -81,7 +81,9 @@ async function submitToDigitalRx(
       RxNumber: rxNumber,
       DrugName: (() => {
         const med = (prescription as Record<string, unknown>).medication as string || "";
-        return med.startsWith("AIM-") ? med : `AIM-${med}`;
+        const prefix = backend.drugNamePrefix || "";
+        if (!prefix) return med;
+        return med.startsWith(prefix) ? med : `${prefix}${med}`;
       })(),
       Qty: String((prescription as Record<string, unknown>).quantity),
       DateWritten: dateWritten,

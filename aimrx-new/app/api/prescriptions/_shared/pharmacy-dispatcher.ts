@@ -11,6 +11,7 @@ export interface PharmacyBackendInfo {
   api_url: string | null;
   store_id: string | null;
   location_id: string | null;
+  drug_name_prefix: string | null;
   is_active: boolean;
 }
 
@@ -22,6 +23,7 @@ export interface ResolvedPharmacyBackend {
   storeId: string | null;
   locationId: string | null;
   employeeId: string | null;
+  drugNamePrefix: string | null;
 }
 
 function decryptKey(encrypted: string): string {
@@ -65,6 +67,7 @@ function resolveRow(row: PharmacyBackendInfo): ResolvedPharmacyBackend {
     storeId: row.store_id,
     locationId: row.location_id,
     employeeId,
+    drugNamePrefix: row.drug_name_prefix ?? null,
   };
 }
 
@@ -74,7 +77,7 @@ export async function resolvePharmacyBackendByPharmacy(
 ): Promise<ResolvedPharmacyBackend | null> {
   const { data } = await supabase
     .from("pharmacy_backends")
-    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, is_active")
+    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, drug_name_prefix, is_active")
     .eq("pharmacy_id", pharmacyId)
     .eq("is_active", true)
     .order("created_at", { ascending: false })
@@ -92,7 +95,7 @@ export async function resolvePharmacyBackendByType(
 ): Promise<ResolvedPharmacyBackend | null> {
   const { data } = await supabase
     .from("pharmacy_backends")
-    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, is_active")
+    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, drug_name_prefix, is_active")
     .eq("pharmacy_id", pharmacyId)
     .eq("is_active", true)
     .eq("system_type", systemType)
@@ -125,7 +128,7 @@ export async function resolvePharmacyBackendsBatchAll(
 
   const { data: backends } = await supabase
     .from("pharmacy_backends")
-    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, is_active")
+    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, drug_name_prefix, is_active")
     .in("pharmacy_id", uniqueIds)
     .eq("is_active", true)
     .order("created_at", { ascending: false });
