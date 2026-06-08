@@ -77,7 +77,7 @@ export async function resolvePharmacyBackendByPharmacy(
 ): Promise<ResolvedPharmacyBackend | null> {
   const { data } = await supabase
     .from("pharmacy_backends")
-    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, drug_name_prefix, is_active")
+    .select("*")
     .eq("pharmacy_id", pharmacyId)
     .eq("is_active", true)
     .order("created_at", { ascending: false })
@@ -95,7 +95,7 @@ export async function resolvePharmacyBackendByType(
 ): Promise<ResolvedPharmacyBackend | null> {
   const { data } = await supabase
     .from("pharmacy_backends")
-    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, drug_name_prefix, is_active")
+    .select("*")
     .eq("pharmacy_id", pharmacyId)
     .eq("is_active", true)
     .eq("system_type", systemType)
@@ -128,7 +128,7 @@ export async function resolvePharmacyBackendsBatchAll(
 
   const { data: backends } = await supabase
     .from("pharmacy_backends")
-    .select("id, pharmacy_id, system_type, api_key_encrypted, api_url, store_id, location_id, drug_name_prefix, is_active")
+    .select("*")
     .in("pharmacy_id", uniqueIds)
     .eq("is_active", true)
     .order("created_at", { ascending: false });
