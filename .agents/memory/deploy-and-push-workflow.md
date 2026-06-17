@@ -9,19 +9,27 @@ The live app (app.smartconnects.com) is hosted on **Render**, which auto-deploys
 from the **GitHub `main`** branch of `Smartconnect2025/Smartconnect-RX`. So
 "make it live" == get the commit onto GitHub `main`; Render does the rest.
 
-## Why agent pushes fail / are blocked
-- **Git write ops (push, fetch, rm of `.git` lockfiles, history rewrite) are
-  guard-blocked for the main agent.** They only run inside a **background
-  Project Task** (task agent), which has the elevated git permissions.
-- The local `master` branch lineage diverged from remote `main` historically;
-  force-with-lease pinned to the known remote SHA is how a task agent reconciles
-  it without losing the user's Replit-synced commits.
-- **GitHub secret-scanning push protection** blocks the whole lineage because a
+## Push behavior (observed)
+- **A plain fast-forward `git push github master:main` CAN succeed from the main
+  agent** when remote `main`'s tip is already an ancestor of local `master` (no
+  force needed). Confirmed working: pushed `8d27092..c045f80` directly.
+- After a successful push you may see `cannot lock ref
+  'refs/remotes/github/main'` / a stale `.git/refs/remotes/github/main.lock`.
+  **This is a LOCAL tracking-ref error only — the remote was already updated.**
+  Verify the real outcome with `git ls-remote github main` (read-only, allowed).
+- **Destructive git ops ARE still guard-blocked** for the main agent: anything
+  that rewrites refs or history (`git update-ref`, `rm` of `.git` lockfiles,
+  force-with-lease, rebase, history scrub). Those must go through a **background
+  Project Task**. So you can fast-forward push, but you cannot clean up the local
+  lock/tracking ref yourself — it's harmless and can be left.
+- If lineage ever genuinely diverges (remote `main` has commits not in local
+  `master`), a plain push will be rejected and you need a task agent to reconcile
+  with force-with-lease pinned to the known remote SHA.
+- **GitHub secret-scanning push protection** can block the lineage because a
   GitHub PAT is committed in history at `aimrx-reference/.replit` (commit
-  `0ac3dd7`, May 29 2026). Until that token is purged from history, pushes need
-  the user to click GitHub's "Allow secret" unblock URL once. The user has done
-  this at least once; the token should be rotated and the file scrubbed from
-  history (a real fix, requires history rewrite via a background task).
+  `0ac3dd7`, May 29 2026). It did NOT block the latest push (user previously
+  clicked "Allow secret"). If it ever re-blocks, the user clicks the unblock URL
+  once; real fix is rotating the token + scrubbing history via a background task.
 
 ## Practical path to ship a change
 1. Make the edit on main (visible in preview immediately).
