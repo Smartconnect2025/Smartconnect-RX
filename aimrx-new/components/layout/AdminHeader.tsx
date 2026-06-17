@@ -140,6 +140,7 @@ export function AdminHeader() {
         { href: "/admin/provider-assistance", label: "Provider Assistance" },
         { href: "/admin/api-logs", label: "API & Logs" },
         { href: "/admin/digitalrx-inspector", label: "DigitalRx Inspector" },
+        { href: "/admin/pioneerrx-inspector", label: "PioneerRx Inspector" },
         { href: "/admin/settings", label: "Integration Settings" },
       ];
 
