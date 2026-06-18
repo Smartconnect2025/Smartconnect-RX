@@ -31,6 +31,16 @@ from the **GitHub `main`** branch of `Smartconnect2025/Smartconnect-RX`. So
   clicked "Allow secret"). If it ever re-blocks, the user clicks the unblock URL
   once; real fix is rotating the token + scrubbing history via a background task.
 
+## Commit vs push (critical sequencing)
+- **The main agent CANNOT `git commit`** (sandbox: "Destructive git operations
+  are not allowed in the main agent"). `git add` works, but `commit` is blocked.
+- The **only committer is the auto-checkpoint**, which fires at *loop end* (full
+  stop / control returned to user), NOT between tool batches.
+- Consequence: **a fresh edit and its push cannot happen in the same turn.** You
+  must finish the turn so the checkpoint commits the edit to local `master`, then
+  push (`git push github master:main`) on a *subsequent* turn. This is why every
+  successful push has been of an already-committed checkpoint from a prior turn.
+
 ## Practical path to ship a change
 1. Make the edit on main (visible in preview immediately).
 2. To go live: the user's normal **Replit Git/Version Control sync** pushes to

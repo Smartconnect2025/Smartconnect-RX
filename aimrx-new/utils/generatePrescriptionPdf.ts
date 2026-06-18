@@ -52,6 +52,16 @@ function resolveSignatureBase64(signatureUrl: string): string | null {
   }
 }
 
+// jsPDF needs the correct raster format string ("PNG" | "JPEG" | "WEBP").
+// Signatures are normally PNG data URLs, but if one was ever saved as JPEG/WEBP
+// a hardcoded "PNG" makes addImage throw and the signature silently disappears.
+function detectImageFormat(dataUrl: string): "PNG" | "JPEG" | "WEBP" {
+  const mime = (dataUrl.match(/^data:([^;,]+)/)?.[1] ?? "").toLowerCase();
+  if (mime.includes("jpeg") || mime.includes("jpg")) return "JPEG";
+  if (mime.includes("webp")) return "WEBP";
+  return "PNG";
+}
+
 export async function generatePrescriptionPdf(
   data: PrescriptionPdfData,
 ): Promise<{ blob: Blob; filename: string }> {
@@ -249,9 +259,17 @@ export async function generatePrescriptionPdf(
     const sigBase64 = resolveSignatureBase64(data.signatureUrl);
     if (sigBase64) {
       try {
-        doc.addImage(sigBase64, "PNG", contentLeft + 42, footerY - 10, 40, 12);
+        doc.addImage(
+          sigBase64,
+          detectImageFormat(sigBase64),
+          contentLeft + 42,
+          footerY - 10,
+          40,
+          12,
+        );
         signatureRendered = true;
-      } catch {
+      } catch (err) {
+        console.error("Signature image failed to render in Rx PDF:", err);
         signatureRendered = false;
       }
     }
