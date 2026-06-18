@@ -103,6 +103,7 @@ export async function GET(
         consultationFeeCents: payment.consultation_fee_cents,
         medicationCostCents: payment.medication_cost_cents,
         shippingFeeCents: payment.shipping_fee_cents,
+        platformFeeCents: payment.platform_fee_cents,
         patientName: payment.patient_name,
         patientEmail: payment.patient_email,
         providerName: payment.provider_name,

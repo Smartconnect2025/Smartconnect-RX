@@ -15,6 +15,7 @@ interface PaymentDetails {
   consultationFeeCents: number;
   medicationCostCents: number;
   shippingFeeCents?: number;
+  platformFeeCents?: number;
   patientName: string;
   patientEmail: string;
   providerName: string;
@@ -230,6 +231,7 @@ export default function PaymentPage() {
   const consultationFee = (paymentDetails.consultationFeeCents / 100).toFixed(2);
   const medicationCost = (paymentDetails.medicationCostCents / 100).toFixed(2);
   const shippingFee = ((paymentDetails.shippingFeeCents || 0) / 100).toFixed(2);
+  const technologyFee = ((paymentDetails.platformFeeCents || 0) / 100).toFixed(2);
 
   const brandColor = paymentDetails.pharmacyColor || "#1E3A8A";
   const brandName = paymentDetails.pharmacyName || "SmartConnect RX";
@@ -313,6 +315,18 @@ export default function PaymentPage() {
                   <div className="flex justify-between items-center py-2 border-b">
                     <span className="text-gray-700">Shipping Fee</span>
                     <span className="font-semibold">${shippingFee}</span>
+                  </div>
+                )}
+                {parseFloat(consultationFee) > 0 && (
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-gray-700">Provider Oversight Fee</span>
+                    <span className="font-semibold">${consultationFee}</span>
+                  </div>
+                )}
+                {parseFloat(technologyFee) > 0 && (
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-gray-700">Technology Platform Access Fee</span>
+                    <span className="font-semibold">${technologyFee}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-center py-3 bg-gray-50 rounded-lg px-4">

@@ -356,6 +356,10 @@ export function paymentConfirmationEmailHtml(options: {
   medication: string;
   providerName: string;
   amountFormatted: string;
+  medicationCostCents?: number;
+  shippingFeeCents?: number;
+  consultationFeeCents?: number;
+  platformFeeCents?: number;
   transactionId: string;
   pharmacyName?: string;
   fulfillmentMethod?: string;
@@ -363,6 +367,12 @@ export function paymentConfirmationEmailHtml(options: {
 }): string {
   const primaryColor = resolvePrimaryColor(options.branding);
   const displayName = resolveDisplayName(options.branding);
+  const money = (cents?: number) => `$${((cents || 0) / 100).toFixed(2)}`;
+  const feeRows =
+    ((options.medicationCostCents || 0) > 0 ? detailRow("Medication Cost", money(options.medicationCostCents)) : "") +
+    ((options.shippingFeeCents || 0) > 0 ? detailRow("Shipping Fee", money(options.shippingFeeCents)) : "") +
+    ((options.consultationFeeCents || 0) > 0 ? detailRow("Provider Oversight Fee", money(options.consultationFeeCents)) : "") +
+    ((options.platformFeeCents || 0) > 0 ? detailRow("Technology Platform Access Fee", money(options.platformFeeCents)) : "");
   let nextStepsText = `Your prescription has been sent to ${options.pharmacyName || displayName} for processing. You will be notified with updates.`;
   if (options.fulfillmentMethod === "pickup") {
     nextStepsText = `Your prescription has been sent to ${options.pharmacyName || displayName}. You will be notified when it's ready for pickup.`;
@@ -386,6 +396,7 @@ export function paymentConfirmationEmailHtml(options: {
         detailRow("Prescribing Clinician", `<strong style="color: ${primaryColor};">${options.providerName}</strong>`, primaryColor) +
         detailRow("Medication(s)", options.medication) +
         detailRow("Pharmacy", options.pharmacyName || displayName) +
+        feeRows +
         `<tr><td colspan="2" style="padding: 14px 16px; text-align: right;">
           <span style="font-size: 13px; color: #64748b;">Amount Paid</span><br>
           <span style="font-size: 22px; font-weight: 700; color: #10B981;">${options.amountFormatted}</span>

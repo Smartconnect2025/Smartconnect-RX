@@ -234,6 +234,10 @@ interface PaymentDetails {
   patientName: string;
   providerName: string;
   totalAmountCents: number;
+  medicationCostCents?: number;
+  shippingFeeCents?: number;
+  consultationFeeCents?: number;
+  platformFeeCents?: number;
   description: string;
   orderProgress: string;
   paymentStatus: string;
@@ -476,6 +480,38 @@ export default function PaymentSuccessPage() {
                       {paymentDetails.description}
                     </span>
                   </div>
+                  {(paymentDetails.medicationCostCents ?? 0) > 0 && (
+                    <div className="flex justify-between items-center pb-3 border-b print-details-row">
+                      <span className="text-gray-600">Medication Cost</span>
+                      <span className="font-semibold">
+                        ${((paymentDetails.medicationCostCents ?? 0) / 100).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {(paymentDetails.shippingFeeCents ?? 0) > 0 && (
+                    <div className="flex justify-between items-center pb-3 border-b print-details-row">
+                      <span className="text-gray-600">Shipping Fee</span>
+                      <span className="font-semibold">
+                        ${((paymentDetails.shippingFeeCents ?? 0) / 100).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {(paymentDetails.consultationFeeCents ?? 0) > 0 && (
+                    <div className="flex justify-between items-center pb-3 border-b print-details-row">
+                      <span className="text-gray-600">Provider Oversight Fee</span>
+                      <span className="font-semibold">
+                        ${((paymentDetails.consultationFeeCents ?? 0) / 100).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
+                  {(paymentDetails.platformFeeCents ?? 0) > 0 && (
+                    <div className="flex justify-between items-center pb-3 border-b print-details-row">
+                      <span className="text-gray-600">Technology Platform Access Fee</span>
+                      <span className="font-semibold">
+                        ${((paymentDetails.platformFeeCents ?? 0) / 100).toFixed(2)}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between items-center pt-3 print-details-row">
                     <span className="text-lg font-bold text-gray-900">
                       Amount Paid
