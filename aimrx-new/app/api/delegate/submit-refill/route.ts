@@ -7,6 +7,7 @@ import {
   createGuardErrorResponse,
 } from "@core/auth/api-guards";
 import { getEffectiveTierDiscountForUser } from "@core/services/pricing/tierDiscountService";
+import { getPharmacyFeeFlags, PLATFORM_FEE_CENTS } from "@core/services/pharmacy-fee-flags";
 
 /**
  * POST /api/delegate/submit-refill
@@ -165,6 +166,7 @@ export async function POST(request: NextRequest) {
        dosage_unit, vial_size, form, quantity, refills, sig,
        dispense_as_written, pharmacy_notes, pharmacy_id, medication_id,
        profit_cents, consultation_reason, refill_frequency_days,
+       platform_fee_cents,
        prescription_type, status, total_refills_to_date,
        has_custom_address, custom_address`,
     )
@@ -408,10 +410,25 @@ export async function POST(request: NextRequest) {
     shippingCents = Number.isFinite(v) ? v : 2500;
   }
 
+  // Per-pharmacy patient-fee flags (admin-controlled). An OFF flag forces the
+  // fee to $0; defaults fail OPEN (charge) if flags can't be read.
+  const feeFlags = await getPharmacyFeeFlags(supabase, parent.pharmacy_id);
+  const enforcedShippingCents = feeFlags.showDeliveryFee ? shippingCents : 0;
+  const enforcedProfitCents = feeFlags.showProviderFee
+    ? parent.profit_cents || 0
+    : 0;
+  // Flat Technology fee: clamp to the server constant when the parent carried
+  // it and the flag is ON; otherwise $0.
+  const enforcedPlatformCents =
+    feeFlags.showTechnologyFee && parent.platform_fee_cents
+      ? PLATFORM_FEE_CENTS
+      : 0;
+
   const medCents = enforcedPriceDollars
     ? Math.round(parseFloat(enforcedPriceDollars) * 100)
     : 0;
-  const totalCents = medCents + (parent.profit_cents || 0) + shippingCents;
+  const totalCents =
+    medCents + enforcedProfitCents + enforcedShippingCents + enforcedPlatformCents;
 
   // 8. Insert the refill — prescriber_id = the assistant herself
   // (simple model). The authorizing provider's identity is recorded
@@ -436,9 +453,10 @@ export async function POST(request: NextRequest) {
       patient_price: enforcedPriceDollars,
       pharmacy_id: parent.pharmacy_id,
       medication_id: parent.medication_id,
-      profit_cents: parent.profit_cents ?? 0,
+      profit_cents: enforcedProfitCents,
       consultation_reason: parent.consultation_reason,
-      shipping_fee_cents: shippingCents,
+      shipping_fee_cents: enforcedShippingCents,
+      platform_fee_cents: enforcedPlatformCents,
       total_paid_cents: totalCents,
       prescription_type: "refill",
       parent_prescription_id: parent.id,

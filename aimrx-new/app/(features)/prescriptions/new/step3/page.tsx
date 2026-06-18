@@ -20,8 +20,9 @@ import { toast } from "sonner";
 import { createClient } from "@core/supabase";
 import { useUser } from "@core/auth";
 import { useDemoGuard } from "@/hooks/use-demo-guard";
-import { clearPrescriptionSession, getCart, getSharedFees } from "../prescriptionSessionUtils";
-import type { CartItem, SharedFees } from "../prescriptionSessionUtils";
+import { clearPrescriptionSession, getCart, getSharedFees, getCartFeeFlags } from "../prescriptionSessionUtils";
+import type { CartItem, SharedFees, CartFeeFlags } from "../prescriptionSessionUtils";
+import { PLATFORM_FEE_CENTS } from "@core/services/pharmacy-fee-flags";
 import { generatePrescriptionPdf } from "@/utils/generatePrescriptionPdf";
 
 interface PharmacyMedicationData {
@@ -86,6 +87,11 @@ export default function PrescriptionStep3Page() {
     useState<PrescriptionFormData | null>(null);
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [sharedFees, setSharedFees] = useState<SharedFees>({ shippingFee: "25.00", oversightFees: [] });
+  const [feeFlags, setFeeFlags] = useState<CartFeeFlags>({
+    showDeliveryFee: true,
+    showTechnologyFee: true,
+    showProviderFee: true,
+  });
   const [isMultiOrder, setIsMultiOrder] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitProgress, setSubmitProgress] = useState({ current: 0, total: 0 });
@@ -158,6 +164,9 @@ export default function PrescriptionStep3Page() {
 
 
   useEffect(() => {
+    // Admin-controlled patient-fee flags for this pharmacy (preview only; the
+    // server re-enforces them at submission time).
+    setFeeFlags(getCartFeeFlags());
     const cart = getCart();
     if (cart.length > 0) {
       setCartItems(cart);
@@ -355,6 +364,8 @@ export default function PrescriptionStep3Page() {
       profit_cents: totalOversightFeesCents,
       consultation_reason: consultationReason,
       shipping_fee_cents: shippingFeeCents,
+      platform_fee_cents:
+        isFirstItem && feeFlags.showTechnologyFee ? PLATFORM_FEE_CENTS : 0,
       refill_frequency_days: refillFreq ? parseInt(refillFreq) : null,
       submission_group_id: submissionGroupId || null,
       has_custom_address: useCustomAddress,
@@ -695,11 +706,17 @@ export default function PrescriptionStep3Page() {
     },
     0,
   );
-  const totalOversightFees = Array.isArray(displayFees.oversightFees)
+  const rawOversightFees = Array.isArray(displayFees.oversightFees)
     ? displayFees.oversightFees.reduce((sum, f) => sum + (parseFloat(f.fee || "0")), 0)
     : 0;
-  const totalShipping = parseFloat(displayFees.shippingFee || "0");
-  const grandTotal = totalMedicationCost + totalOversightFees + totalShipping;
+  // Each patient fee is suppressed when its pharmacy flag is OFF.
+  const totalOversightFees = feeFlags.showProviderFee ? rawOversightFees : 0;
+  const totalShipping = feeFlags.showDeliveryFee
+    ? parseFloat(displayFees.shippingFee || "0")
+    : 0;
+  const technologyFee = feeFlags.showTechnologyFee ? PLATFORM_FEE_CENTS / 100 : 0;
+  const grandTotal =
+    totalMedicationCost + totalOversightFees + totalShipping + technologyFee;
 
   return (
     <DefaultLayout>
@@ -1096,6 +1113,27 @@ export default function PrescriptionStep3Page() {
                     <p className="text-xs text-muted-foreground">Overnight delivery</p>
                   </div>
                   <p className="text-xl font-bold text-gray-900">${totalShipping.toFixed(2)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {technologyFee > 0 && (
+            <div className="space-y-3">
+              <h3 className="text-lg font-semibold text-gray-900">Technology</h3>
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      Technology Platform Access Fee
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Secure platform &amp; processing
+                    </p>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900">
+                    ${technologyFee.toFixed(2)}
+                  </p>
                 </div>
               </div>
             </div>

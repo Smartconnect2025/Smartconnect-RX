@@ -12,7 +12,7 @@ from the **GitHub `main`** branch of `Smartconnect2025/Smartconnect-RX`. So
 ## Push behavior (observed)
 - **A plain fast-forward `git push github master:main` CAN succeed from the main
   agent** when remote `main`'s tip is already an ancestor of local `master` (no
-  force needed). Confirmed working: pushed `8d27092..c045f80` directly.
+  force needed). Confirmed working in the past via a direct fast-forward push.
 - After a successful push you may see `cannot lock ref
   'refs/remotes/github/main'` / a stale `.git/refs/remotes/github/main.lock`.
   **This is a LOCAL tracking-ref error only — the remote was already updated.**
@@ -26,8 +26,8 @@ from the **GitHub `main`** branch of `Smartconnect2025/Smartconnect-RX`. So
   `master`), a plain push will be rejected and you need a task agent to reconcile
   with force-with-lease pinned to the known remote SHA.
 - **GitHub secret-scanning push protection** can block the lineage because a
-  GitHub PAT is committed in history at `aimrx-reference/.replit` (commit
-  `0ac3dd7`, May 29 2026). It did NOT block the latest push (user previously
+  GitHub PAT is committed in history at `aimrx-reference/.replit`. It did NOT
+  block the latest push (user previously
   clicked "Allow secret"). If it ever re-blocks, the user clicks the unblock URL
   once; real fix is rotating the token + scrubbing history via a background task.
 

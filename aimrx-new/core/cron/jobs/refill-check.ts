@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import { createCronClient } from "../supabase";
 import { logCronRun } from "../logger";
+import { getPharmacyFeeFlags, PLATFORM_FEE_CENTS } from "@core/services/pharmacy-fee-flags";
 import { envConfig } from "@core/config";
 import { generatePrescriptionPdf } from "@/utils/generatePrescriptionPdf";
 import { uploadPrescriptionPdf } from "@core/services/storage/prescriptionPdfStorage";
@@ -93,6 +94,28 @@ export async function checkRefills() {
 
       console.log(`[refill-check] Updated original rx ${rx.id} — next_refill_date: ${newRefillDate}`);
 
+      // Per-pharmacy patient-fee flags (admin-controlled). An OFF flag forces
+      // that fee to $0 on the cloned refill; defaults fail OPEN (charge).
+      const feeFlags = await getPharmacyFeeFlags(supabase, rx.pharmacy_id);
+      const medCents = rx.patient_price
+        ? Math.round(parseFloat(String(rx.patient_price)) * 100)
+        : 0;
+      const enforcedShippingCents = feeFlags.showDeliveryFee
+        ? rx.shipping_fee_cents || 0
+        : 0;
+      const enforcedProfitCents = feeFlags.showProviderFee
+        ? rx.profit_cents || 0
+        : 0;
+      const enforcedPlatformCents =
+        feeFlags.showTechnologyFee && rx.platform_fee_cents
+          ? PLATFORM_FEE_CENTS
+          : 0;
+      const enforcedTotalCents =
+        medCents +
+        enforcedProfitCents +
+        enforcedShippingCents +
+        enforcedPlatformCents;
+
       // Create refill prescription clone
       const { data: refill, error: insertError } = await supabase
         .from("prescriptions")
@@ -113,10 +136,11 @@ export async function checkRefills() {
           patient_price: rx.patient_price,
           pharmacy_id: rx.pharmacy_id,
           medication_id: rx.medication_id,
-          profit_cents: rx.profit_cents,
+          profit_cents: enforcedProfitCents,
           consultation_reason: rx.consultation_reason,
-          shipping_fee_cents: rx.shipping_fee_cents,
-          total_paid_cents: rx.total_paid_cents,
+          shipping_fee_cents: enforcedShippingCents,
+          platform_fee_cents: enforcedPlatformCents,
+          total_paid_cents: enforcedTotalCents,
           has_custom_address: rx.has_custom_address,
           custom_address: rx.custom_address,
           queue_id: null,

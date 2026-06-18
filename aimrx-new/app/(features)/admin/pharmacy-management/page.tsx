@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import {
   Plus,
   Search,
@@ -60,6 +61,9 @@ interface Pharmacy {
   phone: string | null;
   is_active: boolean;
   created_at: string;
+  show_delivery_fee?: boolean;
+  show_technology_fee?: boolean;
+  show_provider_fee?: boolean;
 }
 
 interface PharmacyGatewayInfo {
@@ -217,6 +221,49 @@ export default function PharmacyManagementPage() {
   const [admins, setAdmins] = useState<PharmacyAdmin[]>([]);
   const [filteredAdmins, setFilteredAdmins] = useState<PharmacyAdmin[]>([]);
   const [loading, setLoading] = useState(true);
+  // Keyed `${pharmacyId}:${column}` while a Patient Fee toggle is saving.
+  const [savingFlag, setSavingFlag] = useState<string | null>(null);
+
+  const handleToggleFeeFlag = async (
+    pharmacyId: string,
+    column: "show_delivery_fee" | "show_technology_fee" | "show_provider_fee",
+    value: boolean,
+  ) => {
+    const key = `${pharmacyId}:${column}`;
+    setSavingFlag(key);
+    // Optimistic update of both source + filtered lists.
+    const applyValue = (v: boolean) => {
+      setPharmacies((prev) =>
+        prev.map((p) => (p.id === pharmacyId ? { ...p, [column]: v } : p)),
+      );
+      setFilteredPharmacies((prev) =>
+        prev.map((p) => (p.id === pharmacyId ? { ...p, [column]: v } : p)),
+      );
+    };
+    applyValue(value);
+    try {
+      const res = await fetch(
+        `/api/admin/pharmacies/${pharmacyId}/fee-flags`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ [column]: value }),
+        },
+      );
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.error || "Failed to update patient fee");
+      }
+      toast.success("Patient fee updated");
+    } catch (err) {
+      applyValue(!value); // revert
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update patient fee",
+      );
+    } finally {
+      setSavingFlag(null);
+    }
+  };
 
   // Search and filter states
   const [pharmacySearchQuery, setPharmacySearchQuery] = useState("");
@@ -1184,6 +1231,7 @@ export default function PharmacyManagementPage() {
                         <TableHead className="font-semibold">Phone</TableHead>
                         <TableHead className="font-semibold">System</TableHead>
                         <TableHead className="font-semibold">Payment</TableHead>
+                        <TableHead className="font-semibold">Patient Fees</TableHead>
                         <TableHead className="font-semibold">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1191,7 +1239,7 @@ export default function PharmacyManagementPage() {
                       {filteredPharmacies.length === 0 ? (
                         <TableRow>
                           <TableCell
-                            colSpan={6}
+                            colSpan={7}
                             className="text-center text-muted-foreground py-8"
                           >
                             No pharmacies found
@@ -1245,6 +1293,40 @@ export default function PharmacyManagementPage() {
                                     <span className="text-xs text-muted-foreground">Not configured</span>
                                   );
                                 })()}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex flex-col gap-1.5">
+                                  {(
+                                    [
+                                      ["show_delivery_fee", "Delivery"],
+                                      ["show_technology_fee", "Technology"],
+                                      ["show_provider_fee", "Provider"],
+                                    ] as const
+                                  ).map(([column, label]) => {
+                                    const key = `${pharmacy.id}:${column}`;
+                                    return (
+                                      <div
+                                        key={column}
+                                        className="flex items-center gap-2"
+                                      >
+                                        <Switch
+                                          checked={!!pharmacy[column]}
+                                          disabled={savingFlag === key}
+                                          onCheckedChange={(checked) =>
+                                            handleToggleFeeFlag(
+                                              pharmacy.id,
+                                              column,
+                                              checked,
+                                            )
+                                          }
+                                        />
+                                        <span className="text-xs text-muted-foreground">
+                                          {label}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </TableCell>
                               <TableCell>
                                 <div className="flex gap-2">

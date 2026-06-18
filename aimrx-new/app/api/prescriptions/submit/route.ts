@@ -3,6 +3,7 @@ import { createAdminClient } from "@core/database/client";
 import { getUser } from "@/core/auth/get-user";
 import { checkProviderActive } from "@/core/auth/check-provider-active";
 import { requireNonDemo, createGuardErrorResponse } from "@core/auth/api-guards";
+import { getPharmacyFeeFlags, PLATFORM_FEE_CENTS } from "@core/services/pharmacy-fee-flags";
 
 /**
  * Prescription Submission API
@@ -41,6 +42,7 @@ interface SubmitPrescriptionRequest {
   profit_cents?: number; // Provider oversight/monitoring fees in cents
   consultation_reason?: string; // Reason for the consultation fee
   shipping_fee_cents?: number; // Shipping fee in cents
+  platform_fee_cents?: number; // Technology Platform Access Fee in cents
   submission_group_id?: string; // Group ID for multi-item orders
   refill_frequency_days?: number; // Days between refills
   has_custom_address?: boolean;
@@ -441,8 +443,29 @@ export async function POST(request: NextRequest) {
       : 0;
     const qty = body.quantity && body.quantity > 0 ? body.quantity : 1;
     const medicationPriceCents = unitPriceCents * qty;
+
+    // Per-pharmacy patient-fee flags (admin-controlled). The server is the
+    // authoritative enforcer: an OFF flag forces that fee to $0 no matter what
+    // the client submitted. Defaults fail OPEN (charge) if flags can't be read.
+    const feeFlags = await getPharmacyFeeFlags(supabaseAdmin, body.pharmacy_id);
+    const enforcedShippingFeeCents = feeFlags.showDeliveryFee
+      ? body.shipping_fee_cents || 0
+      : 0;
+    const enforcedProfitCents = feeFlags.showProviderFee
+      ? body.profit_cents || 0
+      : 0;
+    // Technology fee is a fixed flat amount: never trust the client's number,
+    // only whether this item carries it (first-item semantics). ON + carried ->
+    // exactly PLATFORM_FEE_CENTS; OFF or not-carried -> $0.
+    const enforcedPlatformFeeCents =
+      feeFlags.showTechnologyFee && body.platform_fee_cents
+        ? PLATFORM_FEE_CENTS
+        : 0;
     const totalPaidCents =
-      medicationPriceCents + (body.profit_cents || 0) + (body.shipping_fee_cents || 0);
+      medicationPriceCents +
+      enforcedProfitCents +
+      enforcedShippingFeeCents +
+      enforcedPlatformFeeCents;
 
     const { data: prescription, error: prescriptionError } = await supabaseAdmin
       .from("prescriptions")
@@ -468,9 +491,10 @@ export async function POST(request: NextRequest) {
         pharmacy_id: body.pharmacy_id || null,
         medication_id: body.medication_id || null,
         
-        profit_cents: body.profit_cents || 0,
+        profit_cents: enforcedProfitCents,
         consultation_reason: body.consultation_reason || null,
-        shipping_fee_cents: body.shipping_fee_cents || 0,
+        shipping_fee_cents: enforcedShippingFeeCents,
+        platform_fee_cents: enforcedPlatformFeeCents,
         total_paid_cents: totalPaidCents,
         refill_frequency_days:
           (body.refills > 0 && (body.refill_frequency_days ?? 0) > 0)

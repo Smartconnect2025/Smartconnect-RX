@@ -2,6 +2,7 @@ const PRESCRIPTION_SESSION_KEYS = [
   "prescriptionFormData",
   "prescriptionCart",
   "prescriptionSharedFees",
+  "cartFeeFlags",
   "selectedPatientId",
   "encounterId",
   "appointmentId",
@@ -35,6 +36,37 @@ export interface CartItem {
 export interface SharedFees {
   shippingFee: string;
   oversightFees: Array<{ fee: string; reason: string }>;
+}
+
+export interface CartFeeFlags {
+  showDeliveryFee: boolean;
+  showTechnologyFee: boolean;
+  showProviderFee: boolean;
+}
+
+const DEFAULT_CART_FEE_FLAGS: CartFeeFlags = {
+  showDeliveryFee: true,
+  showTechnologyFee: true,
+  showProviderFee: true,
+};
+
+export function getCartFeeFlags(): CartFeeFlags {
+  try {
+    const raw = sessionStorage.getItem("cartFeeFlags");
+    if (!raw) return { ...DEFAULT_CART_FEE_FLAGS };
+    const parsed = JSON.parse(raw);
+    return {
+      showDeliveryFee: parsed.showDeliveryFee !== false,
+      showTechnologyFee: parsed.showTechnologyFee !== false,
+      showProviderFee: parsed.showProviderFee !== false,
+    };
+  } catch {
+    return { ...DEFAULT_CART_FEE_FLAGS };
+  }
+}
+
+export function setCartFeeFlags(flags: CartFeeFlags): void {
+  sessionStorage.setItem("cartFeeFlags", JSON.stringify(flags));
 }
 
 export function getCart(): CartItem[] {

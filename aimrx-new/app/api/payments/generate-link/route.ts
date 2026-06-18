@@ -375,22 +375,28 @@ export async function POST(request: NextRequest) {
     // Server-authoritative price calculation
     const { data: dbRxPrices } = await supabase
       .from("prescriptions")
-      .select("patient_price, shipping_fee_cents, profit_cents")
+      .select("patient_price, shipping_fee_cents, profit_cents, platform_fee_cents")
       .in("id", prescriptionIds);
 
     let serverTotalMedCents = 0;
     let serverTotalShipCents = 0;
     let serverTotalOversightCents = 0;
+    let serverTotalPlatformCents = 0;
 
     if (dbRxPrices) {
       for (const rx of dbRxPrices) {
         serverTotalMedCents += Math.round(parseFloat(rx.patient_price || "0") * 100);
         serverTotalShipCents += rx.shipping_fee_cents || 0;
         serverTotalOversightCents += rx.profit_cents || 0;
+        serverTotalPlatformCents += rx.platform_fee_cents || 0;
       }
     }
 
-    const serverTotalCents = serverTotalMedCents + serverTotalShipCents + serverTotalOversightCents;
+    const serverTotalCents =
+      serverTotalMedCents +
+      serverTotalShipCents +
+      serverTotalOversightCents +
+      serverTotalPlatformCents;
     const clientTotalCents = (Number(consultationFeeCents) || 0) + (Number(medicationCostCents) || 0) + (Number(shippingFeeCents) || 0);
 
     const totalAmountCents = serverTotalCents > 0 ? serverTotalCents : clientTotalCents;
@@ -424,6 +430,7 @@ export async function POST(request: NextRequest) {
         consultation_fee_cents: finalOversightCents,
         medication_cost_cents: finalMedCents,
         shipping_fee_cents: finalShipCents,
+        platform_fee_cents: serverTotalPlatformCents,
         patient_id: prescription.patient_id,
         patient_email: patient?.email,
         patient_phone: patient?.phone,

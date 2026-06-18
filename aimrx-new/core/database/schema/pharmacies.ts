@@ -30,6 +30,11 @@ export const pharmacies = pgTable(
     phone: text("phone"),
     catalog_banner_url: text("catalog_banner_url"),
     default_shipping_rate_cents: integer("default_shipping_rate_cents").default(0),
+    // Per-pharmacy patient fee visibility flags (admin-controlled).
+    // true = charge & show the fee; false = never charge it / hide from patient bill.
+    show_delivery_fee: boolean("show_delivery_fee").notNull().default(false),
+    show_technology_fee: boolean("show_technology_fee").notNull().default(false),
+    show_provider_fee: boolean("show_provider_fee").notNull().default(false),
     is_active: boolean("is_active").default(true),
     created_at: timestamp("created_at").defaultNow().notNull(),
     updated_at: timestamp("updated_at").defaultNow().notNull(),

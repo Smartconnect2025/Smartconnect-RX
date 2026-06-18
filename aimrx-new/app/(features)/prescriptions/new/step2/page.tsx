@@ -19,7 +19,7 @@ import {
 import { ArrowLeft, ArrowRight, Search, Plus, Info, ShoppingCart, X, Trash2 } from "lucide-react";
 import { createClient } from "@core/supabase";
 import { useUser } from "@core/auth";
-import { clearPrescriptionSession, getCart, saveCart, getSharedFees, saveSharedFees } from "../prescriptionSessionUtils";
+import { clearPrescriptionSession, getCart, saveCart, getSharedFees, saveSharedFees, setCartFeeFlags } from "../prescriptionSessionUtils";
 import type { CartItem } from "../prescriptionSessionUtils";
 
 const MEDICATION_FORMS = [
@@ -157,6 +157,47 @@ export default function PrescriptionStep2Page() {
     if ((savedFees as any).selectedShippingOption) setSelectedShippingOption((savedFees as any).selectedShippingOption);
     if (savedFees.oversightFees?.length > 0) setOversightFees(savedFees.oversightFees);
   }, []);
+
+  // Load this pharmacy's admin-controlled patient-fee flags for the preview.
+  // The server is still the authoritative enforcer at submission time; this only
+  // controls what the provider sees. Fails OPEN (charge) on any read error.
+  useEffect(() => {
+    const pid = formData.selectedPharmacyId;
+    if (!pid) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data } = await supabase
+          .from("pharmacies")
+          .select("show_delivery_fee, show_technology_fee, show_provider_fee")
+          .eq("id", pid)
+          .maybeSingle();
+        if (cancelled) return;
+        const flags = {
+          showDeliveryFee: data ? data.show_delivery_fee !== false : true,
+          showTechnologyFee: data ? data.show_technology_fee !== false : true,
+          showProviderFee: data ? data.show_provider_fee !== false : true,
+        };
+        setCartFeeFlags(flags);
+        // If delivery fee is disabled, zero the shipping preview so the provider
+        // doesn't quote a charge the patient will never be billed.
+        if (!flags.showDeliveryFee) {
+          setShippingFee("0.00");
+        }
+      } catch {
+        if (!cancelled) {
+          setCartFeeFlags({
+            showDeliveryFee: true,
+            showTechnologyFee: true,
+            showProviderFee: true,
+          });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [formData.selectedPharmacyId, supabase]);
 
   // Get unique pharmacies from loaded medications
   useEffect(() => {
