@@ -72,62 +72,20 @@ export default function PaymentPage() {
   const handleProceedToPayment = async () => {
     setProcessing(true);
     try {
-      const gateway = paymentDetails?.paymentGateway || "authorizenet";
+      // RedSail is the only supported payment gateway.
+      const response = await fetch("/api/payments/create-redsail-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ paymentToken: token }),
+      });
 
-      if (gateway === "redsail") {
-        const response = await fetch("/api/payments/create-redsail-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentToken: token }),
-        });
+      const data = await response.json();
 
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || "Failed to initialize payment");
-        }
-
-        window.location.href = data.sessionUrl;
-      } else if (gateway === "stripe") {
-        const response = await fetch("/api/payments/create-stripe-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentToken: token }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || "Failed to initialize payment");
-        }
-
-        window.location.href = data.sessionUrl;
-      } else {
-        const response = await fetch("/api/payments/get-hosted-token", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentToken: token }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-          throw new Error(data.error || "Failed to initialize payment");
-        }
-
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = data.paymentUrl;
-
-        const tokenInput = document.createElement("input");
-        tokenInput.type = "hidden";
-        tokenInput.name = "token";
-        tokenInput.value = data.formToken;
-        form.appendChild(tokenInput);
-
-        document.body.appendChild(form);
-        form.submit();
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || "Failed to initialize payment");
       }
+
+      window.location.href = data.sessionUrl;
     } catch (err) {
       console.error("Payment initialization error:", err);
       toast.error(
@@ -261,7 +219,7 @@ export default function PaymentPage() {
           />
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Secure Payment</h1>
           <p className="text-muted-foreground">
-            Complete your payment securely through {paymentDetails?.paymentGateway === "stripe" ? "Stripe" : "our secure payment processor"}
+            Complete your payment securely through RedSail Pay
           </p>
         </div>
 
@@ -356,7 +314,7 @@ export default function PaymentPage() {
             <div className="space-y-3 text-sm text-gray-700">
               <div className="flex items-start gap-2">
                 <div className="mt-0.5">✓</div>
-                <p>Your payment is processed securely through {paymentDetails?.paymentGateway === "stripe" ? "Stripe" : "Authorize.Net"}</p>
+                <p>Your payment is processed securely through RedSail Pay</p>
               </div>
               <div className="flex items-start gap-2">
                 <div className="mt-0.5">✓</div>
@@ -398,7 +356,7 @@ export default function PaymentPage() {
         {/* Footer Note */}
         <p className="text-center text-sm text-muted-foreground mt-6">
           By clicking &quot;Proceed to Secure Payment&quot;, you will be redirected to
-          {paymentDetails?.paymentGateway === "stripe" ? " Stripe's" : " Authorize.Net's"} secure payment page to complete your transaction.
+          RedSail Pay&apos;s secure payment page to complete your transaction.
         </p>
         <div className="text-center mt-4">
           <p className="text-sm text-gray-600">Questions? Contact {brandName}</p>

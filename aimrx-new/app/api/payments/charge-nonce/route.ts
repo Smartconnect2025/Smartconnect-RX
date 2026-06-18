@@ -73,6 +73,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (transaction.payment_gateway !== "authorizenet") {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Authorize.Net payments have been retired. This transaction uses RedSail Pay.",
+        },
+        { status: 410 },
+      );
+    }
+
     if (userRole === "provider" && providerProfile && transaction.provider_id !== providerProfile.id) {
       return NextResponse.json(
         { success: false, error: "You are not authorized for this transaction" },

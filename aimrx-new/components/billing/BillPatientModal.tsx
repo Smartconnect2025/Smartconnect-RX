@@ -153,7 +153,6 @@ interface PaymentLinkResultViewProps {
   totalAmount: string;
   loading: boolean;
   onCopyLink: () => void;
-  onChargeDirectly: () => void;
   onResendEmail: () => void;
   onDeleteLink: () => void;
   deleting: boolean;
@@ -173,7 +172,6 @@ function PaymentLinkResultView({
   totalAmount,
   loading,
   onCopyLink,
-  onChargeDirectly,
   onResendEmail,
   onDeleteLink,
   deleting,
@@ -297,16 +295,6 @@ function PaymentLinkResultView({
 
       {/* Action Buttons */}
       <div className="flex flex-col gap-3">
-        {isExistingLink && (
-          <Button
-            onClick={onChargeDirectly}
-            className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
-            disabled={loading || deleting}
-          >
-            <CreditCard className="mr-2 h-4 w-4" />
-            Charge Card Now
-          </Button>
-        )}
         <div className="flex gap-3">
           {isExistingLink && !emailSent && (
             <Button
@@ -436,7 +424,11 @@ export function BillPatientModal({
           if (data.success && data.configured && data.gateway) {
             setLinkGateway(data.gateway);
             setPharmacyGatewayLabel(
-              data.gateway === "stripe" ? "Stripe" : "Authorize.Net",
+              data.gateway === "redsail"
+                ? "RedSail Pay"
+                : data.gateway === "stripe"
+                  ? "Stripe"
+                  : "Authorize.Net",
             );
             if (data.stripePublishableKey) {
               setStripePublishableKey(data.stripePublishableKey);
@@ -948,7 +940,6 @@ export function BillPatientModal({
             totalAmount={calculateTotal()}
             loading={loading}
             onCopyLink={handleCopyLink}
-            onChargeDirectly={handleChargeDirectly}
             onResendEmail={handleGeneratePaymentLink}
             onDeleteLink={handleDeleteLink}
             deleting={deleting}
@@ -971,10 +962,6 @@ export function BillPatientModal({
                 <TabsTrigger value="send-link" className="flex-1 gap-2">
                   <Mail className="h-4 w-4" />
                   Send Payment Link
-                </TabsTrigger>
-                <TabsTrigger value="charge-now" className="flex-1 gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  Charge Now
                 </TabsTrigger>
               </TabsList>
 
@@ -1015,114 +1002,6 @@ export function BillPatientModal({
                     )}
                   </Button>
                 </div>
-              </TabsContent>
-
-              <TabsContent value="charge-now" className="space-y-4 mt-4">
-                {chargeResult?.success ? (
-                  <div className="space-y-4 py-4">
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 mb-4">
-                        <CheckCircle2 className="w-10 h-10 text-green-600" />
-                      </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">Payment Successful!</h3>
-                      <p className="text-gray-600">
-                        Card ending in {chargeResult.cardLastFour} was charged ${calculateTotal()}
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Transaction ID: {chargeResult.transactionId}
-                      </p>
-                    </div>
-                    <Button onClick={handleClose} className="w-full bg-[#1E3A8A] hover:bg-[#1E3A8A]/90">
-                      Done
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <CreditCard className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
-                        <div className="text-sm text-blue-800">
-                          <p className="font-medium mb-1">Process Payment Now</p>
-                          <p>
-                            Enter the patient&apos;s card details below. The card
-                            is tokenized securely — card numbers never touch our
-                            server. A confirmation email will be sent after payment.
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                    {chargeResult?.error && (
-                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                        <div className="flex items-start gap-3">
-                          <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 shrink-0" />
-                          <div className="text-sm text-red-800">
-                            <p className="font-medium">Payment Failed</p>
-                            <p>{chargeResult.error}</p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <Label>Card Details</Label>
-                        <div
-                          id="stripe-card-element"
-                          className={`p-4 border rounded-lg ${
-                            stripeCardError ? "border-red-500" : "border-gray-300"
-                          } bg-white min-h-[44px]`}
-                        />
-                        {stripeCardError && (
-                          <p className="text-sm text-red-600">{stripeCardError}</p>
-                        )}
-                        <p className="text-xs text-gray-500">
-                          Test card: 4242 4242 4242 4242 &bull; Any future date &bull; Any 3-digit CVC
-                        </p>
-                      </div>
-                    </div>
-
-                    <PaymentFormFields
-                      patientEmail={patientEmail}
-                      setPatientEmail={setPatientEmail}
-                      consultationFeeDollars={consultationFeeDollars}
-                      medicationCostDollars={medicationCostDollars}
-                      shippingFeeDollars={shippingFeeDollars}
-                      description={description}
-                      setDescription={setDescription}
-                      totalAmount={calculateTotal()}
-                      emailHelperText="Payment confirmation will be sent to this email"
-                      idPrefix="chargeNow"
-                    />
-                    <div className="flex gap-3 pt-4">
-                      <Button
-                        variant="outline"
-                        onClick={handleClose}
-                        className="flex-1"
-                        disabled={loading}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        onClick={handleChargeNow}
-                        className="flex-1 bg-[#1E3A8A] hover:bg-[#1E3A8A]/90"
-                        disabled={loading}
-                      >
-                        {loading ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Processing...
-                          </>
-                        ) : (
-                          <>
-                            <CreditCard className="mr-2 h-4 w-4" />
-                            Charge ${calculateTotal()}
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </>
-                )}
               </TabsContent>
             </Tabs>
           </div>

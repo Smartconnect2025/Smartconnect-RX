@@ -325,52 +325,12 @@ export async function POST(request: NextRequest) {
       ? await getActivePaymentConfig(prescription.pharmacy_id)
       : null;
 
-    let paymentGateway: "stripe" | "authorizenet" | "redsail";
-
-    // RedSail takes priority ONLY when the feature flag is on AND the pharmacy
-    // has an active, verified RedSail connection. Flag is off by default, so the
-    // existing Stripe / Authorize.Net selection below is unchanged in production.
-    let redsailConfig = null;
-    if (envConfig.REDSAIL_ENABLED && prescription.pharmacy_id) {
-      const rs = await getActiveRedsailConfig(prescription.pharmacy_id);
-      if (rs && rs.isActive && rs.isConnected) {
-        redsailConfig = rs;
-      }
-    }
-
-    if (redsailConfig) {
-      paymentGateway = "redsail";
-    } else if (pharmacyConfig) {
-      paymentGateway = pharmacyConfig.gateway;
-    } else {
-      const rawGateway = body.paymentGateway || "authorizenet";
-      paymentGateway = rawGateway === "stripe" ? "stripe" : "authorizenet";
-    }
-
-    if (paymentGateway === "redsail") {
-      // RedSail config was already verified (active + connected) above; no extra
-      // gateway-credential check needed here.
-    } else if (paymentGateway === "authorizenet") {
-      const hasPharmacyAuthnet = pharmacyConfig?.gateway === "authorizenet" && pharmacyConfig.authnetApiLoginId && pharmacyConfig.authnetTransactionKey;
-      const hasSystemAuthnet = envConfig.AUTHNET_API_LOGIN_ID && envConfig.AUTHNET_TRANSACTION_KEY;
-      if (!hasPharmacyAuthnet && !hasSystemAuthnet) {
-        await revertClaimedRxIds();
-        return NextResponse.json(
-          { error: "Authorize.Net is not configured. Please contact administrator." },
-          { status: 500 },
-        );
-      }
-    } else if (paymentGateway === "stripe") {
-      const hasPharmacyStripe = pharmacyConfig?.gateway === "stripe" && pharmacyConfig.stripeSecretKey;
-      const hasSystemStripe = envConfig.STRIPE_SECRET_KEY;
-      if (!hasPharmacyStripe && !hasSystemStripe) {
-        await revertClaimedRxIds();
-        return NextResponse.json(
-          { error: "Stripe is not configured. Please contact administrator." },
-          { status: 500 },
-        );
-      }
-    }
+    // RedSail is the ONLY supported payment gateway. Stripe and Authorize.Net
+    // have been retired from the app, so every payment link is created for
+    // RedSail regardless of any legacy per-pharmacy gateway configuration.
+    // The RedSail connection (REDSAIL_ENABLED + an active/connected pharmacy
+    // config) is validated at pay time in create-redsail-session.
+    const paymentGateway = "redsail" as "stripe" | "authorizenet" | "redsail";
 
     // Server-authoritative price calculation
     const { data: dbRxPrices } = await supabase

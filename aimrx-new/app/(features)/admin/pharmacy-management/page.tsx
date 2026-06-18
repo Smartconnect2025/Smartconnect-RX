@@ -1360,15 +1360,6 @@ export default function PharmacyManagementPage() {
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => router.push(`/admin/pharmacy-payment-settings?pharmacyId=${pharmacy.id}`)}
-                                    className="text-green-600 hover:text-green-700 hover:bg-green-50 p-2"
-                                    title="Payment Settings"
-                                  >
-                                    <CreditCard className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
                                     onClick={() => router.push(`/admin/redsail-payment-settings?pharmacyId=${pharmacy.id}`)}
                                     className="text-[#1D4E89] hover:text-[#163a66] hover:bg-[#1D4E89]/10 p-2"
                                     title="RedSail Pay Setup"
@@ -2176,8 +2167,6 @@ export default function PharmacyManagementPage() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="none">No Payment Gateway (Skip)</SelectItem>
-                        <SelectItem value="stripe">Stripe</SelectItem>
-                        <SelectItem value="authorizenet">Authorize.Net</SelectItem>
                         <SelectItem value="redsail">RedSail Pay</SelectItem>
                       </SelectContent>
                     </Select>

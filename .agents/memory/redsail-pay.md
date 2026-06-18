@@ -5,6 +5,19 @@ description: Scope boundary and safety rules for the RedSail (Emporos Payments) 
 
 # RedSail Pay (Emporos Payments)
 
+> **STATUS UPDATE (2026-06-18): RedSail is now the ONLY gateway.** Per the user
+> (no live patients exist), Stripe and Authorize.Net were retired app-wide:
+> `generate-link` hardcodes `payment_gateway="redsail"`; the patient page only
+> calls `create-redsail-session`; the admin gateway dropdown offers only
+> None + RedSail; the "Bill Patient" modal only sends a RedSail link. Legacy
+> charge endpoints (`charge-stripe`, `charge-nonce`) now fail closed with 410
+> unless the txn's gateway matches (it never will). `REDSAIL_ENABLED=true` is set
+> in the Replit dev env. **Real payments still require:** (a) `REDSAIL_ENABLED=true`
+> on the Render PROD env, and (b) a per-pharmacy RedSail config that is
+> active+connected (real Emporos creds). Until (b), `create-redsail-session`
+> fails closed — which is fine with no live patients. The two-stage framing
+> below is historical; the gateway is now wired, not flag-gated off.
+
 Goal: make RedSail Pay the patient payment method and hide Stripe/Authorize.Net
 from the patient flow — but only once RedSail is actually provisioned and connected.
 

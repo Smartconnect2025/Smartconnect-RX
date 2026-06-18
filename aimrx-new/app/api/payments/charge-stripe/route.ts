@@ -69,6 +69,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (transaction.payment_gateway !== "stripe") {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Stripe payments have been retired. This transaction uses RedSail Pay.",
+        },
+        { status: 410 },
+      );
+    }
+
     if (userRole === "provider" && providerProfile && transaction.provider_id !== providerProfile.id) {
       return NextResponse.json(
         { success: false, error: "You are not authorized for this transaction" },
