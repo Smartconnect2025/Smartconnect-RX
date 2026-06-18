@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
+} from "@/components/ui/tabs";
 import {
   Pill,
   CheckCircle2,
@@ -106,6 +112,11 @@ const printReceipt = () => {
   // Clone the element and remove buttons
   const clone = element.cloneNode(true) as HTMLElement;
   clone.querySelectorAll(".print-hide").forEach((el) => el.remove());
+  // The modal organises content into tabs; inactive tab panels carry the
+  // `hidden` attribute. Reveal them all so the printed receipt is complete.
+  clone
+    .querySelectorAll("[hidden]")
+    .forEach((el) => el.removeAttribute("hidden"));
 
   // Create iframe for printing
   const iframe = document.createElement("iframe");
@@ -231,6 +242,56 @@ export function PrescriptionModals({
   });
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [addressNotified, setAddressNotified] = useState(false);
+  const [activeTab, setActiveTab] = useState("details");
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+  // Tracks the currently-open order so a slow PDF response from a previously
+  // opened order can never bind its (wrong-patient) URL after the user switches.
+  const currentRxIdRef = useRef<string | undefined>(undefined);
+
+  // Reset per-order view state whenever a different order is opened.
+  useEffect(() => {
+    currentRxIdRef.current = selectedPrescription?.id;
+    setActiveTab("details");
+    setPdfUrl(null);
+    setPdfError(null);
+    setPdfLoading(false);
+    setIsEditingAddress(false);
+    setAddressNotified(false);
+  }, [selectedPrescription?.id]);
+
+  const loadPdf = async () => {
+    if (!selectedPrescription || pdfLoading) return;
+    const requestRxId = selectedPrescription.id;
+    setPdfLoading(true);
+    setPdfError(null);
+    try {
+      const res = await fetch(`/api/prescriptions/${requestRxId}/pdf`);
+      const data = await res.json();
+      // Ignore stale responses for an order the user has since navigated away from.
+      if (currentRxIdRef.current !== requestRxId) return;
+      if (data.success && data.url) {
+        setPdfUrl(data.url);
+      } else {
+        setPdfError(data.error || "Failed to load prescription PDF");
+      }
+    } catch {
+      if (currentRxIdRef.current !== requestRxId) return;
+      setPdfError("Failed to load prescription PDF");
+    } finally {
+      if (currentRxIdRef.current === requestRxId) {
+        setPdfLoading(false);
+      }
+    }
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    if (value === "document" && !pdfUrl && !pdfLoading) {
+      loadPdf();
+    }
+  };
 
   const formatAddress = (addr: AddressData | null | undefined): string => {
     if (!addr) return "";
@@ -290,9 +351,15 @@ export function PrescriptionModals({
     <>
       {/* Official Receipt Modal */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto print:max-w-full">
+        <DialogContent className="max-w-3xl max-h-[90vh] p-0 gap-0 flex flex-col overflow-hidden print:max-w-full print:overflow-visible print:max-h-none print:block">
           {selectedPrescription && (
-            <div className="space-y-6 print-container" id="rx-receipt">
+            <div className="flex flex-col min-h-0 flex-1 print-container" id="rx-receipt">
+              <Tabs
+                value={activeTab}
+                onValueChange={handleTabChange}
+                className="flex flex-col min-h-0 flex-1"
+              >
+                <div className="overflow-y-auto flex-1 min-h-0 px-6 pt-6 space-y-6">
               {/* Pharmacy Logo */}
               <div className="text-center pt-4">
                 <img
@@ -403,6 +470,18 @@ export function PrescriptionModals({
                 </div>
               </div>
 
+              <TabsList className="grid w-full grid-cols-4 print-hide sticky top-0 z-10 bg-white">
+                <TabsTrigger value="details">Details</TabsTrigger>
+                <TabsTrigger value="pricing">Pricing</TabsTrigger>
+                <TabsTrigger value="shipping">Shipping</TabsTrigger>
+                <TabsTrigger value="document">Document</TabsTrigger>
+              </TabsList>
+
+              <TabsContent
+                forceMount
+                value="details"
+                className="mt-0 space-y-6 focus-visible:outline-none"
+              >
               {/* Progress Tracker - screen version (hidden in print) */}
               <div className="print-section print-production print-hide-tracker">
                 <PrescriptionProgressTracker
@@ -527,12 +606,44 @@ export function PrescriptionModals({
                         "Inject 0.5mL subcutaneously once daily in the evening. Rotate injection sites between abdomen, thigh, and upper arm. Store in refrigerator between 36-46°F. Allow to reach room temperature before injection. Dispose of used syringes in approved sharps container."}
                     </p>
                   </div>
+                </div>
+              </div>
 
-                  {/* Pricing Breakdown */}
-                  <div className="pt-3 border-t border-gray-200">
-                    <p className="text-sm text-gray-600 font-medium mb-2 print-text-sm">
-                      Pricing
-                    </p>
+              {/* Notes from Pharmacy - Always show */}
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 print-section print-notes">
+                <p className="font-semibold text-sm text-gray-700 mb-2 print-text">
+                  📋 Important Notes from {selectedPrescription.pharmacyName || "Pharmacy"}:
+                </p>
+                <div className="text-sm text-gray-900 space-y-1">
+                  {(
+                    selectedPrescription.pharmacyNotes ||
+                    "• Keep refrigerated at 36-46°F until use\n• This medication requires proper injection technique - review instructions with your provider\n• Report any unusual side effects to your doctor immediately\n• Do not share needles or medication with others\n• Dispose of used supplies in an approved sharps container"
+                  )
+                    .split("\n")
+                    .map((line, index) => (
+                      <p
+                        key={index}
+                        className="leading-relaxed print-text-sm"
+                      >
+                        {line}
+                      </p>
+                    ))}
+                </div>
+              </div>
+              </TabsContent>
+
+              <TabsContent
+                forceMount
+                value="pricing"
+                className="mt-0 space-y-3 focus-visible:outline-none"
+              >
+                <h3
+                  className="font-semibold text-lg print-details-title"
+                  style={{ color: "#00AEEF" }}
+                >
+                  Pricing
+                </h3>
+                <div className="bg-gray-50 rounded-lg p-4 print-section">
                     <div className="space-y-2">
                       <div className="flex justify-between">
                         <span className="text-sm text-gray-600 print-text-sm">
@@ -588,10 +699,14 @@ export function PrescriptionModals({
                         </span>
                       </div>
                     </div>
-                  </div>
                 </div>
-              </div>
+              </TabsContent>
 
+              <TabsContent
+                forceMount
+                value="shipping"
+                className="mt-0 space-y-6 focus-visible:outline-none"
+              >
               {/* Shipping Address */}
               <div className="space-y-3">
                 <h3
@@ -707,28 +822,6 @@ export function PrescriptionModals({
                 </div>
               </div>
 
-              {/* Notes from Pharmacy - Always show */}
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 print-section print-notes">
-                <p className="font-semibold text-sm text-gray-700 mb-2 print-text">
-                  📋 Important Notes from {selectedPrescription.pharmacyName || "Pharmacy"}:
-                </p>
-                <div className="text-sm text-gray-900 space-y-1">
-                  {(
-                    selectedPrescription.pharmacyNotes ||
-                    "• Keep refrigerated at 36-46°F until use\n• This medication requires proper injection technique - review instructions with your provider\n• Report any unusual side effects to your doctor immediately\n• Do not share needles or medication with others\n• Dispose of used supplies in an approved sharps container"
-                  )
-                    .split("\n")
-                    .map((line, index) => (
-                      <p
-                        key={index}
-                        className="leading-relaxed print-text-sm"
-                      >
-                        {line}
-                      </p>
-                    ))}
-                </div>
-              </div>
-
               {/* Fulfillment Box */}
               <div
                 className="border-2 rounded-lg p-4 space-y-3 print-section print-pickup"
@@ -768,9 +861,69 @@ export function PrescriptionModals({
                   </div>
                 </div>
               </div>
+              </TabsContent>
+
+              <TabsContent
+                forceMount
+                value="document"
+                className="mt-0 focus-visible:outline-none print-hide"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h3
+                      className="font-semibold text-lg"
+                      style={{ color: "#00AEEF" }}
+                    >
+                      Electronic Rx
+                    </h3>
+                    {pdfUrl && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => window.open(pdfUrl, "_blank")}
+                        className="border-[#1E3A8A]/60 text-[#1E3A8A]/80 hover:bg-[#1E3A8A]/5"
+                      >
+                        <FileText className="h-4 w-4 mr-1" />
+                        Open in new tab
+                      </Button>
+                    )}
+                  </div>
+                  {pdfLoading ? (
+                    <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+                      <span className="animate-spin text-2xl mb-2">⏳</span>
+                      Preparing prescription PDF…
+                    </div>
+                  ) : pdfError ? (
+                    <div className="flex flex-col items-center justify-center py-16 gap-3">
+                      <p className="text-sm text-red-600">{pdfError}</p>
+                      <Button variant="outline" size="sm" onClick={loadPdf}>
+                        Retry
+                      </Button>
+                    </div>
+                  ) : pdfUrl ? (
+                    <iframe
+                      src={pdfUrl}
+                      title="Prescription PDF"
+                      className="w-full h-[60vh] rounded-lg border border-gray-200"
+                    />
+                  ) : (
+                    <div className="flex justify-center py-16">
+                      <Button
+                        variant="outline"
+                        onClick={loadPdf}
+                        className="border-[#1E3A8A]/60 text-[#1E3A8A]/80 hover:bg-[#1E3A8A]/5"
+                      >
+                        <FileText className="h-5 w-5 mr-2" />
+                        Load Prescription PDF
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+                </div>
 
               {/* Action Buttons */}
-              <div className="pt-4 space-y-3 print-hide">
+              <div className="border-t bg-white px-6 py-4 space-y-3 print-hide">
                 {/* Edit Prescription - only when pending_payment */}
                 {selectedPrescription.status === "pending_payment" &&
                   !hideEdit && (
@@ -832,35 +985,6 @@ export function PrescriptionModals({
                   </Button>
                 )}
 
-                {/* View PDF Button - always available; the PDF is generated on
-                    demand if one hasn't been stored yet. */}
-                <Button
-                  onClick={async () => {
-                    const toastId = toast.loading("Preparing prescription PDF…");
-                    try {
-                      const response = await fetch(
-                        `/api/prescriptions/${selectedPrescription.id}/pdf`,
-                      );
-                      const data = await response.json();
-                      if (data.success && data.url) {
-                        toast.dismiss(toastId);
-                        window.open(data.url, "_blank");
-                      } else {
-                        toast.error(data.error || "Failed to load PDF", {
-                          id: toastId,
-                        });
-                      }
-                    } catch {
-                      toast.error("Failed to load PDF", { id: toastId });
-                    }
-                  }}
-                  variant="outline"
-                  className="w-full text-lg py-6 border-[#1E3A8A]/60 text-[#1E3A8A]/80 hover:bg-[#1E3A8A]/5"
-                >
-                  <FileText className="h-5 w-5 mr-2" />
-                  View Prescription PDF
-                </Button>
-
                 <Button
                   onClick={() => printReceipt()}
                   variant="outline"
@@ -870,6 +994,7 @@ export function PrescriptionModals({
                   Print Receipt
                 </Button>
               </div>
+              </Tabs>
             </div>
           )}
         </DialogContent>

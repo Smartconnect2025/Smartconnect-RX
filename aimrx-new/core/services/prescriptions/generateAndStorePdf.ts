@@ -97,6 +97,18 @@ export async function generateAndStorePrescriptionPdf(
   });
 
   const arrayBuffer = await blob.arrayBuffer();
+
+  // Sanity guard: a real Electronic Rx is vector text (plus, usually, a
+  // signature image). Anything near-empty means generation produced junk —
+  // don't store a placeholder PDF over a (future) good one.
+  const MIN_PDF_BYTES = 1000;
+  if (arrayBuffer.byteLength < MIN_PDF_BYTES) {
+    console.error(
+      `PRESCRIPTION_PDF_TOO_SMALL: ${arrayBuffer.byteLength} bytes for prescription ${prescriptionId}`,
+    );
+    return { error: "Generated PDF is invalid (too small)" };
+  }
+
   const file = new File([arrayBuffer], filename, { type: "application/pdf" });
 
   const result = await uploadPrescriptionPdf(

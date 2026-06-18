@@ -180,14 +180,10 @@ export async function getPrescriptionPdfBase64(
       return { error: error?.message || "Failed to download PDF" };
     }
 
-    // Convert blob to base64
+    // Convert blob to base64 using Node's Buffer (fast, handles large files;
+    // a per-byte String.fromCharCode loop is slow and can corrupt big PDFs).
     const arrayBuffer = await data.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const base64 = btoa(binary);
+    const base64 = Buffer.from(arrayBuffer).toString("base64");
 
     return { base64 };
   } catch (error) {
