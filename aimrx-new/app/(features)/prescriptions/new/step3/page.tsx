@@ -104,6 +104,8 @@ export default function PrescriptionStep3Page() {
     name: string;
     dataUrl: string;
   } | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
   const [useCustomAddress, setUseCustomAddress] = useState(false);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [customAddress, setCustomAddress] = useState<AddressData>({
@@ -230,6 +232,101 @@ export default function PrescriptionStep3Page() {
       }
     };
   }, []);
+
+  // Generate an in-app preview of the Electronic Rx PDF (single-order flow) so
+  // the provider can see the rendered design + signature before submitting.
+  useEffect(() => {
+    if (isMultiOrder || !selectedPatient || !prescriptionData || !user?.id) {
+      return;
+    }
+
+    let cancelled = false;
+    let objectUrl: string | null = null;
+
+    const buildPreview = async () => {
+      setPreviewLoading(true);
+      try {
+        const { data: fetchedProvider } = await supabase
+          .from("providers")
+          .select(
+            "prefix, first_name, last_name, npi_number, dea_number, phone_number, signature_url, physical_address, company_name",
+          )
+          .eq("user_id", user.id)
+          .single();
+
+        const providerAddress =
+          fetchedProvider?.physical_address as AddressData | null;
+        const patientAddress = useCustomAddress
+          ? customAddress
+          : selectedPatient.physicalAddress;
+        const dateWritten = new Date().toISOString().split("T")[0];
+
+        const { blob } = await generatePrescriptionPdf({
+          patient: {
+            firstName: selectedPatient.firstName,
+            lastName: selectedPatient.lastName,
+            dob: selectedPatient.dateOfBirth || "",
+            sex: selectedPatient.gender === "male" ? "M" : "F",
+            street: patientAddress?.street,
+            city: patientAddress?.city,
+            state: patientAddress?.state,
+            zip: patientAddress?.zipCode,
+            phone: selectedPatient.phone,
+          },
+          doctor: {
+            prefix: fetchedProvider?.prefix || undefined,
+            firstName: fetchedProvider?.first_name || "Provider",
+            lastName: fetchedProvider?.last_name || "User",
+            npi: fetchedProvider?.npi_number || "",
+            dea: fetchedProvider?.dea_number || undefined,
+            street: providerAddress?.street,
+            city: providerAddress?.city,
+            state: providerAddress?.state,
+            zip: providerAddress?.zipCode,
+            phone: fetchedProvider?.phone_number || undefined,
+            companyName: fetchedProvider?.company_name || undefined,
+          },
+          rx: {
+            drugName: prescriptionData.medication,
+            qty: prescriptionData.quantity,
+            dateWritten,
+            refills: prescriptionData.refills,
+            ndc: pharmacyMedData?.ndc,
+            instructions:
+              prescriptionData.sig || pharmacyMedData?.dosageInstructions,
+            notes: prescriptionData.pharmacyNotes || pharmacyMedData?.notes,
+            daw: prescriptionData.dispenseAsWritten ? "Y" : "N",
+          },
+          signatureUrl: fetchedProvider?.signature_url || undefined,
+        });
+
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPreviewUrl(objectUrl);
+      } catch (err) {
+        console.error("Failed to build prescription PDF preview:", err);
+        if (!cancelled) setPreviewUrl(null);
+      } finally {
+        if (!cancelled) setPreviewLoading(false);
+      }
+    };
+
+    buildPreview();
+
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [
+    isMultiOrder,
+    selectedPatient,
+    prescriptionData,
+    pharmacyMedData,
+    useCustomAddress,
+    customAddress,
+    supabase,
+    user?.id,
+  ]);
 
   if (!patientId) {
     return (
@@ -390,6 +487,7 @@ export default function PrescriptionStep3Page() {
     prescriptionId: string,
     item: CartItem | PrescriptionFormData,
     providerData: {
+      prefix?: string;
       firstName: string;
       lastName: string;
       npi: string;
@@ -397,6 +495,7 @@ export default function PrescriptionStep3Page() {
       phone?: string;
       signatureUrl?: string;
       address?: AddressData | null;
+      companyName?: string;
     },
   ) => {
     try {
@@ -420,6 +519,7 @@ export default function PrescriptionStep3Page() {
           phone: selectedPatient!.phone,
         },
         doctor: {
+          prefix: providerData.prefix,
           firstName: providerData.firstName,
           lastName: providerData.lastName,
           npi: providerData.npi,
@@ -429,6 +529,7 @@ export default function PrescriptionStep3Page() {
           state: providerData.address?.state,
           zip: providerData.address?.zipCode,
           phone: providerData.phone,
+          companyName: providerData.companyName,
         },
         rx: {
           drugName: item.medication,
@@ -438,6 +539,7 @@ export default function PrescriptionStep3Page() {
           instructions: item.sig,
           notes: item.pharmacyNotes,
           daw: item.dispenseAsWritten ? "Y" : "N",
+          pon: String(prescriptionId).slice(-8).toUpperCase(),
         },
         signatureUrl: providerData.signatureUrl,
       });
@@ -472,11 +574,12 @@ export default function PrescriptionStep3Page() {
 
       const { data: fetchedProvider } = await supabase
         .from("providers")
-        .select("first_name, last_name, npi_number, dea_number, phone_number, signature_url, physical_address")
+        .select("prefix, first_name, last_name, npi_number, dea_number, phone_number, signature_url, physical_address, company_name")
         .eq("user_id", user.id)
         .single();
 
       const providerData = {
+        prefix: fetchedProvider?.prefix || undefined,
         firstName: fetchedProvider?.first_name || "Provider",
         lastName: fetchedProvider?.last_name || "User",
         npi: fetchedProvider?.npi_number || "1234567890",
@@ -484,6 +587,7 @@ export default function PrescriptionStep3Page() {
         phone: fetchedProvider?.phone_number,
         signatureUrl: fetchedProvider?.signature_url,
         address: fetchedProvider?.physical_address as AddressData | null,
+        companyName: fetchedProvider?.company_name || undefined,
       };
 
       if (isMultiOrder && cartItems.length > 0) {
@@ -576,6 +680,7 @@ export default function PrescriptionStep3Page() {
                 phone: selectedPatient.phone,
               },
               doctor: {
+                prefix: providerData.prefix,
                 firstName: providerData.firstName,
                 lastName: providerData.lastName,
                 npi: providerData.npi,
@@ -585,6 +690,7 @@ export default function PrescriptionStep3Page() {
                 state: providerData.address?.state,
                 zip: providerData.address?.zipCode,
                 phone: providerData.phone,
+                companyName: providerData.companyName,
               },
               rx: {
                 drugName: prescriptionData.medication,
@@ -595,6 +701,7 @@ export default function PrescriptionStep3Page() {
                 instructions: prescriptionData.sig || pharmacyMedData?.dosageInstructions,
                 notes: prescriptionData.pharmacyNotes || pharmacyMedData?.notes,
                 daw: prescriptionData.dispenseAsWritten ? "Y" : "N",
+                pon: String(prescriptionId).slice(-8).toUpperCase(),
               },
               signatureUrl: providerData.signatureUrl,
             });
@@ -952,20 +1059,53 @@ export default function PrescriptionStep3Page() {
             </div>
           </div>
 
-          {!isMultiOrder && pdfInfo && (
+          {!isMultiOrder && (
             <div className="space-y-3">
               <h3 className="text-lg font-semibold text-gray-900">
                 Prescription Document
               </h3>
-              <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <File className="h-6 w-6 text-blue-600" />
+              {pdfInfo ? (
+                <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="p-3 bg-blue-100 rounded-lg">
+                    <File className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-900">{safeString(pdfInfo.name)}</p>
+                    <p className="text-sm text-gray-500">PDF document attached</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900">{safeString(pdfInfo.name)}</p>
-                  <p className="text-sm text-gray-500">PDF document attached</p>
+              ) : previewUrl ? (
+                <div className="space-y-2">
+                  <div className="overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                    <iframe
+                      src={`${previewUrl}#toolbar=1&navpanes=0`}
+                      title="Electronic Rx preview"
+                      className="h-[640px] w-full"
+                    />
+                  </div>
+                  <a
+                    href={previewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
+                  >
+                    Open preview in new tab
+                  </a>
                 </div>
-              </div>
+              ) : (
+                <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  {previewLoading ? (
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                  ) : (
+                    <File className="h-6 w-6 text-blue-600" />
+                  )}
+                  <p className="text-sm text-gray-600">
+                    {previewLoading
+                      ? "Generating prescription preview…"
+                      : "Preview will appear once prescription details are ready."}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

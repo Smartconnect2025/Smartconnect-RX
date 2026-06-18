@@ -13,36 +13,39 @@ interface PrescriptionPdfData {
     phone?: string;
   };
   doctor: {
+    prefix?: string;
     firstName: string;
     lastName: string;
     npi: string;
     dea?: string;
+    spi?: string;
+    effective?: string;
     street?: string;
     city?: string;
     state?: string;
     zip?: string;
     phone?: string;
+    fax?: string;
+    companyName?: string;
   };
   rx: {
     drugName: string;
     qty: string;
     dateWritten: string;
     refills: string;
+    daysSupply?: string;
     ndc?: string;
     instructions?: string;
     notes?: string;
     daw: string;
+    pon?: string;
   };
   signatureUrl?: string;
 }
 
 function resolveSignatureBase64(signatureUrl: string): string | null {
   try {
-    // Already a data URL (data:image/...)
-    if (signatureUrl.startsWith("data:")) {
-      return signatureUrl;
-    }
-    // Raw base64 string — wrap it as a PNG data URL
+    if (signatureUrl.startsWith("data:")) return signatureUrl;
     return `data:image/png;base64,${signatureUrl}`;
   } catch {
     return null;
@@ -52,203 +55,221 @@ function resolveSignatureBase64(signatureUrl: string): string | null {
 export async function generatePrescriptionPdf(
   data: PrescriptionPdfData,
 ): Promise<{ blob: Blob; filename: string }> {
-  const doc = new jsPDF();
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 20;
-  let y = 20;
 
-  // --- Header ---
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text("PRESCRIPTION", pageWidth / 2, y, { align: "center" });
-  y += 10;
+  // ---- Layout constants (mm) ----
+  const frameLeft = 18;
+  const frameRight = pageWidth - 18;
+  const frameTop = 22;
+  const frameBottom = 270;
+  const contentLeft = frameLeft + 6;
+  const contentRight = frameRight - 6;
+  const contentWidth = contentRight - contentLeft;
+  const splitX = contentLeft + contentWidth * 0.65;
 
+  // ---- Outer frame ----
   doc.setDrawColor(0, 0, 0);
-  doc.setLineWidth(0.5);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 10;
+  doc.setLineWidth(0.4);
+  doc.rect(frameLeft, frameTop, frameRight - frameLeft, frameBottom - frameTop);
 
-  // --- Doctor Info ---
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Prescriber", margin, y);
-  y += 6;
-
-  doc.setFontSize(10);
+  // ---- Top-right header block: NPI / SPI / DEA / Effective ----
   doc.setFont("helvetica", "normal");
-  doc.text(
-    `Dr. ${data.doctor.firstName} ${data.doctor.lastName}`,
-    margin,
-    y,
-  );
-  y += 5;
-  doc.text(`NPI: ${data.doctor.npi}`, margin, y);
-  y += 5;
-
-  if (data.doctor.dea && data.doctor.dea.trim()) {
-    doc.text(`DEA: ${data.doctor.dea.trim()}`, margin, y);
-    y += 5;
-  }
-
-  const doctorAddress = [
-    data.doctor.street,
-    data.doctor.city,
-    data.doctor.state,
-    data.doctor.zip,
-  ]
-    .filter(Boolean)
-    .join(", ");
-  if (doctorAddress) {
-    doc.text(doctorAddress, margin, y);
-    y += 5;
-  }
-  if (data.doctor.phone) {
-    doc.text(`Phone: ${data.doctor.phone}`, margin, y);
-    y += 5;
-  }
-
-  // Date written on the right
-  doc.text(`Date: ${data.rx.dateWritten}`, pageWidth - margin, y - 5, {
-    align: "right",
-  });
-
-  y += 5;
-  doc.setLineWidth(0.3);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 10;
-
-  // --- Patient Info ---
-  doc.setFontSize(11);
-  doc.setFont("helvetica", "bold");
-  doc.text("Patient", margin, y);
-  y += 6;
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-  doc.text(
-    `${data.patient.firstName} ${data.patient.lastName}`,
-    margin,
-    y,
-  );
-  y += 5;
-  doc.text(`DOB: ${data.patient.dob}    Sex: ${data.patient.sex}`, margin, y);
-  y += 5;
-
-  const patientAddress = [
-    data.patient.street,
-    data.patient.city,
-    data.patient.state,
-    data.patient.zip,
-  ]
-    .filter(Boolean)
-    .join(", ");
-  if (patientAddress) {
-    doc.text(patientAddress, margin, y);
-    y += 5;
-  }
-  if (data.patient.phone) {
-    doc.text(`Phone: ${data.patient.phone}`, margin, y);
-    y += 5;
-  }
-
-  y += 5;
-  doc.setLineWidth(0.3);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 10;
-
-  // --- Rx Details ---
-  doc.setFontSize(14);
-  doc.setFont("helvetica", "bold");
-  doc.text("Rx", margin, y);
-  y += 8;
-
-  doc.setFontSize(10);
-  doc.setFont("helvetica", "normal");
-
-  const rxFields: [string, string | undefined][] = [
-    ["Drug Name", data.rx.drugName],
-    ["NDC", data.rx.ndc],
-    ["Quantity", data.rx.qty],
-    ["Refills", data.rx.refills],
-    ["Dispense as Written", data.rx.daw === "Y" ? "Yes" : "No"],
+  doc.setFontSize(9);
+  const headerLabelX = contentRight - 38;
+  const headerValueX = contentRight - 22;
+  let headerY = frameTop + 6;
+  const headerRows: [string, string][] = [
+    ["NPI:", data.doctor.npi || ""],
+    ["SPI:", data.doctor.spi || ""],
+    ["DEA:", data.doctor.dea || ""],
+    ["Effective:", data.doctor.effective || ""],
   ];
-
-  for (const [label, value] of rxFields) {
-    if (value) {
-      doc.setFont("helvetica", "bold");
-      doc.text(`${label}: `, margin, y);
-      const labelWidth = doc.getTextWidth(`${label}: `);
-      doc.setFont("helvetica", "normal");
-      doc.text(value, margin + labelWidth, y);
-      y += 6;
-    }
+  for (const [label, value] of headerRows) {
+    doc.text(label, headerLabelX, headerY);
+    if (value) doc.text(value, headerValueX, headerY);
+    headerY += 4.5;
   }
 
-  // Instructions (SIG) - may be multiline
+  // ---- Top-left: Phone / Fax ----
+  let leftHeaderY = frameTop + 14;
+  doc.text("Phone:", contentLeft, leftHeaderY);
+  if (data.doctor.phone) doc.text(data.doctor.phone, contentLeft + 14, leftHeaderY);
+  leftHeaderY += 4.5;
+  doc.text("Fax:", contentLeft, leftHeaderY);
+  if (data.doctor.fax) doc.text(data.doctor.fax, contentLeft + 14, leftHeaderY);
+
+  // ---- Title: Electronic Rx ----
+  const titleY = frameTop + 24;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(13);
+  doc.text("Electronic Rx", pageWidth / 2, titleY, { align: "center" });
+  doc.setLineWidth(0.4);
+  doc.line(contentLeft, titleY + 2, contentRight, titleY + 2);
+
+  // ---- Patient Name | Rx Date row ----
+  let rowY = titleY + 8;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("Patient Name", contentLeft, rowY);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(10);
+  const patientName = `${data.patient.firstName} ${data.patient.lastName}`.trim();
+  doc.text(patientName, contentLeft, rowY + 5);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("Rx Date", splitX + 2, rowY);
+  doc.setFontSize(10);
+  doc.text(data.rx.dateWritten || "", splitX + 2, rowY + 5);
+  doc.setLineWidth(0.2);
+  doc.line(splitX, rowY - 3, splitX, rowY + 7);
+  doc.line(contentLeft, rowY + 7, contentRight, rowY + 7);
+
+  // ---- Patient Address ----
+  rowY += 12;
+  doc.setFontSize(9);
+  doc.text("Patient Address", contentLeft, rowY);
+  const addrLine = [
+    data.patient.street,
+    [data.patient.city, data.patient.state, data.patient.zip]
+      .filter(Boolean)
+      .join(", "),
+  ]
+    .filter(Boolean)
+    .join("  ");
+  doc.setFontSize(10);
+  doc.text(addrLine || "", contentLeft, rowY + 5);
+  doc.line(contentLeft, rowY + 7, contentRight, rowY + 7);
+
+  // ---- Phone (patient) | DOB ----
+  rowY += 12;
+  doc.setFontSize(9);
+  doc.text("Phone:", contentLeft, rowY);
+  doc.setFontSize(10);
+  doc.text(data.patient.phone || "", contentLeft + 14, rowY);
+  doc.setFontSize(9);
+  doc.text("DOB:", splitX + 2, rowY);
+  doc.setFontSize(10);
+  doc.text(data.patient.dob || "", splitX + 14, rowY);
+  doc.setLineWidth(0.2);
+  doc.line(splitX, rowY - 3, splitX, rowY + 3);
+  doc.line(contentLeft, rowY + 3, contentRight, rowY + 3);
+
+  // ---- Rx framed box ----
+  const rxBoxTop = rowY + 8;
+  const rxBoxHeight = 95;
+  const rxBoxBottom = rxBoxTop + rxBoxHeight;
+  doc.setLineWidth(0.4);
+  doc.rect(contentLeft, rxBoxTop, contentRight - contentLeft, rxBoxHeight);
+
+  // Big "Rx" symbol
+  doc.setFont("times", "bolditalic");
+  doc.setFontSize(28);
+  doc.text("Rx", contentLeft + 6, rxBoxTop + 14);
+
+  // Drug name + NDC
+  const displayDrugName = data.rx.drugName;
+  const drugX = contentLeft + 28;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(11);
+  doc.text(displayDrugName || "", drugX, rxBoxTop + 10);
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text(data.rx.ndc ? `NDC: ${data.rx.ndc}` : "NDC", drugX, rxBoxTop + 16);
+
+  // SIG — wrapped and clipped to 12 lines so it can't overlap the bottom row
   if (data.rx.instructions) {
-    y += 2;
-    doc.setFont("helvetica", "bold");
-    doc.text("SIG:", margin, y);
-    y += 6;
     doc.setFont("helvetica", "normal");
-    const sigLines = doc.splitTextToSize(
+    doc.setFontSize(10);
+    const allLines = doc.splitTextToSize(
       data.rx.instructions,
-      pageWidth - margin * 2,
-    );
-    doc.text(sigLines, margin, y);
-    y += sigLines.length * 5 + 2;
+      contentRight - drugX - 6,
+    ) as string[];
+    const MAX_SIG_LINES = 12;
+    const sigLines =
+      allLines.length > MAX_SIG_LINES
+        ? [
+            ...allLines.slice(0, MAX_SIG_LINES - 1),
+            `${allLines[MAX_SIG_LINES - 1]}…`,
+          ]
+        : allLines;
+    doc.text(sigLines, drugX, rxBoxTop + 28);
   }
 
-  // Notes
+  // Bottom row: N Refills | QTY: | DAYS SUPPLY:
+  const refillBottomY = rxBoxBottom - 8;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  const refillsLabel = `${data.rx.refills || "0"} Refills`;
+  const qtyLabel = data.rx.qty ? `QTY:  ${data.rx.qty}` : "QTY:";
+  const daysLabel = data.rx.daysSupply
+    ? `DAYS SUPPLY:  ${data.rx.daysSupply}`
+    : "DAYS SUPPLY:";
+  const boxInnerWidth = contentRight - contentLeft - 12;
+  const col1X = contentLeft + 12;
+  const col2X = contentLeft + 12 + boxInnerWidth * 0.32;
+  const col3X = contentLeft + 12 + boxInnerWidth * 0.62;
+  doc.text(refillsLabel, col1X, refillBottomY);
+  doc.text(qtyLabel, col2X, refillBottomY);
+  doc.text(daysLabel, col3X, refillBottomY);
+
+  // ---- Generic Substitution | Sub. Allowed | Notes ----
+  const subY = rxBoxBottom + 8;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("Generic Substitution", contentLeft, subY);
+  doc.text("Sub. Allowed", contentLeft + 50, subY);
+  doc.setFontSize(10);
+  doc.text(data.rx.daw === "Y" ? "No" : "Yes", contentLeft + 50, subY + 5);
+  doc.setFontSize(9);
+  doc.text("Notes:", splitX + 2, subY);
+  doc.setFontSize(10);
   if (data.rx.notes) {
-    y += 2;
-    doc.setFont("helvetica", "bold");
-    doc.text("Notes:", margin, y);
-    y += 6;
-    doc.setFont("helvetica", "normal");
     const noteLines = doc.splitTextToSize(
       data.rx.notes,
-      pageWidth - margin * 2,
+      contentRight - splitX - 4,
     );
-    doc.text(noteLines, margin, y);
-    y += noteLines.length * 5 + 2;
+    doc.text(noteLines, splitX + 2, subY + 5);
   }
+  doc.setLineWidth(0.2);
+  doc.line(splitX, subY - 3, splitX, subY + 10);
+  doc.line(contentLeft, subY + 10, contentRight, subY + 10);
 
-  // --- Signature ---
-  y += 10;
-  doc.setLineWidth(0.3);
-  doc.line(margin, y, pageWidth - margin, y);
-  y += 8;
-
+  // ---- Footer: Signed electronically by | PON ----
+  const footerY = frameBottom - 10;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  doc.text("Signed electronically by :", contentLeft, footerY);
+  const printedName = (
+    data.doctor.companyName?.trim() ||
+    `${data.doctor.prefix || "Dr."} ${data.doctor.firstName} ${data.doctor.lastName}`
+  ).trim();
+  let signatureRendered = false;
   if (data.signatureUrl) {
     const sigBase64 = resolveSignatureBase64(data.signatureUrl);
     if (sigBase64) {
       try {
-        doc.addImage(sigBase64, "PNG", margin, y, 60, 20);
-        y += 22;
+        doc.addImage(sigBase64, "PNG", contentLeft + 42, footerY - 10, 40, 12);
+        signatureRendered = true;
       } catch {
-        doc.setFont("helvetica", "italic");
-        doc.text("[Signature on file]", margin, y);
-        y += 6;
+        signatureRendered = false;
       }
-    } else {
-      doc.setFont("helvetica", "italic");
-      doc.text("[Signature on file]", margin, y);
-      y += 6;
     }
   }
-
+  if (!signatureRendered) {
+    doc.setFont("helvetica", "italic");
+    doc.text(printedName, contentLeft + 42, footerY);
+  }
   doc.setFont("helvetica", "normal");
-  doc.text(
-    `Dr. ${data.doctor.firstName} ${data.doctor.lastName}`,
-    margin,
-    y,
-  );
-  y += 5;
-  doc.line(margin, y, margin + 60, y);
+  doc.setFontSize(9);
+  doc.text("PON :", splitX + 2, footerY);
+  if (data.rx.pon) {
+    doc.setFontSize(10);
+    doc.text(data.rx.pon, splitX + 14, footerY);
+  }
 
+  // ---- Output ----
   const blob = doc.output("blob");
-  const filename = `prescription-${data.patient.lastName}-${Date.now()}.pdf`;
-
+  const filename = `prescription-${data.patient.lastName || "rx"}-${Date.now()}.pdf`;
   return { blob, filename };
 }

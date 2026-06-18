@@ -196,7 +196,7 @@ export async function checkRefills() {
           // Fetch provider data
           const { data: provider, error: providerError } = await supabase
             .from("providers")
-            .select("first_name, last_name, npi, physical_address, phone, signature_url")
+            .select("prefix, first_name, last_name, npi, physical_address, phone, signature_url, company_name")
             .eq("user_id", rx.prescriber_id)
             .single();
 
@@ -220,6 +220,7 @@ export async function checkRefills() {
               phone: patient.phone || undefined,
             },
             doctor: {
+              prefix: provider?.prefix || undefined,
               firstName: provider?.first_name || "",
               lastName: provider?.last_name || "",
               npi: provider?.npi || "",
@@ -228,6 +229,7 @@ export async function checkRefills() {
               state: providerAddress.state,
               zip: providerAddress.zipCode || providerAddress.zip,
               phone: provider?.phone || undefined,
+              companyName: provider?.company_name || undefined,
             },
             rx: {
               drugName: rx.medication || "",
@@ -237,6 +239,7 @@ export async function checkRefills() {
               instructions: rx.sig || undefined,
               notes: rx.pharmacy_notes || undefined,
               daw: rx.dispense_as_written ? "Y" : "N",
+              pon: String(refill.id).slice(-8).toUpperCase(),
             },
             signatureUrl: provider?.signature_url || undefined,
           });
