@@ -328,6 +328,28 @@ export default function PrescriptionStep3Page() {
     user?.id,
   ]);
 
+  // The document the provider is reviewing: an uploaded PDF (pdfInfo.dataUrl)
+  // takes precedence over the freshly generated in-app preview (blob previewUrl).
+  const documentUrl = pdfInfo?.dataUrl ?? previewUrl;
+
+  // Open the document in a new browser tab. Chrome blocks top-level navigation
+  // to `data:` URLs, so convert those to a blob URL first; blob URLs open as-is.
+  const openDocumentInNewTab = async () => {
+    if (!documentUrl) return;
+    if (documentUrl.startsWith("blob:")) {
+      window.open(documentUrl, "_blank", "noopener");
+      return;
+    }
+    try {
+      const blob = await (await fetch(documentUrl)).blob();
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl, "_blank", "noopener");
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+    } catch (err) {
+      console.error("Failed to open prescription document:", err);
+    }
+  };
+
   if (!patientId) {
     return (
       <DefaultLayout>
@@ -1064,33 +1086,27 @@ export default function PrescriptionStep3Page() {
               <h3 className="text-lg font-semibold text-gray-900">
                 Prescription Document
               </h3>
-              {pdfInfo ? (
-                <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                  <div className="p-3 bg-blue-100 rounded-lg">
-                    <File className="h-6 w-6 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900">{safeString(pdfInfo.name)}</p>
-                    <p className="text-sm text-gray-500">PDF document attached</p>
-                  </div>
-                </div>
-              ) : previewUrl ? (
+              {documentUrl ? (
                 <div className="space-y-2">
+                  {pdfInfo?.name && (
+                    <p className="text-sm text-gray-500">
+                      {safeString(pdfInfo.name)}
+                    </p>
+                  )}
                   <div className="overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
                     <iframe
-                      src={`${previewUrl}#toolbar=1&navpanes=0`}
+                      src={`${documentUrl}#toolbar=1&navpanes=0`}
                       title="Electronic Rx preview"
                       className="h-[640px] w-full"
                     />
                   </div>
-                  <a
-                    href={previewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    type="button"
+                    onClick={openDocumentInNewTab}
                     className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
                   >
                     Open preview in new tab
-                  </a>
+                  </button>
                 </div>
               ) : (
                 <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
