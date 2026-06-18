@@ -196,7 +196,7 @@ export default function PharmacyManagementPage() {
     dea_number: "",
     ncpdp_number: "",
     address: "",
-    system_type: "DigitalRx",
+    system_type: "PioneerRx",
     store_id: "",
     api_url: "",
     api_key: "",
@@ -240,7 +240,7 @@ export default function PharmacyManagementPage() {
     dea_number: "",
     ncpdp_number: "",
     address: "",
-    system_type: "DigitalRx",
+    system_type: "PioneerRx",
     store_id: "",
     api_url: "",
     api_key: "",
@@ -521,7 +521,7 @@ export default function PharmacyManagementPage() {
       dea_number: "",
       ncpdp_number: "",
       address: "",
-      system_type: "DigitalRx",
+      system_type: "PioneerRx",
       store_id: "",
       api_url: "",
       api_key: "",
@@ -563,7 +563,7 @@ export default function PharmacyManagementPage() {
       dea_number: pharmacy.dea_number || "",
       ncpdp_number: pharmacy.ncpdp_number || "",
       address: pharmacy.address || "",
-      system_type: backend?.system_type || "DigitalRx",
+      system_type: backend?.system_type || "PioneerRx",
       store_id: backend?.store_id || "",
       api_url: backend?.api_url || "",
       api_key: "",
@@ -923,7 +923,7 @@ export default function PharmacyManagementPage() {
       dea_number: request.form_data?.deaNumber || "",
       ncpdp_number: request.form_data?.ncpdpNumber || "",
       address: fullAddress,
-      system_type: "DigitalRx",
+      system_type: "PioneerRx",
       store_id: "",
       api_url: "",
       api_key: "",
@@ -1891,7 +1891,6 @@ export default function PharmacyManagementPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="DigitalRx">DigitalRx</SelectItem>
                         <SelectItem value="PioneerRx">PioneerRx</SelectItem>
                         <SelectItem value="QS1">QS1</SelectItem>
                         <SelectItem value="Liberty">Liberty</SelectItem>
@@ -2832,7 +2831,6 @@ export default function PharmacyManagementPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="DigitalRx">DigitalRx</SelectItem>
                       <SelectItem value="PioneerRx">PioneerRx</SelectItem>
                       <SelectItem value="QS1">QS1</SelectItem>
                       <SelectItem value="Liberty">Liberty</SelectItem>

@@ -50,7 +50,7 @@ export default function AdminSettingsPage() {
   const [decryptedKeys, setDecryptedKeys] = useState<Record<string, string>>(
     {},
   );
-  const [activeTab, setActiveTab] = useState<"digitalrx" | "pioneerrx">("digitalrx");
+  const [activeTab, setActiveTab] = useState<"digitalrx" | "pioneerrx">("pioneerrx");
 
   const digitalRxBackends = pharmacyBackends.filter(b => b.system_type === "DigitalRx");
   const pioneerRxBackends = pharmacyBackends.filter(b => b.system_type === "PioneerRx");
@@ -90,7 +90,7 @@ export default function AdminSettingsPage() {
           id: backend.id,
           pharmacy_id: backend.pharmacy_id,
           store_id: backend.store_id,
-          system_type: backend.system_type || "DigitalRx",
+          system_type: backend.system_type || "PioneerRx",
           api_url: backend.api_url || null,
           api_key_encrypted: backend.api_key_encrypted,
           is_active: backend.is_active,
@@ -511,45 +511,6 @@ export default function AdminSettingsPage() {
         <p className="text-muted-foreground mt-1">
           Manage pharmacy system connections, API keys, and webhook configurations
         </p>
-      </div>
-
-      <div className="flex gap-2 mb-6 border-b">
-        <button
-          onClick={() => setActiveTab("digitalrx")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "digitalrx"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            DigitalRx
-            {digitalRxBackends.length > 0 && (
-              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                {digitalRxBackends.length}
-              </span>
-            )}
-          </span>
-        </button>
-        <button
-          onClick={() => setActiveTab("pioneerrx")}
-          className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-            activeTab === "pioneerrx"
-              ? "border-blue-600 text-blue-600"
-              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-          }`}
-        >
-          <span className="flex items-center gap-2">
-            <Shield className="h-4 w-4" />
-            Pioneer RX
-            {pioneerRxBackends.length > 0 && (
-              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full">
-                {pioneerRxBackends.length}
-              </span>
-            )}
-          </span>
-        </button>
       </div>
 
       {activeTab === "digitalrx" && (
