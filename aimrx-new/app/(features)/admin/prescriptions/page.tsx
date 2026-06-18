@@ -73,6 +73,7 @@ interface AdminPrescription {
   paymentTransactionId?: string | null;
   billingStatus?: string;
   patientCopay?: string;
+  pdfStoragePath?: string | null;
 }
 
 const getEffectiveStatus = (rx: AdminPrescription): string => {
@@ -1667,6 +1668,33 @@ export default function AdminPrescriptionsPage() {
                         </Button>
                       </div>
                     </div>
+                  )}
+
+                  {selectedPrescription.pdfStoragePath && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(
+                            `/api/prescriptions/${selectedPrescription.id}/pdf`,
+                          );
+                          const data = await response.json();
+                          if (data.success && data.url) {
+                            window.open(data.url, "_blank");
+                          } else {
+                            toast.error(data.error || "Failed to load PDF");
+                          }
+                        } catch {
+                          toast.error("Failed to load PDF");
+                        }
+                      }}
+                      className="border-[#1E3A8A]/40 text-[#1E3A8A] hover:bg-[#1E3A8A]/5"
+                      data-testid="button-view-prescription-pdf"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      View Prescription PDF
+                    </Button>
                   )}
 
                   {/* Cancel Order — stops all polling AND fires the patient/

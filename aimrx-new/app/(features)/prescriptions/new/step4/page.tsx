@@ -14,6 +14,7 @@ import {
   DollarSign,
   AlertTriangle,
   Banknote,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@core/supabase";
@@ -36,6 +37,7 @@ interface PrescriptionDetails {
   patientName: string;
   patientEmail: string;
   pharmacyName: string;
+  pdf_storage_path?: string | null;
 }
 
 export default function Step4PaymentPage() {
@@ -72,7 +74,7 @@ export default function Step4PaymentPage() {
         .select(`
           id, medication, dosage, quantity, refills, sig,
           patient_price, profit_cents, shipping_fee_cents,
-          status, pharmacy_id, patient_id,
+          status, pharmacy_id, patient_id, pdf_storage_path,
           patients!inner(first_name, last_name, email),
           pharmacies!inner(name)
         `)
@@ -103,6 +105,8 @@ export default function Step4PaymentPage() {
           patientName: `${patients.first_name} ${patients.last_name}`,
           patientEmail: patients.email || "",
           pharmacyName: pharmacies.name,
+          pdf_storage_path:
+            (rx as { pdf_storage_path?: string | null }).pdf_storage_path ?? null,
         };
       });
 
@@ -181,6 +185,20 @@ export default function Step4PaymentPage() {
   useEffect(() => {
     loadPrescriptions();
   }, [loadPrescriptions]);
+
+  const openPrescriptionPdf = async (prescriptionId: string) => {
+    try {
+      const response = await fetch(`/api/prescriptions/${prescriptionId}/pdf`);
+      const data = await response.json();
+      if (data.success && data.url) {
+        window.open(data.url, "_blank");
+      } else {
+        toast.error(data.error || "PDF is not ready yet. Please try again shortly.");
+      }
+    } catch {
+      toast.error("Failed to load PDF");
+    }
+  };
 
   const handleMarkPaid = async () => {
     if (allIds.length === 0) return;
@@ -286,6 +304,23 @@ export default function Step4PaymentPage() {
                 )}
               </div>
             </div>
+            {prescriptions.some((rx) => rx.pdf_storage_path) && (
+              <div className="flex flex-col gap-2 mb-8 max-w-md mx-auto">
+                {prescriptions.map((rx) =>
+                  rx.pdf_storage_path ? (
+                    <Button
+                      key={rx.id}
+                      variant="outline"
+                      onClick={() => openPrescriptionPdf(rx.id)}
+                      className="w-full"
+                    >
+                      <FileText className="h-4 w-4 mr-2" />
+                      View Prescription PDF{isMultiOrder ? ` — ${rx.medication}` : ""}
+                    </Button>
+                  ) : null,
+                )}
+              </div>
+            )}
             <div className="flex gap-3 justify-center">
               <Button variant="outline" onClick={() => router.push("/prescriptions")}>
                 View All Prescriptions
@@ -434,6 +469,29 @@ export default function Step4PaymentPage() {
             </div>
           </div>
         </div>
+
+        {prescriptions.some((rx) => rx.pdf_storage_path) && (
+          <div className="bg-white rounded-2xl border shadow-sm p-6 mb-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">
+              Electronic Prescription
+            </h3>
+            <div className="flex flex-col gap-2">
+              {prescriptions.map((rx) =>
+                rx.pdf_storage_path ? (
+                  <Button
+                    key={rx.id}
+                    variant="outline"
+                    onClick={() => openPrescriptionPdf(rx.id)}
+                    className="w-full justify-start"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    View Prescription PDF{isMultiOrder ? ` — ${rx.medication}` : ""}
+                  </Button>
+                ) : null,
+              )}
+            </div>
+          </div>
+        )}
 
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-900">Choose Payment Method</h3>

@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       refills, sig, status, payment_status, patient_price,
       shipping_fee_cents, profit_cents, tracking_number, fedex_status,
       estimated_delivery, tracking_carrier, has_custom_address, custom_address,
-      payment_transaction_id, prescriber_id, pharmacy_id, patient_id,
+      payment_transaction_id, prescriber_id, pharmacy_id, patient_id, pdf_storage_path,
       patient:patients(first_name, last_name, email, physical_address),
       pharmacy:pharmacies(name, primary_color)
     `;
@@ -178,6 +178,8 @@ export async function GET(request: NextRequest) {
         patientAddress: (patient as Record<string, unknown>)?.physical_address || null,
         paymentToken: paymentTx?.payment_token || null,
         paymentTransactionId: rx.payment_transaction_id || null,
+        pdfStoragePath:
+          (rx as { pdf_storage_path?: string | null }).pdf_storage_path ?? null,
       };
     });
 

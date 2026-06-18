@@ -25,7 +25,8 @@ amount.
 **Invariant — new prescription fee columns must be wired into the charge, not
 just stored:** the amount the patient is actually charged is computed in
 `app/api/payments/generate-link/route.ts` (the server-authoritative total drives
-the Stripe/Authorize.Net charge). Any new per-prescription fee column has to be
+the RedSail charge — Stripe/Authorize.Net were retired in the RedSail-only
+migration). Any new per-prescription fee column has to be
 SELECTed and summed there (and mirrored onto `payment_transactions`) or it gets
 stored on the prescription but never billed.
 **Why:** the Technology fee was initially saved to `platform_fee_cents` and
