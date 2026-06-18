@@ -382,6 +382,7 @@ export default function PrescriptionStep3Page() {
       firstName: string;
       lastName: string;
       npi: string;
+      dea?: string;
       phone?: string;
       signatureUrl?: string;
       address?: AddressData | null;
@@ -411,6 +412,7 @@ export default function PrescriptionStep3Page() {
           firstName: providerData.firstName,
           lastName: providerData.lastName,
           npi: providerData.npi,
+          dea: providerData.dea,
           street: providerData.address?.street,
           city: providerData.address?.city,
           state: providerData.address?.state,
@@ -459,7 +461,7 @@ export default function PrescriptionStep3Page() {
 
       const { data: fetchedProvider } = await supabase
         .from("providers")
-        .select("first_name, last_name, npi_number, phone_number, signature_url, physical_address")
+        .select("first_name, last_name, npi_number, dea_number, phone_number, signature_url, physical_address")
         .eq("user_id", user.id)
         .single();
 
@@ -467,6 +469,7 @@ export default function PrescriptionStep3Page() {
         firstName: fetchedProvider?.first_name || "Provider",
         lastName: fetchedProvider?.last_name || "User",
         npi: fetchedProvider?.npi_number || "1234567890",
+        dea: fetchedProvider?.dea_number || undefined,
         phone: fetchedProvider?.phone_number,
         signatureUrl: fetchedProvider?.signature_url,
         address: fetchedProvider?.physical_address as AddressData | null,
@@ -565,6 +568,7 @@ export default function PrescriptionStep3Page() {
                 firstName: providerData.firstName,
                 lastName: providerData.lastName,
                 npi: providerData.npi,
+                dea: providerData.dea,
                 street: providerData.address?.street,
                 city: providerData.address?.city,
                 state: providerData.address?.state,

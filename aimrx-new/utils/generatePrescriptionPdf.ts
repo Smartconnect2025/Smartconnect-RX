@@ -16,6 +16,7 @@ interface PrescriptionPdfData {
     firstName: string;
     lastName: string;
     npi: string;
+    dea?: string;
     street?: string;
     city?: string;
     state?: string;
@@ -83,6 +84,11 @@ export async function generatePrescriptionPdf(
   y += 5;
   doc.text(`NPI: ${data.doctor.npi}`, margin, y);
   y += 5;
+
+  if (data.doctor.dea && data.doctor.dea.trim()) {
+    doc.text(`DEA: ${data.doctor.dea.trim()}`, margin, y);
+    y += 5;
+  }
 
   const doctorAddress = [
     data.doctor.street,
