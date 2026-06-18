@@ -29,3 +29,9 @@ id = "ICH-e04s-EFd8Y4Nyu6pk"
 uri = "file://aimrx-new/docs/redsail/emporos-onboarding-email.md"
 type = "text"
 title = "Email to Michael Clark (Emporos) — short version"
+
+[[outputs]]
+id = "b-lxDZuYbLaAc7Xwns0Hy"
+uri = "file://.local/sample-electronic-rx.pdf"
+type = "pdf"
+title = "Sample Electronic Rx PDF"
