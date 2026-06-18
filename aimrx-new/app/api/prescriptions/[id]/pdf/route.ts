@@ -5,6 +5,7 @@ import {
   uploadPrescriptionPdf,
   getPrescriptionPdfUrl,
 } from "@core/services/storage/prescriptionPdfStorage";
+import { generateAndStorePrescriptionPdf } from "@core/services/prescriptions/generateAndStorePdf";
 
 export async function POST(
   request: NextRequest,
@@ -147,11 +148,23 @@ export async function GET(
       );
     }
 
+    // No stored PDF yet (older orders, or a failed client-side upload): build it
+    // on demand from the prescription data so the document is always viewable.
     if (!prescription.pdf_storage_path) {
-      return NextResponse.json(
-        { success: false, error: "No PDF attached to this prescription" },
-        { status: 404 }
+      const generated = await generateAndStorePrescriptionPdf(
+        adminClient,
+        prescriptionId
       );
+
+      if (generated.error || !generated.url) {
+        console.error("On-demand PDF generation failed:", generated.error);
+        return NextResponse.json(
+          { success: false, error: "Failed to generate prescription PDF" },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({ success: true, url: generated.url });
     }
 
     const result = await getPrescriptionPdfUrl(

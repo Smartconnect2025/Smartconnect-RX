@@ -832,31 +832,34 @@ export function PrescriptionModals({
                   </Button>
                 )}
 
-                {/* View PDF Button - only show if PDF is attached */}
-                {selectedPrescription.pdfStoragePath && (
-                  <Button
-                    onClick={async () => {
-                      try {
-                        const response = await fetch(
-                          `/api/prescriptions/${selectedPrescription.id}/pdf`,
-                        );
-                        const data = await response.json();
-                        if (data.success && data.url) {
-                          window.open(data.url, "_blank");
-                        } else {
-                          toast.error("Failed to load PDF");
-                        }
-                      } catch {
-                        toast.error("Failed to load PDF");
+                {/* View PDF Button - always available; the PDF is generated on
+                    demand if one hasn't been stored yet. */}
+                <Button
+                  onClick={async () => {
+                    const toastId = toast.loading("Preparing prescription PDF…");
+                    try {
+                      const response = await fetch(
+                        `/api/prescriptions/${selectedPrescription.id}/pdf`,
+                      );
+                      const data = await response.json();
+                      if (data.success && data.url) {
+                        toast.dismiss(toastId);
+                        window.open(data.url, "_blank");
+                      } else {
+                        toast.error(data.error || "Failed to load PDF", {
+                          id: toastId,
+                        });
                       }
-                    }}
-                    variant="outline"
-                    className="w-full text-lg py-6 border-[#1E3A8A]/60 text-[#1E3A8A]/80 hover:bg-[#1E3A8A]/5"
-                  >
-                    <FileText className="h-5 w-5 mr-2" />
-                    View Prescription PDF
-                  </Button>
-                )}
+                    } catch {
+                      toast.error("Failed to load PDF", { id: toastId });
+                    }
+                  }}
+                  variant="outline"
+                  className="w-full text-lg py-6 border-[#1E3A8A]/60 text-[#1E3A8A]/80 hover:bg-[#1E3A8A]/5"
+                >
+                  <FileText className="h-5 w-5 mr-2" />
+                  View Prescription PDF
+                </Button>
 
                 <Button
                   onClick={() => printReceipt()}
