@@ -47,7 +47,7 @@ export async function GET() {
   // Resolve provider row for this user
   const { data: provider, error: provErr } = await supabase
     .from("providers")
-    .select("id, npi_number, first_name, last_name, signature_url, is_active")
+    .select("id, npi_number, prefix, first_name, last_name, signature_url, is_active")
     .eq("user_id", user.id)
     .maybeSingle();
   if (provErr) {

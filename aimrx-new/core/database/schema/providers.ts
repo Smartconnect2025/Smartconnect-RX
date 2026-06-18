@@ -50,6 +50,7 @@ export const providers = pgTable(
     }),
 
     // Personal Information
+    prefix: text("prefix"), // Honorific/title shown before the name (e.g. "Dr.")
     first_name: text("first_name"),
     last_name: text("last_name"),
     date_of_birth: date("date_of_birth"),
@@ -94,6 +95,7 @@ export const providers = pgTable(
     payment_schedule: text("payment_schedule"), // "monthly", "bi-weekly", "weekly"
     tier_level: text("tier_level"), // Tier level set by admin (Tier 1, Tier 2, Tier 3, Tier 4) - each tier has different discount rate
     default_shipping_fee: integer("default_shipping_fee").default(40), // Default shipping fee for prescriptions
+    pay_on_terms: boolean("pay_on_terms").notNull().default(false), // When true, this provider's orders bypass the patient payment flow (net-terms billing)
 
     // Legacy fields (maintaining backward compatibility)
     specialty: text("specialty"), // Primary specialty for backward compatibility
