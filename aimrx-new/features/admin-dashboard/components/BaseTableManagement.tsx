@@ -137,7 +137,7 @@ export function BaseTableManagement<T extends BaseTableItem>({
                 <TableBody>
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-32">
+                      <TableCell colSpan={100} className="h-32">
                         <div className="flex items-center justify-center">
                           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                           <span className="ml-2 text-sm text-muted-foreground">
@@ -148,7 +148,7 @@ export function BaseTableManagement<T extends BaseTableItem>({
                     </TableRow>
                   ) : data.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-32">
+                      <TableCell colSpan={100} className="h-32">
                         <div className="flex flex-col items-center justify-center py-6">
                           <h3 className="mt-4 text-lg font-semibold">
                             No items found
@@ -178,7 +178,7 @@ export function BaseTableManagement<T extends BaseTableItem>({
             {/* Summary Stats */}
             <div className="flex justify-between items-center text-sm text-muted-foreground">
               <span>
-                Showing {data.length} of {data.length} items
+                Showing {data.length} {data.length === 1 ? "item" : "items"}
               </span>
               <div className="flex gap-4">
                 <span>Active: {activeCount}</span>
