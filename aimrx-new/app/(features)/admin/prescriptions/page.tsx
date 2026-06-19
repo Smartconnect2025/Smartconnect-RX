@@ -799,7 +799,7 @@ export default function AdminPrescriptionsPage() {
     : selectedPrescription?.patientAddress;
 
   return (
-    <div className="mx-auto py-8 px-4" style={{ maxWidth: "95vw" }}>
+    <div className="mx-auto max-w-7xl py-8 px-4">
       <div className="mb-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
@@ -926,22 +926,19 @@ export default function AdminPrescriptionsPage() {
           <Table className="w-full">
             <TableHeader>
               <TableRow className="bg-gray-50">
-                <TableHead className="font-semibold w-[140px]">Ordered / Paid</TableHead>
-                <TableHead className="font-semibold">Provider</TableHead>
+                <TableHead className="font-semibold w-[150px]">Ordered / Paid</TableHead>
                 <TableHead className="font-semibold">Patient</TableHead>
                 <TableHead className="font-semibold">Medication</TableHead>
-                <TableHead className="font-semibold w-[100px]">Qty/Refills</TableHead>
-                <TableHead className="font-semibold w-[80px]">Price</TableHead>
-                <TableHead className="font-semibold">Pharmacy</TableHead>
-                <TableHead className="font-semibold w-[110px]">Queue ID</TableHead>
-                <TableHead className="font-semibold">SIG</TableHead>
-                <TableHead className="font-semibold w-[150px]">Status</TableHead>
+                <TableHead className="font-semibold w-[90px]">Qty/Refills</TableHead>
+                <TableHead className="font-semibold w-[90px]">Price</TableHead>
+                <TableHead className="font-semibold w-[150px]">Pharmacy</TableHead>
+                <TableHead className="font-semibold w-[160px]">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <div className="flex items-center justify-center gap-2 text-muted-foreground">
                       <RefreshCw className="h-4 w-4 animate-spin" />
                       Loading prescriptions...
@@ -950,7 +947,7 @@ export default function AdminPrescriptionsPage() {
                 </TableRow>
               ) : loadError ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2 text-red-600">
                       <AlertCircle className="h-5 w-5" />
                       <p className="text-sm font-medium">{loadError}</p>
@@ -962,7 +959,7 @@ export default function AdminPrescriptionsPage() {
                 </TableRow>
               ) : filteredPrescriptions.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <p className="text-muted-foreground">
                       No prescriptions found matching your filters
                     </p>
@@ -1087,16 +1084,20 @@ export default function AdminPrescriptionsPage() {
                       })()}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {prescription.providerName}
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-1.5">
-                        {prescription.patientName}
-                        {isFirstInBatch && isMultiBatch && (
-                          <span className="ml-1 inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: GROUP_BORDER_COLORS[colorIdx] }}>
-                            {batchSize} items
+                      <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate max-w-[160px]" title={prescription.patientName}>
+                            {prescription.patientName}
                           </span>
-                        )}
+                          {isFirstInBatch && isMultiBatch && (
+                            <span className="ml-1 inline-flex items-center text-[10px] font-bold px-1.5 py-0.5 rounded-full text-white" style={{ backgroundColor: GROUP_BORDER_COLORS[colorIdx] }}>
+                              {batchSize} items
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-xs text-muted-foreground truncate max-w-[160px]" title={prescription.providerName}>
+                          {prescription.providerName}
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell className="max-w-[200px]">
@@ -1136,31 +1137,15 @@ export default function AdminPrescriptionsPage() {
                     </TableCell>
                     <TableCell>
                       {prescription.pharmacyName ? (
-                        <span className="font-medium text-sm" style={{ color: prescription.pharmacyColor || "#1E3A8A" }}>
-                          {prescription.pharmacyName}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="inline-block h-2.5 w-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: prescription.pharmacyColor || "#1E3A8A" }} />
+                          <span className="text-sm truncate max-w-[120px]" title={prescription.pharmacyName}>
+                            {prescription.pharmacyName}
+                          </span>
+                        </div>
                       ) : (
                         <span className="text-muted-foreground text-xs">Not specified</span>
                       )}
-                    </TableCell>
-                    <TableCell data-testid={`text-queue-id-${prescription.id}`}>
-                      <div className="flex flex-col items-start gap-1">
-                        {prescription.queueId && prescription.queueId !== "N/A" ? (
-                          <span className="font-mono text-sm font-semibold text-gray-800">
-                            {prescription.queueId}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">--</span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-[180px]">
-                      <p
-                        className="text-sm truncate cursor-help"
-                        title={prescription.sig}
-                      >
-                        {prescription.sig}
-                      </p>
                     </TableCell>
                     <TableCell>
                       <div className="flex flex-col items-start gap-1">
