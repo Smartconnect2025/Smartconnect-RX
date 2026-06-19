@@ -118,6 +118,20 @@ async function submitToDigitalRx(
       "PDF download for DigitalRx submission",
     );
     pdfBase64 = pdfResult.base64 || null;
+    if (!pdfBase64) {
+      // The stored path exists but the download came back empty/failed (transient
+      // storage hiccup, or a path that never finished persisting). Generate the PDF
+      // in memory as a secondary fallback so the pharmacy still gets one rather than
+      // receiving the order with a null Rx image. Timeboxed + best-effort: never
+      // block or fail the submission.
+      const regenerated = await withPdfTimeout(
+        generatePrescriptionPdfBase64(supabaseAdmin, prescription.id as string),
+        PDF_GEN_TIMEOUT_MS,
+        {},
+        "fallback PDF generation for DigitalRx submission",
+      );
+      pdfBase64 = regenerated.base64 || null;
+    }
   } else if (onDemandPdfBase64) {
     // No stored PDF yet (e.g. pay-on-terms pushes before the PDF is persisted,
     // or a provider custom upload is still pending): attach the in-memory PDF
@@ -264,6 +278,20 @@ async function submitToPioneerRx(
       "PDF download for PioneerRx submission",
     );
     pdfBase64 = pdfResult.base64 || null;
+    if (!pdfBase64) {
+      // The stored path exists but the download came back empty/failed (transient
+      // storage hiccup, or a path that never finished persisting). Generate the PDF
+      // in memory as a secondary fallback so the pharmacy still gets one rather than
+      // receiving the order with a null Rx image. Timeboxed + best-effort: never
+      // block or fail the submission.
+      const regenerated = await withPdfTimeout(
+        generatePrescriptionPdfBase64(supabaseAdmin, prescription.id as string),
+        PDF_GEN_TIMEOUT_MS,
+        {},
+        "fallback PDF generation for PioneerRx submission",
+      );
+      pdfBase64 = regenerated.base64 || null;
+    }
   } else if (onDemandPdfBase64) {
     // No stored PDF yet (e.g. pay-on-terms pushes before the PDF is persisted,
     // or a provider custom upload is still pending): attach the in-memory PDF
