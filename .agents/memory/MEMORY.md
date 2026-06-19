@@ -8,3 +8,4 @@
 - [Prescription PDF reliability](prescription-pdf-reliability.md) — PDF storage never on submit path; submit fire-and-forgets, GET regenerates, custom PDFs best-effort via client_pdf_upload flag; size floor 3000 (healthy ~6440).
 - [Patient fee enforcement](patient-fee-enforcement.md) — per-pharmacy fee flags (default OFF), server forces OFF→$0; flat fees clamped not client-trusted; new rx fee columns must be wired into generate-link total or they're stored-but-never-charged.
 - [Pioneer Electronic Rx PDF](pioneer-electronic-rx-pdf.md) — PDF generated in provider portal step3 + profile signature; delivered to Pioneer as ScriptImage; structured EScript (not the PDF) is what Pioneer parses.
+- [Order flow simulation gates](order-flow-simulation-mode.md) — SIM-TX queue_id / EZ1000000001 tracking = simulated; real sends gated on PIONEERRX_SIMULATION_MODE=false + decryptable per-pharmacy keys.
