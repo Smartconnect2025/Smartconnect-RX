@@ -876,19 +876,6 @@ export function PrescriptionModals({
                     >
                       Electronic Rx
                     </h3>
-                    {pdfUrl && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          window.open(pdfUrl, "_blank", "noopener,noreferrer")
-                        }
-                        className="border-[#1E3A8A]/60 text-[#1E3A8A]/80 hover:bg-[#1E3A8A]/5"
-                      >
-                        <FileText className="h-4 w-4 mr-1" />
-                        Open in new tab
-                      </Button>
-                    )}
                   </div>
                   {pdfLoading ? (
                     <div className="flex flex-col items-center justify-center py-16 text-gray-500">
@@ -903,11 +890,19 @@ export function PrescriptionModals({
                       </Button>
                     </div>
                   ) : pdfUrl ? (
-                    <iframe
-                      src={pdfUrl}
-                      title="Prescription PDF"
-                      className="w-full h-[60vh] rounded-lg border border-gray-200"
-                    />
+                    <div className="flex flex-col items-center justify-center py-16 gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() =>
+                          window.open(pdfUrl, "_blank", "noopener,noreferrer")
+                        }
+                        className="border-[#1E3A8A]/60 text-[#1E3A8A]/80 hover:bg-[#1E3A8A]/5"
+                      >
+                        <FileText className="h-5 w-5 mr-2" />
+                        Open Prescription PDF
+                      </Button>
+                      <p className="text-xs text-gray-500">Opens in a new tab</p>
+                    </div>
                   ) : (
                     <div className="flex justify-center py-16">
                       <Button
