@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   Loader2,
   File,
+  ExternalLink,
   MapPin,
   Pencil,
   X,
@@ -961,27 +962,22 @@ export default function PrescriptionStep3Page() {
                 Prescription Document
               </h3>
               {documentUrl ? (
-                <div className="space-y-2">
-                  {pdfInfo?.name && (
-                    <p className="text-sm text-gray-500">
-                      {safeString(pdfInfo.name)}
-                    </p>
-                  )}
-                  <div className="overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
-                    <iframe
-                      src={`${documentUrl}#toolbar=1&navpanes=0`}
-                      title="Electronic Rx preview"
-                      className="h-[640px] w-full"
-                    />
+                <button
+                  type="button"
+                  onClick={openDocumentInNewTab}
+                  className="flex w-full items-center gap-4 rounded-lg border border-gray-200 bg-white p-4 text-left transition-colors hover:border-blue-300 hover:bg-blue-50"
+                >
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+                    <File className="h-5 w-5 text-blue-600" />
                   </div>
-                  <button
-                    type="button"
-                    onClick={openDocumentInNewTab}
-                    className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700"
-                  >
-                    Open preview in new tab
-                  </button>
-                </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-gray-900">
+                      {pdfInfo?.name ? safeString(pdfInfo.name) : "Prescription document"}
+                    </p>
+                    <p className="text-xs text-gray-500">Click to open in a new tab</p>
+                  </div>
+                  <ExternalLink className="h-4 w-4 shrink-0 text-gray-400" />
+                </button>
               ) : (
                 <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
                   {previewLoading ? (
