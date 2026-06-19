@@ -153,6 +153,46 @@ class AllergyService {
     }
   }
 
+  async deleteAllergy(
+    allergyId: string,
+    userId: string,
+  ): Promise<EmrServiceResponse<null>> {
+    try {
+      // First check if allergy exists and user has access
+      const { data: allergyData, error: fetchError } = await this.supabase
+        .from("allergies")
+        .select("patient_id")
+        .eq("id", allergyId)
+        .single();
+
+      if (fetchError || !allergyData) throw new Error("Allergy not found");
+
+      const patientCheck = await this.verifyPatientOwnership(
+        allergyData.patient_id,
+        userId,
+      );
+      if (!patientCheck) throw new Error("Access denied");
+
+      const { error } = await this.supabase
+        .from("allergies")
+        .delete()
+        .eq("id", allergyId);
+
+      if (error) throw error;
+
+      return {
+        success: true,
+        data: null,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "Failed to delete allergy",
+      };
+    }
+  }
+
   private mapDbAllergyToType(dbAllergy: DbAllergyRow): Allergy {
     return {
       id: dbAllergy.id,

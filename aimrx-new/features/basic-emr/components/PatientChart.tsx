@@ -12,6 +12,7 @@ import { useDocumentManager } from "../hooks/useDocumentManager";
 import { useEmrStore } from "../store/emr-store";
 import { Patient } from "../types";
 
+import { AllergiesTab } from "./AllergiesTab";
 import { DocumentManager } from "./DocumentManager";
 import { DocumentViewer } from "./DocumentViewer";
 import { MedicationsTab } from "./MedicationsTab";
@@ -191,6 +192,12 @@ export function PatientChart({ patientId }: PatientChartProps) {
                     Medications
                   </TabsTrigger>
                   <TabsTrigger
+                    value="allergies"
+                    className="data-[state=active]:bg-white whitespace-nowrap flex-shrink-0 px-3 py-2 text-sm"
+                  >
+                    Allergies
+                  </TabsTrigger>
+                  <TabsTrigger
                     value="documents"
                     className="data-[state=active]:bg-white whitespace-nowrap flex-shrink-0 px-3 py-2 text-sm"
                   >
@@ -203,6 +210,13 @@ export function PatientChart({ patientId }: PatientChartProps) {
 
             <TabsContent value="medications" className="space-y-6">
               <MedicationsTab
+                patientId={patientId}
+                patientName={patient ? `${patient.firstName} ${patient.lastName}` : ""}
+              />
+            </TabsContent>
+
+            <TabsContent value="allergies" className="space-y-6">
+              <AllergiesTab
                 patientId={patientId}
                 patientName={patient ? `${patient.firstName} ${patient.lastName}` : ""}
               />
