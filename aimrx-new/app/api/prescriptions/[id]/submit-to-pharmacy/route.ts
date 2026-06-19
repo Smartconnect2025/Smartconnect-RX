@@ -7,11 +7,64 @@ import { resolvePharmacyBackendAny, type ResolvedPharmacyBackend } from "../../_
 import { submitPioneerRxEScript, SIMULATION_MODE } from "../../_shared/pioneerrx-helpers";
 import { formatPhoneForDigitalRx, formatDobForDigitalRx } from "@core/utils/digitalrx-format";
 import { ensureTrackerRegistered } from "../../_shared/tracking-sync";
+import { generatePrescriptionPdfBase64 } from "@core/services/prescriptions/generateAndStorePdf";
 
 const DEFAULT_DIGITALRX_BASE_URL =
   process.env.NEXT_PUBLIC_DIGITALRX_BASE_URL ||
   "https://www.dbswebserver.com/DBSRestApi/API";
 const VENDOR_NAME = process.env.NEXT_PUBLIC_VENDOR_NAME || "SmartRx Demo";
+
+// ── PDF critical-path time budgets ──────────────────────────────────────────
+// PDF work (generation + download) is best-effort and must NEVER stall the
+// pharmacy submission — pay-on-terms orders run this whole chain synchronously
+// inside the provider's submit request. These bound the worst case: if PDF work
+// exceeds its budget (e.g. storage hangs), we log and submit WITHOUT the PDF
+// rather than delaying or failing the order.
+const PDF_GEN_TIMEOUT_MS = 10000;
+const PDF_DOWNLOAD_TIMEOUT_MS = 5000;
+
+/**
+ * Race a best-effort PDF operation against a time budget. NEVER rejects: on
+ * timeout OR error it resolves to `fallback` so the caller can continue the
+ * pharmacy submission unblocked. (The underlying work may still finish in the
+ * background — e.g. the generated PDF gets stored — we just don't wait for it.)
+ */
+function withPdfTimeout<T>(
+  work: Promise<T>,
+  ms: number,
+  fallback: T,
+  label: string,
+): Promise<T> {
+  return new Promise<T>((resolve) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      console.error(
+        `⚠️ [submit-to-pharmacy] ${label} exceeded ${ms}ms budget — continuing without it (non-fatal).`,
+      );
+      resolve(fallback);
+    }, ms);
+    work.then(
+      (value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        console.error(
+          `⚠️ [submit-to-pharmacy] ${label} failed (non-fatal):`,
+          err,
+        );
+        resolve(fallback);
+      },
+    );
+  });
+}
 
 async function submitToDigitalRx(
   backend: ResolvedPharmacyBackend,
@@ -20,6 +73,7 @@ async function submitToDigitalRx(
   provider: Record<string, unknown>,
   pharmacyMedication: Record<string, unknown> | null,
   supabaseAdmin: ReturnType<typeof createAdminClient>,
+  onDemandPdfBase64: string | null,
 ) {
   let apiUrl = backend.baseUrl || DEFAULT_DIGITALRX_BASE_URL;
   apiUrl = apiUrl
@@ -49,6 +103,27 @@ async function submitToDigitalRx(
   const patientSex = typeof patientGender === "string"
     ? (patientGender.toLowerCase() === "male" ? "M" : patientGender.toLowerCase() === "female" ? "F" : "U")
     : "U";
+
+  // Resolve the Rx PDF (base64) up-front so we can both attach it and record
+  // proof-of-send. Downloads with retry to absorb transient storage hiccups.
+  let pdfBase64: string | null = null;
+  const digitalRxStoragePath = (prescription as Record<string, unknown>)
+    .pdf_storage_path as string | undefined;
+  if (digitalRxStoragePath) {
+    // Timeboxed best-effort: never let a slow/hung download stall submission.
+    const pdfResult = await withPdfTimeout(
+      getPrescriptionPdfBase64(supabaseAdmin, digitalRxStoragePath),
+      PDF_DOWNLOAD_TIMEOUT_MS,
+      {},
+      "PDF download for DigitalRx submission",
+    );
+    pdfBase64 = pdfResult.base64 || null;
+  } else if (onDemandPdfBase64) {
+    // No stored PDF yet (e.g. pay-on-terms pushes before the PDF is persisted,
+    // or a provider custom upload is still pending): attach the in-memory PDF
+    // generated on the submit-to-pharmacy path so the pharmacy still gets one.
+    pdfBase64 = onDemandPdfBase64;
+  }
 
   const digitalRxPayload = {
     StoreID: backend.storeId,
@@ -95,14 +170,7 @@ async function submitToDigitalRx(
       Daw: (prescription as Record<string, unknown>).dispense_as_written ? "Y" : "N",
     },
     DocSignature: (provider as Record<string, unknown>).signature_url,
-    PDFFile: (prescription as Record<string, unknown>).pdf_storage_path
-      ? (
-          await getPrescriptionPdfBase64(
-            supabaseAdmin,
-            (prescription as Record<string, unknown>).pdf_storage_path as string,
-          )
-        ).base64 || null
-      : null,
+    PDFFile: pdfBase64,
   };
 
   console.log("📦 [submit-to-pharmacy] DigitalRx payload:", JSON.stringify({
@@ -144,7 +212,13 @@ async function submitToDigitalRx(
     return { success: false as const, error: "Pharmacy did not return a QueueID", status: 500 };
   }
 
-  return { success: true as const, queueId, rxNumber, systemLabel: "DigitalRx" };
+  return {
+    success: true as const,
+    queueId,
+    rxNumber,
+    systemLabel: "DigitalRx",
+    pdfAttached: !!pdfBase64,
+  };
 }
 
 async function submitToPioneerRx(
@@ -154,6 +228,7 @@ async function submitToPioneerRx(
   provider: Record<string, unknown>,
   pharmacyMedication: Record<string, unknown> | null,
   supabaseAdmin: ReturnType<typeof createAdminClient>,
+  onDemandPdfBase64: string | null,
 ) {
   const rxNumber = `RX${Date.now()}`;
   const patients = (prescription as Record<string, unknown>).patients as Record<string, unknown> | null;
@@ -178,11 +253,22 @@ async function submitToPioneerRx(
 
   let pdfBase64: string | null = null;
   if (prescription.pdf_storage_path) {
-    const pdfResult = await getPrescriptionPdfBase64(
-      supabaseAdmin,
-      prescription.pdf_storage_path as string,
+    // Timeboxed best-effort: never let a slow/hung download stall submission.
+    const pdfResult = await withPdfTimeout(
+      getPrescriptionPdfBase64(
+        supabaseAdmin,
+        prescription.pdf_storage_path as string,
+      ),
+      PDF_DOWNLOAD_TIMEOUT_MS,
+      {},
+      "PDF download for PioneerRx submission",
     );
     pdfBase64 = pdfResult.base64 || null;
+  } else if (onDemandPdfBase64) {
+    // No stored PDF yet (e.g. pay-on-terms pushes before the PDF is persisted,
+    // or a provider custom upload is still pending): attach the in-memory PDF
+    // generated on the submit-to-pharmacy path so the pharmacy still gets one.
+    pdfBase64 = onDemandPdfBase64;
   }
 
   const result = await submitPioneerRxEScript(
@@ -243,6 +329,7 @@ async function submitToPioneerRx(
     queueId: result.data.rxTransactionID,
     rxNumber,
     systemLabel: "PioneerRx",
+    pdfAttached: !!pdfBase64,
   };
 }
 
@@ -449,11 +536,45 @@ export async function POST(
 
     console.log(`📦 [submit-to-pharmacy] Submitting to ${backend.systemType} for pharmacy ${prescription.pharmacy_id}`);
 
+    // ──────────────────────────────────────────────────────────────────────
+    // ENSURE THE RX PDF IS AVAILABLE BEFORE BUILDING THE PHARMACY PAYLOAD.
+    // The PDF is normally stored fire-and-forget at order-submit time, but a
+    // pay-on-terms order auto-submits to the pharmacy immediately and can win
+    // that race, leaving pdf_storage_path empty — which would send the order
+    // with a null Rx image. Generate the PDF IN MEMORY on demand here so the
+    // document is attached on essentially every submission.
+    //
+    // We deliberately do NOT persist it: keeping storage off the synchronous
+    // submit path (PDF-reliability invariant) and leaving pdf_storage_path free
+    // so a provider's own custom upload (stored fire-and-forget by the client
+    // after submit) is never blocked/overwritten by a server-generated PDF.
+    //
+    // STRICTLY best-effort + timeboxed: a failure/timeout here must NEVER block
+    // or error the pharmacy submission or the order — log and continue.
+    // ──────────────────────────────────────────────────────────────────────
+    let onDemandPdfBase64: string | null = null;
+    if (!prescription.pdf_storage_path) {
+      // withPdfTimeout swallows timeout/throw and resolves to {} so we continue.
+      const generated = await withPdfTimeout(
+        generatePrescriptionPdfBase64(supabaseAdmin, prescriptionId),
+        PDF_GEN_TIMEOUT_MS,
+        {},
+        `on-demand PDF generation for ${prescriptionId}`,
+      );
+      if (generated.base64) {
+        onDemandPdfBase64 = generated.base64;
+      } else if (generated.error) {
+        console.error(
+          `⚠️ [submit-to-pharmacy] On-demand PDF generation failed for ${prescriptionId} (continuing without blocking): ${generated.error}`,
+        );
+      }
+    }
+
     let result;
     if (backend.systemType === "PioneerRx") {
-      result = await submitToPioneerRx(backend, prescription, patient, provider, pharmacyMedication, supabaseAdmin);
+      result = await submitToPioneerRx(backend, prescription, patient, provider, pharmacyMedication, supabaseAdmin, onDemandPdfBase64);
     } else if (backend.systemType === "DigitalRx") {
-      result = await submitToDigitalRx(backend, prescription, patient, provider, pharmacyMedication, supabaseAdmin);
+      result = await submitToDigitalRx(backend, prescription, patient, provider, pharmacyMedication, supabaseAdmin, onDemandPdfBase64);
     } else {
       console.error(`❌ [submit-to-pharmacy] Unsupported pharmacy system type: ${backend.systemType}`);
       return NextResponse.json(
@@ -494,6 +615,30 @@ export async function POST(
         { success: false, error: "Failed to update prescription" },
         { status: 500 },
       );
+    }
+
+    // Proof-of-send (best-effort, isolated): record that the Rx PDF was attached
+    // to the pharmacy request. Deliberately kept OUT of the critical status
+    // update above so that — even if this column is missing (migration not yet
+    // applied in an environment) or the write fails — the order's "submitted"
+    // state is never lost and PDF metadata never errors the submission.
+    if (result.pdfAttached) {
+      try {
+        const { error: proofErr } = await supabaseAdmin
+          .from("prescriptions")
+          .update({ pdf_push_confirmed_at: new Date().toISOString() })
+          .eq("id", prescriptionId);
+        if (proofErr) {
+          console.error(
+            `⚠️ [submit-to-pharmacy] Failed to record pdf_push_confirmed_at for ${prescriptionId} (non-fatal): ${proofErr.message}`,
+          );
+        }
+      } catch (proofWriteErr) {
+        console.error(
+          `⚠️ [submit-to-pharmacy] pdf_push_confirmed_at write threw for ${prescriptionId} (non-fatal):`,
+          proofWriteErr,
+        );
+      }
     }
 
     await supabaseAdmin.from("system_logs").insert({

@@ -167,31 +167,62 @@ export async function uploadPrescriptionPdf(
  */
 export async function getPrescriptionPdfBase64(
   supabase: SupabaseClient,
-  storagePath: string
+  storagePath: string,
+  retries = 3
 ): Promise<{ base64?: string; error?: string }> {
-  try {
-    // Download the file from storage
-    const { data, error } = await supabase.storage
-      .from("patient-files")
-      .download(storagePath);
+  let lastError = "Failed to download PDF";
 
-    if (error || !data) {
-      console.error("📄 [Storage] Error downloading PDF:", error);
-      return { error: error?.message || "Failed to download PDF" };
+  // Retry on transient failures (empty/failed download). Storage can lag
+  // momentarily right after an upload, so a single attempt occasionally returns
+  // nothing — which would otherwise send an empty Rx image to the pharmacy.
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      // Download the file from storage
+      const { data, error } = await supabase.storage
+        .from("patient-files")
+        .download(storagePath);
+
+      if (error || !data) {
+        lastError = error?.message || "Failed to download PDF";
+        console.error(
+          `📄 [Storage] Error downloading PDF (attempt ${attempt}/${retries}):`,
+          error
+        );
+      } else {
+        // Convert blob to base64 using Node's Buffer (fast, handles large files;
+        // a per-byte String.fromCharCode loop is slow and can corrupt big PDFs).
+        const arrayBuffer = await data.arrayBuffer();
+
+        if (arrayBuffer.byteLength === 0) {
+          // A 0-byte download is a transient hiccup (upload still settling);
+          // retry rather than attaching an empty document to the pharmacy push.
+          lastError = "Downloaded PDF was empty";
+          console.error(
+            `📄 [Storage] Empty PDF download (attempt ${attempt}/${retries}) for ${storagePath}`
+          );
+        } else {
+          const base64 = Buffer.from(arrayBuffer).toString("base64");
+          return { base64 };
+        }
+      }
+    } catch (error) {
+      lastError =
+        error instanceof Error
+          ? error.message
+          : "Failed to convert PDF to base64";
+      console.error(
+        `📄 [Storage] Error converting PDF to base64 (attempt ${attempt}/${retries}):`,
+        error
+      );
     }
 
-    // Convert blob to base64 using Node's Buffer (fast, handles large files;
-    // a per-byte String.fromCharCode loop is slow and can corrupt big PDFs).
-    const arrayBuffer = await data.arrayBuffer();
-    const base64 = Buffer.from(arrayBuffer).toString("base64");
-
-    return { base64 };
-  } catch (error) {
-    console.error("📄 [Storage] Error converting PDF to base64:", error);
-    return {
-      error: error instanceof Error ? error.message : "Failed to convert PDF to base64",
-    };
+    // Short, increasing backoff before retrying (no sleep after final attempt).
+    if (attempt < retries) {
+      await new Promise((resolve) => setTimeout(resolve, 300 * attempt));
+    }
   }
+
+  return { error: lastError };
 }
 
 /**

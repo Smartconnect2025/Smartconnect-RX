@@ -3,6 +3,7 @@
 - [RedSail Pay groundwork](redsail-pay.md) — additive, flag-gated (REDSAIL_ENABLED off); never wired into patient flow until real Emporos creds + SDK provisioned.
 - [Pay-on-terms checkout bypass](pay-on-terms-checkout.md) — net-terms providers auto-skip the checkout screen; invariant: pay-on-terms sends NO patient receipt (suppressPatientNotifications gate in mark-paid).
 - [Deploy & push workflow](deploy-and-push-workflow.md) — live site = Render auto-deploy from GitHub main; agent git pushes are guard-blocked + GitHub secret-scanning blocks history (leaked PAT in aimrx-reference/.replit).
+- [PDF-to-pharmacy reliability](pdf-to-pharmacy-reliability.md) — PDF attach on the pharmacy-submit path must be best-effort + timeboxed; storage stays off the path (in-memory gen, no persist) so provider custom uploads survive; proof-of-send is an isolated write.
 - [Prescription PDF reliability](prescription-pdf-reliability.md) — PDF storage never on submit path; submit fire-and-forgets, GET regenerates, custom PDFs best-effort via client_pdf_upload flag; size floor 3000 (healthy ~6440).
 - [Patient fee enforcement](patient-fee-enforcement.md) — per-pharmacy fee flags (default OFF), server forces OFF→$0; flat fees clamped not client-trusted; new rx fee columns must be wired into generate-link total or they're stored-but-never-charged.
 - [Pioneer Electronic Rx PDF](pioneer-electronic-rx-pdf.md) — PDF generated in provider portal step3 + profile signature; delivered to Pioneer as ScriptImage; structured EScript (not the PDF) is what Pioneer parses.

@@ -145,6 +145,12 @@ export const prescriptions = pgTable(
     submitted_to_pharmacy_at: timestamp("submitted_to_pharmacy_at", {
       withTimezone: true,
     }),
+    // Proof-of-send: set ONLY when the Rx PDF (base64) was actually attached to
+    // the pharmacy API request (PDFFile/ScriptImage). Null means the order was
+    // sent without an attached document. For support/auditing.
+    pdf_push_confirmed_at: timestamp("pdf_push_confirmed_at", {
+      withTimezone: true,
+    }),
     has_custom_address: boolean("has_custom_address").default(false),
     custom_address:
       jsonb("custom_address").$type<z.infer<typeof addressSchema>>(),
