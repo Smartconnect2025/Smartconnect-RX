@@ -4,6 +4,7 @@ import { getUser } from "@/core/auth/get-user";
 import { checkProviderActive } from "@/core/auth/check-provider-active";
 import { requireNonDemo, createGuardErrorResponse } from "@core/auth/api-guards";
 import { getPharmacyFeeFlags, PLATFORM_FEE_CENTS } from "@core/services/pharmacy-fee-flags";
+import { generateAndStorePrescriptionPdf } from "@core/services/prescriptions/generateAndStorePdf";
 
 /**
  * Prescription Submission API
@@ -45,6 +46,7 @@ interface SubmitPrescriptionRequest {
   platform_fee_cents?: number; // Technology Platform Access Fee in cents
   submission_group_id?: string; // Group ID for multi-item orders
   refill_frequency_days?: number; // Days between refills
+  client_pdf_upload?: boolean; // True when the client will upload its own custom PDF (skip server-side generation)
   has_custom_address?: boolean;
   custom_address?: {
     street?: string;
@@ -521,6 +523,27 @@ export async function POST(request: NextRequest) {
           queue_id: queueId,
         },
         { status: 500 },
+      );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────
+    // STORE ELECTRONIC RX PDF — best-effort, NON-BLOCKING.
+    // The order is already saved above. PDF generation/upload must NEVER block,
+    // delay, or fail the submission, so we fire-and-forget here (no await) and
+    // let the GET /api/prescriptions/[id]/pdf route regenerate on demand as the
+    // durability fallback. Skipped when the client will upload its own custom
+    // PDF (single-order provider upload) so we don't overwrite it. Placed before
+    // every return branch (incl. pay-on-terms early returns) so it always runs.
+    // ──────────────────────────────────────────────────────────────────────
+    if (!body.client_pdf_upload) {
+      void generateAndStorePrescriptionPdf(
+        supabaseAdmin,
+        prescription.id,
+      ).catch((err) =>
+        console.error(
+          `[submit] background PDF store failed for rx ${prescription.id}:`,
+          err,
+        ),
       );
     }
 

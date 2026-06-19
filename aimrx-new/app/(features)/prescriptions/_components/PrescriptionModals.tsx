@@ -880,7 +880,9 @@ export function PrescriptionModals({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => window.open(pdfUrl, "_blank")}
+                        onClick={() =>
+                          window.open(pdfUrl, "_blank", "noopener,noreferrer")
+                        }
                         className="border-[#1E3A8A]/60 text-[#1E3A8A]/80 hover:bg-[#1E3A8A]/5"
                       >
                         <FileText className="h-4 w-4 mr-1" />

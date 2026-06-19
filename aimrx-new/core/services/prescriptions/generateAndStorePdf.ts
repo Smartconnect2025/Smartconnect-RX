@@ -10,7 +10,10 @@
 
 import { SupabaseClient } from "@supabase/supabase-js";
 import { generatePrescriptionPdf } from "@/utils/generatePrescriptionPdf";
-import { uploadPrescriptionPdf } from "@core/services/storage/prescriptionPdfStorage";
+import {
+  uploadPrescriptionPdf,
+  getPrescriptionPdfUrl,
+} from "@core/services/storage/prescriptionPdfStorage";
 
 interface AddressShape {
   street?: string;
@@ -26,13 +29,28 @@ export async function generateAndStorePrescriptionPdf(
   const { data: rx, error: rxErr } = await admin
     .from("prescriptions")
     .select(
-      "id, patient_id, prescriber_id, medication, quantity, refills, sig, pharmacy_notes, dispense_as_written, submitted_at, updated_at, has_custom_address, custom_address",
+      "id, patient_id, prescriber_id, medication, quantity, refills, sig, pharmacy_notes, dispense_as_written, submitted_at, updated_at, has_custom_address, custom_address, pdf_storage_path",
     )
     .eq("id", prescriptionId)
     .single();
 
   if (rxErr || !rx) {
     return { error: "Prescription not found" };
+  }
+
+  // Idempotency guard: if a PDF is already stored (e.g. the submit-time
+  // background store finished first, or another request beat us), don't
+  // regenerate — just hand back a fresh signed URL. This prevents duplicate
+  // generated PDFs from the submit-time-background vs on-demand-GET race.
+  if (rx.pdf_storage_path) {
+    const existing = await getPrescriptionPdfUrl(admin, rx.pdf_storage_path);
+    if (existing.error || !existing.url) {
+      return {
+        storagePath: rx.pdf_storage_path,
+        error: existing.error || "Failed to sign existing PDF URL",
+      };
+    }
+    return { url: existing.url, storagePath: rx.pdf_storage_path };
   }
 
   const { data: patient } = await admin
@@ -92,6 +110,7 @@ export async function generateAndStorePrescriptionPdf(
       instructions: rx.sig || undefined,
       notes: rx.pharmacy_notes || undefined,
       daw: rx.dispense_as_written ? "Y" : "N",
+      pon: String(rx.id).slice(-8).toUpperCase(),
     },
     signatureUrl: provider?.signature_url || undefined,
   });
@@ -99,9 +118,11 @@ export async function generateAndStorePrescriptionPdf(
   const arrayBuffer = await blob.arrayBuffer();
 
   // Sanity guard: a real Electronic Rx is vector text (plus, usually, a
-  // signature image). Anything near-empty means generation produced junk —
-  // don't store a placeholder PDF over a (future) good one.
-  const MIN_PDF_BYTES = 1000;
+  // signature image). Measured healthy output is ~6.4KB at the smallest
+  // (empty-field, printed-name fallback, no signature image) and larger for any
+  // populated/signed Rx. A 3KB floor rejects truly broken/near-empty artifacts
+  // while never rejecting a readable, signature-less Rx.
+  const MIN_PDF_BYTES = 3000;
   if (arrayBuffer.byteLength < MIN_PDF_BYTES) {
     console.error(
       `PRESCRIPTION_PDF_TOO_SMALL: ${arrayBuffer.byteLength} bytes for prescription ${prescriptionId}`,

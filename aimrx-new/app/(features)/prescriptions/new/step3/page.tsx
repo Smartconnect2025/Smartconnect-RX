@@ -487,6 +487,7 @@ export default function PrescriptionStep3Page() {
         isFirstItem && feeFlags.showTechnologyFee ? PLATFORM_FEE_CENTS : 0,
       refill_frequency_days: refillFreq ? parseInt(refillFreq) : null,
       submission_group_id: submissionGroupId || null,
+      client_pdf_upload: !isMultiOrder && !!pdfInfo,
       has_custom_address: useCustomAddress,
       custom_address: useCustomAddress ? customAddress : null,
       patient: {
@@ -505,76 +506,49 @@ export default function PrescriptionStep3Page() {
     };
   };
 
-  const generateAndUploadPdf = async (
+  // Upload a provider's custom (manually attached) PDF for an order.
+  // Best-effort and intended to be fired WITHOUT await so it never blocks
+  // navigation. If it fails or is dropped, the GET /api/prescriptions/[id]/pdf
+  // route regenerates a valid PDF on demand as the durability fallback.
+  const uploadCustomPdf = async (
     prescriptionId: string,
-    item: CartItem | PrescriptionFormData,
-    providerData: {
-      prefix?: string;
-      firstName: string;
-      lastName: string;
-      npi: string;
-      dea?: string;
-      phone?: string;
-      signatureUrl?: string;
-      address?: AddressData | null;
-      companyName?: string;
-    },
+    info: { name: string; dataUrl: string },
   ) => {
     try {
-      const patientAddress = useCustomAddress
-        ? customAddress
-        : selectedPatient!.physicalAddress;
+      const dataUrlParts = info.dataUrl.split(",");
+      if (dataUrlParts.length !== 2) {
+        throw new Error("Invalid data URL format");
+      }
 
-      const strength = item.strength || `${(item as CartItem).dosageAmount || ""}${(item as CartItem).dosageUnit || ""}`;
-      const dateWritten = new Date().toISOString().split("T")[0];
+      const mimeMatch = dataUrlParts[0].match(/:(.*?);/);
+      const mimeType = mimeMatch ? mimeMatch[1] : "application/pdf";
+      const base64Data = dataUrlParts[1];
 
-      const { blob, filename } = await generatePrescriptionPdf({
-        patient: {
-          firstName: selectedPatient!.firstName,
-          lastName: selectedPatient!.lastName,
-          dob: selectedPatient!.dateOfBirth || "",
-          sex: selectedPatient!.gender === "male" ? "M" : "F",
-          street: patientAddress?.street,
-          city: patientAddress?.city,
-          state: patientAddress?.state,
-          zip: patientAddress?.zipCode,
-          phone: selectedPatient!.phone,
+      const binaryString = atob(base64Data);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+
+      const blob = new Blob([bytes], { type: mimeType });
+
+      const formDataObj = new FormData();
+      formDataObj.append("file", blob, info.name);
+
+      const uploadResponse = await fetch(
+        `/api/prescriptions/${prescriptionId}/pdf`,
+        {
+          method: "POST",
+          body: formDataObj,
         },
-        doctor: {
-          prefix: providerData.prefix,
-          firstName: providerData.firstName,
-          lastName: providerData.lastName,
-          npi: providerData.npi,
-          dea: providerData.dea,
-          street: providerData.address?.street,
-          city: providerData.address?.city,
-          state: providerData.address?.state,
-          zip: providerData.address?.zipCode,
-          phone: providerData.phone,
-          companyName: providerData.companyName,
-        },
-        rx: {
-          drugName: item.medication,
-          qty: item.quantity,
-          dateWritten,
-          refills: item.refills,
-          instructions: item.sig,
-          notes: item.pharmacyNotes,
-          daw: item.dispenseAsWritten ? "Y" : "N",
-          pon: String(prescriptionId).slice(-8).toUpperCase(),
-        },
-        signatureUrl: providerData.signatureUrl,
-      });
+      );
 
-      const formData = new FormData();
-      formData.append("file", blob, filename);
-
-      await fetch(`/api/prescriptions/${prescriptionId}/pdf`, {
-        method: "POST",
-        body: formData,
-      });
+      const pdfResult = await uploadResponse.json().catch(() => ({}));
+      if (!pdfResult.success) {
+        console.error("Custom PDF upload failed:", pdfResult.error);
+      }
     } catch (err) {
-      console.error("PDF generation/upload failed for", prescriptionId, err);
+      console.error("Custom PDF upload error for", prescriptionId, err);
     }
   };
 
@@ -644,8 +618,6 @@ export default function PrescriptionStep3Page() {
 
           prescriptionIds.push(result.prescription_id);
           sessionStorage.setItem("submittedPrescriptionIds", JSON.stringify(prescriptionIds));
-
-          await generateAndUploadPdf(result.prescription_id, item, providerData);
         }
 
         toast.success(`${prescriptionIds.length} prescriptions created! Now collect payment.`, {
@@ -680,111 +652,13 @@ export default function PrescriptionStep3Page() {
 
         const prescriptionId = result.prescription_id;
 
-        let pdfToUpload = pdfInfo;
-        if (!pdfToUpload && prescriptionId) {
-          try {
-            const patientAddress = useCustomAddress
-              ? customAddress
-              : selectedPatient.physicalAddress;
-
-            const dateWritten = new Date().toISOString().split("T")[0];
-
-            const { blob, filename } = await generatePrescriptionPdf({
-              patient: {
-                firstName: selectedPatient.firstName,
-                lastName: selectedPatient.lastName,
-                dob: selectedPatient.dateOfBirth || "",
-                sex: selectedPatient.gender === "male" ? "M" : "F",
-                street: patientAddress?.street,
-                city: patientAddress?.city,
-                state: patientAddress?.state,
-                zip: patientAddress?.zipCode,
-                phone: selectedPatient.phone,
-              },
-              doctor: {
-                prefix: providerData.prefix,
-                firstName: providerData.firstName,
-                lastName: providerData.lastName,
-                npi: providerData.npi,
-                dea: providerData.dea,
-                street: providerData.address?.street,
-                city: providerData.address?.city,
-                state: providerData.address?.state,
-                zip: providerData.address?.zipCode,
-                phone: providerData.phone,
-                companyName: providerData.companyName,
-              },
-              rx: {
-                drugName: prescriptionData.medication,
-                qty: prescriptionData.quantity,
-                dateWritten,
-                refills: prescriptionData.refills,
-                ndc: pharmacyMedData?.ndc,
-                instructions: prescriptionData.sig || pharmacyMedData?.dosageInstructions,
-                notes: prescriptionData.pharmacyNotes || pharmacyMedData?.notes,
-                daw: prescriptionData.dispenseAsWritten ? "Y" : "N",
-                pon: String(prescriptionId).slice(-8).toUpperCase(),
-              },
-              signatureUrl: providerData.signatureUrl,
-            });
-
-            const dataUrl = await new Promise<string>((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onloadend = () => resolve(reader.result as string);
-              reader.onerror = reject;
-              reader.readAsDataURL(blob);
-            });
-
-            pdfToUpload = { name: filename, dataUrl };
-          } catch (genError) {
-            console.error("Error generating PDF:", genError);
-            toast.warning("Prescription created but PDF generation failed");
-          }
-        }
-
-        if (pdfToUpload && prescriptionId) {
-          try {
-            const dataUrlParts = pdfToUpload.dataUrl.split(",");
-            if (dataUrlParts.length !== 2) {
-              throw new Error("Invalid data URL format");
-            }
-
-            const mimeMatch = dataUrlParts[0].match(/:(.*?);/);
-            const mimeType = mimeMatch ? mimeMatch[1] : "application/pdf";
-            const base64Data = dataUrlParts[1];
-
-            const binaryString = atob(base64Data);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-
-            const blob = new Blob([bytes], { type: mimeType });
-
-            const formDataObj = new FormData();
-            formDataObj.append("file", blob, pdfToUpload.name);
-
-            const uploadResponse = await fetch(
-              `/api/prescriptions/${prescriptionId}/pdf`,
-              {
-                method: "POST",
-                body: formDataObj,
-              },
-            );
-
-            const pdfResult = await uploadResponse.json();
-
-            if (!pdfResult.success) {
-              console.error("PDF upload failed:", pdfResult.error);
-              toast.warning("Prescription created but PDF upload failed", {
-                description: pdfResult.error,
-                duration: 5000,
-              });
-            }
-          } catch (pdfError) {
-            console.error("Error uploading PDF:", pdfError);
-            toast.warning("Prescription created but PDF upload failed");
-          }
+        // Persist the document, but NEVER block navigation on it. If the
+        // provider attached their own PDF, upload it (best-effort, fire-and-
+        // forget). Otherwise the submit route already started server-side
+        // generation, and the GET /pdf route regenerates a valid PDF on demand
+        // as the final fallback.
+        if (pdfInfo && prescriptionId) {
+          void uploadCustomPdf(prescriptionId, pdfInfo);
         }
 
         toast.success("Prescription created! Now collect payment.", {
