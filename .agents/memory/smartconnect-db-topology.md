@@ -16,11 +16,22 @@ i.e. PostgREST — which **cannot run DDL**.
 - The Supabase project's **direct** host (`db.<ref>.supabase.co:5432`) is
   **IPv6-only** and unreachable from the Replit container (CONNECT_TIMEOUT).
 
+Project ref = `pxehuvreezdpiusgwbct`. Live `pharmacies` fingerprint (sanity check
+for the real DB): **5 rows**.
+
+**Gotcha — no usable Postgres DSN is provisioned in the container.** Both
+`SUPABASE_DATABASE_URL` and `SMARTCONNECT_DB_URL` are set to the **REST URL**
+(`https://<ref>.supabase.co`), NOT a `postgres://` DSN — `psql "$SUPABASE_DATABASE_URL"`
+just treats the URL as a dbname and connects to the local default host (fails).
+`SMARTCONNECT_DB_PASSWORD` is in missing-secrets (not provisioned), so the pooler
+DSN below cannot be built without the user adding it.
+
 **How to apply schema changes (DDL) to the real DB:**
-1. Easiest / most reliable for a non-technical user: have them paste the SQL into
-   the Supabase **SQL Editor** and click Run. No credentials needed from us.
-2. Programmatically: use the **Session/Transaction pooler** connection string
-   (`postgresql://postgres.<ref>:<pwd>@aws-<n>-<region>.pooler.supabase.com:6543/postgres`),
+1. Easiest / most reliable: have the user paste the SQL into the Supabase
+   **SQL Editor** and click Run. No credentials needed from us. PostgREST/service
+   role CANNOT run DDL, so this (or option 2) is required for any ALTER/CREATE.
+2. Programmatically (only if user adds the password): **Session/Transaction pooler**
+   string `postgresql://postgres.<ref>:<pwd>@aws-<n>-<region>.pooler.supabase.com:6543/postgres`,
    which is IPv4-friendly. The pooler region must be discovered (probe regions in
    parallel) since it isn't derivable from the project ref.
 
